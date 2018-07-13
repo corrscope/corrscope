@@ -2,6 +2,7 @@ import weakref
 from itertools import count
 from pathlib import Path
 from typing import NamedTuple, Optional, List, Tuple
+import time
 
 import click
 import matplotlib.pyplot as plt
@@ -54,7 +55,7 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         master_wave=master_wave,
         fps=fps,
         render=RendererCfg(  # todo
-            640, 360,
+            1280, 720,
             samples_visible=1000,
             rows_first=False,
             ncols=1
@@ -69,6 +70,8 @@ COLOR_CHANNELS = 3
 
 
 class Ovgen:
+    PROFILING = True
+
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.waves: List[Wave] = []
@@ -95,6 +98,9 @@ class Ovgen:
 
         renderer = MatplotlibRenderer(self.cfg.render, self.waves)
 
+        if self.PROFILING:
+            begin = time.perf_counter()
+
         # For each frame, render each wave
         for frame in range(nframes):
             time_seconds = frame / fps
@@ -108,6 +114,10 @@ class Ovgen:
             print(frame)
             renderer.render_frame(center_smps)
 
+        if self.PROFILING:
+            dtime = time.perf_counter() - begin
+            render_fps = nframes / dtime
+            print(f'FPS = {render_fps}')
 
 class WaveConfig(NamedTuple):
     wave_path: str
