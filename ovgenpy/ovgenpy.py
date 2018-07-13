@@ -10,7 +10,7 @@ from ovgenpy.util import ceildiv
 
 
 class Config(NamedTuple):
-    wave_dir: str   # TODO remove, a function will expand wildcards and create List[WaveConfig]
+    wave_dir: str  # TODO remove, a function will expand wildcards and create List[WaveConfig]
     master_wave: Optional[str]
 
     fps: int
@@ -36,6 +36,7 @@ File = click.Path(exists=True, dir_okay=False)
 
 FPS = 60  # fps
 
+
 @click.command()
 @click.argument('wave_dir', type=Folder)
 @click.option('--master-wave', type=File, default=None)
@@ -45,7 +46,7 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         wave_dir=wave_dir,
         master_wave=master_wave,
         fps=fps,
-        render=RendererCfg(     # todo
+        render=RendererCfg(  # todo
             640, 360,
             samples_visible=1000,
             rows_first=False,
@@ -59,13 +60,14 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
 
 COLOR_CHANNELS = 3
 
+
 class Ovgen:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.waves: List[Wave] = []
 
     def write(self):
-        self.load_waves()   # self.waves =
+        self.load_waves()  # self.waves =
         self.render()
 
     def load_waves(self):
@@ -145,7 +147,7 @@ class Trigger:
         :param offset: sample index
         :return: new sample index, corresponding to rising edge
         """
-        return offset   # todo
+        return offset  # todo
 
 
 class MatplotlibRenderer:
@@ -201,14 +203,14 @@ class MatplotlibRenderer:
 
         return Coords(row, col)
 
-
     def render_frame(self, center_smps: List[int]) -> None:
         nwaves = len(self.waves)
         ncenters = len(center_smps)
         if nwaves != ncenters:
-            raise ValueError(f'incorrect number of wave offsets: {nwaves} waves but {ncenters} offsets')
+            raise ValueError(
+                f'incorrect number of wave offsets: {nwaves} waves but {ncenters} offsets')
 
-        for wave, center_smp in zip(self.waves, center_smps):   # TODO
+        for wave, center_smp in zip(self.waves, center_smps):  # TODO
             print(wave)
             print(center_smp)
             print()
