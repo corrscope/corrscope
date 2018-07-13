@@ -232,6 +232,7 @@ class MatplotlibRenderer:
         for ax in self.axes:
             # Setup axes limits
             ax.set_xlim(0, self.cfg.samples_visible)
+            ax.set_ylim(-1, 1)
 
             line = ax.plot([0] * self.cfg.samples_visible)[0]
             self.lines.append(line)
