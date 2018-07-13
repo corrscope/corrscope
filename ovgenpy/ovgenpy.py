@@ -1,15 +1,23 @@
 import weakref
 from pathlib import Path
-from typing import NamedTuple, Optional, List, Tuple
+from typing import NamedTuple, Optional, List
 
 import click
-import numpy as np
 from scipy.io import wavfile
 
+from ovgenpy.util import ceildiv
 
-class ScreenSize(NamedTuple):
+
+class RendererCfg(NamedTuple):
     width: int
     height: int
+
+    rows_first: bool
+
+    nrows: Optional[int]
+    ncols: Optional[int]
+
+    samples_visible: int
 
 
 class Config(NamedTuple):
@@ -19,7 +27,7 @@ class Config(NamedTuple):
     fps: int
     # TODO algorithm and twiddle knobs
 
-    screen: ScreenSize
+    render: RendererCfg
 
 
 Folder = click.Path(exists=True, file_okay=False)
@@ -65,37 +73,25 @@ class Ovgen:
             wave = Wave(wcfg, str(path))
             self.waves.append(wave)
 
-    def get_coords(self, idx: int):
-        # TODO multi column
-        screen = self.cfg.screen
-
-        width = screen.width
-        height = screen.height // len(self.waves)   # todo +1 if we draw the overall waveform
-        x = 0
-        y = height * idx
-
-        return Coords(x=x, y=y, width=width, height=height)
-
     def render(self):
         # Calculate number of frames (TODO master file?)
         fps = self.cfg.fps
         nframes = fps * self.waves[0].get_s()
         nframes = int(nframes) + 1
 
-        screen = self.cfg.screen
-        sc = np.ndarray((screen.height, screen.width, COLOR_CHANNELS), np.int8)     # TODO https://matplotlib.org/gallery/subplots_axes_and_figures/ganged_plots.html
+        renderer = MatplotlibRenderer(self.cfg.render, self.waves)
 
         # For each frame, render each wave
         for frame in range(nframes):
-            second = frame / fps
+            time_seconds = frame / fps
 
+            center_smps = []
             for wave in self.waves:
-                sample = round(wave.smp_s * second)
+                sample = round(wave.smp_s * time_seconds)
                 trigger_sample = wave.trigger.get_trigger(sample)
+                center_smps.append(trigger_sample)
 
-                # render todo
-                image = wave.render(trigger_sample)
-                # blit TODO
+            renderer.render_frame(center_smps)
 
 
 class Coords(NamedTuple):
@@ -130,18 +126,18 @@ class Wave:
         """
         return self.get_smp() / self.smp_s
 
-    def render(self, trigger_sample: int) -> np.ndarray:
-        """
-        :param trigger_sample: Sample index
-        :return: image or something
-        """
-        pass    # TODO
+    # def render(self, trigger_sample: int) -> np.ndarray:
+    #     """
+    #     :param trigger_sample: Sample index
+    #     :return: image or something
+    #     """
+    #     pass    # TODO
 
 
 class Trigger:
     def __init__(self, wave: Wave, scan_nsamp: int, align_amount: float):
         """
-        Correlation-based trigger which looks at a window of `scan_length` samples.
+        Correlation-based trigger which looks at a window of `scan_nsamp` samples.
 
         it's complicated
 
@@ -161,3 +157,63 @@ class Trigger:
         :return: new sample index, corresponding to rising edge
         """
         return offset   # todo
+
+
+class MatplotlibRenderer:
+    def __init__(self, rcfg: RendererCfg, waves: List[Wave]):
+        self.rcfg = rcfg
+        self.waves = waves
+
+        """
+        If __init__ reads rcfg, rcfg cannot be hotswapped.
+        
+        Reasons to hotswap rcfg: RendererCfg:
+        - GUI preview size
+        - Changing layout
+        - Changing #smp drawn (samples_visible)
+        (see RendererCfg)
+        
+        Reasons to hotswap trigger algorithms:
+        - changing scan_nsamp (cannot be hotswapped, since correlation buffer is incompatible)
+        So don't.
+        """
+
+        if rcfg.rows_first:
+            nrows = rcfg.nrows
+            if nrows is None:
+                raise ValueError('invalid rcfg: rows_first is True and nrows is None')
+            ncols = ceildiv(len(waves), nrows)
+        else:
+            # cols first
+            ncols = rcfg.ncols
+            if ncols is None:
+                raise ValueError('invalid rcfg: rows_first is False and ncols is None')
+            nrows = ceildiv(len(waves), ncols)
+
+        self.nrows = nrows
+        self.ncols = ncols
+
+    # @property
+    # def rcfg(self):
+    #     return self._rcfg
+    #
+    # @rcfg.setter
+    # def rcfg(self, value: RendererCfg):
+    #
+    #     self._rcfg = value._replace()
+
+    def _get_coords(self, idx: int):
+        # TODO multi column
+        rcfg = self.rcfg
+
+
+    def render_frame(self, center_smps: List[int]) -> None:
+        nwaves = len(self.waves)
+        ncenters = len(center_smps)
+        if nwaves != ncenters:
+            raise ValueError(f'incorrect number of wave offsets: {nwaves} waves but {ncenters} offsets')
+
+        for wave, center_smp in zip(self.waves, center_smps):   # TODO
+            print(wave)
+            print(center_smp)
+            print()
