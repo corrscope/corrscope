@@ -1,8 +1,10 @@
 import weakref
+from itertools import count
 from pathlib import Path
 from typing import NamedTuple, Optional, List, Tuple
 
 import click
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.io import wavfile
 
@@ -98,6 +100,7 @@ class Ovgen:
                 trigger_sample = wave.trigger.get_trigger(sample)
                 center_smps.append(trigger_sample)
 
+            print(frame)
             renderer.render_frame(center_smps)
 
 
@@ -151,6 +154,8 @@ class Trigger:
 
 
 class MatplotlibRenderer:
+    DPI = 96
+
     def __init__(self, cfg: RendererCfg, waves: List[Wave]):
         self.cfg = cfg
         self.waves = waves
@@ -208,12 +213,30 @@ class MatplotlibRenderer:
         ncenters = len(center_smps)
         if nwaves != ncenters:
             raise ValueError(
-                f'incorrect number of wave offsets: {nwaves} waves but {ncenters} offsets')
+                f'incorrect wave offsets: {nwaves} waves but {ncenters} offsets')
 
-        for wave, center_smp in zip(self.waves, center_smps):  # TODO
+        fig = plt.figure()
+        fig.set_dpi(self.DPI)
+        fig.set_size_inches(
+            self.cfg.width / self.DPI,
+            self.cfg.height / self.DPI
+        )
+
+        ax = plt.Axes(fig, rect=[0., 0., 1., 1.])   # 0% to 100%
+        ax.set_axis_off()
+        fig.add_axes(ax)
+
+        # plt.set_cmap('hot')
+        # plt.imshow(data, aspect='equal')
+
+        for idx, wave, center_smp in zip(count(), self.waves, center_smps):  # TODO
+            coords = self._get_coords(idx)
             print(wave)
             print(center_smp)
-            print()
+            print(coords)
+
+        print()
+        # plt.show()
 
 
 class Coords(NamedTuple):
