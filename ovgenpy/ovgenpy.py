@@ -6,6 +6,8 @@ from typing import NamedTuple, Optional, List, Tuple
 import click
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 from scipy.io import wavfile
 
 from ovgenpy.util import ceildiv
@@ -31,6 +33,8 @@ class RendererCfg(NamedTuple):
 
     nrows: Optional[int] = None
     ncols: Optional[int] = None
+
+    # TODO backend: FigureCanvasBase = FigureCanvasAgg
 
 
 Folder = click.Path(exists=True, file_okay=False)
@@ -154,59 +158,80 @@ class Trigger:
 
 
 class MatplotlibRenderer:
+    """
+    If __init__ reads cfg, cfg cannot be hotswapped.
+
+    Reasons to hotswap cfg: RendererCfg:
+    - GUI preview size
+    - Changing layout
+    - Changing #smp drawn (samples_visible)
+    (see RendererCfg)
+
+        Original OVGen does not support hotswapping.
+        It disables changing options during rendering.
+
+    Reasons to hotswap trigger algorithms:
+    - changing scan_nsamp (cannot be hotswapped, since correlation buffer is incompatible)
+    So don't.
+    """
+
     DPI = 96
 
     def __init__(self, cfg: RendererCfg, waves: List[Wave]):
         self.cfg = cfg
         self.waves = waves
+        self.fig = Figure()
+        FigureCanvasAgg(self.fig)
 
-        self.dims: Tuple[int, int] = (0, 0)
-        self.calc_layout()
+        # Setup layout
 
+        self.nrows = 0
+        self.ncols = 0
+        # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
+        self.axes: np.ndarray = None
+
+        self.set_layout()   # mutates self
+
+    def set_layout(self) -> None:
         """
-        If __init__ reads cfg, cfg cannot be hotswapped.
-        
-        Reasons to hotswap cfg: RendererCfg:
-        - GUI preview size
-        - Changing layout
-        - Changing #smp drawn (samples_visible)
-        (see RendererCfg)
-            
-            Original OVGen does not support hotswapping.
-            It disables changing options during rendering.
-        
-        Reasons to hotswap trigger algorithms:
-        - changing scan_nsamp (cannot be hotswapped, since correlation buffer is incompatible)
-        So don't.
+        Inputs: self.cfg, self.waves, self.fig
+        Outputs: self.nrows, self.ncols, self.axes
+
+        Creates a flat array of Matplotlib axes, with the new layout.
         """
 
-    def calc_layout(self) -> None:
+        self.nrows, self.ncols = self.calc_layout()
+
+        # https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure.subplots
+        axes2d = self.fig.subplots(self.nrows, self.ncols, squeeze=False)
+
+        # If column major:
+        if not self.cfg.rows_first:
+            axes2d = axes2d.T
+
+        self.axes = axes2d.flatten()
+
+    def calc_layout(self) -> Tuple[int, int]:
         """
         Inputs: self.cfg, self.waves
-        Outputs: self.dims
+        :return: (nmajor, nminor, nrows, ncols)
         """
         cfg = self.cfg
+        nwaves = len(self.waves)
 
         if cfg.rows_first:
-            major = cfg.nrows
-            if major is None:
+            nrows = cfg.nrows
+            if nrows is None:
                 raise ValueError('invalid cfg: rows_first is True and nrows is None')
+            ncols = ceildiv(nwaves, nrows)
         else:
-            major = cfg.ncols
-            if major is None:
-                raise ValueError('invalid cfg: rows_first is False and ncols is None')
+            raise ValueError('rows_first=False not supported')
+            # nmajor = ncols = cfg.ncols
+            # if ncols is None:
+            #     raise ValueError('invalid cfg: rows_first is False and ncols is None')
+            # nminor = nrows = ceildiv(nwaves, ncols)
 
-        minor = ceildiv(len(self.waves), major)
-        self.dims = (major, minor)
-
-    def _get_coords(self, idx: int):
-        major, minor = np.unravel_index(idx, self.dims)
-        if self.cfg.rows_first:
-            row, col = major, minor
-        else:
-            col, row = major, minor
-
-        return Coords(row, col)
+        return nrows, ncols
 
     def render_frame(self, center_smps: List[int]) -> None:
         nwaves = len(self.waves)
@@ -230,7 +255,9 @@ class MatplotlibRenderer:
         # plt.imshow(data, aspect='equal')
 
         for idx, wave, center_smp in zip(count(), self.waves, center_smps):  # TODO
-            coords = self._get_coords(idx)
+            # coords = self._get_coords(idx)
+            ax = self.axes[idx]
+
             print(wave)
             print(center_smp)
             print(coords)
