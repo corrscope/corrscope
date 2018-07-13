@@ -1,7 +1,7 @@
 import weakref
 from itertools import count
 from pathlib import Path
-from typing import NamedTuple, Optional, List, Tuple
+from typing import NamedTuple, Optional, List, Tuple, Dict, Any
 import time
 
 import click
@@ -23,8 +23,8 @@ class Config(NamedTuple):
     master_wave: Optional[str]
 
     fps: int
-    # TODO algorithm and twiddle knobs
 
+    trigger: 'TriggerCfg'   # Maybe overriden per Wave
     render: 'RendererCfg'
 
 
@@ -43,6 +43,7 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         wave_dir=wave_dir,
         master_wave=master_wave,
         fps=fps,
+        trigger=None,   # todo
         render=RendererCfg(  # todo
             1280, 720,
             samples_visible=1000,
@@ -113,13 +114,15 @@ class WaveConfig(NamedTuple):
     wave_path: str
     # TODO color
 
+    # TODO wave-specific trigger options?
+
 
 class Wave:
     def __init__(self, wcfg: WaveConfig, wave_path: str):
+        # TODO inject Trigger as dependency
         self.cfg = wcfg
         self.smp_s, self.data = wavfile.read(wave_path)
 
-        # FIXME cfg
         frames = 1
         self.trigger = Trigger(
             wave=self,
@@ -137,6 +140,23 @@ class Wave:
         return self.get_smp() / self.smp_s
 
 
+class TriggerCfg(NamedTuple):
+    name: str
+    args: List = []
+    kwargs: Dict[str, Any] = {}
+
+    def generate_trigger(self):
+        return TRIGGERS[self.name](*self.args, **self.kwargs)
+
+
+TRIGGERS: Dict[str, type] = {}
+
+def register_trigger(trigger_class: type):
+    TRIGGERS[trigger_class.__name__] = trigger_class
+    return trigger_class
+
+
+@register_trigger
 class Trigger:
     def __init__(self, wave: Wave, scan_nsamp: int, align_amount: float):
         """
