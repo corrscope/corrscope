@@ -16,27 +16,16 @@ from ovgenpy.util import ceildiv
 
 
 class Config(NamedTuple):
-    wave_dir: str  # TODO remove, a function will expand wildcards and create List[WaveConfig]
+    wave_dir: str
+    # TODO: if wave_dir is present, it will overwrite List[WaveConfig].
+    # wave_dir will be commented out.
+
     master_wave: Optional[str]
 
     fps: int
     # TODO algorithm and twiddle knobs
 
     render: 'RendererCfg'
-
-
-class RendererCfg(NamedTuple):
-    width: int
-    height: int
-
-    samples_visible: int
-
-    rows_first: bool
-
-    nrows: Optional[int] = None
-    ncols: Optional[int] = None
-
-    # TODO backend: FigureCanvasBase = FigureCanvasAgg
 
 
 Folder = click.Path(exists=True, file_okay=False)
@@ -119,6 +108,7 @@ class Ovgen:
             render_fps = nframes / dtime
             print(f'FPS = {render_fps}')
 
+
 class WaveConfig(NamedTuple):
     wave_path: str
     # TODO color
@@ -131,7 +121,11 @@ class Wave:
 
         # FIXME cfg
         frames = 1
-        self.trigger = Trigger(self, self.smp_s // FPS * frames, 0.1)
+        self.trigger = Trigger(
+            wave=self,
+            scan_nsamp=self.smp_s // FPS * frames,
+            align_amount=0.1
+        )
 
     def get_smp(self) -> int:
         return len(self.data)
@@ -166,6 +160,20 @@ class Trigger:
         :return: new sample index, corresponding to rising edge
         """
         return offset  # todo
+
+
+class RendererCfg(NamedTuple):
+    width: int
+    height: int
+
+    samples_visible: int
+
+    rows_first: bool
+
+    nrows: Optional[int] = None
+    ncols: Optional[int] = None
+
+    # TODO backend: FigureCanvasBase = FigureCanvasAgg
 
 
 class MatplotlibRenderer:
@@ -297,8 +305,3 @@ class MatplotlibRenderer:
         print()
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
-
-
-class Coords(NamedTuple):
-    row: int
-    col: int
