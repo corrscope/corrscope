@@ -284,13 +284,16 @@ class MatplotlibRenderer:
                 f'incorrect wave offsets: {nwaves} waves but {ncenters} offsets')
 
         for idx, wave, center_smp in zip(count(), self.waves, center_smps):  # TODO
-            line = self.lines[idx]
-
-            # FIXME random data
-            line.set_ydata(np.random.randn(self.cfg.samples_visible))
             print(wave)
             print(center_smp)
 
+            ax = self.axes[idx]
+            line = self.lines[idx]
+
+            # FIXME random data
+            N = self.cfg.samples_visible
+            data = np.random.randn(N) / np.sqrt(N) / 3
+            line.set_ydata(np.cumsum(data))
         print()
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
