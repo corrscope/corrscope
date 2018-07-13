@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import weakref
 from abc import ABC, abstractmethod
 from itertools import count
@@ -128,11 +130,68 @@ class WaveConfig(NamedTuple):
     # TODO wave-specific trigger options?
 
 
+FLOAT = np.double
 class Wave:
     def __init__(self, wcfg: WaveConfig, wave_path: str):
         self.cfg = wcfg
-        self.smp_s, self.data = wavfile.read(wave_path)
+        # TODO mmap
+        self.smp_s, self.data = wavfile.read(wave_path)     # type: int, np.ndarray
+        self.nsamp = len(self.data)
         self.trigger: Trigger = None
+
+        # Calculate scaling factor.
+        # TODO extract function, unit tests... switch to pysoundfile and drop logic
+        dtype = self.data.dtype
+
+        max_val = np.iinfo(dtype).max + 1
+        assert max_val & (max_val - 1) == 0     # power of 2
+
+        if np.issubdtype(dtype, np.uint):
+            self.offset = -max_val // 2
+            self.max_val = max_val // 2
+        else:
+            self.offset = 0
+            self.max_val = max_val
+
+    def __getitem__(self, index):
+        """ Convert self.data[item] to a FLOAT within range [-1, 1). """
+        data = self.data[index].astype(FLOAT)
+        data += self.offset
+        data /= self.max_val
+        return data
+
+    def get_around(self, sample: int, region_nsamp: int):
+        end = sample + region_nsamp // 2
+        begin = end - region_nsamp
+
+        if 0 <= begin and end <= self.nsamp:
+            return self[begin:end]
+
+        delta_begin = 0
+        if begin < 0:
+            delta_begin = 0 - begin
+            assert delta_begin > 0      # TODO really not necessary unless I distrust myself
+            assert begin + delta_begin == 0
+            # begin += delta_begin
+
+        delta_end = 0
+        if end > self.nsamp:
+            delta_end = self.nsamp - end
+            assert delta_end < 0
+            assert end + delta_end == self.nsamp
+            # end += delta_end
+
+        out = np.zeros(region_nsamp, dtype=FLOAT)
+
+        # out[0 : region_nsamp]. == self[begin: end]
+        # out[Δbegin : region_nsamp+Δend] == self[begin + Δbegin: end + Δend]
+        out[delta_begin : region_nsamp+delta_end] = self[begin+delta_begin : end+delta_end]
+        return out
+
+
+
+
+
 
     def set_trigger(self, trigger: 'Trigger'):
         self.trigger = trigger
@@ -330,17 +389,11 @@ class MatplotlibRenderer:
             raise ValueError(
                 f'incorrect wave offsets: {nwaves} waves but {ncenters} offsets')
 
-        for idx, wave, center_smp in zip(count(), self.waves, center_smps):  # TODO
-            print(wave)
-            print(center_smp)
-
-            ax = self.axes[idx]
+        for idx, wave, center_smp in zip(count(), self.waves, center_smps):
+            # Draw waveform data
             line = self.lines[idx]
+            data = wave.get_around(center_smp, self.cfg.samples_visible)
+            line.set_ydata(data)
 
-            # FIXME random data
-            N = self.cfg.samples_visible
-            data = np.random.randn(N) / np.sqrt(N) / 3
-            line.set_ydata(np.cumsum(data))
-        print()
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
