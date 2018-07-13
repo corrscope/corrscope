@@ -18,15 +18,15 @@ from ovgenpy.util import ceildiv
 
 class Config(NamedTuple):
     wave_dir: str
-    # TODO: if wave_dir is present, it will overwrite List[WaveConfig].
-    # wave_dir will be commented out.
+    # TODO: if wave_dir is present, it should overwrite List[WaveConfig].
+    # wave_dir will be commented out when writing to file.
 
     master_wave: Optional[str]
 
     fps: int
 
-    trigger: 'TriggerCfg'   # Maybe overriden per Wave
-    render: 'RendererCfg'
+    trigger: 'TriggerConfig'  # Maybe overriden per Wave
+    render: 'RendererConfig'
 
 
 Folder = click.Path(exists=True, file_okay=False)
@@ -44,13 +44,13 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         wave_dir=wave_dir,
         master_wave=master_wave,
         fps=fps,
-        trigger=TriggerCfg(     # todo
+        trigger=TriggerConfig(     # todo
             name='CorrelationTrigger',
             kwargs=dict(
                 align_amount=0.1    # TODO: default param?
             )
         ),
-        render=RendererCfg(     # todo
+        render=RendererConfig(     # todo
             1280, 720,
             samples_visible=1000,
             rows_first=False,
@@ -147,7 +147,7 @@ class Wave:
         return self.get_smp() / self.smp_s
 
 
-class TriggerCfg(NamedTuple):
+class TriggerConfig(NamedTuple):
     name: str
     # scan_nsamp: int
     args: List = []
@@ -200,7 +200,7 @@ class CorrelationTrigger(Trigger):
         return offset  # todo
 
 
-class RendererCfg(NamedTuple):
+class RendererConfig(NamedTuple):
     width: int
     height: int
 
@@ -216,6 +216,7 @@ class RendererCfg(NamedTuple):
 
 class MatplotlibRenderer:
     """
+    TODO disable antialiasing
     If __init__ reads cfg, cfg cannot be hotswapped.
 
     Reasons to hotswap cfg: RendererCfg:
@@ -234,7 +235,7 @@ class MatplotlibRenderer:
 
     DPI = 96
 
-    def __init__(self, cfg: RendererCfg, waves: List[Wave]):
+    def __init__(self, cfg: RendererConfig, waves: List[Wave]):
         self.cfg = cfg
         self.waves = waves
         self.fig: Figure = None
