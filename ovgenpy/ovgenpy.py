@@ -6,7 +6,7 @@ from typing import NamedTuple, Optional, List, Tuple
 import click
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from scipy.io import wavfile
 
@@ -187,7 +187,7 @@ class MatplotlibRenderer:
         self.nrows = 0
         self.ncols = 0
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
-        self.axes: np.ndarray = None
+        self.axes: np.ndarray[Axes] = None
 
         self.set_layout()   # mutates self
 
@@ -264,11 +264,13 @@ class MatplotlibRenderer:
         for idx, wave, center_smp in zip(count(), self.waves, center_smps):  # TODO
             ax = self.axes[idx]
 
+            # TODO plot waves
+            ax.plot([1,2,3])
             print(wave)
             print(center_smp)
 
         print()
-        # plt.show()
+        plt.show()
 
 
 class Coords(NamedTuple):
