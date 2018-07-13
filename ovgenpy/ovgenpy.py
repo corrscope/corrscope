@@ -180,8 +180,7 @@ class MatplotlibRenderer:
     def __init__(self, cfg: RendererCfg, waves: List[Wave]):
         self.cfg = cfg
         self.waves = waves
-        self.fig = Figure()
-        FigureCanvasAgg(self.fig)
+        self.fig: Figure = None
 
         # Setup layout
 
@@ -197,13 +196,22 @@ class MatplotlibRenderer:
         Inputs: self.cfg, self.waves, self.fig
         Outputs: self.nrows, self.ncols, self.axes
 
-        Creates a flat array of Matplotlib axes, with the new layout.
+        Creates a flat array of Matplotlib Axes, with the new layout.
         """
 
         self.nrows, self.ncols = self.calc_layout()
 
-        # https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure.subplots
-        axes2d = self.fig.subplots(self.nrows, self.ncols, squeeze=False)
+        # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplots.html
+        self.fig, axes2d = plt.subplots(
+            self.nrows, self.ncols,
+            squeeze=False,
+            # Remove gaps between Axes
+            gridspec_kw=dict(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
+        )
+
+        # Remove Axis from Axes
+        for ax in axes2d.flatten():
+            ax.set_axis_off()
 
         # If column major:
         if not self.cfg.rows_first:
@@ -214,7 +222,7 @@ class MatplotlibRenderer:
     def calc_layout(self) -> Tuple[int, int]:
         """
         Inputs: self.cfg, self.waves
-        :return: (nmajor, nminor, nrows, ncols)
+        :return: (nrows, ncols)
         """
         cfg = self.cfg
         nwaves = len(self.waves)
@@ -225,11 +233,10 @@ class MatplotlibRenderer:
                 raise ValueError('invalid cfg: rows_first is True and nrows is None')
             ncols = ceildiv(nwaves, nrows)
         else:
-            raise ValueError('rows_first=False not supported')
-            # nmajor = ncols = cfg.ncols
-            # if ncols is None:
-            #     raise ValueError('invalid cfg: rows_first is False and ncols is None')
-            # nminor = nrows = ceildiv(nwaves, ncols)
+            ncols = cfg.ncols
+            if ncols is None:
+                raise ValueError('invalid cfg: rows_first is False and ncols is None')
+            nrows = ceildiv(nwaves, ncols)
 
         return nrows, ncols
 
@@ -255,12 +262,10 @@ class MatplotlibRenderer:
         # plt.imshow(data, aspect='equal')
 
         for idx, wave, center_smp in zip(count(), self.waves, center_smps):  # TODO
-            # coords = self._get_coords(idx)
             ax = self.axes[idx]
 
             print(wave)
             print(center_smp)
-            print(coords)
 
         print()
         # plt.show()
