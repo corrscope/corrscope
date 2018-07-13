@@ -253,6 +253,9 @@ class MatplotlibRenderer:
             self.cfg.width / self.DPI,
             self.cfg.height / self.DPI
         )
+
+        # Setup rendering
+        self.fig.canvas.draw()  # Dirty hack: This must be called before ax.draw_artist
         plt.show(block=False)
 
     def calc_layout(self) -> Tuple[int, int]:
@@ -294,8 +297,13 @@ class MatplotlibRenderer:
             N = self.cfg.samples_visible
             data = np.random.randn(N) / np.sqrt(N) / 3
             line.set_ydata(np.cumsum(data))
+
+            # Dirty hack to only redraw background and wave
+            ax.draw_artist(ax.patch)
+            ax.draw_artist(line)
+
         print()
-        self.fig.canvas.draw()
+        self.fig.canvas.update()    # Dirty hack to speed up redraws
         self.fig.canvas.flush_events()
 
 
