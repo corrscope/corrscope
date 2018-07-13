@@ -31,20 +31,25 @@ class Config(NamedTuple):
 Folder = click.Path(exists=True, file_okay=False)
 File = click.Path(exists=True, dir_okay=False)
 
-FPS = 60  # fps
+_FPS = 60  # f_s
 
 
 @click.command()
 @click.argument('wave_dir', type=Folder)
 @click.option('--master-wave', type=File, default=None)
-@click.option('--fps', default=FPS)
+@click.option('--fps', default=_FPS)
 def main(wave_dir: str, master_wave: Optional[str], fps: int):
     cfg = Config(
         wave_dir=wave_dir,
         master_wave=master_wave,
         fps=fps,
-        trigger=None,   # todo
-        render=RendererCfg(  # todo
+        trigger=TriggerCfg(     # todo
+            name='Trigger',
+            kwargs=dict(
+                align_amount=0.1    # TODO: default param?
+            )
+        ),
+        render=RendererCfg(     # todo
             1280, 720,
             samples_visible=1000,
             rows_first=False,
@@ -77,7 +82,12 @@ class Ovgen:
             wcfg = WaveConfig(
                 wave_path=str(path)
             )
+
             wave = Wave(wcfg, str(path))
+            wave.set_trigger(self.cfg.trigger.generate_trigger(
+                wave=wave,
+                scan_nsamp=wave.smp_s // self.cfg.fps,
+            ))
             self.waves.append(wave)
 
     def render(self):
@@ -119,16 +129,12 @@ class WaveConfig(NamedTuple):
 
 class Wave:
     def __init__(self, wcfg: WaveConfig, wave_path: str):
-        # TODO inject Trigger as dependency
         self.cfg = wcfg
         self.smp_s, self.data = wavfile.read(wave_path)
+        self.trigger: Trigger = None
 
-        frames = 1
-        self.trigger = Trigger(
-            wave=self,
-            scan_nsamp=self.smp_s // FPS * frames,
-            align_amount=0.1
-        )
+    def set_trigger(self, trigger: 'Trigger'):
+        self.trigger = trigger
 
     def get_smp(self) -> int:
         return len(self.data)
@@ -142,11 +148,12 @@ class Wave:
 
 class TriggerCfg(NamedTuple):
     name: str
+    # scan_nsamp: int
     args: List = []
     kwargs: Dict[str, Any] = {}
 
-    def generate_trigger(self):
-        return TRIGGERS[self.name](*self.args, **self.kwargs)
+    def generate_trigger(self, wave: Wave, scan_nsamp: int) -> 'Trigger':
+        return TRIGGERS[self.name](wave, scan_nsamp, *self.args, **self.kwargs)
 
 
 TRIGGERS: Dict[str, type] = {}
