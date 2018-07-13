@@ -1,4 +1,5 @@
 import weakref
+from abc import ABC, abstractmethod
 from itertools import count
 from pathlib import Path
 from typing import NamedTuple, Optional, List, Tuple, Dict, Any
@@ -44,7 +45,7 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         master_wave=master_wave,
         fps=fps,
         trigger=TriggerCfg(     # todo
-            name='Trigger',
+            name='CorrelationTrigger',
             kwargs=dict(
                 align_amount=0.1    # TODO: default param?
             )
@@ -163,8 +164,18 @@ def register_trigger(trigger_class: type):
     return trigger_class
 
 
+class Trigger(ABC):
+    @abstractmethod
+    def get_trigger(self, offset: int) -> int:
+        """
+        :param offset: sample index
+        :return: new sample index, corresponding to rising edge
+        """
+        ...
+
+
 @register_trigger
-class Trigger:
+class CorrelationTrigger(Trigger):
     def __init__(self, wave: Wave, scan_nsamp: int, align_amount: float):
         """
         Correlation-based trigger which looks at a window of `scan_nsamp` samples.
