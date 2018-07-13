@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from scipy.io import wavfile
 
 from ovgenpy.util import ceildiv
@@ -187,7 +188,8 @@ class MatplotlibRenderer:
         self.nrows = 0
         self.ncols = 0
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
-        self.axes: np.ndarray[Axes] = None
+        self.axes: List[Axes] = None
+        self.lines: List[Line2D] = None
 
         self.set_layout()   # mutates self
 
@@ -201,7 +203,12 @@ class MatplotlibRenderer:
 
         self.nrows, self.ncols = self.calc_layout()
 
+        # Create Axes
         # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplots.html
+        if self.fig:
+            plt.close(self.fig)     # FIXME
+
+        axes2d: np.ndarray[Axes]
         self.fig, axes2d = plt.subplots(
             self.nrows, self.ncols,
             squeeze=False,
@@ -209,15 +216,33 @@ class MatplotlibRenderer:
             gridspec_kw=dict(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
         )
 
-        # Remove Axis from Axes
+        # remove Axis from Axes
         for ax in axes2d.flatten():
             ax.set_axis_off()
 
-        # If column major:
+        # if column major:
         if not self.cfg.rows_first:
             axes2d = axes2d.T
 
-        self.axes = axes2d.flatten()
+        nwave = len(self.waves)
+        self.axes: List[Axes] = axes2d.flatten().tolist()[:nwave]
+
+        # Create oscilloscope line objects
+        self.lines = []
+        for ax in self.axes:
+            # Setup axes limits
+            ax.set_xlim(0, self.cfg.samples_visible)
+
+            line = ax.plot([0] * self.cfg.samples_visible)[0]
+            self.lines.append(line)
+
+        # Setup figure geometry
+        self.fig.set_dpi(self.DPI)
+        self.fig.set_size_inches(
+            self.cfg.width / self.DPI,
+            self.cfg.height / self.DPI
+        )
+        plt.show(block=False)
 
     def calc_layout(self) -> Tuple[int, int]:
         """
@@ -247,30 +272,17 @@ class MatplotlibRenderer:
             raise ValueError(
                 f'incorrect wave offsets: {nwaves} waves but {ncenters} offsets')
 
-        fig = plt.figure()
-        fig.set_dpi(self.DPI)
-        fig.set_size_inches(
-            self.cfg.width / self.DPI,
-            self.cfg.height / self.DPI
-        )
-
-        ax = plt.Axes(fig, rect=[0., 0., 1., 1.])   # 0% to 100%
-        ax.set_axis_off()
-        fig.add_axes(ax)
-
-        # plt.set_cmap('hot')
-        # plt.imshow(data, aspect='equal')
-
         for idx, wave, center_smp in zip(count(), self.waves, center_smps):  # TODO
-            ax = self.axes[idx]
+            line = self.lines[idx]
 
-            # TODO plot waves
-            ax.plot([1,2,3])
+            # FIXME random data
+            line.set_ydata(np.random.randn(self.cfg.samples_visible))
             print(wave)
             print(center_smp)
 
         print()
-        plt.show()
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
 
 
 class Coords(NamedTuple):
