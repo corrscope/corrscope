@@ -1,23 +1,12 @@
 import weakref
 from pathlib import Path
-from typing import NamedTuple, Optional, List
+from typing import NamedTuple, Optional, List, Tuple
 
 import click
+import numpy as np
 from scipy.io import wavfile
 
 from ovgenpy.util import ceildiv
-
-
-class RendererCfg(NamedTuple):
-    width: int
-    height: int
-
-    rows_first: bool
-
-    nrows: Optional[int]
-    ncols: Optional[int]
-
-    samples_visible: int
 
 
 class Config(NamedTuple):
@@ -27,7 +16,19 @@ class Config(NamedTuple):
     fps: int
     # TODO algorithm and twiddle knobs
 
-    render: RendererCfg
+    render: 'RendererCfg'
+
+
+class RendererCfg(NamedTuple):
+    width: int
+    height: int
+
+    samples_visible: int
+
+    rows_first: bool
+
+    nrows: Optional[int] = None
+    ncols: Optional[int] = None
 
 
 Folder = click.Path(exists=True, file_okay=False)
@@ -37,14 +38,19 @@ FPS = 60  # fps
 
 @click.command()
 @click.argument('wave_dir', type=Folder)
-@click.option('master_wave', type=File, default=None)
-@click.option('fps', default=FPS)
+@click.option('--master-wave', type=File, default=None)
+@click.option('--fps', default=FPS)
 def main(wave_dir: str, master_wave: Optional[str], fps: int):
     cfg = Config(
         wave_dir=wave_dir,
         master_wave=master_wave,
         fps=fps,
-        screen=ScreenSize(640, 360)     # todo
+        render=RendererCfg(     # todo
+            640, 360,
+            samples_visible=1000,
+            rows_first=False,
+            ncols=1
+        )
     )
 
     ovgen = Ovgen(cfg)
@@ -67,8 +73,7 @@ class Ovgen:
 
         for idx, path in enumerate(wave_dir.glob('*.wav')):
             wcfg = WaveConfig(
-                wave_path=str(path),
-                coords=self.get_coords(idx)
+                wave_path=str(path)
             )
             wave = Wave(wcfg, str(path))
             self.waves.append(wave)
@@ -94,23 +99,14 @@ class Ovgen:
             renderer.render_frame(center_smps)
 
 
-class Coords(NamedTuple):
-    """ x is right, y is down """
-    x: int
-    y: int
-    width: int
-    height: int
-
-
 class WaveConfig(NamedTuple):
     wave_path: str
-    coords: Coords
     # TODO color
 
 
 class Wave:
     def __init__(self, wcfg: WaveConfig, wave_path: str):
-        self.wcfg = wcfg
+        self.cfg = wcfg
         self.smp_s, self.data = wavfile.read(wave_path)
 
         # FIXME cfg
@@ -125,13 +121,6 @@ class Wave:
         :return: time (seconds)
         """
         return self.get_smp() / self.smp_s
-
-    # def render(self, trigger_sample: int) -> np.ndarray:
-    #     """
-    #     :param trigger_sample: Sample index
-    #     :return: image or something
-    #     """
-    #     pass    # TODO
 
 
 class Trigger:
@@ -164,8 +153,7 @@ class MatplotlibRenderer:
         self.cfg = cfg
         self.waves = waves
 
-        self.nrows = self.nwidth = None
-        self.ncols = self.nheight = None
+        self.dims: Tuple[int, int] = (0, 0)
         self.calc_layout()
 
         """
@@ -188,33 +176,30 @@ class MatplotlibRenderer:
     def calc_layout(self) -> None:
         """
         Inputs: self.cfg, self.waves
-        Outputs: self.nrows, self.ncols
+        Outputs: self.dims
         """
         cfg = self.cfg
-        waves = self.waves
 
         if cfg.rows_first:
-            nrows = cfg.nrows
-            if nrows is None:
+            major = cfg.nrows
+            if major is None:
                 raise ValueError('invalid cfg: rows_first is True and nrows is None')
-            ncols = ceildiv(len(waves), nrows)
         else:
-            # cols first
-            ncols = cfg.ncols
-            if ncols is None:
+            major = cfg.ncols
+            if major is None:
                 raise ValueError('invalid cfg: rows_first is False and ncols is None')
-            nrows = ceildiv(len(waves), ncols)
 
-        self.nrows = self.nwidth = nrows
-        self.ncols = self.nheight = ncols
+        minor = ceildiv(len(self.waves), major)
+        self.dims = (major, minor)
 
     def _get_coords(self, idx: int):
-        # TODO multi column
+        major, minor = np.unravel_index(idx, self.dims)
         if self.cfg.rows_first:
-
-            (y, x) = (idx // self.nwidth, idx % self.nwidth)
+            row, col = major, minor
         else:
-            (x, y) = (idx // self.nheight, idx % self.nheight)
+            col, row = major, minor
+
+        return Coords(row, col)
 
 
     def render_frame(self, center_smps: List[int]) -> None:
@@ -227,3 +212,8 @@ class MatplotlibRenderer:
             print(wave)
             print(center_smp)
             print()
+
+
+class Coords(NamedTuple):
+    row: int
+    col: int
