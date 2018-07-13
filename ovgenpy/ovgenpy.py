@@ -160,51 +160,61 @@ class Trigger:
 
 
 class MatplotlibRenderer:
-    def __init__(self, rcfg: RendererCfg, waves: List[Wave]):
-        self.rcfg = rcfg
+    def __init__(self, cfg: RendererCfg, waves: List[Wave]):
+        self.cfg = cfg
         self.waves = waves
 
+        self.nrows = self.nwidth = None
+        self.ncols = self.nheight = None
+        self.calc_layout()
+
         """
-        If __init__ reads rcfg, rcfg cannot be hotswapped.
+        If __init__ reads cfg, cfg cannot be hotswapped.
         
-        Reasons to hotswap rcfg: RendererCfg:
+        Reasons to hotswap cfg: RendererCfg:
         - GUI preview size
         - Changing layout
         - Changing #smp drawn (samples_visible)
         (see RendererCfg)
+            
+            Original OVGen does not support hotswapping.
+            It disables changing options during rendering.
         
         Reasons to hotswap trigger algorithms:
         - changing scan_nsamp (cannot be hotswapped, since correlation buffer is incompatible)
         So don't.
         """
 
-        if rcfg.rows_first:
-            nrows = rcfg.nrows
+    def calc_layout(self) -> None:
+        """
+        Inputs: self.cfg, self.waves
+        Outputs: self.nrows, self.ncols
+        """
+        cfg = self.cfg
+        waves = self.waves
+
+        if cfg.rows_first:
+            nrows = cfg.nrows
             if nrows is None:
-                raise ValueError('invalid rcfg: rows_first is True and nrows is None')
+                raise ValueError('invalid cfg: rows_first is True and nrows is None')
             ncols = ceildiv(len(waves), nrows)
         else:
             # cols first
-            ncols = rcfg.ncols
+            ncols = cfg.ncols
             if ncols is None:
-                raise ValueError('invalid rcfg: rows_first is False and ncols is None')
+                raise ValueError('invalid cfg: rows_first is False and ncols is None')
             nrows = ceildiv(len(waves), ncols)
 
-        self.nrows = nrows
-        self.ncols = ncols
-
-    # @property
-    # def rcfg(self):
-    #     return self._rcfg
-    #
-    # @rcfg.setter
-    # def rcfg(self, value: RendererCfg):
-    #
-    #     self._rcfg = value._replace()
+        self.nrows = self.nwidth = nrows
+        self.ncols = self.nheight = ncols
 
     def _get_coords(self, idx: int):
         # TODO multi column
-        rcfg = self.rcfg
+        if self.cfg.rows_first:
+
+            (y, x) = (idx // self.nwidth, idx % self.nwidth)
+        else:
+            (x, y) = (idx // self.nheight, idx % self.nheight)
 
 
     def render_frame(self, center_smps: List[int]) -> None:
