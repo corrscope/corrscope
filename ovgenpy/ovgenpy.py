@@ -43,10 +43,10 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         master_wave=master_wave,
         fps=fps,
         trigger=CorrelationTrigger.Config(
-            trigger_strength=0.1,
+            trigger_strength=10,
 
-            responsiveness=0.1,
-            falloff_width=0.5,
+            responsiveness=1,
+            falloff_width=2,
         ),
         render=RendererConfig(     # todo
             1280, 720,
@@ -107,6 +107,7 @@ class Ovgen:
             for wave in self.waves:
                 sample = round(wave.smp_s * time_seconds)
                 trigger_sample = wave.trigger.get_trigger(sample)
+                print(f'- {trigger_sample}')
                 center_smps.append(trigger_sample)
 
             print(frame)

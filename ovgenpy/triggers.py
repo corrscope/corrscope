@@ -3,6 +3,7 @@ from typing import NamedTuple, List, Dict, Any, TYPE_CHECKING
 from dataclasses import dataclass
 
 import numpy as np
+from matplotlib import pyplot as plt
 from scipy import signal
 
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
@@ -32,12 +33,28 @@ class TriggerConfig:
         raise NotImplementedError
 
 
-SHOW_TRIGGER = True
+SHOW_TRIGGER = False
+SHOW_TRIGGER2 = False
 
 
 def lerp(x: np.ndarray, y: np.ndarray, a: float):
     return x * (1 - a) + y * a
 
+
+class Dummy:
+    def __getattr__(self, item):
+        return self
+
+    def __call__(self, *args, **kwargs):
+        return self
+
+
+def plots(nplot):
+    for i in range(nplot):
+        if SHOW_TRIGGER2:
+            yield plt.subplot(nplot, 1, i+1)
+        else:
+            yield Dummy()
 
 class CorrelationTrigger(Trigger):
     MIN_AMPLITUDE = 0.01
@@ -86,19 +103,47 @@ class CorrelationTrigger(Trigger):
         data = self._wave.get_around(offset, self._buffer_nsamp)
         N = len(data)
 
+        ps = plots(4)
+        next(ps).plot(data)
+
         # Add "step function" to correlation buffer
-        prev_buffer = self._buffer.copy()
-        prev_buffer[N//2:] += trigger_strength
+        halfN = N // 2
+
+        wave_period = get_period(data)
+        window = signal.gaussian(N, std = halfN // 3)
+
+        step = np.empty(N)
+        step[:halfN] = -trigger_strength / 2
+        step[halfN:] = trigger_strength / 2
+        step *= window
+
+        prev_buffer = self._buffer + step
+        next(ps).plot(prev_buffer)
 
         # Find optimal offset (within ±N//4)
         delta = N-1
         radius = N//4
 
         # Calculate correlation
-        corr = signal.correlate(prev_buffer, data)
+        """
+        If offset < optimal, we need to `offset += positive`.
+        - The peak will appear near the right of `data`.
+        
+        Either we must slide prev_buffer to the right:
+        - correlate(data, prev_buffer)
+        - trigger = offset + peak_offset
+        
+        Or we must slide data to the left (by sliding offset to the right):
+        - correlate(prev_buffer, data)
+        - trigger = offset - peak_offset
+        """
+        corr = signal.correlate(data, prev_buffer)
         assert len(corr) == 2*N - 1
+        next(ps).plot(corr)
+
         corr = corr[delta-radius : delta+radius+1]
         delta = radius
+        next(ps).plot(corr)
 
         # argmax(corr) == delta + peak_offset == (data >> peak_offset)
         # peak_offset == argmax(corr) - delta
@@ -108,7 +153,8 @@ class CorrelationTrigger(Trigger):
         # Update correlation buffer (distinct from visible area)
         aligned = self._wave.get_around(trigger, self._buffer_nsamp)
         self._update_buffer(aligned)
-
+        if SHOW_TRIGGER2:
+            plt.show()
         return trigger
 
     def _update_buffer(self, data: np.ndarray) -> None:
