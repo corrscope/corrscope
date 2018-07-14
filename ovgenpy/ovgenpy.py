@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
+import time
 from pathlib import Path
 from typing import NamedTuple, Optional, List
-import time
 
 import click
 
-from ovgenpy.renderer import RendererConfig, MatplotlibRenderer
+from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.triggers import TriggerConfig
 from ovgenpy.wave import WaveConfig, Wave
+
+
+RENDER_PROFILING = True
 
 
 class Config(NamedTuple):
@@ -41,8 +44,9 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         fps=fps,
         trigger=TriggerConfig(     # todo
             name='CorrelationTrigger',
-            kwargs=dict(
-                align_amount=0.1    # TODO: default param?
+            kwargs=dict(    # TODO: CorrelationTriggerConfig with default values
+                window_width=0.5,
+                trigger_strength=0.1
             )
         ),
         render=RendererConfig(     # todo
@@ -61,8 +65,6 @@ COLOR_CHANNELS = 3
 
 
 class Ovgen:
-    PROFILING = True
-
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.waves: List[Wave] = []
@@ -94,7 +96,7 @@ class Ovgen:
 
         renderer = MatplotlibRenderer(self.cfg.render, self.waves)
 
-        if self.PROFILING:
+        if RENDER_PROFILING:
             begin = time.perf_counter()
 
         # For each frame, render each wave
@@ -110,7 +112,7 @@ class Ovgen:
             print(frame)
             renderer.render_frame(center_smps)
 
-        if self.PROFILING:
+        if RENDER_PROFILING:
             dtime = time.perf_counter() - begin
             render_fps = nframes / dtime
             print(f'FPS = {render_fps}')

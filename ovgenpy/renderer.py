@@ -1,5 +1,5 @@
 from itertools import count
-from typing import NamedTuple, Optional, List, Tuple
+from typing import NamedTuple, Optional, List, Tuple, TYPE_CHECKING
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -8,7 +8,9 @@ from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
 from ovgenpy.util import ceildiv
-from ovgenpy.wave import Wave
+
+if TYPE_CHECKING:
+    from ovgenpy.wave import Wave
 
 
 class RendererConfig(NamedTuple):
@@ -19,7 +21,7 @@ class RendererConfig(NamedTuple):
 
     rows_first: bool
 
-    nrows: Optional[int] = None
+    nrows: Optional[int] = None     # TODO set to 1
     ncols: Optional[int] = None
 
     # TODO backend: FigureCanvasBase = FigureCanvasAgg
@@ -46,7 +48,7 @@ class MatplotlibRenderer:
 
     DPI = 96
 
-    def __init__(self, cfg: RendererConfig, waves: List[Wave]):
+    def __init__(self, cfg: RendererConfig, waves: List['Wave']):
         self.cfg = cfg
         self.waves = waves
         self.fig: Figure = None

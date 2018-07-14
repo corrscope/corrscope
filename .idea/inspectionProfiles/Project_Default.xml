@@ -14,6 +14,7 @@
       <option name="ignoredIdentifiers">
         <list>
           <option value="numpy.core.multiarray.ndarray.__getitem__" />
+          <option value="scipy.signal.gaussian" />
         </list>
       </option>
     </inspection_tool>
