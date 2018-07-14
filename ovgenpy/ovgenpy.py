@@ -89,7 +89,7 @@ class Ovgen:
             wave = Wave(wcfg, str(path))
             wave.set_trigger(self.cfg.trigger.generate_trigger(
                 wave=wave,
-                scan_nsamp=wave.smp_s // self.cfg.fps,
+                scan_nsamp=wave.smp_s // self.cfg.fps,  # TODO multiply by a thing
             ))
             self.waves.append(wave)
 
@@ -246,16 +246,29 @@ class CorrelationTrigger(Trigger):
         :param align_amount: Amount of centering to apply to each frame, within [0, 1]
         """
 
-        # probably unnecessary
-        self.wave = weakref.proxy(wave)
+        self.wave = wave
         self.scan_nsamp = scan_nsamp
         self.align_amount = align_amount
+
+        # Correlation buffer containing a series of old data
+        self._prev_buffer = np.zeros(scan_nsamp)
+        self._update_buffer(self._prev_buffer)
+
+    def _update_buffer(self, data: np.ndarray) -> None:
+        """
+        Update self._prev_buffer by adding `data` and a step function.
+        Data is reshaped to taper away from the center.
+        :param data: Wave data, containing scan_nsamp samples
+        """
+        self._prev_buffer = data    # TODO
 
     def get_trigger(self, offset: int) -> int:
         """
         :param offset: sample index
         :return: new sample index, corresponding to rising edge
         """
+        data = self.wave.get_around(offset, self.scan_nsamp)
+        self._update_buffer(data)
         return offset  # todo
 
 
