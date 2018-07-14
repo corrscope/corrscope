@@ -1,9 +1,10 @@
-from typing import NamedTuple
+from typing import NamedTuple, TYPE_CHECKING
 
 import numpy as np
 from scipy.io import wavfile
 
-from ovgenpy.triggers import Trigger
+if TYPE_CHECKING:
+    from ovgenpy.triggers import Trigger
 
 
 class WaveConfig(NamedTuple):
@@ -39,31 +40,33 @@ class Wave:
             self.max_val = max_val
 
     def __getitem__(self, index):
-        """ Convert self.data[item] to a FLOAT within range [-1, 1). """
+        """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         data = self.data[index].astype(FLOAT)
         data += self.offset
         data /= self.max_val
         return data
 
     def get(self, begin: int, end: int):
+        """ Copies self.data[begin:end] with zero-padding. """
         if 0 <= begin and end <= self.nsamp:
             return self[begin:end]
 
         region_len = end - begin
 
-        delta_begin = 0
-        if begin < 0:
-            delta_begin = 0 - begin
-            assert delta_begin > 0      # TODO really not necessary unless I distrust myself
-            assert begin + delta_begin == 0
-            # begin += delta_begin
+        def constrain(idx):
+            delta = 0
+            if idx < 0:
+                delta = 0 - idx             # delta > 0
+                assert idx + delta == 0
 
-        delta_end = 0
-        if end > self.nsamp:
-            delta_end = self.nsamp - end
-            assert delta_end < 0
-            assert end + delta_end == self.nsamp
-            # end += delta_end
+            if idx > self.nsamp:
+                delta = self.nsamp - idx    # delta < 0
+                assert idx + delta == self.nsamp
+
+            return delta, idx
+
+        delta_begin, begin = constrain(begin)
+        delta_end, end = constrain(end)
 
         out = np.zeros(region_len, dtype=FLOAT)
 
@@ -73,6 +76,7 @@ class Wave:
         return out
 
     def get_around(self, sample: int, region_len: int):
+        """" Copies self.data[...] """
         end = sample + region_len // 2
         begin = end - region_len
         return self.get(begin, end)
@@ -88,3 +92,5 @@ class Wave:
         :return: time (seconds)
         """
         return self.get_smp() / self.smp_s
+
+
