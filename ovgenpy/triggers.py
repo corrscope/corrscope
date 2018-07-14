@@ -32,9 +32,6 @@ class TriggerConfig:
         raise NotImplementedError
 
 
-SHOW_TRIGGER = True
-
-
 def lerp(x: np.ndarray, y: np.ndarray, a: float):
     return x * (1 - a) + y * a
 
@@ -72,9 +69,6 @@ class CorrelationTrigger(Trigger):
 
         # Create correlation buffer (containing a series of old data)
         self._buffer = np.zeros(scan_nsamp)
-
-        if SHOW_TRIGGER:
-            self._trigger_renderer = TriggerRenderer(self)
 
     def get_trigger(self, offset: int) -> int:
         """
@@ -137,9 +131,6 @@ class CorrelationTrigger(Trigger):
         self._normalize_buffer(self._buffer)
         self._buffer = lerp(self._buffer, data, responsiveness)
 
-        if SHOW_TRIGGER:
-            self._trigger_renderer.render_frame()
-
     # const method
     def _normalize_buffer(self, data: np.ndarray) -> None:
         """
@@ -167,24 +158,3 @@ def get_period(data: np.ndarray) -> int:
     crossX = zero_crossings[0]
     peakX = crossX + np.argmax(corr[crossX:])
     return peakX
-
-
-if SHOW_TRIGGER:
-    class TriggerRenderer(MatplotlibRenderer):
-        # TODO swappable GraphRenderer class shouldn't depend on waves
-        # probably don't need to debug multiple triggers
-        def __init__(self, trigger: CorrelationTrigger):
-            self.trigger = trigger
-            cfg = RendererConfig(
-                640, 360, trigger._buffer_nsamp, rows_first=False, ncols=1
-            )
-            super().__init__(cfg, [None])
-
-        def render_frame(self) -> None:
-            idx = 0
-
-            # Draw trigger buffer data
-            line = self.lines[idx]
-            data = self.trigger._buffer
-            line.set_ydata(data)
-
