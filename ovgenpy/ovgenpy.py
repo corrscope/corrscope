@@ -160,12 +160,11 @@ class Wave:
         data /= self.max_val
         return data
 
-    def get_around(self, sample: int, region_nsamp: int):
-        end = sample + region_nsamp // 2
-        begin = end - region_nsamp
-
+    def get(self, begin: int, end: int):
         if 0 <= begin and end <= self.nsamp:
             return self[begin:end]
+
+        region_len = end - begin
 
         delta_begin = 0
         if begin < 0:
@@ -181,17 +180,17 @@ class Wave:
             assert end + delta_end == self.nsamp
             # end += delta_end
 
-        out = np.zeros(region_nsamp, dtype=FLOAT)
+        out = np.zeros(region_len, dtype=FLOAT)
 
-        # out[0 : region_nsamp]. == self[begin: end]
-        # out[Δbegin : region_nsamp+Δend] == self[begin + Δbegin: end + Δend]
-        out[delta_begin : region_nsamp+delta_end] = self[begin+delta_begin : end+delta_end]
+        # out[0 : region_len]. == self[begin: end]
+        # out[Δbegin : region_len+Δend] == self[begin + Δbegin: end + Δend]
+        out[delta_begin : region_len+delta_end] = self[begin+delta_begin : end+delta_end]
         return out
 
-
-
-
-
+    def get_around(self, sample: int, region_len: int):
+        end = sample + region_len // 2
+        begin = end - region_len
+        return self.get(begin, end)
 
     def set_trigger(self, trigger: 'Trigger'):
         self.trigger = trigger
