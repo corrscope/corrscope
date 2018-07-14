@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 
 class Trigger(ABC):
     def __init__(self, wave: 'Wave', scan_nsamp: int):
-        self.wave = wave
-        self.scan_nsamp = scan_nsamp
+        self._wave = wave
+        self._scan_nsamp = scan_nsamp
 
     @abstractmethod
     def get_trigger(self, offset: int) -> int:
@@ -26,6 +26,7 @@ class Trigger(ABC):
 
 
 class TriggerConfig:
+    # NamedTuple inheritance does not work. Mark children @dataclass instead.
     # https://github.com/python/typing/issues/427
     def __call__(self, wave: 'Wave', scan_nsamp: int):
         raise NotImplementedError
@@ -64,16 +65,16 @@ class CorrelationTrigger(Trigger):
         :param cfg: Correlation config
         """
         Trigger.__init__(self, wave, scan_nsamp)
-        self.buffer_nsamp = self.scan_nsamp
+        self._buffer_nsamp = self._scan_nsamp
 
         # Correlation config
         self.cfg = cfg
 
         # Create correlation buffer (containing a series of old data)
-        self._prev_buffer = np.zeros(scan_nsamp)    # FIXME always zero
+        self._buffer = np.zeros(scan_nsamp)
 
         if SHOW_TRIGGER:
-            self.trigger_renderer = TriggerRenderer(self)
+            self._trigger_renderer = TriggerRenderer(self)
 
     def get_trigger(self, offset: int) -> int:
         """
@@ -82,11 +83,11 @@ class CorrelationTrigger(Trigger):
         """
         trigger_strength = self.cfg.trigger_strength
 
-        data = self.wave.get_around(offset, self.buffer_nsamp)
+        data = self._wave.get_around(offset, self._buffer_nsamp)
         N = len(data)
 
         # Add "step function" to correlation buffer
-        prev_buffer = self._prev_buffer.copy()
+        prev_buffer = self._buffer.copy()
         prev_buffer[N//2:] += trigger_strength
 
         # Find optimal offset (within ±N//4)
@@ -105,14 +106,14 @@ class CorrelationTrigger(Trigger):
         trigger = offset + peak_offset
 
         # Update correlation buffer (distinct from visible area)
-        aligned = self.wave.get_around(trigger, self.buffer_nsamp)
+        aligned = self._wave.get_around(trigger, self._buffer_nsamp)
         self._update_buffer(aligned)
 
         return trigger
 
     def _update_buffer(self, data: np.ndarray) -> None:
         """
-        Update self._prev_buffer by adding `data` and a step function.
+        Update self._buffer by adding `data` and a step function.
         Data is reshaped to taper away from the center.
 
         :param data: Wave data. WILL BE MODIFIED.
@@ -121,23 +122,23 @@ class CorrelationTrigger(Trigger):
         responsiveness = self.cfg.responsiveness
 
         N = len(data)
-        if N != self.buffer_nsamp:
+        if N != self._buffer_nsamp:
             raise ValueError(f'invalid data length {len(data)} does not match '
-                             f'CorrelationTrigger {self.buffer_nsamp}')
+                             f'CorrelationTrigger {self._buffer_nsamp}')
 
         # New waveform
         self._normalize_buffer(data)
 
         wave_period = get_period(data)
-        window = signal.gaussian(N, std =wave_period * falloff_width)
+        window = signal.gaussian(N, std = wave_period * falloff_width)
         data *= window
 
         # Old buffer
-        self._normalize_buffer(self._prev_buffer)
-        self._prev_buffer = lerp(self._prev_buffer, data, responsiveness)
+        self._normalize_buffer(self._buffer)
+        self._buffer = lerp(self._buffer, data, responsiveness)
 
         if SHOW_TRIGGER:
-            self.trigger_renderer.render_frame()
+            self._trigger_renderer.render_frame()
 
     # const method
     def _normalize_buffer(self, data: np.ndarray) -> None:
@@ -175,7 +176,7 @@ if SHOW_TRIGGER:
         def __init__(self, trigger: CorrelationTrigger):
             self.trigger = trigger
             cfg = RendererConfig(
-                640, 360, trigger.buffer_nsamp, rows_first=False, ncols=1
+                640, 360, trigger._buffer_nsamp, rows_first=False, ncols=1
             )
             super().__init__(cfg, [None])
 
@@ -184,6 +185,6 @@ if SHOW_TRIGGER:
 
             # Draw trigger buffer data
             line = self.lines[idx]
-            data = self.trigger._prev_buffer
+            data = self.trigger._buffer
             line.set_ydata(data)
 
