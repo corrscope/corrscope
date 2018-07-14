@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import NamedTuple, List, Dict, Any, TYPE_CHECKING
+from dataclasses import dataclass
 
 import numpy as np
 from scipy import signal
@@ -10,26 +11,11 @@ if TYPE_CHECKING:
     from ovgenpy.wave import Wave
 
 
-class TriggerConfig(NamedTuple):
-    # TODO specialize for CorrelationTrigger, remove args/kwargs
-    name: str
-    # scan_nsamp: int
-    args: List = []
-    kwargs: Dict[str, Any] = {}
-
-    def generate_trigger(self, wave: 'Wave', scan_nsamp: int) -> 'Trigger':
-        return TRIGGERS[self.name](wave, scan_nsamp, *self.args, **self.kwargs)
-
-
-TRIGGERS: Dict[str, type] = {}
-
-
-def register_trigger(trigger_class: type):
-    TRIGGERS[trigger_class.__name__] = trigger_class
-    return trigger_class
-
-
 class Trigger(ABC):
+    def __init__(self, wave: 'Wave', scan_nsamp: int):
+        self.wave = wave
+        self.scan_nsamp = scan_nsamp
+
     @abstractmethod
     def get_trigger(self, offset: int) -> int:
         """
@@ -39,15 +25,35 @@ class Trigger(ABC):
         ...
 
 
+class TriggerConfig:
+    # https://github.com/python/typing/issues/427
+    def __call__(self, wave: 'Wave', scan_nsamp: int):
+        raise NotImplementedError
+
+
 SHOW_TRIGGER = True
 
 
-@register_trigger
+def lerp(x: np.ndarray, y: np.ndarray, a: float):
+    return x * (1 - a) + y * a
+
+
 class CorrelationTrigger(Trigger):
     MIN_AMPLITUDE = 0.01
 
-    def __init__(self, wave: 'Wave', scan_nsamp: int, falloff_width: float,
-                 trigger_strength: float):
+    @dataclass
+    class Config(TriggerConfig):
+        # get_trigger
+        trigger_strength: float
+
+        # _update_buffer
+        responsiveness: float
+        falloff_width: float
+
+        def __call__(self, wave: 'Wave', scan_nsamp: int):
+            return CorrelationTrigger(wave, scan_nsamp, cfg=self)
+
+    def __init__(self, wave: 'Wave', scan_nsamp: int, cfg: Config):
         """
         Correlation-based trigger which looks at a window of `scan_nsamp` samples.
 
@@ -55,69 +61,33 @@ class CorrelationTrigger(Trigger):
 
         :param wave: Wave file
         :param scan_nsamp: Number of samples used to align adjacent frames
-
-        :param falloff_width: Amount of previous wave to compare (in periods)
-        :param trigger_strength: Amount of centering to apply to each frame, within [0, 1]
+        :param cfg: Correlation config
         """
+        Trigger.__init__(self, wave, scan_nsamp)
+        self.buffer_nsamp = self.scan_nsamp
 
-        self.wave = wave
-        self.buffer_nsamp = scan_nsamp
-        # Correlation buffer calculation
-        self.falloff_width = falloff_width
-        # Wave triggering
-        self.trigger_strength = trigger_strength
+        # Correlation config
+        self.cfg = cfg
 
-        # Correlation buffer containing a series of old data
-        self._prev_buffer = np.zeros(scan_nsamp)
-        self._update_buffer(self._prev_buffer)
+        # Create correlation buffer (containing a series of old data)
+        self._prev_buffer = np.zeros(scan_nsamp)    # FIXME always zero
+
         if SHOW_TRIGGER:
             self.trigger_renderer = TriggerRenderer(self)
-
-    def _normalize_buffer(self, data: np.ndarray) -> None:
-        """
-        Rescales `data` in-place.
-        """
-        peak = np.amax(abs(data))
-        data /= max(peak, self.MIN_AMPLITUDE)
-
-
-    def _update_buffer(self, data: np.ndarray) -> None:
-        """
-        Update self._prev_buffer by adding `data` and a step function.
-        Data is reshaped to taper away from the center.
-
-        :param data: Wave data. WILL BE MODIFIED.
-        """
-        N = len(data)
-        if N != self.buffer_nsamp:
-            raise ValueError(f'invalid data length {len(data)} does not match '
-                             f'CorrelationTrigger {self.buffer_nsamp}')
-
-        # New waveform
-        self._normalize_buffer(data)
-
-        wave_period = get_period(data)
-        window = signal.gaussian(N, std = wave_period * self.falloff_width)
-        data *= window
-
-        # Old buffer
-        self._normalize_buffer(self._prev_buffer)
-        self._prev_buffer += 0.5 * data     # FIXME parameter
-
-        if SHOW_TRIGGER:
-            self.trigger_renderer.render_frame()
 
     def get_trigger(self, offset: int) -> int:
         """
         :param offset: sample index
         :return: new sample index, corresponding to rising edge
         """
+        trigger_strength = self.cfg.trigger_strength
+
         data = self.wave.get_around(offset, self.buffer_nsamp)
         N = len(data)
 
         # Add "step function" to correlation buffer
         prev_buffer = self._prev_buffer.copy()
-        prev_buffer[N//2:] += self.trigger_strength
+        prev_buffer[N//2:] += trigger_strength
 
         # Find optimal offset (within ±N//4)
         delta = N-1
@@ -139,6 +109,43 @@ class CorrelationTrigger(Trigger):
         self._update_buffer(aligned)
 
         return trigger
+
+    def _update_buffer(self, data: np.ndarray) -> None:
+        """
+        Update self._prev_buffer by adding `data` and a step function.
+        Data is reshaped to taper away from the center.
+
+        :param data: Wave data. WILL BE MODIFIED.
+        """
+        falloff_width = self.cfg.falloff_width
+        responsiveness = self.cfg.responsiveness
+
+        N = len(data)
+        if N != self.buffer_nsamp:
+            raise ValueError(f'invalid data length {len(data)} does not match '
+                             f'CorrelationTrigger {self.buffer_nsamp}')
+
+        # New waveform
+        self._normalize_buffer(data)
+
+        wave_period = get_period(data)
+        window = signal.gaussian(N, std =wave_period * falloff_width)
+        data *= window
+
+        # Old buffer
+        self._normalize_buffer(self._prev_buffer)
+        self._prev_buffer = lerp(self._prev_buffer, data, responsiveness)
+
+        if SHOW_TRIGGER:
+            self.trigger_renderer.render_frame()
+
+    # const method
+    def _normalize_buffer(self, data: np.ndarray) -> None:
+        """
+        Rescales `data` in-place.
+        """
+        peak = np.amax(abs(data))
+        data /= max(peak, self.MIN_AMPLITUDE)
 
 
 def get_period(data: np.ndarray) -> int:

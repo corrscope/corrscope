@@ -9,5 +9,6 @@ setup(
     author='nyanpasu64',
     author_email='',
     description='',
-    install_requires=['numpy', 'scipy', 'imageio', 'click', 'matplotlib']     # 'pyqt5'
+    install_requires=['numpy', 'scipy', 'imageio', 'click', 'matplotlib',
+                      'dataclass;python_version<"3.7"']
 )

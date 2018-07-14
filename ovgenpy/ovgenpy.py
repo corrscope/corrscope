@@ -2,12 +2,12 @@
 
 import time
 from pathlib import Path
-from typing import NamedTuple, Optional, List
+from typing import NamedTuple, Optional, List, Any
 
 import click
 
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
-from ovgenpy.triggers import TriggerConfig
+from ovgenpy.triggers import TriggerConfig, CorrelationTrigger
 from ovgenpy.wave import WaveConfig, Wave
 
 
@@ -42,12 +42,11 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         wave_dir=wave_dir,
         master_wave=master_wave,
         fps=fps,
-        trigger=TriggerConfig(     # todo
-            name='CorrelationTrigger',
-            kwargs=dict(    # TODO: CorrelationTriggerConfig with default values
-                window_width=0.5,
-                trigger_strength=0.1
-            )
+        trigger=CorrelationTrigger.Config(
+            trigger_strength=0.1,
+
+            responsiveness=0.1,
+            falloff_width=0.5,
         ),
         render=RendererConfig(     # todo
             1280, 720,
@@ -82,10 +81,11 @@ class Ovgen:
             )
 
             wave = Wave(wcfg, str(path))
-            wave.set_trigger(self.cfg.trigger.generate_trigger(
+            trigger = self.cfg.trigger(
                 wave=wave,
                 scan_nsamp=wave.smp_s // self.cfg.fps,  # TODO multiply by a thing
-            ))
+            )
+            wave.set_trigger(trigger)
             self.waves.append(wave)
 
     def render(self):
