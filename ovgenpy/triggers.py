@@ -81,16 +81,36 @@ class CorrelationTrigger(Trigger):
         N = len(data)
 
         # Add "step function" to correlation buffer
-        prev_buffer = self._buffer.copy()
-        prev_buffer[N//2:] += trigger_strength
+        halfN = N // 2
+        window = signal.gaussian(N, std = halfN // 3)
+
+        step = np.empty(N)
+        step[:halfN] = -trigger_strength / 2
+        step[halfN:] = trigger_strength / 2
+        step *= window
+
+        prev_buffer = self._buffer + step
 
         # Find optimal offset (within ±N//4)
         delta = N-1
         radius = N//4
 
         # Calculate correlation
-        corr = signal.correlate(prev_buffer, data)
+        """
+        If offset < optimal, we need to `offset += positive`.
+        - The peak will appear near the right of `data`.
+        
+        Either we must slide prev_buffer to the right:
+        - correlate(data, prev_buffer)
+        - trigger = offset + peak_offset
+        
+        Or we must slide data to the left (by sliding offset to the right):
+        - correlate(prev_buffer, data)
+        - trigger = offset - peak_offset
+        """
+        corr = signal.correlate(data, prev_buffer)
         assert len(corr) == 2*N - 1
+
         corr = corr[delta-radius : delta+radius+1]
         delta = radius
 
