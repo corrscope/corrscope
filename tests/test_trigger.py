@@ -18,21 +18,33 @@ cfg = CorrelationTrigger.Config(
 
 
 def test_trigger():
-    wave = Wave(None, 'tests/sine440.wav')
+    # wave = Wave(None, 'tests/sine440.wav')
+    wave = Wave(None, 'tests/impulse24000.wav')
+
+    iters = 5
+    plot = False
+    x = 24000 - 500
     trigger = cfg(wave, 4000)
 
-    BIG = 0.95
-    SMALL = 0.05
-    fig, axes = plt.subplots(5, gridspec_kw=dict(
-        top=BIG, right=BIG,
-        bottom=SMALL, left=SMALL,
-    ))    # type: Figure, Axes
-    fig.tight_layout()
+    if plot:
+        BIG = 0.95
+        SMALL = 0.05
+        fig, axes = plt.subplots(iters, gridspec_kw=dict(
+            top=BIG, right=BIG,
+            bottom=SMALL, left=SMALL,
+        ))    # type: Figure, Axes
+        fig.tight_layout()
+    else:
+        axes = range(iters)
 
     for i, ax in enumerate(axes):
         if i:
-            print(trigger.get_trigger(4000))
-        ax.plot(trigger._buffer, label=str(i))
-        ax.grid()
+            offset2 = trigger.get_trigger(x)
+            print(offset2)
+            assert offset2 == 24000
+        if plot:
+            ax.plot(trigger._buffer, label=str(i))
+            ax.grid()
 
-    plt.show()
+    if plot:
+        plt.show()
