@@ -197,7 +197,7 @@ class ZeroCrossingTrigger(Trigger):
     def get_trigger(self, index: int):
         scan_nsamp = self._scan_nsamp
 
-        if index not in range(len(self._wave.data)):
+        if not 0 <= index < self._wave.nsamp:
             return index
 
         if self._wave[index] < 0:
