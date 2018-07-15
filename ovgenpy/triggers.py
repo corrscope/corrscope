@@ -17,9 +17,9 @@ class Trigger(ABC):
         self._scan_nsamp = scan_nsamp
 
     @abstractmethod
-    def get_trigger(self, offset: int) -> int:
+    def get_trigger(self, index: int) -> int:
         """
-        :param offset: sample index
+        :param index: sample index
         :return: new sample index, corresponding to rising edge
         """
         ...
@@ -29,6 +29,8 @@ class TriggerConfig:
     # NamedTuple inheritance does not work. Mark children @dataclass instead.
     # https://github.com/python/typing/issues/427
     def __call__(self, wave: 'Wave', scan_nsamp: int):
+        # idea: __call__ return self.cls(wave, scan_nsamp, cfg=self)
+        # problem: cannot reference XTrigger from within XTrigger
         raise NotImplementedError
 
 
@@ -70,14 +72,14 @@ class CorrelationTrigger(Trigger):
         # Create correlation buffer (containing a series of old data)
         self._buffer = np.zeros(scan_nsamp)
 
-    def get_trigger(self, offset: int) -> int:
+    def get_trigger(self, index: int) -> int:
         """
-        :param offset: sample index
+        :param index: sample index
         :return: new sample index, corresponding to rising edge
         """
         trigger_strength = self.cfg.trigger_strength
 
-        data = self._wave.get_around(offset, self._buffer_nsamp)
+        data = self._wave.get_around(index, self._buffer_nsamp)
         N = len(data)
 
         # Add "step function" to correlation buffer
@@ -117,7 +119,7 @@ class CorrelationTrigger(Trigger):
         # argmax(corr) == delta + peak_offset == (data >> peak_offset)
         # peak_offset == argmax(corr) - delta
         peak_offset = np.argmax(corr) - delta   # type: int
-        trigger = offset + peak_offset
+        trigger = index + peak_offset
 
         # Update correlation buffer (distinct from visible area)
         aligned = self._wave.get_around(trigger, self._buffer_nsamp)
