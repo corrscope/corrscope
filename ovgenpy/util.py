@@ -1,7 +1,7 @@
+from itertools import chain
 from typing import Callable, Tuple, TypeVar, Iterator
 
 import numpy as np
-from itertools import chain
 
 
 def ceildiv(n, d):

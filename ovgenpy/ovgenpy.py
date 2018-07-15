@@ -2,7 +2,7 @@
 
 import time
 from pathlib import Path
-from typing import NamedTuple, Optional, List, Any
+from typing import NamedTuple, Optional, List
 
 import click
 
