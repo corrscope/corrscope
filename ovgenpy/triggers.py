@@ -46,6 +46,7 @@ class CorrelationTrigger(Trigger):
     class Config(TriggerConfig):
         # get_trigger
         trigger_strength: float
+        use_edge_trigger: bool
 
         # _update_buffer
         responsiveness: float
@@ -85,6 +86,7 @@ class CorrelationTrigger(Trigger):
         :return: new sample index, corresponding to rising edge
         """
         trigger_strength = self.cfg.trigger_strength
+        use_edge_trigger = self.cfg.use_edge_trigger
 
         N = self._buffer_nsamp
         data = self._wave.get_around(index, N)
@@ -132,8 +134,10 @@ class CorrelationTrigger(Trigger):
         aligned = self._wave.get_around(trigger, self._buffer_nsamp)
         self._update_buffer(aligned)
 
-        trigger2 = self._zero_trigger.get_trigger(trigger)
-        return trigger2
+        if use_edge_trigger:
+            return self._zero_trigger.get_trigger(trigger)
+        else:
+            return trigger
 
     def _update_buffer(self, data: np.ndarray) -> None:
         """

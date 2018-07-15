@@ -44,9 +44,10 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         fps=fps,
         trigger=CorrelationTrigger.Config(
             trigger_strength=10,
+            use_edge_trigger=True,
 
             responsiveness=1,
-            falloff_width=2,
+            falloff_width=.5,
         ),
         render=RendererConfig(     # todo
             1280, 720,
