@@ -84,13 +84,10 @@ class Wave:
     def set_trigger(self, trigger: 'Trigger'):
         self.trigger = trigger
 
-    def get_smp(self) -> int:
-        return len(self.data)
-
     def get_s(self) -> float:
         """
         :return: time (seconds)
         """
-        return self.get_smp() / self.smp_s
+        return self.nsamp / self.smp_s
 
 

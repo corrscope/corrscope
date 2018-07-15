@@ -86,8 +86,8 @@ class CorrelationTrigger(Trigger):
         """
         trigger_strength = self.cfg.trigger_strength
 
-        data = self._wave.get_around(index, self._buffer_nsamp)
-        N = len(data)
+        N = self._buffer_nsamp
+        data = self._wave.get_around(index, N)
 
         # Add "step function" to correlation buffer
         halfN = N // 2

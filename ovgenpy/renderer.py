@@ -51,6 +51,7 @@ class MatplotlibRenderer:
     def __init__(self, cfg: RendererConfig, waves: List['Wave']):
         self.cfg = cfg
         self.waves = waves
+        self.nwaves = len(waves)
         self.fig: Figure = None
 
         # Setup layout
@@ -94,8 +95,7 @@ class MatplotlibRenderer:
         if not self.cfg.rows_first:
             axes2d = axes2d.T
 
-        nwave = len(self.waves)
-        self.axes: List[Axes] = axes2d.flatten().tolist()[:nwave]
+        self.axes: List[Axes] = axes2d.flatten().tolist()[:self.nwaves]
 
         # Create oscilloscope line objects
         self.lines = []
@@ -121,27 +121,25 @@ class MatplotlibRenderer:
         :return: (nrows, ncols)
         """
         cfg = self.cfg
-        nwaves = len(self.waves)
 
         if cfg.rows_first:
             nrows = cfg.nrows
             if nrows is None:
                 raise ValueError('invalid cfg: rows_first is True and nrows is None')
-            ncols = ceildiv(nwaves, nrows)
+            ncols = ceildiv(self.nwaves, nrows)
         else:
             ncols = cfg.ncols
             if ncols is None:
                 raise ValueError('invalid cfg: rows_first is False and ncols is None')
-            nrows = ceildiv(nwaves, ncols)
+            nrows = ceildiv(self.nwaves, ncols)
 
         return nrows, ncols
 
     def render_frame(self, center_smps: List[int]) -> None:
-        nwaves = len(self.waves)
         ncenters = len(center_smps)
-        if nwaves != ncenters:
+        if self.nwaves != ncenters:
             raise ValueError(
-                f'incorrect wave offsets: {nwaves} waves but {ncenters} offsets')
+                f'incorrect wave offsets: {self.nwaves} waves but {ncenters} offsets')
 
         for idx, wave, center_smp in zip(count(), self.waves, center_smps):
             # Draw waveform data
