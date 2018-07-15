@@ -39,7 +39,7 @@ class Wave:
             self.offset = 0
             self.max_val = max_val
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> 'np.ndarray[FLOAT]':
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         data = self.data[index].astype(FLOAT)
         data += self.offset
