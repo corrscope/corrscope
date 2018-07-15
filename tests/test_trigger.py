@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pytest
 
 from ovgenpy import triggers
 from matplotlib.axes import Axes
@@ -10,14 +11,20 @@ from ovgenpy.wave import Wave
 
 triggers.SHOW_TRIGGER = False
 
-cfg = CorrelationTrigger.Config(
-    trigger_strength=1,
-    responsiveness=1,
-    falloff_width=2,
-)
+
+@pytest.fixture(scope='session', params=[False, True])
+def cfg(request):
+    use_edge_trigger = request.param
+    return CorrelationTrigger.Config(
+        trigger_strength=1,
+        use_edge_trigger=use_edge_trigger,
+
+        responsiveness=1,
+        falloff_width=2,
+    )
 
 
-def test_trigger():
+def test_trigger(cfg):
     # wave = Wave(None, 'tests/sine440.wav')
     wave = Wave(None, 'tests/impulse24000.wav')
 
