@@ -1,4 +1,4 @@
-from typing import NamedTuple, TYPE_CHECKING
+from typing import NamedTuple, TYPE_CHECKING, Optional
 
 import numpy as np
 from scipy.io import wavfile
@@ -18,7 +18,7 @@ FLOAT = np.double
 
 
 class Wave:
-    def __init__(self, wcfg: WaveConfig, wave_path: str):
+    def __init__(self, wcfg: Optional[WaveConfig], wave_path: str):
         self.cfg = wcfg
         # TODO mmap
         self.smp_s, self.data = wavfile.read(wave_path)     # type: int, np.ndarray
