@@ -1,5 +1,4 @@
-from itertools import count
-from typing import NamedTuple, Optional, List, Tuple, TYPE_CHECKING
+from typing import NamedTuple, Optional, List, Tuple
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -9,15 +8,10 @@ from matplotlib.lines import Line2D
 
 from ovgenpy.util import ceildiv
 
-if TYPE_CHECKING:
-    from ovgenpy.wave import Wave
-
 
 class RendererConfig(NamedTuple):
     width: int
     height: int
-
-    samples_visible: int
 
     rows_first: bool
 
@@ -48,19 +42,19 @@ class MatplotlibRenderer:
 
     DPI = 96
 
-    def __init__(self, cfg: RendererConfig, waves: List['Wave']):
+    def __init__(self, cfg: RendererConfig, nplots: int):
         self.cfg = cfg
-        self.waves = waves
-        self.nwaves = len(waves)
+        self.nplots = nplots
         self.fig: Figure = None
 
         # Setup layout
 
         self.nrows = 0
         self.ncols = 0
+
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
-        self.axes: List[Axes] = None
-        self.lines: List[Line2D] = None
+        self.axes: List[Axes] = None        # set by set_layout()
+        self.lines: List[Line2D] = None     # set by render_frame() first call
 
         self.set_layout()   # mutates self
 
@@ -95,17 +89,7 @@ class MatplotlibRenderer:
         if not self.cfg.rows_first:
             axes2d = axes2d.T
 
-        self.axes: List[Axes] = axes2d.flatten().tolist()[:self.nwaves]
-
-        # Create oscilloscope line objects
-        self.lines = []
-        for ax in self.axes:
-            # Setup axes limits
-            ax.set_xlim(0, self.cfg.samples_visible)
-            ax.set_ylim(-1, 1)
-
-            line = ax.plot([0] * self.cfg.samples_visible)[0]
-            self.lines.append(line)
+        self.axes: List[Axes] = axes2d.flatten().tolist()[:self.nplots]
 
         # Setup figure geometry
         self.fig.set_dpi(self.DPI)
@@ -126,26 +110,37 @@ class MatplotlibRenderer:
             nrows = cfg.nrows
             if nrows is None:
                 raise ValueError('invalid cfg: rows_first is True and nrows is None')
-            ncols = ceildiv(self.nwaves, nrows)
+            ncols = ceildiv(self.nplots, nrows)
         else:
             ncols = cfg.ncols
             if ncols is None:
                 raise ValueError('invalid cfg: rows_first is False and ncols is None')
-            nrows = ceildiv(self.nwaves, ncols)
+            nrows = ceildiv(self.nplots, ncols)
 
         return nrows, ncols
 
-    def render_frame(self, center_smps: List[int]) -> None:
-        ncenters = len(center_smps)
-        if self.nwaves != ncenters:
+    def render_frame(self, datas: List[np.ndarray]) -> None:
+        ndata = len(datas)
+        if self.nplots != ndata:
             raise ValueError(
-                f'incorrect wave offsets: {self.nwaves} waves but {ncenters} offsets')
+                f'incorrect data to plot: {self.nplots} plots but {ndata} datas')
 
-        for idx, wave, center_smp in zip(count(), self.waves, center_smps):
-            # Draw waveform data
-            line = self.lines[idx]
-            data = wave.get_around(center_smp, self.cfg.samples_visible)
-            line.set_ydata(data)
+        # Initialize axes and draw waveform data
+        if self.lines is None:
+            self.lines = []
+            for idx, data in enumerate(datas):
+                ax = self.axes[idx]
+                ax.set_xlim(0, len(data) - 1)
+                ax.set_ylim(-1, 1)
+
+                line = ax.plot(data)[0]
+                self.lines.append(line)
+
+        # Draw waveform data
+        else:
+            for idx, data in enumerate(datas):
+                line = self.lines[idx]
+                line.set_ydata(data)
 
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
