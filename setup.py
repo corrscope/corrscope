@@ -10,5 +10,5 @@ setup(
     author_email='',
     description='',
     install_requires=['numpy', 'scipy', 'imageio', 'click', 'matplotlib',
-                      'dataclass;python_version<"3.7"']
+                      'dataclasses;python_version<"3.7"']
 )
