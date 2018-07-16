@@ -50,7 +50,6 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         ),
         render=RendererConfig(     # todo
             1280, 720,
-            rows_first=False,
             ncols=1
         )
     )

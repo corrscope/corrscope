@@ -1,6 +1,7 @@
 from typing import NamedTuple, Optional, List, Tuple
 
 import numpy as np
+from dataclasses import dataclass
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -9,21 +10,29 @@ from matplotlib.lines import Line2D
 from ovgenpy.util import ceildiv
 
 
-class RendererConfig(NamedTuple):
+@dataclass
+class RendererConfig:
     width: int
     height: int
 
-    rows_first: bool
-
-    nrows: Optional[int] = None     # TODO set to 1
+    nrows: Optional[int] = None
     ncols: Optional[int] = None
 
-    # TODO backend: FigureCanvasBase = FigureCanvasAgg
+    def __post_init__(self):
+        if not self.nrows:
+            self.nrows = None
+        if not self.ncols:
+            self.ncols = None
+
+        if self.nrows and self.ncols:
+            raise ValueError('cannot manually assign both nrows and ncols')
+
+        if not self.nrows and not self.ncols:
+            self.ncols = 1
 
 
 class MatplotlibRenderer:
     """
-    TODO disable antialiasing
     If __init__ reads cfg, cfg cannot be hotswapped.
 
     Reasons to hotswap cfg: RendererCfg:
@@ -48,6 +57,8 @@ class MatplotlibRenderer:
         self.fig: Figure = None
 
         # Setup layout
+        # "ncols=1" is good for vertical layouts.
+        # But "nrows=X" is good for left-to-right grids.
 
         self.nrows = 0
         self.ncols = 0
@@ -60,13 +71,14 @@ class MatplotlibRenderer:
 
     def set_layout(self) -> None:
         """
-        Inputs: self.cfg, self.waves, self.fig
-        Outputs: self.nrows, self.ncols, self.axes
-
         Creates a flat array of Matplotlib Axes, with the new layout.
+        Opens a window showing the Figure (and Axes).
+
+        Inputs: self.cfg, self.fig
+        Outputs: self.nrows, self.ncols, self.axes
         """
 
-        self.nrows, self.ncols = self.calc_layout()
+        self.nrows, self.ncols = self._calc_layout()
 
         # Create Axes
         # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplots.html
@@ -86,7 +98,7 @@ class MatplotlibRenderer:
             ax.set_axis_off()
 
         # if column major:
-        if not self.cfg.rows_first:
+        if self.cfg.ncols:
             axes2d = axes2d.T
 
         self.axes: List[Axes] = axes2d.flatten().tolist()[:self.nplots]
@@ -99,14 +111,14 @@ class MatplotlibRenderer:
         )
         plt.show(block=False)
 
-    def calc_layout(self) -> Tuple[int, int]:
+    def _calc_layout(self) -> Tuple[int, int]:
         """
         Inputs: self.cfg, self.waves
         :return: (nrows, ncols)
         """
         cfg = self.cfg
 
-        if cfg.rows_first:
+        if cfg.nrows:
             nrows = cfg.nrows
             if nrows is None:
                 raise ValueError('invalid cfg: rows_first is True and nrows is None')
