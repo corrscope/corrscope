@@ -20,8 +20,7 @@ FLOAT = np.double
 class Wave:
     def __init__(self, wcfg: Optional[WaveConfig], wave_path: str):
         self.cfg = wcfg
-        # TODO mmap
-        self.smp_s, self.data = wavfile.read(wave_path)     # type: int, np.ndarray
+        self.smp_s, self.data = wavfile.read(wave_path, mmap=True)  # type: int, np.ndarray
         self.nsamp = len(self.data)
         self.trigger: Trigger = None
 
