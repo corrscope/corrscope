@@ -19,9 +19,14 @@ class Config(NamedTuple):
     master_wave: Optional[str]
     fps: int
     time_visible_ms: int
+    scan_ratio: float
 
     trigger: TriggerConfig  # Maybe overriden per Wave
     render: RendererConfig
+
+    @property
+    def time_visible_s(self) -> float:
+        return self.time_visible_ms / 1000
 
 
 Folder = click.Path(exists=True, file_okay=False)
@@ -40,12 +45,13 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         master_wave=master_wave,
         fps=fps,
         time_visible_ms=25,
+        scan_ratio=1,
 
         trigger=CorrelationTrigger.Config(
             trigger_strength=10,
             use_edge_trigger=True,
 
-            responsiveness=1,
+            responsiveness=0.1,
             falloff_width=.5,
         ),
         render=RendererConfig(     # todo
@@ -82,7 +88,9 @@ class Ovgen:
             wave = Wave(wcfg, str(path))
             trigger = self.cfg.trigger(
                 wave=wave,
-                scan_nsamp=wave.smp_s // self.cfg.fps,  # TODO multiply by a thing
+                scan_nsamp=round(
+                    self.cfg.time_visible_s * self.cfg.scan_ratio * wave.smp_s),
+                # I tried extracting variable, but got confused as a result
             )
             wave.set_trigger(trigger)
             self.waves.append(wave)
@@ -91,7 +99,7 @@ class Ovgen:
 
     def _render(self):
         # Calculate number of frames (TODO master file?)
-        time_visible_ms = self.cfg.time_visible_ms
+        time_visible_s = self.cfg.time_visible_s
         fps = self.cfg.fps
 
         nframes = fps * self.waves[0].get_s()
@@ -110,7 +118,7 @@ class Ovgen:
             # Get data from each wave
             for wave in self.waves:
                 sample = round(wave.smp_s * time_seconds)
-                region_len = round(wave.smp_s * time_visible_ms / 1000)
+                region_len = round(wave.smp_s * time_visible_s)
 
                 trigger_sample = wave.trigger.get_trigger(sample)
                 print(f'- {trigger_sample}')
