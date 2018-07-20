@@ -30,6 +30,7 @@ class Wave:
         def is_type(parent: type) -> bool:
             return np.issubdtype(dtype, parent)
 
+        # Numpy types: https://docs.scipy.org/doc/numpy/reference/arrays.scalars.html
         if is_type(np.integer):
             max_int = np.iinfo(dtype).max + 1
             assert max_int & (max_int - 1) == 0  # power of 2
@@ -42,7 +43,7 @@ class Wave:
                 self.center = 0
                 self.max_val = max_int
 
-        elif is_type(np.float):
+        elif is_type(np.floating):
             self.center = 0
             self.max_val = 1
 
