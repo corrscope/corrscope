@@ -14,7 +14,7 @@ class WaveConfig(NamedTuple):
     # TODO wave-specific trigger options?
 
 
-FLOAT = np.double
+FLOAT = np.single
 
 
 class Wave:
