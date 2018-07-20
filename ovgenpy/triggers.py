@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from scipy import signal
 
 from ovgenpy.util import find
+from ovgenpy.wave import FLOAT
+
 
 if TYPE_CHECKING:
     from ovgenpy.wave import Wave
@@ -74,7 +76,7 @@ class CorrelationTrigger(Trigger):
         self.cfg = cfg
 
         # Create correlation buffer (containing a series of old data)
-        self._buffer = np.zeros(scan_nsamp)
+        self._buffer = np.zeros(scan_nsamp, dtype=FLOAT)    # type: np.ndarray[FLOAT]
 
         # Create zero crossing trigger, for postprocessing results
         self._zero_trigger = ZeroCrossingTrigger(wave, self.ZERO_CROSSING_SCAN)
@@ -92,7 +94,7 @@ class CorrelationTrigger(Trigger):
 
         # prev_buffer = windowed step function + self._buffer
         halfN = N // 2
-        step = np.empty(N)
+        step = np.empty(N, dtype=FLOAT)     # type: np.ndarray[FLOAT]
         step[:halfN] = -trigger_strength / 2
         step[halfN:] = trigger_strength / 2
 
