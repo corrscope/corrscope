@@ -14,7 +14,7 @@ class WaveConfig(NamedTuple):
     # TODO wave-specific trigger options?
 
 
-FLOAT = np.double
+FLOAT = np.single
 
 
 class Wave:
@@ -57,7 +57,7 @@ class Wave:
         data /= self.max_val
         return data
 
-    def get(self, begin: int, end: int):
+    def get(self, begin: int, end: int) -> 'np.ndarray[FLOAT]':
         """ Copies self.data[begin:end] with zero-padding. """
         if 0 <= begin and end <= self.nsamp:
             return self[begin:end]
