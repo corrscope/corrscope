@@ -28,20 +28,32 @@ class Wave:
         # TODO extract function, unit tests... switch to pysoundfile and drop logic
         dtype = self.data.dtype
 
-        max_val = np.iinfo(dtype).max + 1
-        assert max_val & (max_val - 1) == 0     # power of 2
+        def is_type(parent: type) -> bool:
+            return np.issubdtype(dtype, parent)
 
-        if np.issubdtype(dtype, np.uint):
-            self.offset = -max_val // 2
-            self.max_val = max_val // 2
+        if is_type(np.integer):
+            max_int = np.iinfo(dtype).max + 1
+            assert max_int & (max_int - 1) == 0  # power of 2
+
+            if is_type(np.unsignedinteger):
+                self.center = max_int // 2
+                self.max_val = max_int // 2
+
+            elif is_type(np.signedinteger):
+                self.center = 0
+                self.max_val = max_int
+
+        elif is_type(np.float):
+            self.center = 0
+            self.max_val = 1
+
         else:
-            self.offset = 0
-            self.max_val = max_val
+            raise ValueError(f'unexpected wavfile dtype {dtype}')
 
     def __getitem__(self, index: int) -> 'np.ndarray[FLOAT]':
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         data = self.data[index].astype(FLOAT)
-        data += self.offset
+        data -= self.center
         data /= self.max_val
         return data
 
