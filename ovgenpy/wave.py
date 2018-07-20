@@ -8,10 +8,11 @@ if TYPE_CHECKING:
 
 
 class WaveConfig(NamedTuple):
-    wave_path: str
-    # TODO color
+    amplification: float
 
-    # TODO wave-specific trigger options?
+
+def dummy_wave_config() -> WaveConfig:
+    return WaveConfig(amplification=1)
 
 
 FLOAT = np.single
@@ -19,10 +20,9 @@ FLOAT = np.single
 
 class Wave:
     def __init__(self, wcfg: Optional[WaveConfig], wave_path: str):
-        self.cfg = wcfg
+        self.cfg = wcfg or dummy_wave_config()                      # type: WaveConfig
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)  # type: int, np.ndarray
         self.nsamp = len(self.data)
-        self.trigger: Trigger = None
 
         # Calculate scaling factor.
         dtype = self.data.dtype
@@ -90,9 +90,6 @@ class Wave:
         end = sample + region_len // 2
         begin = end - region_len
         return self.get(begin, end)
-
-    def set_trigger(self, trigger: 'Trigger'):
-        self.trigger = trigger
 
     def get_s(self) -> float:
         """
