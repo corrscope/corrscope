@@ -109,11 +109,11 @@ class CorrelationTrigger(Trigger):
         """
         If offset < optimal, we need to `offset += positive`.
         - The peak will appear near the right of `data`.
-        
+
         Either we must slide prev_buffer to the right:
         - correlate(data, prev_buffer)
         - trigger = offset + peak_offset
-        
+
         Or we must slide data to the left (by sliding offset to the right):
         - correlate(prev_buffer, data)
         - trigger = offset - peak_offset
@@ -233,6 +233,6 @@ class ZeroCrossingTrigger(Trigger):
 
         CorrelationTrigger tries to maximize @trigger - @(trigger-1). I think always
         incrementing zeros (impulse24000 = 24000) is acceptable.
-        
+
         - To be consistent, we should increment zeros whenever we *start* there.
         """
