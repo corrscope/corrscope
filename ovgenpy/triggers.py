@@ -90,19 +90,19 @@ class CorrelationTrigger(Trigger):
         N = self._buffer_nsamp
         data = self._wave.get_around(index, N)
 
-        # Add "step function" to correlation buffer
+        # prev_buffer = windowed step function + self._buffer
         halfN = N // 2
-        window = signal.gaussian(N, std = halfN // 3)
-
         step = np.empty(N)
         step[:halfN] = -trigger_strength / 2
         step[halfN:] = trigger_strength / 2
+
+        window = signal.gaussian(N, std = halfN // 3)
         step *= window
 
         prev_buffer = self._buffer + step
 
         # Find optimal offset (within ±N//4)
-        delta = N-1
+        mid = N-1
         radius = N//4
 
         # Calculate correlation
@@ -121,12 +121,15 @@ class CorrelationTrigger(Trigger):
         corr = signal.correlate(data, prev_buffer)
         assert len(corr) == 2*N - 1
 
-        corr = corr[delta-radius : delta+radius+1]
-        delta = radius
+        left = mid - radius
+        right = mid + radius + 1
 
-        # argmax(corr) == delta + peak_offset == (data >> peak_offset)
-        # peak_offset == argmax(corr) - delta
-        peak_offset = np.argmax(corr) - delta   # type: int
+        corr = corr[left:right]
+        mid = mid - left
+
+        # argmax(corr) == mid + peak_offset == (data >> peak_offset)
+        # peak_offset == argmax(corr) - mid
+        peak_offset = np.argmax(corr) - mid   # type: int
         trigger = index + peak_offset
 
         # Update correlation buffer (distinct from visible area)
