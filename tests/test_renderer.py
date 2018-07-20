@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import pytest
-from matplotlib import pyplot as plt
 
 from ovgenpy.renderer import RendererConfig, MatplotlibRenderer
 
