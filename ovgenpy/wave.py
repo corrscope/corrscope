@@ -25,7 +25,6 @@ class Wave:
         self.trigger: Trigger = None
 
         # Calculate scaling factor.
-        # TODO extract function, unit tests... switch to pysoundfile and drop logic
         dtype = self.data.dtype
 
         def is_type(parent: type) -> bool:
