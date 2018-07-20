@@ -36,15 +36,15 @@ class Wave:
             assert max_int & (max_int - 1) == 0  # power of 2
 
             if is_type(np.unsignedinteger):
-                self.offset = -max_int // 2
+                self.center = max_int // 2
                 self.max_val = max_int // 2
 
             elif is_type(np.signedinteger):
-                self.offset = 0
+                self.center = 0
                 self.max_val = max_int
 
         elif is_type(np.float):
-            self.offset = 0
+            self.center = 0
             self.max_val = 1
 
         else:
@@ -53,7 +53,7 @@ class Wave:
     def __getitem__(self, index: int) -> 'np.ndarray[FLOAT]':
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         data = self.data[index].astype(FLOAT)
-        data += self.offset
+        data -= self.center
         data /= self.max_val
         return data
 
