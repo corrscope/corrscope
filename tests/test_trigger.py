@@ -1,10 +1,9 @@
 import matplotlib.pyplot as plt
 import pytest
-
-from ovgenpy import triggers
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
+from ovgenpy import triggers
 from ovgenpy.triggers import CorrelationTrigger
 from ovgenpy.wave import Wave
 
