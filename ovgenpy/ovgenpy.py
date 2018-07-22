@@ -63,7 +63,8 @@ def main(wave_dir: str, audio_path: Optional[str], fps: int, output: str):
             ncols=1
         ),
         outputs=[
-            outputs.FFmpegOutputConfig(output)
+            # outputs.FFmpegOutputConfig(output)
+            outputs.FFplayOutputConfig()
         ],
         create_window=False
     )
