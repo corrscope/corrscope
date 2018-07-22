@@ -95,7 +95,7 @@ class FFmpegOutput(Output):
         super().__init__(ovgen_cfg, cfg)
 
         # Input
-        templates: List[str] = [FFMPEG]
+        templates: List[str] = [FFMPEG, '-y']
 
         # TODO factor out "get_ffmpeg_input"... what if wrong abstraction?
         templates += ffmpeg_input_video(ovgen_cfg)  # video
