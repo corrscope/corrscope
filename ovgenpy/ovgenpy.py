@@ -16,7 +16,7 @@ RENDER_PROFILING = True
 
 class Config(NamedTuple):
     wave_dir: str
-    master_wave: Optional[str]
+    audio_path: Optional[str]
     fps: int
     time_visible_ms: int
     scan_ratio: float
@@ -39,10 +39,10 @@ _FPS = 60  # f_s
 @click.argument('wave_dir', type=Folder)
 @click.option('--master-wave', type=File, default=None)
 @click.option('--fps', default=_FPS)
-def main(wave_dir: str, master_wave: Optional[str], fps: int):
+def main(wave_dir: str, audio_path: Optional[str], fps: int):
     cfg = Config(
         wave_dir=wave_dir,
-        master_wave=master_wave,
+        audio_path=audio_path,
         fps=fps,
         time_visible_ms=25,
         scan_ratio=1,
