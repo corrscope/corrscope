@@ -41,9 +41,6 @@ def register_output(config_t: Type[OutputConfig]):
     return inner
 
 
-# Output subclasses
-
-## FFMPEG templates TODO rename to "...template..."
 FFMPEG = 'ffmpeg'
 FFPLAY = 'ffplay'
 
@@ -67,54 +64,33 @@ FFMPEG_OUTPUT_VIDEO_DEFAULT = '-c:v libx264 -crf 18 -bf 2 -flags +cgop -pix_fmt 
 FFMPEG_OUTPUT_AUDIO_DEFAULT = '-c:a aac -b:a 384k'
 
 
-def parse_templates(templates: List[str]) -> List[str]:
-    return [arg
-            for template in templates
-            for arg in shlex.split(template)]
+class _FFmpegCommand:
+    def __init__(self, templates: List[str], ovgen_cfg: 'Config'):
+        self.templates = templates
+        self.ovgen_cfg = ovgen_cfg
+
+        self.templates += ffmpeg_input_video(ovgen_cfg)  # video
+        if self.ovgen_cfg.audio_path:
+            self.templates += ffmpeg_input_audio(audio_path=ovgen_cfg.audio_path)    # audio
+
+    def add_output(self, cfg: 'FFmpegOutputConfig') -> None:
+        self.templates.append(cfg.video_template)  # video
+        if self.ovgen_cfg.audio_path:
+            self.templates.append(cfg.audio_template)  # audio
+
+    def popen(self) -> subprocess.Popen:
+        return subprocess.Popen(self._generate_args(), stdin=subprocess.PIPE)
+
+    def _generate_args(self) -> List[str]:
+        return [arg
+                for template in self.templates
+                for arg in shlex.split(template)]
 
 
-# @dataclass
-# class FFmpegCommand:
-#     audio: Optional[str] = None
-#
-#     def generate_command(self):
-
-
-@dataclass
-class FFmpegOutputConfig(OutputConfig):
-    path: str
-    video_template: str = FFMPEG_OUTPUT_VIDEO_DEFAULT
-    audio_template: str = FFMPEG_OUTPUT_AUDIO_DEFAULT
-
-
-@register_output(FFmpegOutputConfig)
-class FFmpegOutput(Output):
-    # TODO https://github.com/kkroening/ffmpeg-python
-
-    def __init__(self, ovgen_cfg: 'Config', cfg: FFmpegOutputConfig):
-        super().__init__(ovgen_cfg, cfg)
-
-        # Input
-        templates: List[str] = [FFMPEG, '-y']
-
-        # TODO factor out "get_ffmpeg_input"... what if wrong abstraction?
-        templates += ffmpeg_input_video(ovgen_cfg)  # video
-        if ovgen_cfg.audio_path:
-            templates += ffmpeg_input_audio(audio_path=ovgen_cfg.audio_path)    # audio
-
-        # Output
-        templates.append(cfg.video_template)  # video
-        if ovgen_cfg.audio_path:
-            templates.append(cfg.audio_template)  # audio
-
-        templates.append(cfg.path)  # output filename
-
-        # Split arguments by words
-        args = parse_templates(templates)
-
-        self._popen = subprocess.Popen(args, stdin=subprocess.PIPE)
+class ProcessOutput(Output):
+    def open(self, popen: subprocess.Popen):
+        self._popen = popen
         self._stream = self._popen.stdin
-
         # Python documentation discourages accessing popen.stdin. It's wrong.
         # https://stackoverflow.com/a/9886747
 
@@ -124,26 +100,41 @@ class FFmpegOutput(Output):
     def close(self):
         self._stream.close()
         self._popen.wait()
-    # {ffmpeg}
-    #
-    #     # input
-    #     -f image2pipe -framerate {framerate} -c:v {IMAGE_FORMAT} -i {img}
-    #     -i {audio}
-    #
-    #     # output
-    #     -c:a aac -b:a 384k
-    #     -c:v libx264 -crf 18 -bf 2 -flags +cgop -pix_fmt yuv420p -movflags faststart
-    #     {outfile}
 
 
+# FFmpegOutput
+@dataclass
+class FFmpegOutputConfig(OutputConfig):
+    path: str
+    video_template: str = FFMPEG_OUTPUT_VIDEO_DEFAULT
+    audio_template: str = FFMPEG_OUTPUT_AUDIO_DEFAULT
+
+
+@register_output(FFmpegOutputConfig)
+class FFmpegOutput(ProcessOutput):
+    def __init__(self, ovgen_cfg: 'Config', cfg: FFmpegOutputConfig):
+        super().__init__(ovgen_cfg, cfg)
+
+        ffmpeg = _FFmpegCommand([FFMPEG, '-y'], ovgen_cfg)
+        ffmpeg.add_output(cfg)
+        self.open(ffmpeg.popen())
+
+
+# FFplayOutput
 class FFplayOutputConfig(OutputConfig):
     pass
 
+
 @register_output(FFplayOutputConfig)
-class FFplayOutput(Output):
-    pass
+class FFplayOutput(ProcessOutput):
+    def __init__(self, ovgen_cfg: 'Config', cfg: FFplayOutputConfig):
+        super().__init__(ovgen_cfg, cfg)
+
+        ffplay = _FFmpegCommand([FFPLAY], ovgen_cfg)
+        self.open(ffplay.popen())
 
 
+# ImageOutput
 @dataclass
 class ImageOutputConfig:
     path_prefix: str
