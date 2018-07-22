@@ -135,12 +135,9 @@ class Ovgen:
                 region_len = round(wave.smp_s * time_visible_s)
 
                 trigger_sample = wave.trigger.get_trigger(sample)
-                print(f'- {trigger_sample}')
-
                 datas.append(wave.get_around(trigger_sample, region_len))
 
             # Render frame
-            print(frame)
             renderer.render_frame(datas)
 
             # Output frame

@@ -32,7 +32,6 @@ def test_renderer(mock_show):
     https://stackoverflow.com/a/27950953
     "[I]mage comparison tests end up bring more trouble than they are worth"
     """
-    # monkeypatch.setattr(plt, 'show', lambda *args, **kwargs: None)
 
     # 2 columns
     cfg = RendererConfig(WIDTH, HEIGHT, ncols=2)
