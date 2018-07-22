@@ -63,8 +63,8 @@ def main(wave_dir: str, audio_path: Optional[str], fps: int, output: str):
             ncols=1
         ),
         outputs=[
-            # outputs.FFmpegOutputConfig(output)
-            outputs.FFplayOutputConfig()
+            # outputs.FFmpegOutputConfig(output),
+            outputs.FFplayOutputConfig(),
         ],
         create_window=False
     )
@@ -146,11 +146,6 @@ class Ovgen:
                 frame = renderer.get_frame()
             for output in self.outputs:
                 output.write_frame(frame)
-
-            # TODO write to file
-            # how to write ndarray to ffmpeg?
-            # idea: imageio.mimwrite(stdout, ... wait it's blocking = bad
-            # idea: -f rawvideo, pass cfg.render.options... to ffmpeg_input_video()
 
         if RENDER_PROFILING:
             # noinspection PyUnboundLocalVariable
