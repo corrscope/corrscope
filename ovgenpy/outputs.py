@@ -2,7 +2,7 @@
 import shlex
 import subprocess
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Type, List
+from typing import TYPE_CHECKING, Type, List, Union
 
 from dataclasses import dataclass
 
@@ -73,13 +73,16 @@ class _FFmpegCommand:
         if self.ovgen_cfg.audio_path:
             self.templates += ffmpeg_input_audio(audio_path=ovgen_cfg.audio_path)    # audio
 
-    def add_output(self, cfg: 'FFmpegOutputConfig') -> None:
+    def add_output(self, cfg: 'Union[FFmpegOutputConfig, FFplayOutputConfig]') -> None:
         self.templates.append(cfg.video_template)  # video
         if self.ovgen_cfg.audio_path:
             self.templates.append(cfg.audio_template)  # audio
 
-    def popen(self) -> subprocess.Popen:
-        return subprocess.Popen(self._generate_args(), stdin=subprocess.PIPE)
+    def popen(self, process_args=None, **kwargs) -> subprocess.Popen:
+        if process_args is None:
+            process_args = []
+
+        return subprocess.Popen(self._generate_args() + process_args, stdin=subprocess.PIPE, **kwargs)
 
     def _generate_args(self) -> List[str]:
         return [arg
@@ -117,12 +120,13 @@ class FFmpegOutput(ProcessOutput):
 
         ffmpeg = _FFmpegCommand([FFMPEG, '-y'], ovgen_cfg)
         ffmpeg.add_output(cfg)
-        self.open(ffmpeg.popen())
+        self.open(ffmpeg.popen([cfg.path]))
 
 
 # FFplayOutput
 class FFplayOutputConfig(OutputConfig):
-    pass
+    video_template: str = '-c:v copy'
+    audio_template: str = '-c:a copy'
 
 
 @register_output(FFplayOutputConfig)
@@ -130,8 +134,21 @@ class FFplayOutput(ProcessOutput):
     def __init__(self, ovgen_cfg: 'Config', cfg: FFplayOutputConfig):
         super().__init__(ovgen_cfg, cfg)
 
-        ffplay = _FFmpegCommand([FFPLAY], ovgen_cfg)
-        self.open(ffplay.popen())
+        ffmpeg = _FFmpegCommand([FFMPEG], ovgen_cfg)
+        ffmpeg.add_output(cfg)
+        ffmpeg.templates.append('-f nut -')
+
+        p1 = ffmpeg.popen(stdout=subprocess.PIPE)
+        self.p2 = subprocess.Popen('ffplay -autoexit -', stdin=p1.stdout)
+        p1.stdout.close()
+        self.open(p1)
+
+    def close(self):
+        ProcessOutput.close(self)
+        self.p2.wait()
+
+
+# TODO: MPVOutput?
 
 
 # ImageOutput
