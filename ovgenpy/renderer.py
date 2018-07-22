@@ -186,11 +186,3 @@ class MatplotlibRenderer:
         assert buffer_rgb.size == w * h * RGB_DEPTH
 
         return buffer_rgb
-        # # TODO https://matplotlib.org/api/_as_gen/matplotlib.pyplot.imsave.html to
-        # # in-memory stream as png
-        #
-        # # or imsave(arr=...)
-        #
-        # # TODO http://www.icare.univ-lille1.fr/tutorials/convert_a_matplotlib_figure
-        #
-        # raise NotImplementedError
