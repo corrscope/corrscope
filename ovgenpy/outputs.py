@@ -2,16 +2,16 @@
 import shlex
 import subprocess
 from abc import ABC, abstractmethod
-from io import BytesIO
-from typing import Optional, TYPE_CHECKING, Type, Callable, TypeVar, List
+from typing import TYPE_CHECKING, Type, List
 
 from dataclasses import dataclass
 
 if TYPE_CHECKING:
+    import numpy as np
     from ovgenpy.ovgenpy import Config
 
 
-IMAGE_FORMAT = 'png'
+RGB_DEPTH = 3
 
 
 class OutputConfig:
@@ -27,9 +27,8 @@ class Output(ABC):
         self.cfg = cfg
 
     @abstractmethod
-    def output_frame_png(self, frame: bytes) -> None:
-        """ Output an encoded PNG file. TODO PNG compression overhead is bad """
-        pass
+    def write_frame(self, frame: 'np.ndarray') -> None:
+        """ Output a Numpy ndarray. """
 
 
 # Glue logic
@@ -49,9 +48,15 @@ FFMPEG = 'ffmpeg'
 FFPLAY = 'ffplay'
 
 
-def ffmpeg_input_video(fps: int) -> List[str]:
-    # Removed: '-c:v {IMAGE_FORMAT}' since it doesn't work
-    return ['-f image2pipe -framerate', str(fps), '-i -']
+assert RGB_DEPTH == 3
+def ffmpeg_input_video(cfg: 'Config') -> List[str]:
+    fps = cfg.fps
+    width = cfg.render.width
+    height = cfg.render.height
+
+    return [f'-f rawvideo -pixel_format rgb24 -video_size {width}x{height}',
+            f'-framerate {fps}',
+            '-i -']
 
 
 def ffmpeg_input_audio(audio_path: str) -> List[str]:
@@ -93,7 +98,7 @@ class FFmpegOutput(Output):
         templates: List[str] = [FFMPEG]
 
         # TODO factor out "get_ffmpeg_input"... what if wrong abstraction?
-        templates += ffmpeg_input_video(fps=ovgen_cfg.fps)  # video
+        templates += ffmpeg_input_video(ovgen_cfg)  # video
         if ovgen_cfg.audio_path:
             templates += ffmpeg_input_audio(audio_path=ovgen_cfg.audio_path)    # audio
 
@@ -113,7 +118,7 @@ class FFmpegOutput(Output):
         # Python documentation discourages accessing popen.stdin. It's wrong.
         # https://stackoverflow.com/a/9886747
 
-    def output_frame_png(self, frame: bytes) -> None:
+    def write_frame(self, frame: bytes) -> None:
         self._stream.write(frame)
 
     def close(self):
