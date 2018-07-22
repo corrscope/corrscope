@@ -1,12 +1,15 @@
 from typing import Optional, List, Tuple, TYPE_CHECKING
 
+import matplotlib
 import numpy as np
 from dataclasses import dataclass
+
+from ovgenpy.outputs import RGB_DEPTH
+from ovgenpy.util import ceildiv
+
+matplotlib.use('agg')
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-
-from ovgenpy.outputs import IMAGE_FORMAT
-from ovgenpy.util import ceildiv
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
@@ -167,10 +170,8 @@ class MatplotlibRenderer:
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 
-    assert IMAGE_FORMAT == 'png'
-    RGB_DEPTH = 3
-
-    def get_frame(self):
+    def get_frame(self) -> np.ndarray:
+        """ Returns ndarray of shape w,h,3. """
         canvas = self.fig.canvas
 
         # Agg is the default noninteractive backend except on OSX.
@@ -179,12 +180,13 @@ class MatplotlibRenderer:
             raise RuntimeError(
                 f'oh shit, cannot read data from {type(canvas)} != FigureCanvasAgg')
 
-        # buffer_rgba, (w, h) = canvas.print_to_buffer()
+        w = self.cfg.width
+        h = self.cfg.height
+        assert (w, h) == canvas.get_width_height()
 
-        w, h = canvas.get_width_height()
-        buffer_rgb = np.frombuffer(canvas.tostring_rgb(), np.uint8)
-        print(buffer_rgb.shape)
-        np.reshape(buffer_rgb, (w, h, self.RGB_DEPTH))
+        buffer_rgb: np.ndarray = np.frombuffer(canvas.tostring_rgb(), np.uint8)     # TODO Pycharm type inference error
+        np.reshape(buffer_rgb, (w, h, RGB_DEPTH))
+        assert buffer_rgb.size == w * h * RGB_DEPTH
 
         return buffer_rgb
         # # TODO https://matplotlib.org/api/_as_gen/matplotlib.pyplot.imsave.html to

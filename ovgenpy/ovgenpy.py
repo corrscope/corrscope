@@ -65,14 +65,11 @@ def main(wave_dir: str, audio_path: Optional[str], fps: int, output: str):
         outputs=[
             outputs.FFmpegOutputConfig(output)
         ],
-        create_window=True
+        create_window=False
     )
 
     ovgen = Ovgen(cfg)
     ovgen.write()
-
-
-COLOR_CHANNELS = 3
 
 
 class Ovgen:
@@ -148,6 +145,8 @@ class Ovgen:
 
             # Output frame
             frame = renderer.get_frame()
+            for output in self.outputs:
+                output.write_frame(frame)
 
             # TODO write to file
             # how to write ndarray to ffmpeg?
