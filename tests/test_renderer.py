@@ -43,3 +43,7 @@ def test_renderer(mock_show):
     # 2 columns, 8 rows
     assert r.ncols == 2
     assert r.nrows == 8
+
+
+# TODO: test get_frame()
+# (integration test) ensure rendering to output works

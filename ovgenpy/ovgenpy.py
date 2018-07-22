@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import NamedTuple, Optional, List
 
 import click
+from ovgenpy import outputs
 
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.triggers import TriggerConfig, CorrelationTrigger
@@ -23,6 +24,8 @@ class Config(NamedTuple):
 
     trigger: TriggerConfig  # Maybe overriden per Wave
     render: RendererConfig
+    outputs: List[outputs.OutputConfig]
+    create_window: bool
 
     @property
     def time_visible_s(self) -> float:
@@ -37,9 +40,10 @@ _FPS = 60  # f_s
 
 @click.command()
 @click.argument('wave_dir', type=Folder)
-@click.option('--master-wave', type=File, default=None)
+@click.option('--audio_path', type=File, default=None)
 @click.option('--fps', default=_FPS)
-def main(wave_dir: str, audio_path: Optional[str], fps: int):
+@click.option('--output', default='output.mp4')
+def main(wave_dir: str, audio_path: Optional[str], fps: int, output: str):
     cfg = Config(
         wave_dir=wave_dir,
         audio_path=audio_path,
@@ -57,7 +61,11 @@ def main(wave_dir: str, audio_path: Optional[str], fps: int):
         render=RendererConfig(     # todo
             1280, 720,
             ncols=1
-        )
+        ),
+        outputs=[
+            outputs.FFmpegOutputConfig(output)
+        ],
+        create_window=True
     )
 
     ovgen = Ovgen(cfg)
@@ -72,9 +80,11 @@ class Ovgen:
         self.cfg = cfg
         self.waves: List[Wave] = []
         self.nwaves: int = None
+        self.outputs: List[outputs.Output] = []
 
     def write(self):
         self._load_waves()  # self.waves =
+        self._load_outputs()  # self.outputs =
         self._render()
 
     def _load_waves(self):
@@ -97,15 +107,22 @@ class Ovgen:
 
         self.nwaves = len(self.waves)
 
+    def _load_outputs(self):
+        self.outputs = []
+        for output_cfg in self.cfg.outputs:
+            output = output_cfg(self.cfg)
+            self.outputs.append(output)
+
     def _render(self):
         # Calculate number of frames (TODO master file?)
         time_visible_s = self.cfg.time_visible_s
         fps = self.cfg.fps
+        create_window = self.cfg.create_window
 
         nframes = fps * self.waves[0].get_s()
         nframes = int(nframes) + 1
 
-        renderer = MatplotlibRenderer(self.cfg.render, self.nwaves)
+        renderer = MatplotlibRenderer(self.cfg.render, self.nwaves, create_window)
 
         if RENDER_PROFILING:
             begin = time.perf_counter()
@@ -125,8 +142,17 @@ class Ovgen:
 
                 datas.append(wave.get_around(trigger_sample, region_len))
 
+            # Render frame
             print(frame)
             renderer.render_frame(datas)
+
+            # Output frame
+            frame = renderer.get_frame()
+
+            # TODO write to file
+            # how to write ndarray to ffmpeg?
+            # idea: imageio.mimwrite(stdout, ... wait it's blocking = bad
+            # idea: -f rawvideo, pass cfg.render.options... to ffmpeg_input_video()
 
         if RENDER_PROFILING:
             # noinspection PyUnboundLocalVariable
