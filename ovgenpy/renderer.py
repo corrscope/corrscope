@@ -1,15 +1,12 @@
 from typing import Optional, List, Tuple, TYPE_CHECKING
 
-import matplotlib
 import numpy as np
 from dataclasses import dataclass
+from matplotlib import pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 from ovgenpy.outputs import RGB_DEPTH
 from ovgenpy.util import ceildiv
-
-matplotlib.use('agg')
-from matplotlib import pyplot as plt
-from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
