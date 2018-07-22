@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Type, List
 from dataclasses import dataclass
 
 if TYPE_CHECKING:
-    import numpy as np
     from ovgenpy.ovgenpy import Config
 
 
@@ -27,8 +26,8 @@ class Output(ABC):
         self.cfg = cfg
 
     @abstractmethod
-    def write_frame(self, frame: 'np.ndarray') -> None:
-        """ Output a Numpy ndarray. """
+    def write_frame(self, frame: bytes) -> None:
+        """ Output an image file. """
 
 
 # Glue logic
@@ -48,10 +47,8 @@ FFPLAY = 'ffplay'
 assert RGB_DEPTH == 3
 def ffmpeg_input_video(cfg: 'Config') -> List[str]:
     fps = cfg.fps
-    width = cfg.render.width
-    height = cfg.render.height
 
-    return [f'-f rawvideo -pixel_format rgb24 -video_size {width}x{height}',
+    return ['-f image2pipe',
             f'-framerate {fps}',
             '-i -']
 

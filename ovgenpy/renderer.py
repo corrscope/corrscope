@@ -1,3 +1,4 @@
+from io import BytesIO
 from typing import Optional, List, Tuple, TYPE_CHECKING
 
 import matplotlib
@@ -170,8 +171,9 @@ class MatplotlibRenderer:
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 
-    def get_frame(self) -> np.ndarray:
+    def get_frame(self) -> bytes:
         """ Returns ndarray of shape w,h,3. """
+        print('foo')
         canvas = self.fig.canvas
 
         # Agg is the default noninteractive backend except on OSX.
@@ -184,16 +186,9 @@ class MatplotlibRenderer:
         h = self.cfg.height
         assert (w, h) == canvas.get_width_height()
 
-        buffer_rgb: np.ndarray = np.frombuffer(canvas.tostring_rgb(), np.uint8)     # TODO Pycharm type inference error
-        np.reshape(buffer_rgb, (w, h, RGB_DEPTH))
-        assert buffer_rgb.size == w * h * RGB_DEPTH
+        io = BytesIO()
+        canvas.print_png(io)
+        val = io.getvalue()
+        # print(val)
+        return val
 
-        return buffer_rgb
-        # # TODO https://matplotlib.org/api/_as_gen/matplotlib.pyplot.imsave.html to
-        # # in-memory stream as png
-        #
-        # # or imsave(arr=...)
-        #
-        # # TODO http://www.icare.univ-lille1.fr/tutorials/convert_a_matplotlib_figure
-        #
-        # raise NotImplementedError
