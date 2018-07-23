@@ -1,7 +1,10 @@
 from typing import Optional, List, Tuple, TYPE_CHECKING
 
+import matplotlib
 import numpy as np
 from dataclasses import dataclass
+
+matplotlib.use('agg')
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
