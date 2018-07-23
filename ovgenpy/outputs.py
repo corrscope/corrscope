@@ -139,7 +139,10 @@ class FFplayOutput(ProcessOutput):
         ffmpeg.templates.append('-f nut -')
 
         p1 = ffmpeg.popen(stdout=subprocess.PIPE)
-        self.p2 = subprocess.Popen('ffplay -autoexit -', stdin=p1.stdout)
+
+        ffplay = shlex.split('ffplay -autoexit -')
+        self.p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
+
         p1.stdout.close()
         self.open(p1)
 
