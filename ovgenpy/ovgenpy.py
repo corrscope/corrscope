@@ -88,7 +88,8 @@ class Ovgen:
     def _load_waves(self):
         wave_dir = Path(self.cfg.wave_dir)
 
-        for idx, path in enumerate(wave_dir.glob('*.wav')):
+        waves = sorted(wave_dir.glob('*.wav'))
+        for idx, path in enumerate(waves):
             wcfg = WaveConfig(
                 wave_path=str(path)
             )
