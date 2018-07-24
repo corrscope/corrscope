@@ -1,13 +1,21 @@
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, TYPE_CHECKING
 
+import matplotlib
 import numpy as np
 from dataclasses import dataclass
-from matplotlib import pyplot as plt
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
-from matplotlib.lines import Line2D
 
+matplotlib.use('agg')
+from matplotlib import pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+from ovgenpy.outputs import RGB_DEPTH
 from ovgenpy.util import ceildiv
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
+    from matplotlib.lines import Line2D
+
 
 
 @dataclass
@@ -33,6 +41,9 @@ class RendererConfig:
 
 class MatplotlibRenderer:
     """
+    Renderer backend which takes data and produces images.
+    Does not touch Wave or Channel.
+
     If __init__ reads cfg, cfg cannot be hotswapped.
 
     Reasons to hotswap cfg: RendererCfg:
@@ -51,10 +62,10 @@ class MatplotlibRenderer:
 
     DPI = 96
 
-    def __init__(self, cfg: RendererConfig, nplots: int):
+    def __init__(self, cfg: RendererConfig, nplots: int, create_window: bool):
         self.cfg = cfg
         self.nplots = nplots
-        self.fig: Figure = None
+        self.create_window = create_window
 
         # Setup layout
         # "ncols=1" is good for vertical layouts.
@@ -64,8 +75,9 @@ class MatplotlibRenderer:
         self.ncols = 0
 
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
-        self.axes: List[Axes] = None        # set by set_layout()
-        self.lines: List[Line2D] = None     # set by render_frame() first call
+        self.fig: 'Figure' = None
+        self.axes: List['Axes'] = None        # set by set_layout()
+        self.lines: List['Line2D'] = None     # set by render_frame() first call
 
         self.set_layout()   # mutates self
 
@@ -85,7 +97,7 @@ class MatplotlibRenderer:
         if self.fig:
             plt.close(self.fig)     # FIXME
 
-        axes2d: np.ndarray[Axes]
+        axes2d: np.ndarray['Axes']
         self.fig, axes2d = plt.subplots(
             self.nrows, self.ncols,
             squeeze=False,
@@ -101,7 +113,7 @@ class MatplotlibRenderer:
         if self.cfg.ncols:
             axes2d = axes2d.T
 
-        self.axes: List[Axes] = axes2d.flatten().tolist()[:self.nplots]
+        self.axes: List['Axes'] = axes2d.flatten().tolist()[:self.nplots]
 
         # Setup figure geometry
         self.fig.set_dpi(self.DPI)
@@ -109,7 +121,8 @@ class MatplotlibRenderer:
             self.cfg.width / self.DPI,
             self.cfg.height / self.DPI
         )
-        plt.show(block=False)
+        if self.create_window:
+            plt.show(block=False)
 
     def _calc_layout(self) -> Tuple[int, int]:
         """
@@ -156,3 +169,23 @@ class MatplotlibRenderer:
 
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
+
+    def get_frame(self) -> np.ndarray:
+        """ Returns ndarray of shape w,h,3. """
+        canvas = self.fig.canvas
+
+        # Agg is the default noninteractive backend except on OSX.
+        # https://matplotlib.org/faq/usage_faq.html
+        if not isinstance(canvas, FigureCanvasAgg):
+            raise RuntimeError(
+                f'oh shit, cannot read data from {type(canvas)} != FigureCanvasAgg')
+
+        w = self.cfg.width
+        h = self.cfg.height
+        assert (w, h) == canvas.get_width_height()
+
+        buffer_rgb: np.ndarray = np.frombuffer(canvas.tostring_rgb(), np.uint8)     # TODO Pycharm type inference error
+        np.reshape(buffer_rgb, (w, h, RGB_DEPTH))
+        assert buffer_rgb.size == w * h * RGB_DEPTH
+
+        return buffer_rgb

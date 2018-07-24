@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import NamedTuple, Optional, List
 
 import click
+from ovgenpy import outputs
 
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.triggers import TriggerConfig, CorrelationTrigger
@@ -16,13 +17,15 @@ RENDER_PROFILING = True
 
 class Config(NamedTuple):
     wave_dir: str
-    master_wave: Optional[str]
+    audio_path: Optional[str]
     fps: int
     time_visible_ms: int
     scan_ratio: float
 
     trigger: TriggerConfig  # Maybe overriden per Wave
     render: RendererConfig
+    outputs: List[outputs.OutputConfig]
+    create_window: bool
 
     @property
     def time_visible_s(self) -> float:
@@ -36,13 +39,14 @@ _FPS = 60  # f_s
 
 
 @click.command()
-@click.argument('wave_dir', type=Folder)
-@click.option('--master-wave', type=File, default=None)
+@click.argument('wave-dir', type=Folder)
+@click.option('--audio-path', type=File, default=None)
 @click.option('--fps', default=_FPS)
-def main(wave_dir: str, master_wave: Optional[str], fps: int):
+@click.option('--output', default='output.mp4')
+def main(wave_dir: str, audio_path: Optional[str], fps: int, output: str):
     cfg = Config(
         wave_dir=wave_dir,
-        master_wave=master_wave,
+        audio_path=audio_path,
         fps=fps,
         time_visible_ms=25,
         scan_ratio=1,
@@ -57,14 +61,16 @@ def main(wave_dir: str, master_wave: Optional[str], fps: int):
         render=RendererConfig(     # todo
             1280, 720,
             ncols=1
-        )
+        ),
+        outputs=[
+            # outputs.FFmpegOutputConfig(output),
+            outputs.FFplayOutputConfig(),
+        ],
+        create_window=False
     )
 
     ovgen = Ovgen(cfg)
     ovgen.write()
-
-
-COLOR_CHANNELS = 3
 
 
 class Ovgen:
@@ -72,9 +78,11 @@ class Ovgen:
         self.cfg = cfg
         self.waves: List[Wave] = []
         self.nwaves: int = None
+        self.outputs: List[outputs.Output] = []
 
     def write(self):
         self._load_waves()  # self.waves =
+        self._load_outputs()  # self.outputs =
         self._render()
 
     def _load_waves(self):
@@ -97,15 +105,22 @@ class Ovgen:
 
         self.nwaves = len(self.waves)
 
+    def _load_outputs(self):
+        self.outputs = []
+        for output_cfg in self.cfg.outputs:
+            output = output_cfg(self.cfg)
+            self.outputs.append(output)
+
     def _render(self):
         # Calculate number of frames (TODO master file?)
         time_visible_s = self.cfg.time_visible_s
         fps = self.cfg.fps
+        create_window = self.cfg.create_window
 
         nframes = fps * self.waves[0].get_s()
         nframes = int(nframes) + 1
 
-        renderer = MatplotlibRenderer(self.cfg.render, self.nwaves)
+        renderer = MatplotlibRenderer(self.cfg.render, self.nwaves, create_window)
 
         if RENDER_PROFILING:
             begin = time.perf_counter()
@@ -121,12 +136,16 @@ class Ovgen:
                 region_len = round(wave.smp_s * time_visible_s)
 
                 trigger_sample = wave.trigger.get_trigger(sample)
-                print(f'- {trigger_sample}')
-
                 datas.append(wave.get_around(trigger_sample, region_len))
 
-            print(frame)
+            # Render frame
             renderer.render_frame(datas)
+
+            # Output frame
+            if self.outputs:
+                frame = renderer.get_frame()
+            for output in self.outputs:
+                output.write_frame(frame)
 
         if RENDER_PROFILING:
             # noinspection PyUnboundLocalVariable
