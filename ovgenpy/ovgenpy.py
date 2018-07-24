@@ -19,6 +19,8 @@ class Config(NamedTuple):
     wave_dir: str
     audio_path: Optional[str]
     fps: int
+    amplification: float
+
     time_visible_ms: int
     scan_ratio: float
 
@@ -48,6 +50,7 @@ def main(wave_dir: str, audio_path: Optional[str], fps: int, output: str):
         wave_dir=wave_dir,
         audio_path=audio_path,
         fps=fps,
+        amplification=5,
         time_visible_ms=25,
         scan_ratio=1,
 
@@ -91,7 +94,7 @@ class Ovgen:
         waves = sorted(wave_dir.glob('*.wav'))
         for idx, path in enumerate(waves):
             wcfg = WaveConfig(
-                wave_path=str(path)
+                amplification=self.cfg.amplification
             )
 
             wave = Wave(wcfg, str(path))

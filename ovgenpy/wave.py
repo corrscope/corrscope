@@ -8,10 +8,7 @@ if TYPE_CHECKING:
 
 
 class WaveConfig(NamedTuple):
-    wave_path: str
-    # TODO color
-
-    # TODO wave-specific trigger options?
+    amplification: float = 1
 
 
 FLOAT = np.single
@@ -19,7 +16,7 @@ FLOAT = np.single
 
 class Wave:
     def __init__(self, wcfg: Optional[WaveConfig], wave_path: str):
-        self.cfg = wcfg
+        self.cfg = wcfg or WaveConfig()
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)  # type: int, np.ndarray
         dtype = self.data.dtype
 
@@ -59,7 +56,7 @@ class Wave:
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         data = self.data[index].astype(FLOAT)
         data -= self.center
-        data /= self.max_val
+        data *= self.cfg.amplification / self.max_val
         return data
 
     def get(self, begin: int, end: int) -> 'np.ndarray[FLOAT]':
