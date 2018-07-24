@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import numpy as np
-from dataclasses import dataclass
 from scipy import signal
 
+from ovgenpy.config import register_dataclass
 from ovgenpy.util import find
 from ovgenpy.wave import FLOAT
 
@@ -27,12 +27,11 @@ class Trigger(ABC):
         ...
 
 
-class TriggerConfig:
-    # NamedTuple inheritance does not work. Mark children @dataclass instead.
-    # https://github.com/python/typing/issues/427
+class ITriggerConfig:
     def __call__(self, wave: 'Wave', scan_nsamp: int):
         # idea: __call__ return self.cls(wave, scan_nsamp, cfg=self)
         # problem: cannot reference XTrigger from within XTrigger
+        # solution: @register_trigger(XTriggerCfg)
         raise NotImplementedError
 
 
@@ -40,26 +39,26 @@ def lerp(x: np.ndarray, y: np.ndarray, a: float):
     return x * (1 - a) + y * a
 
 
+@register_dataclass
+class CorrelationTriggerConfig(ITriggerConfig):
+    # get_trigger
+    trigger_strength: float
+    use_edge_trigger: bool
+
+    # _update_buffer
+    responsiveness: float
+    falloff_width: float
+
+    def __call__(self, wave: 'Wave', scan_nsamp: int):
+        return CorrelationTrigger(wave, scan_nsamp, cfg=self)
+
+
 class CorrelationTrigger(Trigger):
     MIN_AMPLITUDE = 0.01
-
-    @dataclass
-    class Config(TriggerConfig):
-        # get_trigger
-        trigger_strength: float
-        use_edge_trigger: bool
-
-        # _update_buffer
-        responsiveness: float
-        falloff_width: float
-
-        def __call__(self, wave: 'Wave', scan_nsamp: int):
-            return CorrelationTrigger(wave, scan_nsamp, cfg=self)
-
     # get_trigger postprocessing: self._zero_trigger
     ZERO_CROSSING_SCAN = 256
 
-    def __init__(self, wave: 'Wave', scan_nsamp: int, cfg: Config):
+    def __init__(self, wave: 'Wave', scan_nsamp: int, cfg: CorrelationTriggerConfig):
         """
         Correlation-based trigger which looks at a window of `scan_nsamp` samples.
 

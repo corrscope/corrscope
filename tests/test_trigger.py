@@ -4,7 +4,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from ovgenpy import triggers
-from ovgenpy.triggers import CorrelationTrigger
+from ovgenpy.triggers import CorrelationTriggerConfig
 from ovgenpy.wave import Wave
 
 
@@ -14,7 +14,7 @@ triggers.SHOW_TRIGGER = False
 @pytest.fixture(scope='session', params=[False, True])
 def cfg(request):
     use_edge_trigger = request.param
-    return CorrelationTrigger.Config(
+    return CorrelationTriggerConfig(
         trigger_strength=1,
         use_edge_trigger=use_edge_trigger,
 
