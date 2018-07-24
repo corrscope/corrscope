@@ -40,7 +40,7 @@ _FPS = 60  # f_s
 
 @click.command()
 @click.argument('wave-dir', type=Folder)
-@click.option('--audio-path', type=File, default=None)
+@click.option('--audio', '--audio-path', type=File, default=None)
 @click.option('--fps', default=_FPS)
 @click.option('--output', default='output.mp4')
 def main(wave_dir: str, audio_path: Optional[str], fps: int, output: str):
