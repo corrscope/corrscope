@@ -21,12 +21,17 @@ class Wave:
     def __init__(self, wcfg: Optional[WaveConfig], wave_path: str):
         self.cfg = wcfg
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)  # type: int, np.ndarray
+        dtype = self.data.dtype
+
+        # Flatten stereo to mono
+        assert self.data.ndim in [1, 2]
+        if self.data.ndim == 2:
+            self.data = np.mean(self.data, axis=1, dtype=dtype)
+
         self.nsamp = len(self.data)
         self.trigger: Trigger = None
 
         # Calculate scaling factor.
-        dtype = self.data.dtype
-
         def is_type(parent: type) -> bool:
             return np.issubdtype(dtype, parent)
 
