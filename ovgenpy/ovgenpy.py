@@ -19,13 +19,14 @@ class Config(NamedTuple):
     wave_dir: str
     audio_path: Optional[str]
     fps: int
-    amplification: float
 
     time_visible_ms: int
     scan_ratio: float
-
     trigger: TriggerConfig  # Maybe overriden per Wave
+
+    amplification: float
     render: RendererConfig
+
     outputs: List[outputs.OutputConfig]
     create_window: bool
 
@@ -50,21 +51,23 @@ def main(wave_dir: str, audio_path: Optional[str], fps: int, output: str):
         wave_dir=wave_dir,
         audio_path=audio_path,
         fps=fps,
-        amplification=5,
+
         time_visible_ms=25,
         scan_ratio=1,
-
         trigger=CorrelationTrigger.Config(
-            trigger_strength=10,
-            use_edge_trigger=True,
+            trigger_strength=1,
+            use_edge_trigger=False,
 
-            responsiveness=0.1,
-            falloff_width=.5,
+            responsiveness=1,
+            falloff_width=1,
         ),
-        render=RendererConfig(     # todo
+
+        amplification=5,
+        render=RendererConfig(  # todo
             1280, 720,
             ncols=1
         ),
+
         outputs=[
             # outputs.FFmpegOutputConfig(output),
             outputs.FFplayOutputConfig(),
