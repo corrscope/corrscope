@@ -1,13 +1,16 @@
-from typing import NamedTuple, TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 from scipy.io import wavfile
+
+from ovgenpy.config import register_dataclass
 
 if TYPE_CHECKING:
     from ovgenpy.triggers import Trigger
 
 
-class WaveConfig(NamedTuple):
+@register_dataclass
+class WaveConfig:
     amplification: float = 1
 
 

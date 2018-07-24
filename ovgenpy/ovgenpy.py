@@ -2,32 +2,34 @@
 
 import time
 from pathlib import Path
-from typing import NamedTuple, Optional, List
+from typing import Optional, List
 
 import click
-from ovgenpy import outputs
 
+from ovgenpy import outputs
+from ovgenpy.config import register_dataclass
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
-from ovgenpy.triggers import TriggerConfig, CorrelationTrigger
+from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig
 from ovgenpy.wave import WaveConfig, Wave
 
 
 RENDER_PROFILING = True
 
 
-class Config(NamedTuple):
+@register_dataclass
+class Config:
     wave_dir: str
     audio_path: Optional[str]
     fps: int
 
     time_visible_ms: int
     scan_ratio: float
-    trigger: TriggerConfig  # Maybe overriden per Wave
+    trigger: ITriggerConfig  # Maybe overriden per Wave
 
     amplification: float
     render: RendererConfig
 
-    outputs: List[outputs.OutputConfig]
+    outputs: List[outputs.IOutputConfig]
     create_window: bool
 
     @property
@@ -54,7 +56,7 @@ def main(wave_dir: str, audio_path: Optional[str], fps: int, output: str):
 
         time_visible_ms=25,
         scan_ratio=1,
-        trigger=CorrelationTrigger.Config(
+        trigger=CorrelationTriggerConfig(
             trigger_strength=1,
             use_edge_trigger=False,
 

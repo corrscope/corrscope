@@ -4,7 +4,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Type, List, Union
 
-from dataclasses import dataclass
+from ovgenpy.config import register_dataclass
 
 if TYPE_CHECKING:
     import numpy as np
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 RGB_DEPTH = 3
 
 
-class OutputConfig:
+class IOutputConfig:
     cls: 'Type[Output]'
 
     def __call__(self, ovgen_cfg: 'Config'):
@@ -22,7 +22,7 @@ class OutputConfig:
 
 
 class Output(ABC):
-    def __init__(self, ovgen_cfg: 'Config', cfg: OutputConfig):
+    def __init__(self, ovgen_cfg: 'Config', cfg: IOutputConfig):
         self.ovgen_cfg = ovgen_cfg
         self.cfg = cfg
 
@@ -33,7 +33,7 @@ class Output(ABC):
 
 # Glue logic
 
-def register_output(config_t: Type[OutputConfig]):
+def register_output(config_t: Type[IOutputConfig]):
     def inner(output_t: Type[Output]):
         config_t.cls = output_t
         return output_t
@@ -101,8 +101,8 @@ class ProcessOutput(Output):
 
 
 # FFmpegOutput
-@dataclass
-class FFmpegOutputConfig(OutputConfig):
+@register_dataclass
+class FFmpegOutputConfig(IOutputConfig):
     path: str
     video_template: str = '-c:v libx264 -crf 18 -bf 2 -flags +cgop -pix_fmt yuv420p -movflags faststart'
     audio_template: str = '-c:a aac -b:a 384k'
@@ -121,7 +121,8 @@ class FFmpegOutput(ProcessOutput):
 
 
 # FFplayOutput
-class FFplayOutputConfig(OutputConfig):
+@register_dataclass
+class FFplayOutputConfig(IOutputConfig):
     video_template: str = '-c:v copy'
     audio_template: str = '-c:a copy'
 
@@ -154,8 +155,8 @@ class FFplayOutput(ProcessOutput):
 
 
 # ImageOutput
-@dataclass
-class ImageOutputConfig:
+@register_dataclass
+class ImageOutputConfig(IOutputConfig):
     path_prefix: str
 
 
