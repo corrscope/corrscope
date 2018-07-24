@@ -130,8 +130,14 @@ class Ovgen:
             begin = time.perf_counter()
 
         # For each frame, render each wave
+        prev = -1
         for frame in range(nframes):
             time_seconds = frame / fps
+
+            rounded = int(time_seconds)
+            if rounded != prev:
+                print(rounded)
+                prev = rounded
 
             datas = []
             # Get data from each wave
