@@ -23,8 +23,7 @@ def test_config():
     assert default.nrows is None
 
 
-@patch("ovgenpy.renderer.plt.show")
-def test_renderer(mock_show):
+def test_renderer():
     """
     TODO check image output using:
     https://matplotlib.org/devel/testing.html#writing-an-image-comparison-test
@@ -37,7 +36,7 @@ def test_renderer(mock_show):
     cfg = RendererConfig(WIDTH, HEIGHT, ncols=2)
     nplots = 16
 
-    r = MatplotlibRenderer(cfg, nplots)
+    r = MatplotlibRenderer(cfg, nplots, create_window=False)
 
     # 2 columns, 8 rows
     assert r.ncols == 2
