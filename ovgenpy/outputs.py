@@ -41,28 +41,7 @@ def register_output(config_t: Type[OutputConfig]):
     return inner
 
 
-FFMPEG = 'ffmpeg'
-FFPLAY = 'ffplay'
-
-
-assert RGB_DEPTH == 3
-def ffmpeg_input_video(cfg: 'Config') -> List[str]:
-    fps = cfg.fps
-    width = cfg.render.width
-    height = cfg.render.height
-
-    return [f'-f rawvideo -pixel_format rgb24 -video_size {width}x{height}',
-            f'-framerate {fps}',
-            '-i -']
-
-
-def ffmpeg_input_audio(audio_path: str) -> List[str]:
-    return ['-i', audio_path]
-
-
-FFMPEG_OUTPUT_VIDEO_DEFAULT = '-c:v libx264 -crf 18 -bf 2 -flags +cgop -pix_fmt yuv420p -movflags faststart'
-FFMPEG_OUTPUT_AUDIO_DEFAULT = '-c:a aac -b:a 384k'
-
+# FFmpeg input format
 
 class _FFmpegCommand:
     def __init__(self, templates: List[str], ovgen_cfg: 'Config'):
@@ -82,12 +61,28 @@ class _FFmpegCommand:
         if process_args is None:
             process_args = []
 
-        return subprocess.Popen(self._generate_args() + process_args, stdin=subprocess.PIPE, **kwargs)
+        return subprocess.Popen(self._generate_args() + process_args,
+                                stdin=subprocess.PIPE, **kwargs)
 
     def _generate_args(self) -> List[str]:
         return [arg
                 for template in self.templates
                 for arg in shlex.split(template)]
+
+
+assert RGB_DEPTH == 3
+def ffmpeg_input_video(cfg: 'Config') -> List[str]:
+    fps = cfg.fps
+    width = cfg.render.width
+    height = cfg.render.height
+
+    return [f'-f rawvideo -pixel_format rgb24 -video_size {width}x{height}',
+            f'-framerate {fps}',
+            '-i -']
+
+
+def ffmpeg_input_audio(audio_path: str) -> List[str]:
+    return ['-i', audio_path]
 
 
 class ProcessOutput(Output):
@@ -109,9 +104,11 @@ class ProcessOutput(Output):
 @dataclass
 class FFmpegOutputConfig(OutputConfig):
     path: str
-    video_template: str = FFMPEG_OUTPUT_VIDEO_DEFAULT
-    audio_template: str = FFMPEG_OUTPUT_AUDIO_DEFAULT
+    video_template: str = '-c:v libx264 -crf 18 -bf 2 -flags +cgop -pix_fmt yuv420p -movflags faststart'
+    audio_template: str = '-c:a aac -b:a 384k'
 
+
+FFMPEG = 'ffmpeg'
 
 @register_output(FFmpegOutputConfig)
 class FFmpegOutput(ProcessOutput):
@@ -128,6 +125,8 @@ class FFplayOutputConfig(OutputConfig):
     video_template: str = '-c:v copy'
     audio_template: str = '-c:a copy'
 
+
+FFPLAY = 'ffplay'
 
 @register_output(FFplayOutputConfig)
 class FFplayOutput(ProcessOutput):
