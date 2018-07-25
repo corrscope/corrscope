@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 class WaveConfig:
     amplification: float = 1
 
+def dummy_wave_config() -> WaveConfig:
+    return WaveConfig(amplification=1)
 
 FLOAT = np.single
 
@@ -29,7 +31,6 @@ class Wave:
             self.data = np.mean(self.data, axis=1, dtype=dtype)
 
         self.nsamp = len(self.data)
-        self.trigger: Trigger = None
 
         # Calculate scaling factor.
         def is_type(parent: type) -> bool:
@@ -96,9 +97,6 @@ class Wave:
         end = sample + region_len // 2
         begin = end - region_len
         return self.get(begin, end)
-
-    def set_trigger(self, trigger: 'Trigger'):
-        self.trigger = trigger
 
     def get_s(self) -> float:
         """

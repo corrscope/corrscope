@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional, List
 
 import click
+from ovgenpy.channel import Channel
 
 from ovgenpy import outputs
 from ovgenpy.config import register_config, yaml
@@ -83,8 +84,9 @@ class Ovgen:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self.waves: List[Wave] = []
-        self.nwaves: int = None
+        self.channels: List[Channel] = []
         self.outputs: List[outputs.Output] = []
+        self.nchan: int = None
 
     def write(self):
         self._load_waves()  # self.waves =
@@ -101,16 +103,18 @@ class Ovgen:
             )
 
             wave = Wave(wcfg, str(path))
+            self.waves.append(wave)
+
             trigger = self.cfg.trigger(
                 wave=wave,
                 scan_nsamp=round(
                     self.cfg.time_visible_s * self.cfg.scan_ratio * wave.smp_s),
                 # I tried extracting variable, but got confused as a result
             )
-            wave.set_trigger(trigger)
-            self.waves.append(wave)
+            channel = Channel(None, wave, trigger)
+            self.channels.append(channel)
 
-        self.nwaves = len(self.waves)
+        self.nchan = len(self.waves)
 
     def _load_outputs(self):
         self.outputs = []
@@ -127,7 +131,7 @@ class Ovgen:
         nframes = fps * self.waves[0].get_s()
         nframes = int(nframes) + 1
 
-        renderer = MatplotlibRenderer(self.cfg.render, self.nwaves, create_window)
+        renderer = MatplotlibRenderer(self.cfg.render, self.nchan, create_window)
 
         if RENDER_PROFILING:
             begin = time.perf_counter()
@@ -144,11 +148,11 @@ class Ovgen:
 
             datas = []
             # Get data from each wave
-            for wave in self.waves:
+            for wave, channel in zip(self.waves, self.channels):
                 sample = round(wave.smp_s * time_seconds)
                 region_len = round(wave.smp_s * time_visible_s)
 
-                trigger_sample = wave.trigger.get_trigger(sample)
+                trigger_sample = channel.trigger.get_trigger(sample)
                 datas.append(wave.get_around(trigger_sample, region_len))
 
             # Render frame
