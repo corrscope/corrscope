@@ -9,7 +9,7 @@ from ovgenpy.wave import Wave
 triggers.SHOW_TRIGGER = False
 
 
-cfg = CorrelationTrigger.Config(
+cfg = CorrelationTriggerConfig(
     trigger_strength=1,
     use_edge_trigger=True,
 
