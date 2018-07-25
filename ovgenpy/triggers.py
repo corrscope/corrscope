@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from scipy import signal
 
-from ovgenpy.config import register_dataclass
+from ovgenpy.config import register_config
 from ovgenpy.util import find
 from ovgenpy.wave import FLOAT
 
@@ -39,7 +39,7 @@ def lerp(x: np.ndarray, y: np.ndarray, a: float):
     return x * (1 - a) + y * a
 
 
-@register_dataclass
+@register_config
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
     trigger_strength: float

@@ -2,11 +2,11 @@ import sys
 
 from ruamel.yaml import yaml_object
 
-from ovgenpy.config import register_dataclass, yaml
+from ovgenpy.config import register_config, yaml
 
 
-def test_register_dataclass():
-    @register_dataclass
+def test_register_config():
+    @register_config
     class Foo:
         foo: int
         bar: int

@@ -3,13 +3,13 @@ from typing import TYPE_CHECKING, Optional
 import numpy as np
 from scipy.io import wavfile
 
-from ovgenpy.config import register_dataclass
+from ovgenpy.config import register_config
 
 if TYPE_CHECKING:
     from ovgenpy.triggers import Trigger
 
 
-@register_dataclass
+@register_config
 class WaveConfig:
     amplification: float = 1
 
