@@ -49,12 +49,12 @@ class _FFmpegCommand:
         self.ovgen_cfg = ovgen_cfg
 
         self.templates += ffmpeg_input_video(ovgen_cfg)  # video
-        if self.ovgen_cfg.audio_path:
-            self.templates += ffmpeg_input_audio(audio_path=ovgen_cfg.audio_path)    # audio
+        if self.ovgen_cfg.master_audio:
+            self.templates += ffmpeg_input_audio(audio_path=ovgen_cfg.master_audio)    # audio
 
     def add_output(self, cfg: 'Union[FFmpegOutputConfig, FFplayOutputConfig]') -> None:
         self.templates.append(cfg.video_template)  # video
-        if self.ovgen_cfg.audio_path:
+        if self.ovgen_cfg.master_audio:
             self.templates.append(cfg.audio_template)  # audio
 
     def popen(self, process_args=None, **kwargs) -> subprocess.Popen:
