@@ -12,7 +12,7 @@ from ruamel.yaml import YAML, yaml_object
 yaml = YAML()
 
 
-def register_dataclass(cls):
+def register_config(cls):
     # https://stackoverflow.com/a/51497219/2683842
     # YAML.register_class(cls) has only returned cls since 2018-07-12.
     return yaml_object(yaml)(

@@ -7,7 +7,7 @@ from typing import Optional, List
 import click
 
 from ovgenpy import outputs
-from ovgenpy.config import register_dataclass
+from ovgenpy.config import register_config
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig
 from ovgenpy.wave import WaveConfig, Wave
@@ -16,7 +16,7 @@ from ovgenpy.wave import WaveConfig, Wave
 RENDER_PROFILING = True
 
 
-@register_dataclass
+@register_config
 class Config:
     wave_dir: str
     audio_path: Optional[str]

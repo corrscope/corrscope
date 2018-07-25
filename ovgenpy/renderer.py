@@ -3,7 +3,7 @@ from typing import Optional, List, Tuple, TYPE_CHECKING
 import matplotlib
 import numpy as np
 
-from ovgenpy.config import register_dataclass
+from ovgenpy.config import register_config
 from ovgenpy.outputs import RGB_DEPTH
 from ovgenpy.util import ceildiv
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from matplotlib.lines import Line2D
 
 
-@register_dataclass
+@register_config
 class RendererConfig:
     width: int
     height: int

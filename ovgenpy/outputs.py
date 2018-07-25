@@ -4,7 +4,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Type, List, Union
 
-from ovgenpy.config import register_dataclass
+from ovgenpy.config import register_config
 
 if TYPE_CHECKING:
     import numpy as np
@@ -101,7 +101,7 @@ class ProcessOutput(Output):
 
 
 # FFmpegOutput
-@register_dataclass
+@register_config
 class FFmpegOutputConfig(IOutputConfig):
     path: str
     video_template: str = '-c:v libx264 -crf 18 -bf 2 -flags +cgop -pix_fmt yuv420p -movflags faststart'
@@ -121,7 +121,7 @@ class FFmpegOutput(ProcessOutput):
 
 
 # FFplayOutput
-@register_dataclass
+@register_config
 class FFplayOutputConfig(IOutputConfig):
     video_template: str = '-c:v copy'
     audio_template: str = '-c:a copy'
@@ -155,7 +155,7 @@ class FFplayOutput(ProcessOutput):
 
 
 # ImageOutput
-@register_dataclass
+@register_config
 class ImageOutputConfig(IOutputConfig):
     path_prefix: str
 
