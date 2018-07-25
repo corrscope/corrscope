@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import sys
 import time
 from pathlib import Path
 from typing import Optional, List
@@ -7,7 +7,7 @@ from typing import Optional, List
 import click
 
 from ovgenpy import outputs
-from ovgenpy.config import register_config
+from ovgenpy.config import register_config, yaml
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig
 from ovgenpy.wave import WaveConfig, Wave
@@ -43,16 +43,11 @@ File = click.Path(exists=True, dir_okay=False)
 _FPS = 60  # f_s
 
 
-@click.command()
-@click.argument('wave-dir', type=Folder)
-@click.option('--audio', '--master-audio', type=File, default=None)
-@click.option('--fps', default=_FPS)
-@click.option('--output', default='output.mp4')
-def main(wave_dir: str, master_audio: Optional[str], fps: int, output: str):
+def main():
     cfg = Config(
-        wave_dir=wave_dir,
-        master_audio=master_audio,
-        fps=fps,
+        wave_dir='foo',
+        master_audio=None,
+        fps=69,
 
         time_visible_ms=25,
         scan_ratio=1,
@@ -76,6 +71,9 @@ def main(wave_dir: str, master_audio: Optional[str], fps: int, output: str):
         ],
         create_window=False
     )
+
+    yaml.dump(cfg, sys.stdout)
+    return
 
     ovgen = Ovgen(cfg)
     ovgen.write()
