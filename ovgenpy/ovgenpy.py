@@ -19,7 +19,7 @@ RENDER_PROFILING = True
 @register_config
 class Config:
     wave_dir: str
-    audio_path: Optional[str]
+    master_audio: Optional[str]
     fps: int
 
     time_visible_ms: int
@@ -45,13 +45,13 @@ _FPS = 60  # f_s
 
 @click.command()
 @click.argument('wave-dir', type=Folder)
-@click.option('--audio', '--audio-path', type=File, default=None)
+@click.option('--audio', '--master-audio', type=File, default=None)
 @click.option('--fps', default=_FPS)
 @click.option('--output', default='output.mp4')
-def main(wave_dir: str, audio_path: Optional[str], fps: int, output: str):
+def main(wave_dir: str, master_audio: Optional[str], fps: int, output: str):
     cfg = Config(
         wave_dir=wave_dir,
-        audio_path=audio_path,
+        master_audio=master_audio,
         fps=fps,
 
         time_visible_ms=25,
