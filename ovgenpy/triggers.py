@@ -1,3 +1,4 @@
+import weakref
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 
 class Trigger(ABC):
     def __init__(self, wave: 'Wave', scan_nsamp: int):
-        self._wave = wave
+        self._wave: Wave = weakref.proxy(wave)
         self._scan_nsamp = scan_nsamp
 
     @abstractmethod
