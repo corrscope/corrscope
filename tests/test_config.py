@@ -1,6 +1,14 @@
+# noinspection PyUnresolvedReferences
+import sys
+
+from dataclasses import fields
+import pytest
 from ruamel.yaml import yaml_object
 
-from ovgenpy.config import register_config, yaml
+from ovgenpy.config import register_config, yaml, OvgenError
+
+
+# YAML Idiosyncrasies: https://docs.saltstack.com/en/develop/topics/troubleshooting/yaml_idiosyncrasies.html
 
 
 def test_register_config():
@@ -26,7 +34,7 @@ def test_yaml_object():
     assert s == '!Bar {}\n'
 
 
-def test_exclude_defaults():
+def test_dump_exclude_defaults():
     @register_config
     class DefaultConfig:
         a: str = 'a'
@@ -38,3 +46,36 @@ def test_exclude_defaults():
 !DefaultConfig
 a: alpha
 '''
+
+
+def test_load_type_checking():
+    @register_config
+    class Foo:
+        foo: int
+        bar: int
+
+    s = '''\
+!Foo
+foo: "foo"
+bar: "bar"
+'''
+    with pytest.raises(OvgenError) as e:
+        print(yaml.load(s))
+    print(e)
+
+
+def test_load_post_init():
+    """ yaml.load() does not natively call __post_init__. So @register_config modifies
+    __setstate__ to call __post_init__. """
+    @register_config
+    class Foo:
+        foo: int
+
+        def __post_init__(self):
+            self.foo = 99
+
+    s = '''\
+!Foo
+foo: 0
+'''
+    assert yaml.load(s) == Foo(99)
