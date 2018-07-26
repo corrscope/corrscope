@@ -11,7 +11,7 @@ from ovgenpy import outputs
 from ovgenpy.config import register_config, yaml
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig
-from ovgenpy.wave import WaveConfig, Wave
+from ovgenpy.wave import _WaveConfig, Wave
 
 
 RENDER_PROFILING = True
@@ -98,7 +98,7 @@ class Ovgen:
 
         waves = sorted(wave_dir.glob('*.wav'))
         for idx, path in enumerate(waves):
-            wcfg = WaveConfig(
+            wcfg = _WaveConfig(
                 amplification=self.cfg.amplification
             )
 

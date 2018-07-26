@@ -1,27 +1,22 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 import numpy as np
+from dataclasses import dataclass
 from scipy.io import wavfile
 
-from ovgenpy.config import register_config
 
-if TYPE_CHECKING:
-    from ovgenpy.triggers import Trigger
-
-
-@register_config
-class WaveConfig:
+# Internal class, not exposed via YAML (TODO replace with ChannelConfig?)
+@dataclass
+class _WaveConfig:
     amplification: float = 1
 
-def dummy_wave_config() -> WaveConfig:
-    return WaveConfig(amplification=1)
 
 FLOAT = np.single
 
 
 class Wave:
-    def __init__(self, wcfg: Optional[WaveConfig], wave_path: str):
-        self.cfg = wcfg or WaveConfig()
+    def __init__(self, wcfg: Optional[_WaveConfig], wave_path: str):
+        self.cfg = wcfg or _WaveConfig()
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)  # type: int, np.ndarray
         dtype = self.data.dtype
 
