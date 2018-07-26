@@ -34,17 +34,41 @@ def test_yaml_object():
     assert s == '!Bar {}\n'
 
 
-def test_dump_exclude_defaults():
+def test_dump_defaults():
     @register_config
-    class DefaultConfig:
+    class Config:
         a: str = 'a'
         b: str = 'b'
 
-    s = yaml.dump(DefaultConfig('alpha'))
-    assert 'b:' not in s
+    s = yaml.dump(Config('alpha'))
     assert s == '''\
-!DefaultConfig
+!Config
 a: alpha
+'''
+
+    @register_config(always_dump='a b')
+    class Config:
+        a: str = 'a'
+        b: str = 'b'
+        c: str = 'c'
+
+    s = yaml.dump(Config())
+    assert s == '''\
+!Config
+a: a
+b: b
+'''
+
+    @register_config(always_dump='*')
+    class Config:
+        a: str = 'a'
+        b: str = 'b'
+
+    s = yaml.dump(Config())
+    assert s == '''\
+!Config
+a: a
+b: b
 '''
 
 
