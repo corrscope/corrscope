@@ -1,25 +1,31 @@
 # -*- coding: utf-8 -*-
+import cgitb
 import sys
 import time
 from pathlib import Path
 from typing import Optional, List
 
 import click
-from ovgenpy.channel import Channel
 
 from ovgenpy import outputs
+from ovgenpy.channel import Channel
 from ovgenpy.config import register_config, yaml
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig
+from ovgenpy.utils.keyword_dataclasses import field
 from ovgenpy.wave import _WaveConfig, Wave
 
+
+# cgitb.enable(format='text')
 
 RENDER_PROFILING = True
 
 
-@register_config
+@register_config(always_dump='*')
 class Config:
-    wave_folder: str
+    wave_prefix: str = ''   # if wave/glob..., pwd. if folder, folder.
+    channels: List[Channel] = field(default_factory=lambda: [])
+
     master_audio: Optional[str]
     fps: int
 
@@ -46,7 +52,9 @@ _FPS = 60  # f_s
 
 def main():
     cfg = Config(
-        wave_dir='foo',
+        wave_prefix='foo',
+        channels=[],
+
         master_audio=None,
         fps=69,
 
