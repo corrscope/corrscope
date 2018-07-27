@@ -1,7 +1,7 @@
 from io import StringIO
 from typing import ClassVar
 
-from dataclasses import dataclass, fields
+from ovgenpy.utils.keyword_dataclasses import dataclass, fields
 from ruamel.yaml import yaml_object, YAML
 
 
