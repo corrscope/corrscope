@@ -15,8 +15,8 @@ FLOAT = np.single
 
 
 class Wave:
-    def __init__(self, wcfg: Optional[_WaveConfig], wave_path: str):
-        self.cfg = wcfg or _WaveConfig()
+    def __init__(self, cfg: Optional[_WaveConfig], wave_path: str):
+        self.cfg = cfg or _WaveConfig()
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)  # type: int, np.ndarray
         dtype = self.data.dtype
 
