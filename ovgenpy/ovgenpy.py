@@ -19,7 +19,7 @@ RENDER_PROFILING = True
 
 @register_config
 class Config:
-    wave_dir: str
+    wave_folder: str
     master_audio: Optional[str]
     fps: int
 
@@ -94,7 +94,7 @@ class Ovgen:
         self._render()
 
     def _load_waves(self):
-        wave_dir = Path(self.cfg.wave_dir)
+        wave_dir = Path(self.cfg.wave_folder)
 
         waves = sorted(wave_dir.glob('*.wav'))
         for idx, path in enumerate(waves):
