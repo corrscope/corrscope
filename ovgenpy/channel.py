@@ -1,5 +1,7 @@
 from typing import NamedTuple, TYPE_CHECKING, Any, Optional
 
+from ovgenpy.config import register_config
+
 
 if TYPE_CHECKING:
     from ovgenpy.triggers import Trigger
@@ -7,12 +9,16 @@ if TYPE_CHECKING:
     from ovgenpy.ovgenpy import Config
 
 
-class ChannelConfig(NamedTuple):
+@register_config
+class ChannelConfig:
     _main_cfg: 'Config'
-    visible_ms: Optional[int]
-    scan_ratio: Optional[float]
-    line_color: Any
-    background_color: Any
+
+    trigger_width_ratio: int = 1
+    render_width_ratio: int = 1
+
+    amplification: float = 1.0
+    line_color: Any = None
+    background_color: Any = None
 
 
 class Channel:
