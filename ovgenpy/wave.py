@@ -1,7 +1,7 @@
 from typing import Optional
 
 import numpy as np
-from dataclasses import dataclass
+from ovgenpy.config import dataclass
 from scipy.io import wavfile
 
 

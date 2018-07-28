@@ -1,7 +1,6 @@
 # noinspection PyUnresolvedReferences
 import sys
 
-from dataclasses import fields
 import pytest
 from ruamel.yaml import yaml_object
 
