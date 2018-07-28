@@ -2,6 +2,7 @@ from io import StringIO
 from typing import ClassVar
 
 from ovgenpy.utils.keyword_dataclasses import dataclass, fields
+# from dataclasses import dataclass, fields
 from ruamel.yaml import yaml_object, YAML
 
 
@@ -92,6 +93,7 @@ class _ConfigMixin:
             value = getattr(self, key)
             typ = field.type
 
+            # FIXME crashes on generics, https://github.com/Stewori/pytypes ?
             if not isinstance(value, typ):
                 name = type(self).__name__
                 raise OvgenError(f'{name}.{key} was supplied {repr(value)}, should be of type {typ.__name__}')
