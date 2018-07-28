@@ -5,7 +5,7 @@ from ovgenpy.config import dataclass
 from scipy.io import wavfile
 
 
-# Internal class, not exposed via YAML (TODO replace with ChannelConfig?)
+# Internal class, not exposed via YAML
 @dataclass
 class _WaveConfig:
     amplification: float = 1

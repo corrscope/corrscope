@@ -41,7 +41,7 @@ class Channel:
         )
         self.trigger = tcfg(
             wave=self.wave,
-            scan_nsamp=trigger_nsamp,  # TODO rename to trigger_nsamp
-            # FIXME self.trigger_subsampling
+            nsamp=trigger_nsamp,
+            subsampling=ovgen_cfg.subsampling * self.trigger_subsampling
         )
 
