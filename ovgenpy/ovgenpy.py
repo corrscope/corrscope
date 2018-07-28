@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-import sys
 import time
 from typing import Optional, List
 
 from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
-from ovgenpy.config import register_config, yaml
+from ovgenpy.config import register_config
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig
 from ovgenpy.utils import keyword_dataclasses as dc
