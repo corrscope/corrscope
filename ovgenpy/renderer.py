@@ -94,7 +94,8 @@ class MatplotlibRenderer:
         # Create Axes
         # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplots.html
         if self.fig:
-            plt.close(self.fig)     # FIXME
+            raise Exception("I don't currently expect to call set_layout() twice")
+            plt.close(self.fig)
 
         axes2d: np.ndarray['Axes']
         self.fig, axes2d = plt.subplots(
