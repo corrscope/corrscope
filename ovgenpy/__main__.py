@@ -1,4 +1,4 @@
-from ovgenpy import ovgenpy
+from ovgenpy import cli
 
 if __name__ == '__main__':
-    ovgenpy.main()
+    cli.main()
