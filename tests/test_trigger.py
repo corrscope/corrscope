@@ -23,14 +23,14 @@ def cfg(request):
     )
 
 
-def test_trigger(cfg):
+def test_trigger(cfg: CorrelationTriggerConfig):
     # wave = Wave(None, 'tests/sine440.wav')
     wave = Wave(None, 'tests/impulse24000.wav')
 
     iters = 5
     plot = False
     x = 24000 - 500
-    trigger = cfg(wave, 4000)
+    trigger = cfg(wave, 4000, subsampling=1)
 
     if plot:
         BIG = 0.95
