@@ -33,11 +33,15 @@ YAML_EXTS = ['.yaml']
 @click.argument('files', nargs=-1)
 # Override default .yaml settings (only if YAML file not supplied)
 # Incorrect [option] name order: https://github.com/pallets/click/issues/793
-@click.option('--audio', '-a', type=File)
-@click.option('--video-output', '-o', type=click.Path(dir_okay=False))
+@click.option('--audio', '-a', type=File,
+              help='Config: Input path for master audio file')
+@click.option('--video-output', '-o', type=click.Path(dir_okay=False),
+              help='Config: Output video path')
 # Disables GUI
-@click.option('--write-cfg', '-w', nargs=1, type=click.Path(dir_okay=False))
-@click.option('--play', '-p', is_flag=True)
+@click.option('--write-cfg', '-w', nargs=1, type=click.Path(dir_okay=False),
+              help="Write config YAML file to path (don't open GUI).")
+@click.option('--play', '-p', is_flag=True,
+              help="Preview or render (don't open GUI).")
 def main(
         files: Tuple[str],
         # cfg
@@ -47,21 +51,24 @@ def main(
         write_cfg: Optional[str],
         play: bool,
 ):
-    """
-    GUI:
-    ovgenpy
-    ovgenpy file.yaml
-    ovgenpy wildcard/wav/folder ... [--options]
+    """Intelligent oscilloscope visualizer for .wav files.
 
-    CLI:
-    ovgenpy wildcard/wav/folder ... [--options] --write-cfg file.yaml [--play]
-    ??? ovgenpy wildcard/wav/folder ... --play
-    ovgenpy file.yaml --play
-    ovgenpy file.yaml --write-yaml
-
-    - You can specify as many wildcards or wav files as you want.
-    - You can only supply one folder, with no files/wildcards.
+    FILES can be one or more .wav files (or wildcards), one folder, or one
+    .yaml config.
     """
+    # GUI:
+    # ovgenpy
+    # ovgenpy file.yaml
+    # ovgenpy wildcard/wav/folder ... [--options]
+    #
+    # CLI:
+    # ovgenpy wildcard/wav/folder ... [--options] --write-cfg file.yaml [--play]
+    # ovgenpy wildcard/wav/folder ... --play
+    # ovgenpy file.yaml --play
+    # ovgenpy file.yaml --write-yaml
+    #
+    # - You can specify as many wildcards or wav files as you want.
+    # - You can only supply one folder, with no files/wildcards.
 
     show_gui = (not write_cfg and not play)
 
