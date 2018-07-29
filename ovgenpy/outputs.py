@@ -105,7 +105,7 @@ class ProcessOutput(Output):
 @register_config
 class FFmpegOutputConfig(IOutputConfig):
     path: str
-    video_template: str = '-c:v libx264 -crf 18 -bf 2 -flags +cgop -pix_fmt yuv420p -movflags faststart'
+    video_template: str = '-c:v libx264 -crf 18 -preset superfast'
     audio_template: str = '-c:a aac -b:a 384k'
 
 
