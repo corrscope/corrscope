@@ -49,8 +49,9 @@ class _FFmpegCommand:
         self.ovgen_cfg = ovgen_cfg
 
         self.templates += ffmpeg_input_video(ovgen_cfg)  # video
-        if self.ovgen_cfg.master_audio:
-            self.templates += ffmpeg_input_audio(audio_path=ovgen_cfg.master_audio)    # audio
+        if ovgen_cfg.master_audio:
+            audio_path = shlex.quote(ovgen_cfg.master_audio)
+            self.templates += ffmpeg_input_audio(audio_path)    # audio
 
     def add_output(self, cfg: 'Union[FFmpegOutputConfig, FFplayOutputConfig]') -> None:
         self.templates.append(cfg.video_template)  # video
