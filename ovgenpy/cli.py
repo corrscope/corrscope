@@ -133,4 +133,3 @@ def main(
 
         if play:
             Ovgen(cfg).play()
-        print(cfg)
