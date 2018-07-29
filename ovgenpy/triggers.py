@@ -97,16 +97,18 @@ class CorrelationTrigger(Trigger):
         use_edge_trigger = self.cfg.use_edge_trigger
 
         N = self._buffer_nsamp
+        halfN = N // 2
+
+        # data = windowed
         data = self._wave.get_around(index, N, self._subsampling)
+        data *= signal.gaussian(N, std = halfN / np.sqrt(self._subsampling))
 
         # prev_buffer = windowed step function + self._buffer
-        halfN = N // 2
         step = np.empty(N, dtype=FLOAT)     # type: np.ndarray[FLOAT]
         step[:halfN] = -trigger_strength / 2
         step[halfN:] = trigger_strength / 2
 
-        window = signal.gaussian(N, std = halfN // 3)
-        step *= window
+        step *= signal.gaussian(N, std = halfN / 3)
 
         prev_buffer = self._buffer + step
 
