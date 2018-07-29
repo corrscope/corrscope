@@ -58,10 +58,10 @@ class Wave:
         data *= self.cfg.amplification / self.max_val
         return data
 
-    def get(self, begin: int, end: int) -> 'np.ndarray[FLOAT]':
+    def _get(self, begin: int, end: int, subsampling: int) -> 'np.ndarray[FLOAT]':
         """ Copies self.data[begin:end] with zero-padding. """
         if 0 <= begin and end <= self.nsamp:
-            return self[begin:end]
+            return self[begin:end:subsampling]
 
         region_len = end - begin
 
@@ -75,23 +75,31 @@ class Wave:
                 delta = self.nsamp - idx    # delta < 0
                 assert idx + delta == self.nsamp
 
-            return delta, idx
+            return delta
 
-        delta_begin, begin = constrain(begin)
-        delta_end, end = constrain(end)
+        begin_index = constrain(begin)
+        end_index = region_len + constrain(end)
+        del end
+        data = self[begin+begin_index : begin+end_index : subsampling]
 
-        out = np.zeros(region_len, dtype=FLOAT)
+        # Compute subsampled output ranges
+        out_len = region_len // subsampling
+        out_begin = begin_index // subsampling
+        out_end = out_begin + len(data)
+        # len(data) == ceil((end_index - begin_index) / subsampling)
 
-        # out[0 : region_len]. == self[begin: end]
-        # out[Δbegin : region_len+Δend] == self[begin + Δbegin: end + Δend]
-        out[delta_begin : region_len+delta_end] = self[begin+delta_begin : end+delta_end]
+        out = np.zeros(out_len, dtype=FLOAT)
+
+        out[out_begin : out_end] = data
+
         return out
 
-    def get_around(self, sample: int, region_len: int):
+    def get_around(self, sample: int, region_len: int, subsampling: int):
         """" Copies self.data[...] """
+        region_len *= subsampling
         end = sample + region_len // 2
         begin = end - region_len
-        return self.get(begin, end)
+        return self._get(begin, end, subsampling)
 
     def get_s(self) -> float:
         """
