@@ -93,10 +93,10 @@ class _ConfigMixin:
             value = getattr(self, key)
             typ = field.type
 
-            # FIXME crashes on generics, https://github.com/Stewori/pytypes ?
-            if not isinstance(value, typ):
-                name = type(self).__name__
-                raise OvgenError(f'{name}.{key} was supplied {repr(value)}, should be of type {typ.__name__}')
+            # # FIXME crashes on generics, https://github.com/Stewori/pytypes ?
+            # if not isinstance(value, typ):
+            #     name = type(self).__name__
+            #     raise OvgenError(f'{name}.{key} was supplied {repr(value)}, should be of type {typ.__name__}')
 
         if hasattr(self, '__post_init__'):
             self.__post_init__()
