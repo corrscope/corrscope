@@ -151,9 +151,6 @@ class FFplayOutput(ProcessOutput):
         self.p2.wait()
 
 
-# TODO: MPVOutput?
-
-
 # ImageOutput
 @register_config
 class ImageOutputConfig(IOutputConfig):
