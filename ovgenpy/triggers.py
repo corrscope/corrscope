@@ -88,29 +88,37 @@ class CorrelationTrigger(Trigger):
             subsampling=1,
         )
 
-    def get_trigger(self, index: int) -> int:
-        """
-        :param index: sample index
-        :return: new sample index, corresponding to rising edge
-        """
+        # Precompute tables
         trigger_strength = self.cfg.trigger_strength
-        use_edge_trigger = self.cfg.use_edge_trigger
-
         N = self._buffer_nsamp
         halfN = N // 2
 
-        # data = windowed
-        data = self._wave.get_around(index, N, self._subsampling)
-        data *= signal.gaussian(N, std = halfN / np.sqrt(self._subsampling))
-
-        # prev_buffer = windowed step function + self._buffer
+        # Step function (get_trigger)
         step = np.empty(N, dtype=FLOAT)     # type: np.ndarray[FLOAT]
         step[:halfN] = -trigger_strength / 2
         step[halfN:] = trigger_strength / 2
 
         step *= signal.gaussian(N, std = halfN / 3)
+        self._windowed_step = step
 
-        prev_buffer = self._buffer + step
+        # Input data window (narrower for long subsampled data)
+        self._data_window = signal.gaussian(N, std=halfN / np.sqrt(self._subsampling))
+
+    def get_trigger(self, index: int) -> int:
+        """
+        :param index: sample index
+        :return: new sample index, corresponding to rising edge
+        """
+        use_edge_trigger = self.cfg.use_edge_trigger
+
+        N = self._buffer_nsamp
+
+        # data = windowed
+        data = self._wave.get_around(index, N, self._subsampling)
+        data *= self._data_window
+
+        # prev_buffer
+        prev_buffer = self._windowed_step + self._buffer
 
         # Calculate correlation
         """
