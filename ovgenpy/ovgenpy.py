@@ -124,8 +124,8 @@ class Ovgen:
                 region_len = round(wave.smp_s * render_width_s)
 
                 trigger_sample = channel.trigger.get_trigger(sample)
-                datas.append(wave.get_around(trigger_sample, region_len))
-                # FIXME channel.render_subsampling
+                datas.append(wave.get_around(
+                    trigger_sample, region_len, channel.render_subsampling))
 
             # Render frame
             renderer.render_frame(datas)
