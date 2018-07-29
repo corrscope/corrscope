@@ -24,12 +24,12 @@ def cfg(request):
 
 
 def test_trigger(cfg: CorrelationTriggerConfig):
-    # wave = Wave(None, 'tests/sine440.wav')
     wave = Wave(None, 'tests/impulse24000.wav')
 
     iters = 5
     plot = False
-    x = 24000 - 500
+    x0 = 24000
+    x = x0 - 500
     trigger = cfg(wave, 4000, subsampling=1)
 
     if plot:
@@ -45,12 +45,67 @@ def test_trigger(cfg: CorrelationTriggerConfig):
 
     for i, ax in enumerate(axes):
         if i:
-            offset2 = trigger.get_trigger(x)
-            print(offset2)
-            assert offset2 == 24000
+            offset = trigger.get_trigger(x)
+            print(offset)
+            assert offset == x0
         if plot:
             ax.plot(trigger._buffer, label=str(i))
             ax.grid()
 
     if plot:
         plt.show()
+
+
+def test_trigger_subsampling(cfg: CorrelationTriggerConfig):
+    wave = Wave(None, 'tests/sine440.wav')
+    # period = 48000 / 440 = 109.(09)*
+
+    iters = 5
+    x0 = 24000
+    subsampling = 4
+    trigger = cfg(wave, nsamp=100, subsampling=subsampling)
+    # real nsamp = nsamp*subsampling
+    # period = 109
+
+    for i in range(1, iters):
+        offset = trigger.get_trigger(x0)
+        print(offset)
+
+        # Debugging CorrelationTrigger.get_trigger:
+        # from matplotlib import pyplot as plt
+        # plt.plot(data)
+        # plt.plot(prev_buffer)
+        # plt.plot(corr)
+
+        # When i=0, the data has 3 peaks, the rightmost taller than the center. The
+        # *tips* of the outer peaks are truncated between `left` and `right`.
+        # After truncation, corr[mid+1] is almost identical to corr[mid], for
+        # reasons I don't understand (mid+1 > mid because dithering?).
+        if not cfg.use_edge_trigger:
+            assert (offset - x0) % subsampling == 0
+            assert abs(offset - x0) < 10
+
+        # The edge trigger activates at x0+1=24001. Likely related: it triggers
+        # when moving from <=0 to >0. This is a necessary evil, in order to
+        # recognize 0-to-positive edges while testing tests/impulse24000.wav .
+
+        else:
+            assert abs(offset - x0) <= 2
+
+
+def test_trigger_subsampling_edges(cfg: CorrelationTriggerConfig):
+    wave = Wave(None, 'tests/sine440.wav')
+    # period = 48000 / 440 = 109.(09)*
+
+    iters = 5
+    subsampling = 4
+    trigger = cfg(wave, nsamp=100, subsampling=subsampling)
+    # real nsamp = nsamp*subsampling
+    # period = 109
+
+    trigger.get_trigger(0)
+    trigger.get_trigger(-1000)
+    trigger.get_trigger(50000)
+
+
+# TODO test_period get_period()

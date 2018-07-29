@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Type
 import numpy as np
 from scipy import signal
 
-from ovgenpy.config import register_config
+from ovgenpy.config import register_config, OvgenError
 from ovgenpy.util import find
 from ovgenpy.wave import FLOAT
 
@@ -36,8 +36,8 @@ class Trigger(ABC):
         self.cfg = cfg
         self._wave = wave
 
-        self._trigger_nsamp = nsamp
-        self._trigger_subsampling = subsampling
+        self._nsamp = nsamp
+        self._subsampling = subsampling
 
     @abstractmethod
     def get_trigger(self, index: int) -> int:
@@ -75,7 +75,7 @@ class CorrelationTrigger(Trigger):
         it's complicated
         """
         Trigger.__init__(self, *args, **kwargs)
-        self._buffer_nsamp = self._trigger_nsamp
+        self._buffer_nsamp = self._nsamp
 
         # Create correlation buffer (containing a series of old data)
         self._buffer = np.zeros(self._buffer_nsamp, dtype=FLOAT)    # type: np.ndarray[FLOAT]
@@ -97,7 +97,7 @@ class CorrelationTrigger(Trigger):
         use_edge_trigger = self.cfg.use_edge_trigger
 
         N = self._buffer_nsamp
-        data = self._wave.get_around(index, N)
+        data = self._wave.get_around(index, N, self._subsampling)
 
         # prev_buffer = windowed step function + self._buffer
         halfN = N // 2
@@ -109,10 +109,6 @@ class CorrelationTrigger(Trigger):
         step *= window
 
         prev_buffer = self._buffer + step
-
-        # Find optimal offset (within ±N//4)
-        mid = N-1
-        radius = N//4
 
         # Calculate correlation
         """
@@ -130,6 +126,10 @@ class CorrelationTrigger(Trigger):
         corr = signal.correlate(data, prev_buffer)
         assert len(corr) == 2*N - 1
 
+        # Find optimal offset (within ±N//4)
+        mid = N-1
+        radius = N//4
+
         left = mid - radius
         right = mid + radius + 1
 
@@ -139,10 +139,10 @@ class CorrelationTrigger(Trigger):
         # argmax(corr) == mid + peak_offset == (data >> peak_offset)
         # peak_offset == argmax(corr) - mid
         peak_offset = np.argmax(corr) - mid   # type: int
-        trigger = index + peak_offset
+        trigger = index + (self._subsampling * peak_offset)
 
         # Update correlation buffer (distinct from visible area)
-        aligned = self._wave.get_around(trigger, self._buffer_nsamp)
+        aligned = self._wave.get_around(trigger, self._buffer_nsamp, self._subsampling)
         self._update_buffer(aligned)
 
         if use_edge_trigger:
@@ -206,8 +206,13 @@ def get_period(data: np.ndarray) -> int:
 
 
 class ZeroCrossingTrigger(Trigger):
+    # TODO support subsampling
     def get_trigger(self, index: int):
-        trigger_nsamp = self._trigger_nsamp
+        if self._subsampling != 1:
+            raise OvgenError(
+                f'ZeroCrossingTrigger with subsampling != 1 is not implemented '
+                f'(supplied {self._subsampling})')
+        nsamp = self._nsamp
 
         if not 0 <= index < self._wave.nsamp:
             return index
@@ -223,7 +228,7 @@ class ZeroCrossingTrigger(Trigger):
         else:   # self._wave[sample] == 0
             return index + 1
 
-        data = self._wave[index : index + (direction * trigger_nsamp) : direction]
+        data = self._wave[index : index + (direction * nsamp) : direction]
         intercepts = find(data, test)
         try:
             (delta,), value = next(intercepts)

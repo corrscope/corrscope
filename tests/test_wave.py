@@ -35,3 +35,18 @@ def test_wave(wave_path):
         # check for FutureWarning (raised when determining wavfile type)
         warns = [o for o in w if issubclass(o.category, FutureWarning)]
         assert not [str(w) for w in warns]
+
+
+def test_wave_subsampling():
+    wave = Wave(None, 'tests/sine440.wav')
+    # period = 48000 / 440 = 109.(09)*
+
+    wave.get_around(1000, region_len=501, subsampling=4)
+    # len([:region_len:subsampling]) == ceil(region_len / subsampling)
+    # If region_len % subsampling != 0, len() != region_len // subsampling.
+
+    subsampling = 4
+    region = 100    # diameter = region * subsampling
+    for i in [-1000, 50000]:
+        data = wave.get_around(i, region, subsampling)
+        assert (data == 0).all()
