@@ -24,6 +24,7 @@ class RendererConfig:
 
     nrows: Optional[int] = None
     ncols: Optional[int] = None
+    create_window: bool = False
 
     def __post_init__(self):
         if not self.nrows:
@@ -61,10 +62,9 @@ class MatplotlibRenderer:
 
     DPI = 96
 
-    def __init__(self, cfg: RendererConfig, nplots: int, create_window: bool):
+    def __init__(self, cfg: RendererConfig, nplots: int):
         self.cfg = cfg
         self.nplots = nplots
-        self.create_window = create_window
 
         # Setup layout
         # "ncols=1" is good for vertical layouts.
@@ -121,7 +121,7 @@ class MatplotlibRenderer:
             self.cfg.width / self.DPI,
             self.cfg.height / self.DPI
         )
-        if self.create_window:
+        if self.cfg.create_window:
             plt.show(block=False)
 
     def _calc_layout(self) -> Tuple[int, int]:
