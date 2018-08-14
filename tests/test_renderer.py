@@ -34,13 +34,13 @@ def test_renderer():
 
     # 2 columns
     cfg = RendererConfig(WIDTH, HEIGHT, ncols=2)
-    nplots = 16
+    nplots = 15
 
     r = MatplotlibRenderer(cfg, nplots)
 
     # 2 columns, 8 rows
-    assert r.ncols == 2
-    assert r.nrows == 8
+    assert r.layout.ncols == 2
+    assert r.layout.nrows == 8
 
 
 # TODO: test get_frame()

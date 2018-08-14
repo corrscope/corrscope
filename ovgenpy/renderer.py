@@ -1,4 +1,4 @@
-from typing import Optional, List, Tuple, TYPE_CHECKING
+from typing import Optional, List, Tuple, TYPE_CHECKING, TypeVar, Callable
 
 import matplotlib
 import numpy as np
@@ -24,6 +24,8 @@ class RendererConfig:
 
     nrows: Optional[int] = None
     ncols: Optional[int] = None
+    orientation: str = 'h'
+
     create_window: bool = False
 
     def __post_init__(self):
@@ -65,13 +67,7 @@ class MatplotlibRenderer:
     def __init__(self, cfg: RendererConfig, nplots: int):
         self.cfg = cfg
         self.nplots = nplots
-
-        # Setup layout
-        # "ncols=1" is good for vertical layouts.
-        # But "nrows=X" is good for left-to-right grids.
-
-        self.nrows = 0
-        self.ncols = 0
+        self.layout = RendererLayout(cfg, nplots)
 
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
         self.fig: 'Figure' = None
@@ -89,8 +85,6 @@ class MatplotlibRenderer:
         Outputs: self.nrows, self.ncols, self.axes
         """
 
-        self.nrows, self.ncols = self._calc_layout()
-
         # Create Axes
         # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplots.html
         if self.fig:
@@ -99,7 +93,7 @@ class MatplotlibRenderer:
 
         axes2d: np.ndarray['Axes']
         self.fig, axes2d = plt.subplots(
-            self.nrows, self.ncols,
+            self.layout.nrows, self.layout.ncols,
             squeeze=False,
             # Remove gaps between Axes
             gridspec_kw=dict(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
@@ -109,11 +103,8 @@ class MatplotlibRenderer:
         for ax in axes2d.flatten():
             ax.set_axis_off()
 
-        # if column major:
-        if self.cfg.ncols:
-            axes2d = axes2d.T
-
-        self.axes: List['Axes'] = axes2d.flatten().tolist()[:self.nplots]
+        # Generate arrangement (using nplots, cfg.orientation)
+        self.axes = self.layout.arrange(lambda row, col: axes2d[row, col])
 
         # Setup figure geometry
         self.fig.set_dpi(self.DPI)
@@ -123,26 +114,6 @@ class MatplotlibRenderer:
         )
         if self.cfg.create_window:
             plt.show(block=False)
-
-    def _calc_layout(self) -> Tuple[int, int]:
-        """
-        Inputs: self.cfg, self.waves
-        :return: (nrows, ncols)
-        """
-        cfg = self.cfg
-
-        if cfg.nrows:
-            nrows = cfg.nrows
-            if nrows is None:
-                raise ValueError('invalid cfg: rows_first is True and nrows is None')
-            ncols = ceildiv(self.nplots, nrows)
-        else:
-            ncols = cfg.ncols
-            if ncols is None:
-                raise ValueError('invalid cfg: rows_first is False and ncols is None')
-            nrows = ceildiv(self.nplots, ncols)
-
-        return nrows, ncols
 
     def render_frame(self, datas: List[np.ndarray]) -> None:
         ndata = len(datas)
@@ -189,3 +160,62 @@ class MatplotlibRenderer:
         assert buffer_rgb.size == w * h * RGB_DEPTH
 
         return buffer_rgb
+
+
+Region = TypeVar('Region')
+RegionFactory = Callable[[int, int], Region]   # f(row, column) -> Region
+
+class RendererLayout:
+    VALID_ORIENTATIONS = ['h', 'v']
+
+    def __init__(self, cfg: 'RendererConfig', nplots: int):
+        self.cfg = cfg
+        self.nplots = nplots
+
+        # Setup layout
+        self.nrows, self.ncols = self._calc_layout()
+
+        self.orientation = cfg.orientation
+        if self.orientation not in self.VALID_ORIENTATIONS:
+            raise ValueError(f'Invalid orientation {self.orientation} not in '
+                             f'{self.VALID_ORIENTATIONS}')
+
+    def _calc_layout(self):
+        """
+        Inputs: self.cfg, self.waves
+        :return: (nrows, ncols)
+        """
+        cfg = self.cfg
+
+        if cfg.nrows:
+            nrows = cfg.nrows
+            if nrows is None:
+                raise ValueError('invalid cfg: rows_first is True and nrows is None')
+            ncols = ceildiv(self.nplots, nrows)
+        else:
+            ncols = cfg.ncols
+            if ncols is None:
+                raise ValueError('invalid cfg: rows_first is False and ncols is None')
+            nrows = ceildiv(self.nplots, ncols)
+
+        return nrows, ncols
+
+    def arrange(self, region_factory: RegionFactory) -> List[Region]:
+        """ Generates an array of regions.
+
+        index, row, column are fed into region_factory in a row-major order [row][col].
+        The results are possibly reshaped into column-major order [col][row].
+        """
+        nspaces = self.nrows * self.ncols
+        inds = np.arange(nspaces)
+        rows, cols = np.unravel_index(inds, (self.nrows, self.ncols))
+
+        row_col = np.array([rows, cols]).T
+        regions = np.array([region_factory(*rc) for rc in row_col])  # type: np.ndarray[Region]
+        regions2d = regions.reshape((self.nrows, self.ncols))   # type: np.ndarray[Region]
+
+        # if column major:
+        if self.orientation == 'v':
+            regions2d = regions2d.T
+
+        return regions2d.flatten()[:self.nplots].tolist()
