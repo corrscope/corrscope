@@ -33,7 +33,6 @@ class Config:
     render: RendererConfig
 
     outputs: List[outputs.IOutputConfig]
-    create_window: bool = False
 
     @property
     def render_width_s(self) -> float:
@@ -97,12 +96,11 @@ class Ovgen:
         # Calculate number of frames (TODO master file?)
         render_width_s = self.cfg.render_width_s
         fps = self.cfg.fps
-        create_window = self.cfg.create_window
 
         nframes = fps * self.waves[0].get_s()
         nframes = int(nframes) + 1
 
-        renderer = MatplotlibRenderer(self.cfg.render, self.nchan, create_window)
+        renderer = MatplotlibRenderer(self.cfg.render, self.nchan)
 
         if RENDER_PROFILING:
             begin = time.perf_counter()

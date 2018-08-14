@@ -36,7 +36,7 @@ def test_renderer():
     cfg = RendererConfig(WIDTH, HEIGHT, ncols=2)
     nplots = 16
 
-    r = MatplotlibRenderer(cfg, nplots, create_window=False)
+    r = MatplotlibRenderer(cfg, nplots)
 
     # 2 columns, 8 rows
     assert r.ncols == 2
