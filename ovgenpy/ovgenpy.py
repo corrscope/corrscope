@@ -5,7 +5,7 @@ from typing import Optional, List
 from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
 from ovgenpy.config import register_config
-from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
+from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig
 from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field
@@ -30,6 +30,7 @@ class Config:
     trigger: ITriggerConfig  # Maybe overriden per Wave
 
     amplification: float
+    layout: LayoutConfig
     render: RendererConfig
 
     outputs: List[outputs.IOutputConfig]
@@ -60,10 +61,8 @@ def default_config(**kwargs):
         ),
 
         amplification=1,
-        render=RendererConfig(
-            1280, 720,
-            ncols=1
-        ),
+        layout=LayoutConfig(ncols=1),
+        render=RendererConfig(1280, 720),
 
         outputs=[
             # outputs.FFmpegOutputConfig(output),
@@ -100,7 +99,7 @@ class Ovgen:
         nframes = fps * self.waves[0].get_s()
         nframes = int(nframes) + 1
 
-        renderer = MatplotlibRenderer(self.cfg.render, self.nchan)
+        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan)
 
         if RENDER_PROFILING:
             begin = time.perf_counter()
