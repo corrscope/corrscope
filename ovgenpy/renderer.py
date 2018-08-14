@@ -1,4 +1,4 @@
-from typing import Optional, List, Tuple, TYPE_CHECKING, TypeVar, Callable
+from typing import Optional, List, TYPE_CHECKING, TypeVar, Callable
 
 import matplotlib
 import numpy as np
@@ -22,23 +22,7 @@ class RendererConfig:
     width: int
     height: int
 
-    nrows: Optional[int] = None
-    ncols: Optional[int] = None
-    orientation: str = 'h'
-
     create_window: bool = False
-
-    def __post_init__(self):
-        if not self.nrows:
-            self.nrows = None
-        if not self.ncols:
-            self.ncols = None
-
-        if self.nrows and self.ncols:
-            raise ValueError('cannot manually assign both nrows and ncols')
-
-        if not self.nrows and not self.ncols:
-            self.ncols = 1
 
 
 class MatplotlibRenderer:
@@ -64,10 +48,10 @@ class MatplotlibRenderer:
 
     DPI = 96
 
-    def __init__(self, cfg: RendererConfig, nplots: int):
+    def __init__(self, cfg: RendererConfig, lcfg: 'LayoutConfig', nplots: int):
         self.cfg = cfg
         self.nplots = nplots
-        self.layout = RendererLayout(cfg, nplots)
+        self.layout = RendererLayout(lcfg, nplots)
 
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
         self.fig: 'Figure' = None
@@ -162,13 +146,33 @@ class MatplotlibRenderer:
         return buffer_rgb
 
 
+@register_config
+class LayoutConfig:
+    nrows: Optional[int] = None
+    ncols: Optional[int] = None
+    orientation: str = 'h'
+
+    def __post_init__(self):
+        if not self.nrows:
+            self.nrows = None
+        if not self.ncols:
+            self.ncols = None
+
+        if self.nrows and self.ncols:
+            raise ValueError('cannot manually assign both nrows and ncols')
+
+        if not self.nrows and not self.ncols:
+            self.ncols = 1
+
+
 Region = TypeVar('Region')
 RegionFactory = Callable[[int, int], Region]   # f(row, column) -> Region
+
 
 class RendererLayout:
     VALID_ORIENTATIONS = ['h', 'v']
 
-    def __init__(self, cfg: 'RendererConfig', nplots: int):
+    def __init__(self, cfg: LayoutConfig, nplots: int):
         self.cfg = cfg
         self.nplots = nplots
 
