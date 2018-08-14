@@ -1,6 +1,7 @@
 import warnings
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pytest
 from delayed_assert import expect, assert_expectations
 
@@ -34,6 +35,44 @@ def test_wave(wave_path):
         # check for FutureWarning (raised when determining wavfile type)
         warns = [o for o in w if issubclass(o.category, FutureWarning)]
         assert not [str(w) for w in warns]
+
+
+def test_stereo_merge():
+    """ Ensure stereo channels are combined properly, when indexing by slices
+    *or* ints. """
+
+    # Contains a full-scale sine wave in left channel, and silence in right.
+    # λ=100, nsamp=2000
+    wave = Wave(None, prefix + 'stereo-sine-left-2000.wav')
+    period = 100
+    nsamp = 2000
+
+    # [-1, 1) from [-32768..32768)
+    int16_step = (1 - -1) / (2 ** 16)
+    assert int16_step == 2**-15
+
+    # Check wave indexing dimensions.
+    assert wave[0].shape == ()
+    assert wave[:].shape == (nsamp,)
+
+    # Check stereo merging.
+    assert_allclose(wave[0], 0)
+    assert_allclose(wave[period], 0)
+    assert_allclose(wave[period//4], 0.5, atol=int16_step)
+
+    def check_bound(obj):
+        amax = np.amax(obj)
+        assert amax.shape == ()
+
+        assert_allclose(amax, 0.5, atol=int16_step)
+        assert_allclose(np.amin(obj), -0.5, atol=int16_step)
+
+    check_bound(wave[:])
+
+
+def test_stereo_mmap():
+    wave = Wave(None, prefix + 'stereo-sine-left-2000.wav')
+    assert isinstance(wave.data, np.memmap)
 
 
 def test_wave_subsampling():
