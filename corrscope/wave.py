@@ -21,16 +21,12 @@ class Wave:
     def __init__(self, cfg: Optional[_WaveConfig], wave_path: str):
         self.cfg = cfg or _WaveConfig()
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)  # type: int, np.ndarray
+        self.nsamp = len(self.data)
         dtype = self.data.dtype
 
-        # Flatten stereo to mono
+        # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
         assert self.data.ndim in [1, 2]
-        if self.data.ndim == 2:
-            # np.mean() defaults to dtype=float64,
-            # which prevents overflow if dtype is an integer.
-            self.data = np.mean(self.data, axis=1).astype(dtype)
-
-        self.nsamp = len(self.data)
+        self.is_stereo = (self.data.ndim == 2)
 
         # Calculate scaling factor.
         def is_type(parent: type) -> bool:
@@ -59,6 +55,12 @@ class Wave:
     def __getitem__(self, index: Union[int, slice]) -> 'np.ndarray[FLOAT]':
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         data = self.data[index].astype(FLOAT)
+
+        # Flatten stereo to mono.
+        # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
+        if self.is_stereo:
+            data = np.mean(data, axis=-1, dtype=FLOAT)
+
         data -= self.center
         data *= self.cfg.amplification / self.max_val
         return data
