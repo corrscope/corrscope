@@ -71,6 +71,7 @@ b: b
 '''
 
 
+@pytest.mark.xfail(strict=True)
 def test_load_type_checking():
     @register_config
     class Foo:
