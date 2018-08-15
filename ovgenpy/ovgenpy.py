@@ -100,6 +100,7 @@ class Ovgen:
         nframes = int(nframes) + 1
 
         renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan)
+        renderer.set_colors(self.cfg.channels)
 
         if RENDER_PROFILING:
             begin = time.perf_counter()
