@@ -18,6 +18,13 @@ if TYPE_CHECKING:
     from ovgenpy.channel import ChannelConfig
 
 
+def default_color():
+    colors = np.array([int(x, 16) for x in '1f 77 b4'.split()], dtype=float)
+    colors /= np.amax(colors)
+    colors **= 1/3
+
+    return tuple(colors.tolist())   # tolist() converts np.float64 to float
+
 
 @register_config(always_dump='bg_color init_line_color line_width')
 class RendererConfig:
@@ -25,7 +32,7 @@ class RendererConfig:
     height: int
 
     bg_color: Any = 'black'
-    init_line_color: Any = 'white'
+    init_line_color: Any = default_color()
     # line_width: Optional[float] = None  # TODO
 
     create_window: bool = False
