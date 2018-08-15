@@ -58,9 +58,9 @@ class MatplotlibRenderer:
         self.axes: List['Axes'] = None        # set by set_layout()
         self.lines: List['Line2D'] = None     # set by render_frame() first call
 
-        self.set_layout()   # mutates self
+        self._set_layout()   # mutates self
 
-    def set_layout(self) -> None:
+    def _set_layout(self) -> None:
         """
         Creates a flat array of Matplotlib Axes, with the new layout.
         Opens a window showing the Figure (and Axes).
