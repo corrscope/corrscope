@@ -18,8 +18,8 @@ class ChannelConfig:
     render_width_ratio: int = 1
 
     ampl_ratio: float = 1.0     # TODO use amplification = None instead?
+    bg_color: Any = None
     line_color: Any = None
-    background_color: Any = None
 
 
 class Channel:
