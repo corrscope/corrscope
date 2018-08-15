@@ -1,11 +1,11 @@
-from typing import Optional, List, TYPE_CHECKING, TypeVar, Callable
+from typing import Optional, List, TYPE_CHECKING, TypeVar, Callable, Any
 
 import matplotlib
 import numpy as np
 
 from ovgenpy.config import register_config
 from ovgenpy.outputs import RGB_DEPTH
-from ovgenpy.util import ceildiv
+from ovgenpy.util import ceildiv, coalesce
 
 matplotlib.use('agg')
 from matplotlib import pyplot as plt
@@ -15,12 +15,17 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
     from matplotlib.lines import Line2D
+    from ovgenpy.channel import ChannelConfig
 
 
-@register_config
+@register_config(always_dump='init_bg_color init_line_color line_width')
 class RendererConfig:
     width: int
     height: int
+
+    init_bg_color: Any = 'black'
+    init_line_color: Any = 'white'
+    # line_width: Optional[float] = None  # TODO
 
     create_window: bool = False
 
@@ -58,6 +63,9 @@ class MatplotlibRenderer:
         self.axes: List['Axes'] = None        # set by set_layout()
         self.lines: List['Line2D'] = None     # set by render_frame() first call
 
+        self.bg_colors: List = [None] * nplots
+        self.line_colors: List = [None] * nplots
+
         self._set_layout()   # mutates self
 
     def _set_layout(self) -> None:
@@ -85,7 +93,7 @@ class MatplotlibRenderer:
 
         # remove Axis from Axes
         for ax in axes2d.flatten():
-            ax.set_axis_off()
+            ax.set_axis_off()   # FIXME ax.get_xaxis().set_visible(False)
 
         # Generate arrangement (using nplots, cfg.orientation)
         self.axes = self.layout.arrange(lambda row, col: axes2d[row, col])
@@ -99,6 +107,16 @@ class MatplotlibRenderer:
         if self.cfg.create_window:
             plt.show(block=False)
 
+    def set_colors(self, channel_cfgs: List['ChannelConfig']):
+        if len(channel_cfgs) != self.nplots:
+            raise ValueError(
+                f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
+            )
+        self.bg_colors = [coalesce(cfg.bg_color, self.cfg.init_bg_color)
+                          for cfg in channel_cfgs]
+        self.line_colors = [coalesce(cfg.line_color, self.cfg.init_line_color)
+                            for cfg in channel_cfgs]
+
     def render_frame(self, datas: List[np.ndarray]) -> None:
         ndata = len(datas)
         if self.nplots != ndata:
@@ -109,11 +127,18 @@ class MatplotlibRenderer:
         if self.lines is None:
             self.lines = []
             for idx, data in enumerate(datas):
+                # Setup colors
+                bg_color = self.bg_colors[idx]
+                line_color = self.line_colors[idx]
+
+                # Setup axes
                 ax = self.axes[idx]
                 ax.set_xlim(0, len(data) - 1)
                 ax.set_ylim(-1, 1)
+                ax.set_facecolor(bg_color)
 
-                line = ax.plot(data)[0]
+                # Plot line
+                line = ax.plot(data, color=line_color)[0]
                 self.lines.append(line)
 
         # Draw waveform data
