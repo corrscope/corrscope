@@ -140,7 +140,6 @@ class MatplotlibRenderer:
         assert (w, h) == canvas.get_width_height()
 
         buffer_rgb: np.ndarray = np.frombuffer(canvas.tostring_rgb(), np.uint8)     # TODO Pycharm type inference error
-        np.reshape(buffer_rgb, (w, h, RGB_DEPTH))
         assert buffer_rgb.size == w * h * RGB_DEPTH
 
         return buffer_rgb
