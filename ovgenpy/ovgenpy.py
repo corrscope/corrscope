@@ -128,8 +128,7 @@ class Ovgen:
             renderer.render_frame(datas)
 
             # Output frame
-            if self.outputs:
-                frame = renderer.get_frame()
+            frame = renderer.get_frame()
             for output in self.outputs:
                 output.write_frame(frame)
 
