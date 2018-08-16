@@ -125,7 +125,7 @@ class MatplotlibRenderer:
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 
-    def get_frame(self) -> np.ndarray:
+    def get_frame(self) -> bytes:
         """ Returns ndarray of shape w,h,3. """
         canvas = self.fig.canvas
 
@@ -139,8 +139,8 @@ class MatplotlibRenderer:
         h = self.cfg.height
         assert (w, h) == canvas.get_width_height()
 
-        buffer_rgb: np.ndarray = np.frombuffer(canvas.tostring_rgb(), np.uint8)     # TODO Pycharm type inference error
-        assert buffer_rgb.size == w * h * RGB_DEPTH
+        buffer_rgb = canvas.tostring_rgb()
+        assert len(buffer_rgb) == w * h * RGB_DEPTH
 
         return buffer_rgb
 
