@@ -33,7 +33,7 @@ class RendererConfig:
 
     bg_color: Any = 'black'
     init_line_color: Any = default_color()
-    # line_width: Optional[float] = None  # TODO
+    line_width: Optional[float] = None  # TODO
 
     create_window: bool = False
 
@@ -130,6 +130,7 @@ class MatplotlibRenderer:
         # Initialize axes and draw waveform data
         if self._lines is None:
             self._fig.set_facecolor(self.cfg.bg_color)
+            line_width = self.cfg.line_width
 
             self._lines = []
             for idx, data in enumerate(datas):
@@ -142,7 +143,7 @@ class MatplotlibRenderer:
                 ax.set_ylim(-1, 1)
 
                 # Plot line
-                line = ax.plot(data, color=line_color)[0]
+                line = ax.plot(data, color=line_color, linewidth=line_width)[0]
                 self._lines.append(line)
 
         # Draw waveform data
