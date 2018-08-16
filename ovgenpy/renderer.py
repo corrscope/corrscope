@@ -67,11 +67,11 @@ class MatplotlibRenderer:
         self.layout = RendererLayout(lcfg, nplots)
 
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
-        self.fig: 'Figure' = None
-        self.axes: List['Axes'] = None        # set by set_layout()
-        self.lines: List['Line2D'] = None     # set by render_frame() first call
+        self._fig: 'Figure' = None
+        self._axes: List['Axes'] = None        # set by set_layout()
+        self._lines: List['Line2D'] = None     # set by render_frame() first call
 
-        self.line_colors: List = [None] * nplots
+        self._line_colors: List = [None] * nplots
 
         self._set_layout()   # mutates self
 
@@ -86,12 +86,12 @@ class MatplotlibRenderer:
 
         # Create Axes
         # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplots.html
-        if self.fig:
+        if self._fig:
             raise Exception("I don't currently expect to call set_layout() twice")
             # plt.close(self.fig)
 
         axes2d: np.ndarray['Axes']
-        self.fig, axes2d = plt.subplots(
+        self._fig, axes2d = plt.subplots(
             self.layout.nrows, self.layout.ncols,
             squeeze=False,
             # Remove gaps between Axes
@@ -103,11 +103,11 @@ class MatplotlibRenderer:
             ax.set_axis_off()
 
         # Generate arrangement (using nplots, cfg.orientation)
-        self.axes = self.layout.arrange(lambda row, col: axes2d[row, col])
+        self._axes = self.layout.arrange(lambda row, col: axes2d[row, col])
 
         # Setup figure geometry
-        self.fig.set_dpi(self.DPI)
-        self.fig.set_size_inches(
+        self._fig.set_dpi(self.DPI)
+        self._fig.set_size_inches(
             self.cfg.width / self.DPI,
             self.cfg.height / self.DPI
         )
@@ -119,7 +119,7 @@ class MatplotlibRenderer:
             raise ValueError(
                 f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
             )
-        self.line_colors = [cfg.line_color for cfg in channel_cfgs]
+        self._line_colors = [cfg.line_color for cfg in channel_cfgs]
 
     def render_frame(self, datas: List[np.ndarray]) -> None:
         ndata = len(datas)
@@ -128,35 +128,35 @@ class MatplotlibRenderer:
                 f'incorrect data to plot: {self.nplots} plots but {ndata} datas')
 
         # Initialize axes and draw waveform data
-        if self.lines is None:
-            self.fig.set_facecolor(self.cfg.bg_color)
+        if self._lines is None:
+            self._fig.set_facecolor(self.cfg.bg_color)
 
-            self.lines = []
+            self._lines = []
             for idx, data in enumerate(datas):
                 # Setup colors
-                line_color = coalesce(self.line_colors[idx], self.cfg.init_line_color)
+                line_color = coalesce(self._line_colors[idx], self.cfg.init_line_color)
 
                 # Setup axes
-                ax = self.axes[idx]
+                ax = self._axes[idx]
                 ax.set_xlim(0, len(data) - 1)
                 ax.set_ylim(-1, 1)
 
                 # Plot line
                 line = ax.plot(data, color=line_color)[0]
-                self.lines.append(line)
+                self._lines.append(line)
 
         # Draw waveform data
         else:
             for idx, data in enumerate(datas):
-                line = self.lines[idx]
+                line = self._lines[idx]
                 line.set_ydata(data)
 
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
+        self._fig.canvas.draw()
+        self._fig.canvas.flush_events()
 
     def get_frame(self) -> bytes:
         """ Returns ndarray of shape w,h,3. """
-        canvas = self.fig.canvas
+        canvas = self._fig.canvas
 
         # Agg is the default noninteractive backend except on OSX.
         # https://matplotlib.org/faq/usage_faq.html
