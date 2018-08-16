@@ -27,7 +27,7 @@ class Output(ABC):
         self.cfg = cfg
 
     @abstractmethod
-    def write_frame(self, frame: 'np.ndarray') -> None:
+    def write_frame(self, frame: bytes) -> None:
         """ Output a Numpy ndarray. """
 
 
@@ -93,7 +93,7 @@ class ProcessOutput(Output):
         # Python documentation discourages accessing popen.stdin. It's wrong.
         # https://stackoverflow.com/a/9886747
 
-    def write_frame(self, frame: 'np.ndarray') -> None:
+    def write_frame(self, frame: bytes) -> None:
         # frame.tobytes() avoids PyCharm complaining about type mismatch,
         # but results in slightly higher CPU consumption.
         self._stream.write(frame)
