@@ -119,8 +119,7 @@ class MatplotlibRenderer:
             raise ValueError(
                 f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
             )
-        self.line_colors = [coalesce(cfg.line_color, self.cfg.init_line_color)
-                            for cfg in channel_cfgs]
+        self.line_colors = [cfg.line_color for cfg in channel_cfgs]
 
     def render_frame(self, datas: List[np.ndarray]) -> None:
         ndata = len(datas)
@@ -135,7 +134,7 @@ class MatplotlibRenderer:
             self.lines = []
             for idx, data in enumerate(datas):
                 # Setup colors
-                line_color = self.line_colors[idx]
+                line_color = coalesce(self.line_colors[idx], self.cfg.init_line_color)
 
                 # Setup axes
                 ax = self.axes[idx]

@@ -1,10 +1,10 @@
-from unittest.mock import patch
-
+import numpy as np
 import pytest
+from matplotlib.colors import to_rgb
 
+from ovgenpy.outputs import RGB_DEPTH
 from ovgenpy.renderer import RendererConfig, MatplotlibRenderer, LayoutConfig, \
     RendererLayout
-
 
 WIDTH = 640
 HEIGHT = 360
@@ -90,9 +90,43 @@ def test_renderer():
     assert r.layout.ncols == 2
     assert r.layout.nrows == 8
 
-# TODO: test get_frame()
-def test_colors():
-    pass    # TODO
+
+ALL_ZEROS = np.array([0,0])
+
+@pytest.mark.parametrize('bg_str,fg_str', [
+    ('#000000', '#ffffff'),
+    ('#ffffff', '#000000'),
+    ('#0000aa', '#aaaa00'),
+    ('#aaaa00', '#0000aa'),
+])
+def test_colors(bg_str, fg_str):
+    """ Ensure the rendered background/foreground colors are correct. """
+    cfg = RendererConfig(
+        WIDTH,
+        HEIGHT,
+        bg_color=bg_str,
+        init_line_color=fg_str,
+        # line_width=5,
+    )
+    lcfg = LayoutConfig()
+    nplots = 1
+
+    r = MatplotlibRenderer(cfg, lcfg, nplots)
+    r.render_frame([ALL_ZEROS])
+    frame_colors: np.ndarray = \
+        np.frombuffer(r.get_frame(), dtype=np.uint8).reshape((-1, RGB_DEPTH))
+
+    bg_u8 = [round(c*255) for c in to_rgb(bg_str)]
+    fg_u8 = [round(c*255) for c in to_rgb(fg_str)]
+
+    # Ensure background is correct
+    assert (frame_colors[0] == bg_u8).all()
+
+    # Ensure foreground is present
+    assert np.prod(frame_colors == fg_u8, axis=-1).any()
+
+    assert (np.amax(frame_colors, axis=0) == np.maximum(bg_u8, fg_u8)).all()
+    assert (np.amin(frame_colors, axis=0) == np.minimum(bg_u8, fg_u8)).all()
 
 
 # TODO (integration test) ensure rendering to output works
