@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 
 RGB_DEPTH = 3
+FRAMES_TO_BUFFER = 2
 
 
 class IOutputConfig:
@@ -25,6 +26,11 @@ class Output(ABC):
     def __init__(self, ovgen_cfg: 'Config', cfg: IOutputConfig):
         self.ovgen_cfg = ovgen_cfg
         self.cfg = cfg
+
+        rcfg = ovgen_cfg.render
+
+        frame_bytes = rcfg.height * rcfg.width * RGB_DEPTH
+        self.bufsize = frame_bytes * FRAMES_TO_BUFFER
 
     @abstractmethod
     def write_frame(self, frame: 'np.ndarray') -> None:
@@ -58,12 +64,9 @@ class _FFmpegCommand:
         if self.ovgen_cfg.master_audio:
             self.templates.append(cfg.audio_template)  # audio
 
-    def popen(self, process_args=None, **kwargs) -> subprocess.Popen:
-        if process_args is None:
-            process_args = []
-
-        return subprocess.Popen(self._generate_args() + process_args,
-                                stdin=subprocess.PIPE, **kwargs)
+    def popen(self, extra_args, bufsize, **kwargs) -> subprocess.Popen:
+        return subprocess.Popen(self._generate_args() + extra_args,
+                                stdin=subprocess.PIPE, bufsize=bufsize, **kwargs)
 
     def _generate_args(self) -> List[str]:
         return [arg
@@ -122,7 +125,7 @@ class FFmpegOutput(ProcessOutput):
 
         ffmpeg = _FFmpegCommand([FFMPEG, '-y'], ovgen_cfg)
         ffmpeg.add_output(cfg)
-        self.open(ffmpeg.popen([cfg.path]))
+        self.open(ffmpeg.popen([cfg.path], self.bufsize))
 
 
 # FFplayOutput
@@ -141,9 +144,9 @@ class FFplayOutput(ProcessOutput):
 
         ffmpeg = _FFmpegCommand([FFMPEG], ovgen_cfg)
         ffmpeg.add_output(cfg)
-        ffmpeg.templates.append('-f nut -')
+        ffmpeg.templates.append('-f nut')
 
-        p1 = ffmpeg.popen(stdout=subprocess.PIPE)
+        p1 = ffmpeg.popen(['-'], self.bufsize, stdout=subprocess.PIPE)
 
         ffplay = shlex.split('ffplay -autoexit -')
         self.p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
