@@ -1,3 +1,4 @@
+from itertools import count
 from pathlib import Path
 from typing import Optional, List, Tuple
 
@@ -26,6 +27,7 @@ File = click.Path(exists=True, dir_okay=False)
 
 
 YAML_EXTS = ['.yaml']
+PROFILE_DUMP_NAME = 'cprofile'
 
 
 @click.command()
@@ -42,6 +44,9 @@ YAML_EXTS = ['.yaml']
               help="Write config YAML file to path (don't open GUI).")
 @click.option('--play', '-p', is_flag=True,
               help="Preview or render (don't open GUI).")
+# Debugging
+@click.option('--profile', is_flag=True,
+              help='Debug: Write CProfiler snapshot')
 def main(
         files: Tuple[str],
         # cfg
@@ -50,6 +55,7 @@ def main(
         # gui
         write_cfg: Optional[str],
         play: bool,
+        profile: bool,
 ):
     """Intelligent oscilloscope visualizer for .wav files.
 
@@ -139,4 +145,16 @@ def main(
             yaml.dump(cfg, Path(write_cfg))
 
         if play:
-            Ovgen(cfg).play()
+            if profile:
+                import cProfile
+
+                # Write stats to unused filename
+                for i in count():
+                    path = Path(PROFILE_DUMP_NAME + str(i))
+                    if not path.exists():
+                        break
+
+                cProfile.runctx('Ovgen(cfg).play()', globals(), locals(), path)
+
+            else:
+                Ovgen(cfg).play()
