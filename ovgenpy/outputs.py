@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Type, List, Union
 from ovgenpy.config import register_config
 
 if TYPE_CHECKING:
-    import numpy as np
     from ovgenpy.ovgenpy import Config
 
 
