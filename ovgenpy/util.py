@@ -8,6 +8,15 @@ def ceildiv(n, d):
     return -(-n // d)
 
 
+def coalesce(*args):
+    if len(args) == 0:
+        raise TypeError('coalesce expected 1 argument, got 0')
+    for arg in args:
+        if arg is not None:
+            return arg
+    return args[-1]
+
+
 T = TypeVar('T')
 
 # Adapted from https://github.com/numpy/numpy/issues/2269#issuecomment-14436725

@@ -19,7 +19,6 @@ class ChannelConfig:
 
     ampl_ratio: float = 1.0     # TODO use amplification = None instead?
     line_color: Any = None
-    background_color: Any = None
 
 
 class Channel:

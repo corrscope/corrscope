@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Type, List, Union
 
 from ovgenpy.config import register_config
+from ovgenpy.utils.keyword_dataclasses import field
 
 if TYPE_CHECKING:
     from ovgenpy.ovgenpy import Config
@@ -100,15 +101,16 @@ class ProcessOutput(Output):
         # but results in slightly higher CPU consumption.
         self._stream.write(frame)
 
-    def close(self):
+    def close(self) -> int:
         self._stream.close()
-        self._popen.wait()
+        return self._popen.wait()
 
 
 # FFmpegOutput
 @register_config
 class FFmpegOutputConfig(IOutputConfig):
     path: str
+    args: str = ''
 
     # Do not use `-movflags faststart`, I get corrupted mp4 files (missing MOOV)
     video_template: str = '-c:v libx264 -crf 18 -preset superfast'
@@ -124,6 +126,7 @@ class FFmpegOutput(ProcessOutput):
 
         ffmpeg = _FFmpegCommand([FFMPEG, '-y'], ovgen_cfg)
         ffmpeg.add_output(cfg)
+        ffmpeg.templates.append(cfg.args)
         self.open(ffmpeg.popen([cfg.path], self.bufsize))
 
 
