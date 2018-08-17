@@ -47,7 +47,7 @@ def register_output(config_t: Type[IOutputConfig]):
     return inner
 
 
-# FFmpeg input format
+# FFmpeg command line generation
 
 class _FFmpegCommand:
     def __init__(self, templates: List[str], ovgen_cfg: 'Config'):
@@ -74,7 +74,6 @@ class _FFmpegCommand:
                 for arg in shlex.split(template)]
 
 
-assert RGB_DEPTH == 3
 def ffmpeg_input_video(cfg: 'Config') -> List[str]:
     fps = cfg.fps
     width = cfg.render.width
@@ -90,23 +89,36 @@ def ffmpeg_input_audio(audio_path: str) -> List[str]:
 
 
 class ProcessOutput(Output):
-    def open(self, popen: subprocess.Popen):
+    def open(self, popen: subprocess.Popen, others: List[subprocess.popen] = None):
+        """ Called by __init__ with a Popen pipe to ffmpeg/ffplay. """
         self._popen = popen
         self._stream = self._popen.stdin
         # Python documentation discourages accessing popen.stdin. It's wrong.
         # https://stackoverflow.com/a/9886747
 
+        opened = [popen]
+        if others:
+            opened += others
+
+        self._opened = opened
+
+    def __enter__(self):
+        return self
+
     def write_frame(self, frame: bytes) -> None:
-        # frame.tobytes() avoids PyCharm complaining about type mismatch,
-        # but results in slightly higher CPU consumption.
         self._stream.write(frame)
 
     def close(self) -> int:
         self._stream.close()
         return self._popen.wait()
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self._popen.terminate()
+
 
 # FFmpegOutput
+
 @register_config
 class FFmpegOutputConfig(IOutputConfig):
     path: str
@@ -131,6 +143,7 @@ class FFmpegOutput(ProcessOutput):
 
 
 # FFplayOutput
+
 @register_config
 class FFplayOutputConfig(IOutputConfig):
     video_template: str = '-c:v copy'
@@ -160,8 +173,15 @@ class FFplayOutput(ProcessOutput):
         ProcessOutput.close(self)
         self.p2.wait()
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        super().__exit__(exc_type, exc_val, exc_tb)
+
+        if exc_type is not None:
+            self.p2.terminate()
+
 
 # ImageOutput
+
 @register_config
 class ImageOutputConfig(IOutputConfig):
     path_prefix: str
