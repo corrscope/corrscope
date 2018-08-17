@@ -23,7 +23,7 @@ class Wave:
         # Flatten stereo to mono
         assert self.data.ndim in [1, 2]
         if self.data.ndim == 2:
-            self.data = np.mean(self.data, axis=1, dtype=dtype)
+            self.data = self.data[:, 0] - self.data[:, 1]
 
         self.nsamp = len(self.data)
 
