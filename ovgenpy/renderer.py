@@ -119,6 +119,11 @@ class MatplotlibRenderer:
             raise ValueError(
                 f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
             )
+
+        if self._lines is not None:
+            raise ValueError(
+                f'cannot set line colors after calling render_frame()'
+            )
         self._line_colors = [cfg.line_color for cfg in channel_cfgs]
 
     def render_frame(self, datas: List[np.ndarray]) -> None:

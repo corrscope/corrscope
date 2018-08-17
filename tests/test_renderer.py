@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from matplotlib.colors import to_rgb
 
+from ovgenpy.channel import ChannelConfig
 from ovgenpy.outputs import RGB_DEPTH
 from ovgenpy.renderer import RendererConfig, MatplotlibRenderer, LayoutConfig, \
     RendererLayout
@@ -93,25 +94,55 @@ def test_renderer():
 
 ALL_ZEROS = np.array([0,0])
 
-@pytest.mark.parametrize('bg_str,fg_str', [
+all_colors = pytest.mark.parametrize('bg_str,fg_str', [
     ('#000000', '#ffffff'),
     ('#ffffff', '#000000'),
     ('#0000aa', '#aaaa00'),
     ('#aaaa00', '#0000aa'),
 ])
-def test_colors(bg_str, fg_str):
-    """ Ensure the rendered background/foreground colors are correct. """
+
+
+@all_colors
+def test_default_colors(bg_str, fg_str):
+    """ Test the default background/foreground colors. """
     cfg = RendererConfig(
         WIDTH,
         HEIGHT,
         bg_color=bg_str,
         init_line_color=fg_str,
-        # line_width=5,
     )
     lcfg = LayoutConfig()
     nplots = 1
 
     r = MatplotlibRenderer(cfg, lcfg, nplots)
+    verify(r, bg_str, fg_str)
+
+    # Ensure default ChannelConfig(line_color=None) does not override line color
+    r = MatplotlibRenderer(cfg, lcfg, nplots)
+    chan = ChannelConfig(wav_path='')
+    r.set_colors([chan] * nplots)
+    verify(r, bg_str, fg_str)
+
+
+@all_colors
+def test_line_colors(bg_str, fg_str):
+    """ Test channel-specific line color overrides """
+    cfg = RendererConfig(
+        WIDTH,
+        HEIGHT,
+        bg_color=bg_str,
+        init_line_color='#888888',
+    )
+    lcfg = LayoutConfig()
+    nplots = 1
+
+    r = MatplotlibRenderer(cfg, lcfg, nplots)
+    chan = ChannelConfig(wav_path='', line_color=fg_str)
+    r.set_colors([chan] * nplots)
+    verify(r, bg_str, fg_str)
+
+
+def verify(r: MatplotlibRenderer, bg_str, fg_str):
     r.render_frame([ALL_ZEROS])
     frame_colors: np.ndarray = \
         np.frombuffer(r.get_frame(), dtype=np.uint8).reshape((-1, RGB_DEPTH))
