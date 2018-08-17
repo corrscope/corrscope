@@ -88,19 +88,16 @@ def ffmpeg_input_audio(audio_path: str) -> List[str]:
     return ['-i', audio_path]
 
 
-class ProcessOutput(Output):
-    def open(self, popen: subprocess.Popen, others: List[subprocess.popen] = None):
-        """ Called by __init__ with a Popen pipe to ffmpeg/ffplay. """
-        self._popen = popen
-        self._stream = self._popen.stdin
+class PipeOutput(Output):
+    def open(self, *pipeline: subprocess.Popen):
+        """ Called by __init__ with a Popen pipeline to ffmpeg/ffplay. """
+        if len(pipeline) == 0:
+            raise TypeError('must provide at least one Popen argument to popens')
+
+        self._pipeline = pipeline
+        self._stream = pipeline[0].stdin
         # Python documentation discourages accessing popen.stdin. It's wrong.
         # https://stackoverflow.com/a/9886747
-
-        opened = [popen]
-        if others:
-            opened += others
-
-        self._opened = opened
 
     def __enter__(self):
         return self
@@ -110,11 +107,16 @@ class ProcessOutput(Output):
 
     def close(self) -> int:
         self._stream.close()
-        return self._popen.wait()
+
+        retval = None
+        for popen in self._pipeline:
+            retval = popen.wait()
+        return retval   # final value
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
-            self._popen.terminate()
+            for popen in self._pipeline:
+                popen.terminate()
 
 
 # FFmpegOutput
@@ -132,7 +134,7 @@ class FFmpegOutputConfig(IOutputConfig):
 FFMPEG = 'ffmpeg'
 
 @register_output(FFmpegOutputConfig)
-class FFmpegOutput(ProcessOutput):
+class FFmpegOutput(PipeOutput):
     def __init__(self, ovgen_cfg: 'Config', cfg: FFmpegOutputConfig):
         super().__init__(ovgen_cfg, cfg)
 
@@ -153,7 +155,7 @@ class FFplayOutputConfig(IOutputConfig):
 FFPLAY = 'ffplay'
 
 @register_output(FFplayOutputConfig)
-class FFplayOutput(ProcessOutput):
+class FFplayOutput(PipeOutput):
     def __init__(self, ovgen_cfg: 'Config', cfg: FFplayOutputConfig):
         super().__init__(ovgen_cfg, cfg)
 
@@ -164,20 +166,10 @@ class FFplayOutput(ProcessOutput):
         p1 = ffmpeg.popen(['-'], self.bufsize, stdout=subprocess.PIPE)
 
         ffplay = shlex.split('ffplay -autoexit -')
-        self.p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
+        p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
 
         p1.stdout.close()
-        self.open(p1)
-
-    def close(self):
-        ProcessOutput.close(self)
-        self.p2.wait()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        super().__exit__(exc_type, exc_val, exc_tb)
-
-        if exc_type is not None:
-            self.p2.terminate()
+        self.open(p1, p2)
 
 
 # ImageOutput
