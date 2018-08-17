@@ -1,9 +1,12 @@
 from io import StringIO
-from typing import ClassVar
+from typing import ClassVar, TYPE_CHECKING
 
 from ovgenpy.utils.keyword_dataclasses import dataclass, fields
 # from dataclasses import dataclass, fields
-from ruamel.yaml import yaml_object, YAML
+from ruamel.yaml import yaml_object, YAML, Representer
+
+if TYPE_CHECKING:
+    from enum import Enum
 
 
 class MyYAML(YAML):
@@ -22,6 +25,7 @@ class MyYAML(YAML):
 # >since it loads any Python object, this can be unsafe.
 # I assume roundtrip is safe.
 yaml = MyYAML()
+_yaml_loadable = yaml_object(yaml)
 
 
 def register_config(cls=None, *, always_dump: str = ''):
@@ -38,9 +42,7 @@ def register_config(cls=None, *, always_dump: str = ''):
 
         # https://stackoverflow.com/a/51497219/2683842
         # YAML().register_class(cls) works... on versions more recent than 2018-07-12.
-        return yaml_object(yaml)(
-            dataclass(cls)
-        )
+        return _yaml_loadable(dataclass(cls))
 
     if cls is not None:
         return decorator(cls)
@@ -100,6 +102,17 @@ class _ConfigMixin:
 
         if hasattr(self, '__post_init__'):
             self.__post_init__()
+
+
+def register_enum(cls: type):
+    cls.to_yaml = _EnumMixin.to_yaml
+    return _yaml_loadable(cls)
+
+
+class _EnumMixin:
+    @classmethod
+    def to_yaml(cls, representer: Representer, node: 'Enum'):
+        return representer.represent_str(node._name_)
 
 
 class OvgenError(Exception):

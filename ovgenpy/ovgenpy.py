@@ -1,20 +1,28 @@
 # -*- coding: utf-8 -*-
 import time
-from typing import Optional, List
+from enum import unique, IntEnum
+from typing import Optional, List, Union
 
 from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
-from ovgenpy.config import register_config
+from ovgenpy.config import register_config, register_enum
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig
 from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field
 from ovgenpy.wave import Wave
 
-
 # cgitb.enable(format='text')
 
 RENDER_PROFILING = True
+
+@register_enum
+@unique
+class BenchmarkMode(IntEnum):
+    NONE = 0
+    TRIGGER = 1
+    RENDER = 2
+    OUTPUT = 3
 
 
 @register_config(always_dump='wave_prefix')
@@ -35,9 +43,20 @@ class Config:
 
     outputs: List[outputs.IOutputConfig]
 
+    benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
+
     @property
     def render_width_s(self) -> float:
         return self.width_ms / 1000
+
+    def __post_init__(self):
+        try:
+            if not isinstance(self.benchmark_mode, BenchmarkMode):
+                self.benchmark_mode = BenchmarkMode[self.benchmark_mode]
+        except KeyError:
+            raise ValueError(
+                f'invalid benchmark_mode mode {self.benchmark_mode} not in '
+                f'{[el.name for el in BenchmarkMode]}')
 
 
 _FPS = 60  # f_s
@@ -105,6 +124,9 @@ class Ovgen:
         if RENDER_PROFILING:
             begin = time.perf_counter()
 
+        benchmark_mode = self.cfg.benchmark_mode
+        not_benchmarking = not benchmark_mode
+
         # For each frame, render each wave
         prev = -1
         for frame in range(nframes):
@@ -121,17 +143,23 @@ class Ovgen:
                 sample = round(wave.smp_s * time_seconds)
                 region_len = round(wave.smp_s * render_width_s)
 
-                trigger_sample = channel.trigger.get_trigger(sample)
+                if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
+                    trigger_sample = channel.trigger.get_trigger(sample)
+                else:
+                    trigger_sample = sample
+
                 datas.append(wave.get_around(
                     trigger_sample, region_len, channel.render_subsampling))
 
-            # Render frame
-            renderer.render_frame(datas)
+            if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
+                # Render frame
+                renderer.render_frame(datas)
 
-            # Output frame
-            frame = renderer.get_frame()
-            for output in self.outputs:
-                output.write_frame(frame)
+                if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
+                    # Output frame
+                    frame = renderer.get_frame()
+                    for output in self.outputs:
+                        output.write_frame(frame)
 
         if RENDER_PROFILING:
             # noinspection PyUnboundLocalVariable
