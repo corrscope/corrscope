@@ -5,18 +5,18 @@ from typing import Optional, List, Union
 
 from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
-from ovgenpy.config import register_config
+from ovgenpy.config import register_config, register_enum
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig
 from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field
 from ovgenpy.wave import Wave
 
-
 # cgitb.enable(format='text')
 
 RENDER_PROFILING = True
 
+@register_enum
 @unique
 class BenchmarkMode(IntEnum):
     NONE = 0
@@ -43,7 +43,7 @@ class Config:
 
     outputs: List[outputs.IOutputConfig]
 
-    benchmark_mode: Union[str, BenchmarkMode] = 'NONE'
+    benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
 
     @property
     def render_width_s(self) -> float:
@@ -51,7 +51,8 @@ class Config:
 
     def __post_init__(self):
         try:
-            self.benchmark_mode = BenchmarkMode[self.benchmark_mode]
+            if not isinstance(self.benchmark_mode, BenchmarkMode):
+                self.benchmark_mode = BenchmarkMode[self.benchmark_mode]
         except KeyError:
             raise ValueError(
                 f'invalid benchmark_mode mode {self.benchmark_mode} not in '
