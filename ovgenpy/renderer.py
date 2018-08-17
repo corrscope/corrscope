@@ -180,7 +180,7 @@ class MatplotlibRenderer:
         return buffer_rgb
 
 
-@register_config
+@register_config(always_dump='orientation')
 class LayoutConfig:
     nrows: Optional[int] = None
     ncols: Optional[int] = None
