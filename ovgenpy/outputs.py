@@ -108,9 +108,9 @@ class PipeOutput(Output):
     def close(self) -> int:
         self._stream.close()
 
-        retval = None
+        retval = 0
         for popen in self._pipeline:
-            retval = popen.wait()
+            retval |= popen.wait()
         return retval   # final value
 
     def __exit__(self, exc_type, exc_val, exc_tb):
