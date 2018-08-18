@@ -1,18 +1,29 @@
 # ovgenpy
 Python program to render wave files into oscilloscope views, featuring improved correlation-based triggering algorithm
 
+## Dependencies
+
+- Python 3.6 or higher
+- FFmpeg
+
 ## Installation
 
-ovgenpy requires Python 3.6 or higher, as a hard requirement.
+Virtualenv:
 
-```python
-# create virtualenv or something
+```shell
+# create virtualenv
 pip install -e .
+```
+
+Conda env:
+```shell
+# create conda env
+??? how to setup.py
 ```
 
 ## Usage
 
-Basic settings are exposed via command-line.
+[TODO] Basic settings are exposed via command-line.
 
 All settings are exposed via YAML files.
 
