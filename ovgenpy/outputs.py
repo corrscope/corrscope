@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Type, List, Union
 
 from ovgenpy.config import register_config
-from ovgenpy.utils.keyword_dataclasses import field
 
 if TYPE_CHECKING:
     from ovgenpy.ovgenpy import Config
@@ -57,6 +56,7 @@ class _FFmpegCommand:
         self.templates += ffmpeg_input_video(ovgen_cfg)  # video
         if ovgen_cfg.master_audio:
             audio_path = shlex.quote(ovgen_cfg.master_audio)
+            self.templates.append(f'-ss {ovgen_cfg.begin_time}')
             self.templates += ffmpeg_input_audio(audio_path)    # audio
 
     def add_output(self, cfg: 'Union[FFmpegOutputConfig, FFplayOutputConfig]') -> None:
