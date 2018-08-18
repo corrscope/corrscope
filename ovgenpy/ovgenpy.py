@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
+from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
 from typing import Optional, List, Union
 
@@ -94,8 +95,6 @@ def default_config(**kwargs):
 class Ovgen:
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self._load_channels()  # self.waves =
-        self._load_outputs()  # self.outputs =
 
     waves: List[Wave]
     channels: List[Channel]
@@ -107,10 +106,17 @@ class Ovgen:
         self.waves = [channel.wave for channel in self.channels]
         self.nchan = len(self.channels)
 
+    @contextmanager
     def _load_outputs(self):
-        self.outputs = [output_cfg(self.cfg) for output_cfg in self.cfg.outputs]
+        with ExitStack() as stack:
+            self.outputs = [
+                stack.enter_context(output_cfg(self.cfg))
+                for output_cfg in self.cfg.outputs
+            ]
+            yield
 
     def play(self):
+        self._load_channels()
         # Calculate number of frames (TODO master file?)
         render_width_s = self.cfg.render_width_s
         fps = self.cfg.fps
@@ -128,38 +134,39 @@ class Ovgen:
         not_benchmarking = not benchmark_mode
 
         # For each frame, render each wave
-        prev = -1
-        for frame in range(nframes):
-            time_seconds = frame / fps
+        with self._load_outputs():
+            prev = -1
+            for frame in range(nframes):
+                time_seconds = frame / fps
 
-            rounded = int(time_seconds)
-            if rounded != prev:
-                print(rounded)
-                prev = rounded
+                rounded = int(time_seconds)
+                if rounded != prev:
+                    print(rounded)
+                    prev = rounded
 
-            datas = []
-            # Get data from each wave
-            for wave, channel in zip(self.waves, self.channels):
-                sample = round(wave.smp_s * time_seconds)
-                region_len = round(wave.smp_s * render_width_s)
+                datas = []
+                # Get data from each wave
+                for wave, channel in zip(self.waves, self.channels):
+                    sample = round(wave.smp_s * time_seconds)
+                    region_len = round(wave.smp_s * render_width_s)
 
-                if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
-                    trigger_sample = channel.trigger.get_trigger(sample)
-                else:
-                    trigger_sample = sample
+                    if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
+                        trigger_sample = channel.trigger.get_trigger(sample)
+                    else:
+                        trigger_sample = sample
 
-                datas.append(wave.get_around(
-                    trigger_sample, region_len, channel.render_subsampling))
+                    datas.append(wave.get_around(
+                        trigger_sample, region_len, channel.render_subsampling))
 
-            if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
-                # Render frame
-                renderer.render_frame(datas)
+                if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
+                    # Render frame
+                    renderer.render_frame(datas)
 
-                if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
-                    # Output frame
-                    frame = renderer.get_frame()
-                    for output in self.outputs:
-                        output.write_frame(frame)
+                    if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
+                        # Output frame
+                        frame = renderer.get_frame()
+                        for output in self.outputs:
+                            output.write_frame(frame)
 
         if RENDER_PROFILING:
             # noinspection PyUnboundLocalVariable

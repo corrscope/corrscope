@@ -47,7 +47,7 @@ def register_output(config_t: Type[IOutputConfig]):
     return inner
 
 
-# FFmpeg input format
+# FFmpeg command line generation
 
 class _FFmpegCommand:
     def __init__(self, templates: List[str], ovgen_cfg: 'Config'):
@@ -74,7 +74,6 @@ class _FFmpegCommand:
                 for arg in shlex.split(template)]
 
 
-assert RGB_DEPTH == 3
 def ffmpeg_input_video(cfg: 'Config') -> List[str]:
     fps = cfg.fps
     width = cfg.render.width
@@ -89,24 +88,39 @@ def ffmpeg_input_audio(audio_path: str) -> List[str]:
     return ['-i', audio_path]
 
 
-class ProcessOutput(Output):
-    def open(self, popen: subprocess.Popen):
-        self._popen = popen
-        self._stream = self._popen.stdin
+class PipeOutput(Output):
+    def open(self, *pipeline: subprocess.Popen):
+        """ Called by __init__ with a Popen pipeline to ffmpeg/ffplay. """
+        if len(pipeline) == 0:
+            raise TypeError('must provide at least one Popen argument to popens')
+
+        self._pipeline = pipeline
+        self._stream = pipeline[0].stdin
         # Python documentation discourages accessing popen.stdin. It's wrong.
         # https://stackoverflow.com/a/9886747
 
+    def __enter__(self):
+        return self
+
     def write_frame(self, frame: bytes) -> None:
-        # frame.tobytes() avoids PyCharm complaining about type mismatch,
-        # but results in slightly higher CPU consumption.
         self._stream.write(frame)
 
     def close(self) -> int:
         self._stream.close()
-        return self._popen.wait()
+
+        retval = 0
+        for popen in self._pipeline:
+            retval |= popen.wait()
+        return retval   # final value
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            for popen in self._pipeline:
+                popen.terminate()
 
 
 # FFmpegOutput
+
 @register_config
 class FFmpegOutputConfig(IOutputConfig):
     path: str
@@ -120,7 +134,7 @@ class FFmpegOutputConfig(IOutputConfig):
 FFMPEG = 'ffmpeg'
 
 @register_output(FFmpegOutputConfig)
-class FFmpegOutput(ProcessOutput):
+class FFmpegOutput(PipeOutput):
     def __init__(self, ovgen_cfg: 'Config', cfg: FFmpegOutputConfig):
         super().__init__(ovgen_cfg, cfg)
 
@@ -131,6 +145,7 @@ class FFmpegOutput(ProcessOutput):
 
 
 # FFplayOutput
+
 @register_config
 class FFplayOutputConfig(IOutputConfig):
     video_template: str = '-c:v copy'
@@ -140,7 +155,7 @@ class FFplayOutputConfig(IOutputConfig):
 FFPLAY = 'ffplay'
 
 @register_output(FFplayOutputConfig)
-class FFplayOutput(ProcessOutput):
+class FFplayOutput(PipeOutput):
     def __init__(self, ovgen_cfg: 'Config', cfg: FFplayOutputConfig):
         super().__init__(ovgen_cfg, cfg)
 
@@ -151,17 +166,14 @@ class FFplayOutput(ProcessOutput):
         p1 = ffmpeg.popen(['-'], self.bufsize, stdout=subprocess.PIPE)
 
         ffplay = shlex.split('ffplay -autoexit -')
-        self.p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
+        p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
 
         p1.stdout.close()
-        self.open(p1)
-
-    def close(self):
-        ProcessOutput.close(self)
-        self.p2.wait()
+        self.open(p1, p2)
 
 
 # ImageOutput
+
 @register_config
 class ImageOutputConfig(IOutputConfig):
     path_prefix: str
