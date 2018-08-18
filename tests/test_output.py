@@ -3,6 +3,8 @@ import subprocess
 from typing import TYPE_CHECKING
 
 import pytest
+
+from ovgenpy.channel import ChannelConfig
 from ovgenpy.outputs import RGB_DEPTH, \
     FFmpegOutput, FFmpegOutputConfig, FFplayOutput, FFplayOutputConfig
 from ovgenpy.ovgenpy import default_config, Ovgen
@@ -60,15 +62,15 @@ def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
     """ Integration test: Ensure ffmpeg and ffplay are terminated when Python exceptions
     occur. """
 
-    play = mocker.patch.object(Ovgen, 'play')
-    play.side_effect = DummyException()
-
     cfg = default_config(
+        channels=[ChannelConfig('tests/sine440.wav')],
         master_audio='tests/sine440.wav',
         outputs=[FFplayOutputConfig()]
     )
-
     ovgen = Ovgen(cfg)
+
+    render_frame = mocker.patch.object(MatplotlibRenderer, 'render_frame')
+    render_frame.side_effect = DummyException()
     with pytest.raises(DummyException):
         ovgen.play()
 
