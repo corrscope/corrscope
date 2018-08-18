@@ -158,23 +158,3 @@ def verify(r: MatplotlibRenderer, bg_str, fg_str):
 
     assert (np.amax(frame_colors, axis=0) == np.maximum(bg_u8, fg_u8)).all()
     assert (np.amin(frame_colors, axis=0) == np.minimum(bg_u8, fg_u8)).all()
-
-
-# TODO (integration test) ensure rendering to output works
-
-
-def test_render_output():
-    """ Ensure rendering to output does not raise exceptions. """
-
-    from ovgenpy.ovgenpy import default_config
-    from ovgenpy.outputs import FFmpegOutput, FFmpegOutputConfig
-
-    cfg = default_config(render=RendererConfig(WIDTH, HEIGHT))
-    renderer = MatplotlibRenderer(cfg.render, cfg.layout, nplots=1)
-    output_cfg = FFmpegOutputConfig('-', '-f nut')
-    out = FFmpegOutput(cfg, output_cfg)
-
-    renderer.render_frame([ALL_ZEROS])
-    out.write_frame(renderer.get_frame())
-
-    assert out.close() == 0
