@@ -30,6 +30,7 @@ class BenchmarkMode(IntEnum):
 class Config:
     master_audio: Optional[str]
     fps: int
+    begin_time: float
 
     wav_prefix: str = ''   # if wave/glob..., pwd. if folder, folder.
     channels: List[ChannelConfig] = field(default_factory=list)
@@ -66,6 +67,7 @@ def default_config(**kwargs):
     cfg = Config(
         master_audio='',
         fps=_FPS,
+        begin_time=0,
 
         wav_prefix='',
         channels=[],
@@ -121,8 +123,10 @@ class Ovgen:
         render_width_s = self.cfg.render_width_s
         fps = self.cfg.fps
 
-        nframes = fps * self.waves[0].get_s()
-        nframes = int(nframes) + 1
+        begin_frame = round(fps * self.cfg.begin_time)
+
+        end_frame = fps * self.waves[0].get_s()
+        end_frame = int(end_frame) + 1
 
         renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan)
         renderer.set_colors(self.cfg.channels)
@@ -136,7 +140,7 @@ class Ovgen:
         # For each frame, render each wave
         with self._load_outputs():
             prev = -1
-            for frame in range(nframes):
+            for frame in range(begin_frame, end_frame):
                 time_seconds = frame / fps
 
                 rounded = int(time_seconds)
@@ -171,5 +175,5 @@ class Ovgen:
         if RENDER_PROFILING:
             # noinspection PyUnboundLocalVariable
             dtime = time.perf_counter() - begin
-            render_fps = nframes / dtime
+            render_fps = end_frame / dtime
             print(f'FPS = {render_fps}')
