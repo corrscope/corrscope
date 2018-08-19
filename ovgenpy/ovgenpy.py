@@ -26,11 +26,11 @@ class BenchmarkMode(IntEnum):
     OUTPUT = 3
 
 
-@register_config(always_dump='wave_prefix')
+@register_config(always_dump='begin_time wave_prefix')
 class Config:
     master_audio: Optional[str]
     fps: int
-    begin_time: float
+    begin_time: float = 0
 
     wav_prefix: str = ''   # if wave/glob..., pwd. if folder, folder.
     channels: List[ChannelConfig] = field(default_factory=list)
@@ -67,9 +67,9 @@ def default_config(**kwargs):
     cfg = Config(
         master_audio='',
         fps=_FPS,
-        begin_time=0,
+        # begin_time=0,
 
-        wav_prefix='',
+        # wav_prefix='',
         channels=[],
 
         width_ms=25,
