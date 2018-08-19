@@ -88,20 +88,9 @@ class _ConfigMixin:
 
     # SafeConstructor.construct_yaml_object() uses __setstate__ to load objects.
     def __setstate__(self, state):
-        """ Checks that all fields match their correct types. """
-        self.__dict__.update(state)
-        for field in fields(self):
-            key = field.name
-            value = getattr(self, key)
-            typ = field.type
-
-            # # FIXME crashes on generics, https://github.com/Stewori/pytypes ?
-            # if not isinstance(value, typ):
-            #     name = type(self).__name__
-            #     raise OvgenError(f'{name}.{key} was supplied {repr(value)}, should be of type {typ.__name__}')
-
-        if hasattr(self, '__post_init__'):
-            self.__post_init__()
+        """Call the dataclass constructor, to ensure all parameters are valid."""
+        new = type(self)(**state)
+        self.__dict__ = new.__dict__
 
 
 def register_enum(cls: type):
