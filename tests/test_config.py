@@ -71,21 +71,27 @@ b: b
 '''
 
 
-@pytest.mark.xfail(strict=True)
-def test_load_type_checking():
+def test_argument_validation():
+    """ Ensure that loading config via YAML catches missing and invalid parameters. """
     @register_config
-    class Foo:
-        foo: int
-        bar: int
+    class Config:
+        a: int
 
-    s = '''\
-!Foo
-foo: "foo"
-bar: "bar"
-'''
-    with pytest.raises(OvgenError) as e:
-        print(yaml.load(s))
-    print(e)
+    yaml.load('''\
+!Config
+  a: 1
+''')
+
+    with pytest.raises(TypeError):
+        yaml.load('!Config {}')
+
+    with pytest.raises(TypeError):
+        yaml.load('''\
+!Config
+  a: 1
+  b: 1
+''')
+
 
 
 def test_load_post_init():
