@@ -1,7 +1,6 @@
-import os
 import shlex
-from contextlib import contextmanager
-from typing import TYPE_CHECKING, List, Tuple, ContextManager, Callable
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 import pytest
@@ -10,6 +9,7 @@ from click.testing import CliRunner
 from ovgenpy import cli
 from ovgenpy.config import yaml
 from ovgenpy.ovgenpy import Config
+from ovgenpy.util import curry
 
 if TYPE_CHECKING:
     import pytest_mock
@@ -21,24 +21,58 @@ def call_main(args):
 
 # ovgenpy configuration sinks
 
-def write_yaml(command):
+@pytest.fixture
+@curry
+def yaml_sink(mocker: 'pytest_mock.MockFixture', command):
+    dump = mocker.patch.object(yaml, 'dump')
+
     args = shlex.split(command) + ['-w']
-    return call_main(args)
+    call_main(args)
+
+    dump.assert_called_once()
+    args, kwargs = dump.call_args
+
+    cfg = args[0]     # yaml.dump(cfg, out)
+    assert isinstance(cfg, Config)
+    return cfg
 
 
-def play(command):
+@pytest.fixture
+@curry
+def player_sink(mocker, command):
+    Ovgen = mocker.patch.object(cli, 'Ovgen')
+
     args = shlex.split(command) + ['-p']
-    return call_main(args)
+    call_main(args)
+
+    Ovgen.assert_called_once()
+    args, kwargs = Ovgen.call_args
+
+    cfg = args[0]   # Ovgen(cfg)
+    assert isinstance(cfg, Config)
+    return cfg
+
+
+@pytest.fixture(params=[yaml_sink, player_sink])
+def any_sink(request, mocker):
+    sink = request.param
+    return sink(mocker)
 
 
 # ovgenpy configuration sources
 
-@pytest.mark.parametrize('runner', [write_yaml, play])
-def test_no_files(runner):
+def test_no_files(any_sink):
     with pytest.raises(click.ClickException):
-        runner('')
+        any_sink('')
 
 
-@pytest.mark.parametrize('runner', [write_yaml, play])
-def test_cwd(runner):
-    runner('.')
+@pytest.mark.parametrize('folder', '. wav-formats'.split())
+def test_cwd(any_sink, folder):
+    wavs = Path(folder).glob('*.wav')
+    wavs = sorted(str(x) for x in wavs)
+
+    cfg = any_sink('.')
+    assert isinstance(cfg, Config)
+
+    assert cfg.wav_prefix == folder
+    assert [chan.wav_path for chan in cfg.channels] == wavs
