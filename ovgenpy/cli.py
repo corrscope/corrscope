@@ -146,6 +146,8 @@ def main(
     if show_gui:
         raise OvgenError('GUI not implemented')
     else:
+        if not files:
+            raise click.ClickException('Must specify files or folders to play')
         if write:
             if audio:
                 write_path = Path(audio).with_suffix(YAML_NAME)
