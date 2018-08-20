@@ -12,6 +12,7 @@ from ovgenpy.ovgenpy import default_config, Config, Ovgen
 
 Folder = click.Path(exists=True, file_okay=False)
 File = click.Path(exists=True, dir_okay=False)
+OutFile = click.Path(dir_okay=False)
 
 
 # https://github.com/pallets/click/issues/473
@@ -37,10 +38,10 @@ PROFILE_DUMP_NAME = 'cprofile'
 # Incorrect [option] name order: https://github.com/pallets/click/issues/793
 @click.option('--audio', '-a', type=File, help=
         'Config: Input path for master audio file')
-@click.option('--video-output', '-o', type=click.Path(dir_okay=False), help=
+@click.option('--video-output', '-o', type=OutFile, help=
         'Config: Output video path')
 # Disables GUI
-@click.option('--write-cfg', '-w', nargs=1, type=click.Path(dir_okay=False), help=
+@click.option('--write-cfg', '-w', nargs=1, type=OutFile, help=
         "Write config YAML file to path (don't open GUI).")
 @click.option('--play', '-p', is_flag=True, help=
         "Preview or render (don't open GUI).")
