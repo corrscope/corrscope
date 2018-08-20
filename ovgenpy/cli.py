@@ -87,16 +87,15 @@ def main(
     # Create cfg: Config object.
     cfg: Config = None
 
-    wav_prefix = Path()
     wav_list: List[Path] = []
     for name in files:
         path = Path(name)
         if path.is_dir():
             # Add a directory.
             if len(files) > 1:
+                # Warning is technically optional, since wav_prefix has been removed.
                 raise click.ClickException(
                     f'When supplying folder {path}, you cannot supply other files/folders')
-            wav_prefix = path
             matches = sorted(path.glob('*.wav'))
             wav_list += matches
             break
@@ -120,7 +119,6 @@ def main(
             wav_list += matches
 
     if not cfg:
-        wav_prefix = str(wav_prefix)
         wav_list = [str(wav_path) for wav_path in wav_list]
 
         channels = [ChannelConfig(wav_path) for wav_path in wav_list]
@@ -130,13 +128,9 @@ def main(
         else:
             outputs = [FFplayOutputConfig()]
 
-        # TODO test cfg, ensure wav_prefix and wav_list are correct
-        # maybe I should use a list comprehension to parse cfg.channels to List[str].
-
         cfg = default_config(
             master_audio=audio,
             # fps=default,
-            wav_prefix=wav_prefix,
             channels=channels,
             # width_ms...trigger=default,
             # amplification...render=default,
