@@ -67,11 +67,12 @@ def test_no_files(any_sink):
 
 
 @pytest.mark.parametrize('folder', '. wav-formats'.split())
-def test_cwd(any_sink, folder):
+def test_cwd(any_sink, folder, mocker):
+    """ wav_prefix"""
     wavs = Path(folder).glob('*.wav')
-    wavs = sorted(str(x) for x in wavs)
+    wavs = sorted(x.name for x in wavs)
 
-    cfg = any_sink('.')
+    cfg = any_sink(folder)
     assert isinstance(cfg, Config)
 
     assert cfg.wav_prefix == folder
