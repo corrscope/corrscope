@@ -116,7 +116,7 @@ def main(
                 matches = [path]
                 if not path.exists():
                     raise click.ClickException(
-                        f'Supplied nonexistent file or wildcard {path}')
+                        f'Supplied nonexistent file or wildcard: {path}')
             wav_list += matches
 
     if not cfg:
