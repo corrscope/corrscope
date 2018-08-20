@@ -35,18 +35,18 @@ PROFILE_DUMP_NAME = 'cprofile'
 @click.argument('files', nargs=-1)
 # Override default .yaml settings (only if YAML file not supplied)
 # Incorrect [option] name order: https://github.com/pallets/click/issues/793
-@click.option('--audio', '-a', type=File,
-              help='Config: Input path for master audio file')
-@click.option('--video-output', '-o', type=click.Path(dir_okay=False),
-              help='Config: Output video path')
+@click.option('--audio', '-a', type=File, help=
+        'Config: Input path for master audio file')
+@click.option('--video-output', '-o', type=click.Path(dir_okay=False), help=
+        'Config: Output video path')
 # Disables GUI
-@click.option('--write-cfg', '-w', nargs=1, type=click.Path(dir_okay=False),
-              help="Write config YAML file to path (don't open GUI).")
-@click.option('--play', '-p', is_flag=True,
-              help="Preview or render (don't open GUI).")
+@click.option('--write-cfg', '-w', nargs=1, type=click.Path(dir_okay=False), help=
+        "Write config YAML file to path (don't open GUI).")
+@click.option('--play', '-p', is_flag=True, help=
+        "Preview or render (don't open GUI).")
 # Debugging
-@click.option('--profile', is_flag=True,
-              help='Debug: Write CProfiler snapshot')
+@click.option('--profile', is_flag=True, help=
+        'Debug: Write CProfiler snapshot')
 def main(
         files: Tuple[str],
         # cfg
