@@ -12,6 +12,7 @@ from ovgenpy.wave import FLOAT
 if TYPE_CHECKING:
     from ovgenpy.wave import Wave
 
+# Abstract classes
 
 class ITriggerConfig:
     cls: Type['Trigger']
@@ -48,9 +49,7 @@ class Trigger(ABC):
         ...
 
 
-def lerp(x: np.ndarray, y: np.ndarray, a: float):
-    return x * (1 - a) + y * a
-
+# CorrelationTrigger
 
 @register_config
 class CorrelationTriggerConfig(ITriggerConfig):
@@ -215,6 +214,12 @@ def get_period(data: np.ndarray) -> int:
     return peakX
 
 
+def lerp(x: np.ndarray, y: np.ndarray, a: float):
+    return x * (1 - a) + y * a
+
+
+# ZeroCrossingTrigger
+
 class ZeroCrossingTrigger(Trigger):
     # TODO support subsampling
     def get_trigger(self, index: int):
@@ -260,3 +265,16 @@ class ZeroCrossingTrigger(Trigger):
 
         - To be consistent, we should increment zeros whenever we *start* there.
         """
+
+
+# NullTrigger
+
+@register_config
+class NullTriggerConfig(ITriggerConfig):
+    pass
+
+
+@register_trigger(NullTriggerConfig)
+class NullTrigger(Trigger):
+    def get_trigger(self, index: int) -> int:
+        return index
