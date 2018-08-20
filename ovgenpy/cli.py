@@ -41,7 +41,7 @@ PROFILE_DUMP_NAME = 'cprofile'
 @click.option('--video-output', '-o', type=OutFile, help=
         'Config: Output video path')
 # Disables GUI
-@click.option('--write-cfg', '-w', nargs=1, type=OutFile, help=
+@click.option('--write', '-w', nargs=1, type=OutFile, help=
         "Write config YAML file to path (don't open GUI).")
 @click.option('--play', '-p', is_flag=True, help=
         "Preview or render (don't open GUI).")
@@ -54,7 +54,7 @@ def main(
         audio: Optional[str],
         video_output: Optional[str],
         # gui
-        write_cfg: Optional[str],
+        write: Optional[str],
         play: bool,
         profile: bool,
 ):
@@ -77,7 +77,7 @@ def main(
     # - You can specify as many wildcards or wav files as you want.
     # - You can only supply one folder, with no files/wildcards.
 
-    show_gui = (not write_cfg and not play)
+    show_gui = (not write and not play)
 
     # Create cfg: Config object.
     cfg: Config = None
@@ -141,9 +141,9 @@ def main(
     if show_gui:
         raise OvgenError('GUI not implemented')
     else:
-        if write_cfg:
+        if write:
             # TODO test writing YAML file
-            yaml.dump(cfg, Path(write_cfg))
+            yaml.dump(cfg, Path(write))
 
         if play:
             if profile:
