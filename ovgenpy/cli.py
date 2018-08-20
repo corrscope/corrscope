@@ -27,7 +27,12 @@ OutFile = click.Path(dir_okay=False)
 # name = possible_names[-1][1].replace('-', '_').lower()
 
 
+# List of recognized Config file extensions.
 YAML_EXTS = ['.yaml']
+# Default extension when writing Config.
+YAML_NAME = YAML_EXTS[0]
+DEFAULT_CONFIG_PATH = Path('ovgenpy').with_suffix(YAML_NAME)
+
 PROFILE_DUMP_NAME = 'cprofile'
 
 
@@ -41,7 +46,7 @@ PROFILE_DUMP_NAME = 'cprofile'
 @click.option('--video-output', '-o', type=OutFile, help=
         'Config: Output video path')
 # Disables GUI
-@click.option('--write', '-w', nargs=1, type=OutFile, help=
+@click.option('--write', '-w', is_flag=True, help=
         "Write config YAML file to path (don't open GUI).")
 @click.option('--play', '-p', is_flag=True, help=
         "Preview or render (don't open GUI).")
@@ -54,7 +59,7 @@ def main(
         audio: Optional[str],
         video_output: Optional[str],
         # gui
-        write: Optional[str],
+        write: bool,
         play: bool,
         profile: bool,
 ):
@@ -142,8 +147,13 @@ def main(
         raise OvgenError('GUI not implemented')
     else:
         if write:
+            if audio:
+                write_path = Path(audio).with_suffix(YAML_NAME)
+            else:
+                write_path = DEFAULT_CONFIG_PATH
+
             # TODO test writing YAML file
-            yaml.dump(cfg, Path(write))
+            yaml.dump(cfg, write_path)
 
         if play:
             if profile:
