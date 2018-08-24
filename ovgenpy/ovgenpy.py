@@ -173,5 +173,5 @@ class Ovgen:
         if RENDER_PROFILING:
             # noinspection PyUnboundLocalVariable
             dtime = time.perf_counter() - begin
-            render_fps = end_frame / dtime
+            render_fps = (end_frame - begin_frame) / dtime
             print(f'FPS = {render_fps}')
