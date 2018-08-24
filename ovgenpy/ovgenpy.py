@@ -162,7 +162,6 @@ class Ovgen:
                 # Get data from each wave
                 for wave, channel in zip(self.waves, self.channels):
                     sample = round(wave.smp_s * time_seconds)
-                    region_len = round(wave.smp_s * render_width_s)
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
                         trigger_sample = channel.trigger.get_trigger(sample)
@@ -170,7 +169,7 @@ class Ovgen:
                         trigger_sample = sample
 
                     datas.append(wave.get_around(
-                        trigger_sample, region_len, channel.render_subsampling))
+                        trigger_sample, channel.nsamp, channel.render_subsampling))
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
