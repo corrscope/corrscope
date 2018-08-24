@@ -95,6 +95,7 @@ def default_config(**kwargs):
 class Ovgen:
     def __init__(self, cfg: Config):
         self.cfg = cfg
+        self.has_played = False
 
     waves: List[Wave]
     channels: List[Channel]
@@ -116,6 +117,10 @@ class Ovgen:
             yield
 
     def play(self):
+        if self.has_played:
+            raise ValueError('Cannot call Ovgen.play() more than once')
+        self.has_played = True
+
         self._load_channels()
         # Calculate number of frames (TODO master file?)
         render_width_s = self.cfg.render_width_s
