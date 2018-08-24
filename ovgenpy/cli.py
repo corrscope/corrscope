@@ -12,6 +12,7 @@ from ovgenpy.ovgenpy import default_config, Config, Ovgen
 
 Folder = click.Path(exists=True, file_okay=False)
 File = click.Path(exists=True, dir_okay=False)
+OutFile = click.Path(dir_okay=False)
 
 
 # https://github.com/pallets/click/issues/473
@@ -26,7 +27,12 @@ File = click.Path(exists=True, dir_okay=False)
 # name = possible_names[-1][1].replace('-', '_').lower()
 
 
+# List of recognized Config file extensions.
 YAML_EXTS = ['.yaml']
+# Default extension when writing Config.
+YAML_NAME = YAML_EXTS[0]
+DEFAULT_CONFIG_PATH = Path('ovgenpy').with_suffix(YAML_NAME)
+
 PROFILE_DUMP_NAME = 'cprofile'
 
 
@@ -35,25 +41,25 @@ PROFILE_DUMP_NAME = 'cprofile'
 @click.argument('files', nargs=-1)
 # Override default .yaml settings (only if YAML file not supplied)
 # Incorrect [option] name order: https://github.com/pallets/click/issues/793
-@click.option('--audio', '-a', type=File,
-              help='Config: Input path for master audio file')
-@click.option('--video-output', '-o', type=click.Path(dir_okay=False),
-              help='Config: Output video path')
+@click.option('--audio', '-a', type=File, help=
+        'Config: Input path for master audio file')
+@click.option('--video-output', '-o', type=OutFile, help=
+        'Config: Output video path')
 # Disables GUI
-@click.option('--write-cfg', '-w', nargs=1, type=click.Path(dir_okay=False),
-              help="Write config YAML file to path (don't open GUI).")
-@click.option('--play', '-p', is_flag=True,
-              help="Preview or render (don't open GUI).")
+@click.option('--write', '-w', is_flag=True, help=
+        "Write config YAML file to path (don't open GUI).")
+@click.option('--play', '-p', is_flag=True, help=
+        "Preview or render (don't open GUI).")
 # Debugging
-@click.option('--profile', is_flag=True,
-              help='Debug: Write CProfiler snapshot')
+@click.option('--profile', is_flag=True, help=
+        'Debug: Write CProfiler snapshot')
 def main(
         files: Tuple[str],
         # cfg
         audio: Optional[str],
         video_output: Optional[str],
         # gui
-        write_cfg: Optional[str],
+        write: bool,
         play: bool,
         profile: bool,
 ):
@@ -76,21 +82,20 @@ def main(
     # - You can specify as many wildcards or wav files as you want.
     # - You can only supply one folder, with no files/wildcards.
 
-    show_gui = (not write_cfg and not play)
+    show_gui = (not write and not play)
 
     # Create cfg: Config object.
     cfg: Config = None
 
-    wav_prefix = Path()
     wav_list: List[Path] = []
     for name in files:
         path = Path(name)
         if path.is_dir():
             # Add a directory.
             if len(files) > 1:
+                # Warning is technically optional, since wav_prefix has been removed.
                 raise click.ClickException(
                     f'When supplying folder {path}, you cannot supply other files/folders')
-            wav_prefix = path
             matches = sorted(path.glob('*.wav'))
             wav_list += matches
             break
@@ -110,11 +115,10 @@ def main(
                 matches = [path]
                 if not path.exists():
                     raise click.ClickException(
-                        f'Supplied nonexistent file or wildcard {path}')
+                        f'Supplied nonexistent file or wildcard: {path}')
             wav_list += matches
 
     if not cfg:
-        wav_prefix = str(wav_prefix)
         wav_list = [str(wav_path) for wav_path in wav_list]
 
         channels = [ChannelConfig(wav_path) for wav_path in wav_list]
@@ -124,13 +128,9 @@ def main(
         else:
             outputs = [FFplayOutputConfig()]
 
-        # TODO test cfg, ensure wav_prefix and wav_list are correct
-        # maybe I should use a list comprehension to parse cfg.channels to List[str].
-
         cfg = default_config(
             master_audio=audio,
             # fps=default,
-            wav_prefix=wav_prefix,
             channels=channels,
             # width_ms...trigger=default,
             # amplification...render=default,
@@ -140,9 +140,16 @@ def main(
     if show_gui:
         raise OvgenError('GUI not implemented')
     else:
-        if write_cfg:
+        if not files:
+            raise click.ClickException('Must specify files or folders to play')
+        if write:
+            if audio:
+                write_path = Path(audio).with_suffix(YAML_NAME)
+            else:
+                write_path = DEFAULT_CONFIG_PATH
+
             # TODO test writing YAML file
-            yaml.dump(cfg, Path(write_cfg))
+            yaml.dump(cfg, write_path)
 
         if play:
             if profile:
