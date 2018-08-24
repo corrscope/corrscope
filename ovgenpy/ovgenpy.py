@@ -97,6 +97,9 @@ class Ovgen:
         self.cfg = cfg
         self.has_played = False
 
+        if len(self.cfg.channels) == 0:
+            raise ValueError('Config.channels is empty')
+
     waves: List[Wave]
     channels: List[Channel]
     outputs: List[outputs.Output]
