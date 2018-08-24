@@ -22,25 +22,36 @@ class ChannelConfig:
 
 
 class Channel:
+    # Shared between trigger and renderer.
+    nsamp: int
+
+    # Product of ovgen_cfg.subsampling and trigger/render_width_ratio.
+    trigger_subsampling: int
+    render_subsampling: int
+
     def __init__(self, cfg: ChannelConfig, ovgen_cfg: 'Config'):
         self.cfg = cfg
+        subsampling = ovgen_cfg.subsampling
 
-        # Compute subsampling factors.
-        self.trigger_subsampling = ovgen_cfg.subsampling * cfg.trigger_width_ratio
-        self.render_subsampling = ovgen_cfg.subsampling * cfg.render_width_ratio
-
-        # Create a Wave object. (TODO maybe create in Ovgenpy()?)
+        # Create a Wave object.
         wcfg = _WaveConfig(amplification=ovgen_cfg.amplification * cfg.ampl_ratio)
         self.wave = Wave(wcfg, cfg.wav_path)
 
+        # Compute nsamp.
+        nsamp = ovgen_cfg.render_width_s * self.wave.smp_s / subsampling
+        self.nsamp = round(nsamp)
+        del nsamp
+
+        # Compute subsampling (array stride).
+        self.trigger_subsampling = subsampling * cfg.trigger_width_ratio
+        self.render_subsampling = subsampling * cfg.render_width_ratio
+        del subsampling
+
         # Create a Trigger object.
         tcfg = cfg.trigger or ovgen_cfg.trigger
-        trigger_nsamp = round(
-            ovgen_cfg.render_width_s * cfg.trigger_width_ratio * self.wave.smp_s
-        )
         self.trigger = tcfg(
             wave=self.wave,
-            nsamp=trigger_nsamp,
-            subsampling=ovgen_cfg.subsampling * self.trigger_subsampling
+            nsamp=self.nsamp,
+            subsampling=self.trigger_subsampling
         )
 
