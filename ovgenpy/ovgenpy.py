@@ -116,6 +116,11 @@ class Ovgen:
             ]
             yield
 
+    def _load_renderer(self):
+        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan)
+        renderer.set_colors(self.cfg.channels)
+        return renderer
+
     def play(self):
         if self.has_played:
             raise ValueError('Cannot call Ovgen.play() more than once')
@@ -131,8 +136,7 @@ class Ovgen:
         end_frame = fps * self.waves[0].get_s()
         end_frame = int(end_frame) + 1
 
-        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan)
-        renderer.set_colors(self.cfg.channels)
+        renderer = self._load_renderer()
 
         if RENDER_PROFILING:
             begin = time.perf_counter()
