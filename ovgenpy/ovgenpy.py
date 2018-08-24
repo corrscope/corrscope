@@ -154,7 +154,7 @@ class Ovgen:
                 time_seconds = frame / fps
 
                 rounded = int(time_seconds)
-                if rounded != prev:
+                if RENDER_PROFILING and rounded != prev:
                     print(rounded)
                     prev = rounded
 
