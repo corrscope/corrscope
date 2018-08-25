@@ -24,7 +24,7 @@ def test_channel_subsampling(
 ):
     """ Ensure nsamp and trigger/render subsampling are computed correctly. """
 
-    ovgenpy.ovgenpy.RENDER_PROFILING = False    # Cleanup Hypothesis testing logs
+    ovgenpy.ovgenpy.PRINT_TIMESTAMP = False    # Cleanup Hypothesis testing logs
 
     Wave = mocker.patch.object(ovgenpy.channel, 'Wave')
     wave = Wave.return_value
