@@ -2,7 +2,7 @@
 import time
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
-from typing import Optional, List, Union
+from typing import Optional, List, Union, TYPE_CHECKING
 
 from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
@@ -13,9 +13,12 @@ from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field
 from ovgenpy.wave import Wave
 
+if TYPE_CHECKING:
+    from ovgenpy.triggers import CorrelationTrigger
+
 # cgitb.enable(format='text')
 
-RENDER_PROFILING = True
+PRINT_TIMESTAMP = True
 
 @register_enum
 @unique
@@ -44,6 +47,7 @@ class Config:
 
     outputs: List[outputs.IOutputConfig]
 
+    show_buffer: bool = False
     benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
 
     @property
@@ -108,6 +112,7 @@ class Ovgen:
     def _load_channels(self):
         self.channels = [Channel(ccfg, self.cfg) for ccfg in self.cfg.channels]
         self.waves = [channel.wave for channel in self.channels]
+        self.triggers = [channel.trigger for channel in self.channels]
         self.nchan = len(self.channels)
 
     @contextmanager
@@ -140,7 +145,18 @@ class Ovgen:
 
         renderer = self._load_renderer()
 
-        if RENDER_PROFILING:
+        # Display buffers, for debugging purposes.
+        show_buffer = self.cfg.show_buffer
+        if show_buffer:
+            from ovgenpy.outputs import FFplayOutputConfig
+            from ovgenpy.utils.keyword_dataclasses import replace
+
+            no_audio = replace(self.cfg, master_audio='')
+
+            buf_render = self._load_renderer()
+            buf_output = FFplayOutputConfig()(no_audio)
+
+        if PRINT_TIMESTAMP:
             begin = time.perf_counter()
 
         benchmark_mode = self.cfg.benchmark_mode
@@ -153,7 +169,7 @@ class Ovgen:
                 time_seconds = frame / fps
 
                 rounded = int(time_seconds)
-                if RENDER_PROFILING and rounded != prev:
+                if PRINT_TIMESTAMP and rounded != prev:
                     print(rounded)
                     prev = rounded
 
@@ -170,6 +186,12 @@ class Ovgen:
                     datas.append(wave.get_around(
                         trigger_sample, channel.nsamp, channel.render_subsampling))
 
+                # Display buffers, for debugging purposes.
+                if show_buffer:
+                    triggers: List['CorrelationTrigger'] = self.triggers
+                    buf_render.render_frame([trigger._buffer for trigger in triggers])
+                    buf_output.write_frame(buf_render.get_frame())
+
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
                     renderer.render_frame(datas)
@@ -180,7 +202,7 @@ class Ovgen:
                         for output in self.outputs:
                             output.write_frame(frame)
 
-        if RENDER_PROFILING:
+        if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
             dtime = time.perf_counter() - begin
             render_fps = (end_frame - begin_frame) / dtime
