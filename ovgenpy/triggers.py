@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Type, Tuple
 
 import numpy as np
 from scipy import signal
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 # Abstract classes
 
+# TODO rename nsamp to trigger_nsamp or tsamp or wsamp
 class ITriggerConfig:
     cls: Type['Trigger']
 
@@ -58,13 +59,14 @@ class Trigger(ABC):
 @register_config(always_dump='*')
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
-    trigger_strength: float
+    edge_strength: float = 10
     trigger_diameter: float = 0.5
-    use_edge_trigger: bool
+    trigger_falloff: Tuple[float, float] = (4, 1)  # FIXME add default, dump/load as list
+    use_edge_trigger: bool = True
 
     # _update_buffer
-    responsiveness: float
-    falloff_width: float
+    responsiveness: float = 0.1
+    buffer_falloff: float = 0.5
 
 
 @register_trigger(CorrelationTriggerConfig)
@@ -97,21 +99,21 @@ class CorrelationTrigger(Trigger):
         self._windowed_step = self._calc_step()
 
         # Input data window (narrower for long subsampled data)
-        self._data_window = self._calc_data_window()
+        self._data_taper = self._calc_data_taper()  # TODO add a right cosine taper or not?
 
     def _calc_step(self):
         """ Step function used for approximate edge triggering. """
-        trigger_strength = self.cfg.trigger_strength
+        edge_strength = self.cfg.edge_strength
         N = self._buffer_nsamp
         halfN = N // 2
 
         step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
-        step[:halfN] = -trigger_strength / 2
-        step[halfN:] = trigger_strength / 2
+        step[:halfN] = -edge_strength / 2
+        step[halfN:] = edge_strength / 2
         step *= windows.gaussian(N, std=halfN / 3)
         return step
 
-    def _calc_data_window(self):
+    def _calc_data_taper(self):
         """ Input data window. Zeroes out all data older than 1 frame old.
         See https://github.com/jimbo1qaz/ovgenpy/wiki/Correlation-Trigger
         """
@@ -127,17 +129,9 @@ class CorrelationTrigger(Trigger):
         taper = np.pad(taper, (halfN - len(taper), 0), 'constant')
         assert len(taper) == halfN
 
-        # Generate Gaussian window based on data width.
-
-        # FIXME: If subsampling doubles, halfN *2 and _subsampling *2. data_window
-        # should /2, but would previously / 2√2.
-        # (Note: data_window(std=) is in units of samples, whose size is proportional
-        # to _subsampling.)
-        data_window = windows.gaussian(N, std=halfN)    # / self._subsampling)
-
-        # Truncate left half of data_window (don't correlate with data 1+ frames old).
+        # Generate left half-taper to prevent correlating with 1-frame-old data.
+        data_window = np.ones(N)
         data_window[:halfN] = np.minimum(data_window[:halfN], taper)
-
         return data_window
 
     def get_trigger(self, index: int) -> int:
@@ -145,13 +139,21 @@ class CorrelationTrigger(Trigger):
         :param index: sample index
         :return: new sample index, corresponding to rising edge
         """
+        N = self._buffer_nsamp
         use_edge_trigger = self.cfg.use_edge_trigger
 
-        N = self._buffer_nsamp
-
-        # data = windowed
+        # Get data
         data = self._wave.get_around(index, N, self._subsampling)
-        data *= self._data_window
+
+        # Window data
+        period = get_period(data)
+        print(period)
+        diameter, falloff = [round(period * x) for x in self.cfg.trigger_falloff]
+        falloff_window = cosine_flat(N, diameter, falloff)
+
+        window = np.minimum(falloff_window, self._data_taper)
+        data *= window
+        self.lol = window
 
         # prev_buffer
         prev_buffer = self._windowed_step + self._buffer
@@ -203,7 +205,7 @@ class CorrelationTrigger(Trigger):
 
         :param data: Wave data. WILL BE MODIFIED.
         """
-        falloff_width = self.cfg.falloff_width
+        buffer_falloff = self.cfg.buffer_falloff
         responsiveness = self.cfg.responsiveness
 
         N = len(data)
@@ -215,7 +217,7 @@ class CorrelationTrigger(Trigger):
         self._normalize_buffer(data)
 
         wave_period = get_period(data)
-        window = windows.gaussian(N, std = wave_period * falloff_width)
+        window = windows.gaussian(N, std = wave_period * buffer_falloff)
         data *= window
 
         # Old buffer
@@ -249,6 +251,27 @@ def get_period(data: np.ndarray) -> int:
     crossX = zero_crossings[0]
     peakX = crossX + np.argmax(corr[crossX:])
     return peakX
+
+
+def cosine_flat(n: int, diameter: int, falloff: int):
+    cosine = windows.hann(falloff * 2)
+    left, right = cosine[:falloff], cosine[falloff:]
+
+    window = np.concatenate([left, np.ones(diameter), right])
+
+    oversize = len(window) - n
+    if oversize > 0:
+        half = oversize // 2
+        window = window[half: oversize - half]
+    del oversize
+
+    undersize = n - len(window)
+    if undersize > 0:
+        half = undersize // 2
+        window = np.pad(window, (half, undersize - half), 'constant')
+    del undersize
+
+    return window
 
 
 def lerp(x: np.ndarray, y: np.ndarray, a: float):
