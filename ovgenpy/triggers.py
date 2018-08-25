@@ -128,7 +128,12 @@ class CorrelationTrigger(Trigger):
         assert len(taper) == halfN
 
         # Generate Gaussian window based on data width.
-        data_window = windows.gaussian(N, std=halfN / self._subsampling)
+
+        # FIXME: If subsampling doubles, halfN *2 and _subsampling *2. data_window
+        # should /2, but would previously / 2√2.
+        # (Note: data_window(std=) is in units of samples, whose size is proportional
+        # to _subsampling.)
+        data_window = windows.gaussian(N, std=halfN)    # / self._subsampling)
 
         # Truncate left half of data_window (don't correlate with data 1+ frames old).
         data_window[:halfN] = np.minimum(data_window[:halfN], taper)
