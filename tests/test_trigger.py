@@ -7,7 +7,6 @@ from ovgenpy import triggers
 from ovgenpy.triggers import CorrelationTriggerConfig
 from ovgenpy.wave import Wave
 
-
 triggers.SHOW_TRIGGER = False
 
 
@@ -15,12 +14,14 @@ triggers.SHOW_TRIGGER = False
 def cfg(request):
     use_edge_trigger = request.param
     return CorrelationTriggerConfig(
-        trigger_strength=1,
         use_edge_trigger=use_edge_trigger,
-
         responsiveness=1,
-        falloff_width=2,
     )
+
+
+# I regret adding the nsamp_frame parameter. It makes unit tests hard.
+
+NSAMP_FRAME = round(48000 / 60)
 
 
 def test_trigger(cfg: CorrelationTriggerConfig):
@@ -30,7 +31,7 @@ def test_trigger(cfg: CorrelationTriggerConfig):
     plot = False
     x0 = 24000
     x = x0 - 500
-    trigger = cfg(wave, 4000, subsampling=1)
+    trigger = cfg(wave, 4000, subsampling=1, nsamp_frame=NSAMP_FRAME)
 
     if plot:
         BIG = 0.95
@@ -63,7 +64,7 @@ def test_trigger_subsampling(cfg: CorrelationTriggerConfig):
     iters = 5
     x0 = 24000
     subsampling = 4
-    trigger = cfg(wave, nsamp=100, subsampling=subsampling)
+    trigger = cfg(wave, nsamp=100, subsampling=subsampling, nsamp_frame=NSAMP_FRAME)
     # real nsamp = nsamp*subsampling
     # period = 109
 
@@ -99,7 +100,7 @@ def test_trigger_subsampling_edges(cfg: CorrelationTriggerConfig):
 
     iters = 5
     subsampling = 4
-    trigger = cfg(wave, nsamp=100, subsampling=subsampling)
+    trigger = cfg(wave, nsamp=100, subsampling=subsampling, nsamp_frame=NSAMP_FRAME)
     # real nsamp = nsamp*subsampling
     # period = 109
 
