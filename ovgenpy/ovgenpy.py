@@ -15,7 +15,7 @@ from ovgenpy.wave import Wave
 
 # cgitb.enable(format='text')
 
-RENDER_PROFILING = True
+PRINT_TIMESTAMP = True
 
 @register_enum
 @unique
@@ -140,7 +140,7 @@ class Ovgen:
 
         renderer = self._load_renderer()
 
-        if RENDER_PROFILING:
+        if PRINT_TIMESTAMP:
             begin = time.perf_counter()
 
         benchmark_mode = self.cfg.benchmark_mode
@@ -153,7 +153,7 @@ class Ovgen:
                 time_seconds = frame / fps
 
                 rounded = int(time_seconds)
-                if RENDER_PROFILING and rounded != prev:
+                if PRINT_TIMESTAMP and rounded != prev:
                     print(rounded)
                     prev = rounded
 
@@ -180,7 +180,7 @@ class Ovgen:
                         for output in self.outputs:
                             output.write_frame(frame)
 
-        if RENDER_PROFILING:
+        if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
             dtime = time.perf_counter() - begin
             render_fps = (end_frame - begin_frame) / dtime
