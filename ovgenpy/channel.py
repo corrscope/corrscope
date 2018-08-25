@@ -37,21 +37,26 @@ class Channel:
         wcfg = _WaveConfig(amplification=ovgen_cfg.amplification * cfg.ampl_ratio)
         self.wave = Wave(wcfg, cfg.wav_path)
 
-        # Compute nsamp.
-        nsamp = ovgen_cfg.render_width_s * self.wave.smp_s / subsampling
-        self.nsamp = round(nsamp)
-        del nsamp
-
         # Compute subsampling (array stride).
         self.trigger_subsampling = subsampling * cfg.trigger_width_ratio
         self.render_subsampling = subsampling * cfg.render_width_ratio
+
+        # Compute nsamp and nsamp_frame.
+        nsamp = ovgen_cfg.render_width_s * self.wave.smp_s / subsampling
+        self.nsamp = round(nsamp)
+
         del subsampling
+        del nsamp
+
+        nsamp_frame = (1 / ovgen_cfg.fps) * self.wave.smp_s
+        nsamp_frame = round(nsamp_frame)
 
         # Create a Trigger object.
         tcfg = cfg.trigger or ovgen_cfg.trigger
         self.trigger = tcfg(
             wave=self.wave,
             nsamp=self.nsamp,
-            subsampling=self.trigger_subsampling
+            subsampling=self.trigger_subsampling,
+            nsamp_frame=nsamp_frame
         )
 
