@@ -13,7 +13,7 @@ from ovgenpy.triggers import NullTriggerConfig
 assert reproduce_failure
 
 
-positive = integers(min_value=1)
+positive = integers(min_value=1, max_value=100)
 
 @given(subsampling=positive, trigger_width_ratio=positive, render_width_ratio=positive)
 def test_channel_subsampling(
