@@ -1,7 +1,7 @@
 from io import StringIO
 from typing import ClassVar, TYPE_CHECKING
 
-from ovgenpy.utils.keyword_dataclasses import dataclass, fields
+from ovgenpy.utils.keyword_dataclasses import dataclass, fields, field
 # from dataclasses import dataclass, fields
 from ruamel.yaml import yaml_object, YAML, Representer
 
@@ -50,6 +50,12 @@ def register_config(cls=None, *, always_dump: str = ''):
         return decorator
 
     # __init__-less non-dataclasses are also compatible with yaml.register_class.
+
+
+# Default value for dataclass field
+def default(value):
+    string = repr(value)
+    return field(default=lambda: eval(string))
 
 
 @dataclass()

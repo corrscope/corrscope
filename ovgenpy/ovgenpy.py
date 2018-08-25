@@ -76,13 +76,7 @@ def default_config(**kwargs):
 
         width_ms=25,
         subsampling=1,
-        trigger=CorrelationTriggerConfig(
-            trigger_strength=10,
-            use_edge_trigger=True,
-
-            responsiveness=0.1,
-            falloff_width=0.5,
-        ),
+        trigger=CorrelationTriggerConfig(),
 
         amplification=1,
         layout=LayoutConfig(ncols=1),
@@ -189,7 +183,7 @@ class Ovgen:
                 # Display buffers, for debugging purposes.
                 if show_buffer:
                     triggers: List['CorrelationTrigger'] = self.triggers
-                    buf_render.render_frame([trigger._buffer for trigger in triggers])
+                    buf_render.render_frame([trigger.lol for trigger in triggers])
                     buf_output.write_frame(buf_render.get_frame())
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
