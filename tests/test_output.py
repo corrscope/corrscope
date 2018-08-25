@@ -81,6 +81,11 @@ def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
         popen.terminate.assert_called()
 
 
+# TODO integration test without audio
+
+# TODO integration test on ???
+
+
 @pytest.fixture
 def Popen(mocker: 'pytest_mock.MockFixture'):
     Popen = mocker.patch.object(subprocess, 'Popen', autospec=True).return_value
@@ -94,11 +99,3 @@ def Popen(mocker: 'pytest_mock.MockFixture'):
 
 class DummyException(Exception):
     pass
-
-
-"""
-import pytest
-from ovgenpy import manager
-"""
-
-

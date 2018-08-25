@@ -95,6 +95,10 @@ def default_config(**kwargs):
 class Ovgen:
     def __init__(self, cfg: Config):
         self.cfg = cfg
+        self.has_played = False
+
+        if len(self.cfg.channels) == 0:
+            raise ValueError('Config.channels is empty')
 
     waves: List[Wave]
     channels: List[Channel]
@@ -115,7 +119,16 @@ class Ovgen:
             ]
             yield
 
+    def _load_renderer(self):
+        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan)
+        renderer.set_colors(self.cfg.channels)
+        return renderer
+
     def play(self):
+        if self.has_played:
+            raise ValueError('Cannot call Ovgen.play() more than once')
+        self.has_played = True
+
         self._load_channels()
         # Calculate number of frames (TODO master file?)
         render_width_s = self.cfg.render_width_s
@@ -126,8 +139,7 @@ class Ovgen:
         end_frame = fps * self.waves[0].get_s()
         end_frame = int(end_frame) + 1
 
-        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan)
-        renderer.set_colors(self.cfg.channels)
+        renderer = self._load_renderer()
 
         if RENDER_PROFILING:
             begin = time.perf_counter()
@@ -142,7 +154,7 @@ class Ovgen:
                 time_seconds = frame / fps
 
                 rounded = int(time_seconds)
-                if rounded != prev:
+                if RENDER_PROFILING and rounded != prev:
                     print(rounded)
                     prev = rounded
 
@@ -150,7 +162,6 @@ class Ovgen:
                 # Get data from each wave
                 for wave, channel in zip(self.waves, self.channels):
                     sample = round(wave.smp_s * time_seconds)
-                    region_len = round(wave.smp_s * render_width_s)
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
                         trigger_sample = channel.trigger.get_trigger(sample)
@@ -158,7 +169,7 @@ class Ovgen:
                         trigger_sample = sample
 
                     datas.append(wave.get_around(
-                        trigger_sample, region_len, channel.render_subsampling))
+                        trigger_sample, channel.nsamp, channel.render_subsampling))
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
@@ -173,5 +184,5 @@ class Ovgen:
         if RENDER_PROFILING:
             # noinspection PyUnboundLocalVariable
             dtime = time.perf_counter() - begin
-            render_fps = end_frame / dtime
+            render_fps = (end_frame - begin_frame) / dtime
             print(f'FPS = {render_fps}')
