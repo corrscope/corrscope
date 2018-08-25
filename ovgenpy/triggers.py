@@ -55,10 +55,11 @@ class Trigger(ABC):
 
 # CorrelationTrigger
 
-@register_config
+@register_config(always_dump='*')
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
     trigger_strength: float
+    trigger_diameter: float = 0.5
     use_edge_trigger: bool
 
     # _update_buffer
@@ -168,7 +169,7 @@ class CorrelationTrigger(Trigger):
 
         # Find optimal offset (within ±N//4)
         mid = N-1
-        radius = N//4
+        radius = round(N * self.cfg.trigger_diameter / 2)
 
         left = mid - radius
         right = mid + radius + 1
