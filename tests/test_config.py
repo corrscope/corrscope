@@ -4,7 +4,7 @@ import sys
 import pytest
 from ruamel.yaml import yaml_object
 
-from ovgenpy.config import register_config, yaml, OvgenError
+from ovgenpy.config import register_config, yaml
 
 
 # YAML Idiosyncrasies: https://docs.saltstack.com/en/develop/topics/troubleshooting/yaml_idiosyncrasies.html
