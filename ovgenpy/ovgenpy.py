@@ -131,7 +131,6 @@ class Ovgen:
 
         self._load_channels()
         # Calculate number of frames (TODO master file?)
-        render_width_s = self.cfg.render_width_s
         fps = self.cfg.fps
 
         begin_frame = round(fps * self.cfg.begin_time)
