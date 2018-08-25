@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Type
 
 import numpy as np
 from scipy import signal
+from scipy.signal import windows
 
 from ovgenpy.config import register_config, OvgenError
 from ovgenpy.util import find
@@ -17,8 +18,9 @@ if TYPE_CHECKING:
 class ITriggerConfig:
     cls: Type['Trigger']
 
-    def __call__(self, wave: 'Wave', nsamp: int, subsampling: int):
-        return self.cls(wave, cfg=self, nsamp=nsamp, subsampling=subsampling)
+    def __call__(self, wave: 'Wave', nsamp: int, subsampling: int, nsamp_frame: int):
+        return self.cls(wave, cfg=self, nsamp=nsamp, subsampling=subsampling,
+                        nsamp_frame=nsamp_frame)
 
 
 def register_trigger(config_t: Type[ITriggerConfig]):
@@ -33,12 +35,14 @@ def register_trigger(config_t: Type[ITriggerConfig]):
 
 
 class Trigger(ABC):
-    def __init__(self, wave: 'Wave', cfg: ITriggerConfig, nsamp: int, subsampling: int):
+    def __init__(self, wave: 'Wave', cfg: ITriggerConfig, nsamp: int, subsampling: int,
+                 nsamp_frame: int):
         self.cfg = cfg
         self._wave = wave
 
         self._nsamp = nsamp
         self._subsampling = subsampling
+        self._nsamp_frame = nsamp_frame
 
     @abstractmethod
     def get_trigger(self, index: int) -> int:
@@ -85,23 +89,50 @@ class CorrelationTrigger(Trigger):
             ITriggerConfig(),
             nsamp=self.ZERO_CROSSING_SCAN,
             subsampling=1,
+            nsamp_frame=self._nsamp_frame
         )
 
         # Precompute tables
+        self._windowed_step = self._calc_step()
+
+        # Input data window (narrower for long subsampled data)
+        self._data_window = self._calc_data_window()
+
+    def _calc_step(self):
+        """ Step function used for approximate edge triggering. """
         trigger_strength = self.cfg.trigger_strength
         N = self._buffer_nsamp
         halfN = N // 2
 
-        # Step function (get_trigger)
-        step = np.empty(N, dtype=FLOAT)     # type: np.ndarray[FLOAT]
+        step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
         step[:halfN] = -trigger_strength / 2
         step[halfN:] = trigger_strength / 2
+        step *= windows.gaussian(N, std=halfN / 3)
+        return step
 
-        step *= signal.gaussian(N, std = halfN / 3)
-        self._windowed_step = step
+    def _calc_data_window(self):
+        """ Input data window. Zeroes out all data older than 1 frame old.
+        See https://github.com/jimbo1qaz/ovgenpy/wiki/Correlation-Trigger
+        """
+        N = self._buffer_nsamp
+        halfN = N // 2
+        nsamp_frame = self._nsamp_frame
 
-        # Input data window (narrower for long subsampled data)
-        self._data_window = signal.gaussian(N, std=halfN / np.sqrt(self._subsampling))
+        # Left half of a Hann cosine taper
+        taper = windows.hann(nsamp_frame * 2)[:nsamp_frame]
+
+        # Reshape taper to left `halfN` of data_window (right-aligned).
+        taper = taper[-halfN:]
+        taper = np.pad(taper, (halfN - len(taper), 0), 'constant')
+        assert len(taper) == halfN
+
+        # Generate Gaussian window based on data width.
+        data_window = windows.gaussian(N, std=halfN / self._subsampling)
+
+        # Truncate left half of data_window (don't correlate with data 1+ frames old).
+        data_window[:halfN] = np.minimum(data_window[:halfN], taper)
+
+        return data_window
 
     def get_trigger(self, index: int) -> int:
         """
@@ -178,7 +209,7 @@ class CorrelationTrigger(Trigger):
         self._normalize_buffer(data)
 
         wave_period = get_period(data)
-        window = signal.gaussian(N, std = wave_period * falloff_width)
+        window = windows.gaussian(N, std = wave_period * falloff_width)
         data *= window
 
         # Old buffer
