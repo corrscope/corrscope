@@ -15,11 +15,11 @@ assert reproduce_failure
 
 positive = integers(min_value=1, max_value=100)
 
-@given(subsampling=positive, trigger_width_ratio=positive, render_width_ratio=positive)
+@given(subsampling=positive, trigger_width=positive, render_width=positive)
 def test_channel_subsampling(
     subsampling: int,
-    trigger_width_ratio: int,
-    render_width_ratio: int,
+    trigger_width: int,
+    render_width: int,
     mocker: MockFixture
 ):
     """ Ensure window_samp and trigger/render subsampling are computed correctly. """
@@ -38,8 +38,8 @@ def test_channel_subsampling(
 
     ccfg = ChannelConfig(
         'tests/sine440.wav',
-        trigger_width_ratio=trigger_width_ratio,
-        render_width_ratio=render_width_ratio,
+        trigger_width=trigger_width,
+        render_width=render_width,
     )
     cfg = default_config(
         channels=[ccfg],
@@ -55,8 +55,8 @@ def test_channel_subsampling(
         round(cfg.render_width_s * channel.wave.smp_s / subsampling), 1)
 
     assert channel.window_samp == ideal_nsamp
-    assert channel.trigger_subsampling == subsampling * trigger_width_ratio
-    assert channel.render_subsampling == subsampling * render_width_ratio
+    assert channel.trigger_subsampling == subsampling * trigger_width
+    assert channel.render_subsampling == subsampling * render_width
 
     # Ensure trigger uses channel.window_samp and trigger_subsampling.
     trigger = channel.trigger
