@@ -16,12 +16,11 @@ if TYPE_CHECKING:
 
 # Abstract classes
 
-# FIXME rename nsamp to trigger_nsamp or tsamp
 class ITriggerConfig:
     cls: Type['Trigger']
 
-    def __call__(self, wave: 'Wave', nsamp: int, subsampling: int, fps: float):
-        return self.cls(wave, cfg=self, nsamp=nsamp, subsampling=subsampling, fps=fps)
+    def __call__(self, wave: 'Wave', tsamp: int, subsampling: int, fps: float):
+        return self.cls(wave, cfg=self, tsamp=tsamp, subsampling=subsampling, fps=fps)
 
 
 def register_trigger(config_t: Type[ITriggerConfig]):
@@ -36,17 +35,17 @@ def register_trigger(config_t: Type[ITriggerConfig]):
 
 
 class Trigger(ABC):
-    def __init__(self, wave: 'Wave', cfg: ITriggerConfig, nsamp: int, subsampling: int,
+    def __init__(self, wave: 'Wave', cfg: ITriggerConfig, tsamp: int, subsampling: int,
                  fps: float):
         self.cfg = cfg
         self._wave = wave
 
-        self._nsamp = nsamp
+        self._tsamp = tsamp
         self._subsampling = subsampling
         self._fps = fps
 
         frame_dur = 1 / fps
-        self._nsamp_frame = self.time2tsamp(frame_dur)
+        self._tsamp_frame = self.time2tsamp(frame_dur)
 
     def time2tsamp(self, time: float):
         return round(time * self._wave.smp_s / self._subsampling)
@@ -67,7 +66,7 @@ class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
     edge_strength: float = 10
     trigger_diameter: float = 0.5
-    trigger_falloff: Tuple[float, float] = (4, 1)  # FIXME add default, dump/load as list
+    trigger_falloff: Tuple[float, float] = (4, 1)
     use_edge_trigger: bool = True
 
     # _update_buffer
@@ -83,11 +82,11 @@ class CorrelationTrigger(Trigger):
 
     def __init__(self, *args, **kwargs):
         """
-        Correlation-based trigger which looks at a window of `trigger_nsamp` samples.
+        Correlation-based trigger which looks at a window of `trigger_tsamp` samples.
         it's complicated
         """
         Trigger.__init__(self, *args, **kwargs)
-        self._buffer_nsamp = self._nsamp
+        self._buffer_nsamp = self._tsamp
 
         # Create correlation buffer (containing a series of old data)
         self._buffer = np.zeros(self._buffer_nsamp, dtype=FLOAT)    # type: np.ndarray[FLOAT]
@@ -96,7 +95,7 @@ class CorrelationTrigger(Trigger):
         self._zero_trigger = ZeroCrossingTrigger(
             self._wave,
             ITriggerConfig(),
-            nsamp=self.ZERO_CROSSING_SCAN,
+            tsamp=self.ZERO_CROSSING_SCAN,
             subsampling=1,
             fps=self._fps
         )
@@ -104,8 +103,8 @@ class CorrelationTrigger(Trigger):
         # Precompute tables
         self._windowed_step = self._calc_step()
 
-        # Input data window (narrower for long subsampled data)
-        self._data_taper = self._calc_data_taper()  # TODO add a right cosine taper or not?
+        # Input data taper (zeroes out all data older than 1 frame old)
+        self._data_taper = self._calc_data_taper()  # Rejected idea: right cosine taper
 
     def _calc_step(self):
         """ Step function used for approximate edge triggering. """
@@ -125,10 +124,10 @@ class CorrelationTrigger(Trigger):
         """
         N = self._buffer_nsamp
         halfN = N // 2
-        nsamp_frame = self._nsamp_frame
+        tsamp_frame = self._tsamp_frame
 
         # Left half of a Hann cosine taper
-        taper = windows.hann(nsamp_frame * 2)[:nsamp_frame]
+        taper = windows.hann(tsamp_frame * 2)[:tsamp_frame]
 
         # Reshape taper to left `halfN` of data_window (right-aligned).
         taper = leftpad(taper, halfN)
@@ -278,7 +277,7 @@ class ZeroCrossingTrigger(Trigger):
             raise OvgenError(
                 f'ZeroCrossingTrigger with subsampling != 1 is not implemented '
                 f'(supplied {self._subsampling})')
-        nsamp = self._nsamp
+        tsamp = self._tsamp
 
         if not 0 <= index < self._wave.nsamp:
             return index
@@ -294,7 +293,7 @@ class ZeroCrossingTrigger(Trigger):
         else:   # self._wave[sample] == 0
             return index + 1
 
-        data = self._wave[index : index + (direction * nsamp) : direction]
+        data = self._wave[index : index + (direction * tsamp) : direction]
         intercepts = find(data, test)
         try:
             (delta,), value = next(intercepts)

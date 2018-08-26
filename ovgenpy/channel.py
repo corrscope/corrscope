@@ -52,7 +52,7 @@ class Channel:
         tcfg = cfg.trigger or ovgen_cfg.trigger
         self.trigger = tcfg(
             wave=self.wave,
-            nsamp=self.nsamp,
+            tsamp=self.nsamp,
             subsampling=self.trigger_subsampling,
             fps=ovgen_cfg.fps
         )
