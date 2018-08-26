@@ -21,8 +21,7 @@ def cfg(request):
 
 # I regret adding the nsamp_frame parameter. It makes unit tests hard.
 
-NSAMP_FRAME = round(48000 / 60)
-
+FPS = 60
 
 def test_trigger(cfg: CorrelationTriggerConfig):
     wave = Wave(None, 'tests/impulse24000.wav')
@@ -31,7 +30,7 @@ def test_trigger(cfg: CorrelationTriggerConfig):
     plot = False
     x0 = 24000
     x = x0 - 500
-    trigger = cfg(wave, 4000, subsampling=1, nsamp_frame=NSAMP_FRAME)
+    trigger = cfg(wave, 4000, subsampling=1, fps=FPS)
 
     if plot:
         BIG = 0.95
@@ -64,8 +63,8 @@ def test_trigger_subsampling(cfg: CorrelationTriggerConfig):
     iters = 5
     x0 = 24000
     subsampling = 4
-    trigger = cfg(wave, nsamp=100, subsampling=subsampling, nsamp_frame=NSAMP_FRAME)
-    # real nsamp = nsamp*subsampling
+    trigger = cfg(wave, tsamp=100, subsampling=subsampling, fps=FPS)
+    # real window_samp = window_samp*subsampling
     # period = 109
 
     for i in range(1, iters):
@@ -100,8 +99,8 @@ def test_trigger_subsampling_edges(cfg: CorrelationTriggerConfig):
 
     iters = 5
     subsampling = 4
-    trigger = cfg(wave, nsamp=100, subsampling=subsampling, nsamp_frame=NSAMP_FRAME)
-    # real nsamp = nsamp*subsampling
+    trigger = cfg(wave, tsamp=100, subsampling=subsampling, fps=FPS)
+    # real window_samp = window_samp*subsampling
     # period = 109
 
     trigger.get_trigger(0)

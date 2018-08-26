@@ -22,7 +22,7 @@ def test_channel_subsampling(
     render_width_ratio: int,
     mocker: MockFixture
 ):
-    """ Ensure nsamp and trigger/render subsampling are computed correctly. """
+    """ Ensure window_samp and trigger/render subsampling are computed correctly. """
 
     ovgenpy.ovgenpy.PRINT_TIMESTAMP = False    # Cleanup Hypothesis testing logs
 
@@ -50,34 +50,34 @@ def test_channel_subsampling(
     )
     channel = Channel(ccfg, cfg)
 
-    # Ensure channel.nsamp, trigger_subsampling, render_subsampling are correct.
+    # Ensure channel.window_samp, trigger_subsampling, render_subsampling are correct.
     ideal_nsamp = pytest.approx(
         round(cfg.render_width_s * channel.wave.smp_s / subsampling), 1)
 
-    assert channel.nsamp == ideal_nsamp
+    assert channel.window_samp == ideal_nsamp
     assert channel.trigger_subsampling == subsampling * trigger_width_ratio
     assert channel.render_subsampling == subsampling * render_width_ratio
 
-    # Ensure trigger uses channel.nsamp and trigger_subsampling.
+    # Ensure trigger uses channel.window_samp and trigger_subsampling.
     trigger = channel.trigger
-    assert trigger._nsamp == channel.nsamp
+    assert trigger._tsamp == channel.window_samp
     assert trigger._subsampling == channel.trigger_subsampling
 
-    # Ensure ovgenpy calls render using channel.nsamp and render_subsampling.
+    # Ensure ovgenpy calls render using channel.window_samp and render_subsampling.
     ovgen = Ovgen(cfg)
     renderer = mocker.patch.object(Ovgen, '_load_renderer').return_value
     ovgen.play()
 
     # Inspect arguments to wave.get_around()
     (_sample, _region_nsamp, _subsampling), kwargs = wave.get_around.call_args
-    assert _region_nsamp == channel.nsamp
+    assert _region_nsamp == channel.window_samp
     assert _subsampling == channel.render_subsampling
 
     # Inspect arguments to renderer.render_frame()
     # datas: List[np.ndarray]
     (datas,), kwargs = renderer.render_frame.call_args
     render_data = datas[0]
-    assert len(render_data) == channel.nsamp
+    assert len(render_data) == channel.window_samp
 
 
 # line_color is tested in test_renderer.py
