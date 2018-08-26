@@ -82,6 +82,18 @@ class CorrelationTriggerConfig(ITriggerConfig):
     falloff_width = Alias('buffer_falloff')
     # endregion
 
+    def __post_init__(self):
+        self._validate_param('lag_prevention', 0, 1)
+        self._validate_param('responsiveness', 0, 1)
+        # TODO trigger_falloff >= 0
+        self._validate_param('buffer_falloff', 0, np.inf)
+
+    def _validate_param(self, key: str, begin, end):
+        value = getattr(self, key)
+        if not begin <= value <= end:
+            raise ValueError(
+                f'Invalid {key}={value} (should be within [{begin}, {end}])')
+
 
 @register_trigger(CorrelationTriggerConfig)
 class CorrelationTrigger(Trigger):
