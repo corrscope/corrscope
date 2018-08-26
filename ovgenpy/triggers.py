@@ -7,6 +7,7 @@ from scipy.signal import windows
 
 from ovgenpy.config import register_config, OvgenError
 from ovgenpy.util import find
+from ovgenpy.utils.windows import midpad, leftpad
 from ovgenpy.wave import FLOAT
 
 
@@ -125,9 +126,7 @@ class CorrelationTrigger(Trigger):
         taper = windows.hann(nsamp_frame * 2)[:nsamp_frame]
 
         # Reshape taper to left `halfN` of data_window (right-aligned).
-        taper = taper[-halfN:]
-        taper = np.pad(taper, (halfN - len(taper), 0), 'constant')
-        assert len(taper) == halfN
+        taper = leftpad(taper, halfN)
 
         # Generate left half-taper to prevent correlating with 1-frame-old data.
         data_window = np.ones(N)
@@ -259,19 +258,8 @@ def cosine_flat(n: int, diameter: int, falloff: int):
 
     window = np.concatenate([left, np.ones(diameter), right])
 
-    oversize = len(window) - n
-    if oversize > 0:
-        half = oversize // 2
-        window = window[half: oversize - half]
-    del oversize
-
-    undersize = n - len(window)
-    if undersize > 0:
-        half = undersize // 2
-        window = np.pad(window, (half, undersize - half), 'constant')
-    del undersize
-
-    return window
+    padded = midpad(window, n)
+    return padded
 
 
 def lerp(x: np.ndarray, y: np.ndarray, a: float):
