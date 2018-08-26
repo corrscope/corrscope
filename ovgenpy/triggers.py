@@ -147,13 +147,11 @@ class CorrelationTrigger(Trigger):
 
         # Window data
         period = get_period(data)
-        print(period)
         diameter, falloff = [round(period * x) for x in self.cfg.trigger_falloff]
         falloff_window = cosine_flat(N, diameter, falloff)
 
         window = np.minimum(falloff_window, self._data_taper)
         data *= window
-        self.lol = window
 
         # prev_buffer
         prev_buffer = self._windowed_step + self._buffer

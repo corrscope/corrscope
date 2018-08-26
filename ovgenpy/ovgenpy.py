@@ -183,7 +183,7 @@ class Ovgen:
                 # Display buffers, for debugging purposes.
                 if show_buffer:
                     triggers: List['CorrelationTrigger'] = self.triggers
-                    buf_render.render_frame([trigger.lol for trigger in triggers])
+                    buf_render.render_frame([trigger._buffer for trigger in triggers])
                     buf_output.write_frame(buf_render.get_frame())
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
