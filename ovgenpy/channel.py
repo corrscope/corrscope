@@ -23,7 +23,7 @@ class ChannelConfig:
 
 class Channel:
     # Shared between trigger and renderer.
-    nsamp: int
+    window_samp: int
 
     # Product of ovgen_cfg.subsampling and trigger/render_width_ratio.
     trigger_subsampling: int
@@ -41,9 +41,9 @@ class Channel:
         self.trigger_subsampling = subsampling * cfg.trigger_width_ratio
         self.render_subsampling = subsampling * cfg.render_width_ratio
 
-        # Compute nsamp and tsamp_frame.
+        # Compute window_samp and tsamp_frame.
         nsamp = ovgen_cfg.render_width_s * self.wave.smp_s / subsampling
-        self.nsamp = round(nsamp)
+        self.window_samp = round(nsamp)
 
         del subsampling
         del nsamp
@@ -52,7 +52,7 @@ class Channel:
         tcfg = cfg.trigger or ovgen_cfg.trigger
         self.trigger = tcfg(
             wave=self.wave,
-            tsamp=self.nsamp,
+            tsamp=self.window_samp,
             subsampling=self.trigger_subsampling,
             fps=ovgen_cfg.fps
         )

@@ -178,7 +178,7 @@ class Ovgen:
                         trigger_sample = sample
 
                     datas.append(wave.get_around(
-                        trigger_sample, channel.nsamp, channel.render_subsampling))
+                        trigger_sample, channel.window_samp, channel.render_subsampling))
 
                 # Display buffers, for debugging purposes.
                 if show_buffer:
