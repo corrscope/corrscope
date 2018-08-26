@@ -127,10 +127,10 @@ class Alias:
 Ignored = object()
 
 # Unused
-def default(value):
-    """Supplies a mutable default value for a dataclass field."""
-    string = repr(value)
-    return field(default=lambda: eval(string))
+# def default(value):
+#     """Supplies a mutable default value for a dataclass field."""
+#     string = repr(value)
+#     return field(default_factory=lambda: eval(string))
 
 
 # Setup Enum load/dump infrastructure
