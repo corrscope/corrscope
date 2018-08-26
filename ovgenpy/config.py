@@ -8,6 +8,7 @@ from ruamel.yaml import yaml_object, YAML, Representer
 if TYPE_CHECKING:
     from enum import Enum
 
+# Setup YAML loading (yaml object).
 
 class MyYAML(YAML):
     def dump(self, data, stream=None, **kw):
@@ -28,10 +29,12 @@ yaml = MyYAML()
 _yaml_loadable = yaml_object(yaml)
 
 
+# Setup configuration load/dump infrastructure.
+
 def register_config(cls=None, *, always_dump: str = ''):
     """ Marks class as @dataclass, and enables YAML dumping (excludes default fields).
 
-    dataclasses.dataclass is compatible with yaml.register_class.
+    dataclasses.dataclass is compatible with yaml_object().
     typing.NamedTuple is incompatible.
     """
 
@@ -49,14 +52,6 @@ def register_config(cls=None, *, always_dump: str = ''):
     else:
         return decorator
 
-    # __init__-less non-dataclasses are also compatible with yaml.register_class.
-
-
-# Default value for dataclass field
-def default(value):
-    string = repr(value)
-    return field(default=lambda: eval(string))
-
 
 @dataclass()
 class _ConfigMixin:
@@ -69,7 +64,7 @@ class _ConfigMixin:
 
     # SafeRepresenter.represent_yaml_object() uses __getstate__ to dump objects.
     def __getstate__(self):
-        """ Returns all fields with non-default value, or appeear in
+        """ Removes all fields with default values, but not found in
         self.always_dump. """
 
         always_dump = set(self.always_dump.split())
@@ -94,10 +89,47 @@ class _ConfigMixin:
 
     # SafeConstructor.construct_yaml_object() uses __setstate__ to load objects.
     def __setstate__(self, state):
-        """Call the dataclass constructor, to ensure all parameters are valid."""
-        new = type(self)(**state)
-        self.__dict__ = new.__dict__
+        """ Redirect `Alias(key)=value` to `key=value`.
+        Then call the dataclass constructor (to validate parameters). """
 
+        for key, value in dict(state).items():
+            classvar = getattr(self, key, None)
+            if not isinstance(classvar, Alias):
+                continue
+
+            target = classvar.key
+            if target in state:
+                raise TypeError(
+                    f'{type(self).__name__} received both Alias {key} and equivalent '
+                    f'{target}'
+                )
+
+            state[target] = value
+            del state[key]
+
+        obj = type(self)(**state)
+        self.__dict__ = obj.__dict__
+
+
+@dataclass
+class Alias:
+    """
+    @register_config
+    class Foo:
+        x: int
+        xx = Alias('x')     # do not add a type hint
+    """
+    key: str
+
+
+# Unused
+def default(value):
+    """Supplies a mutable default value for a dataclass field."""
+    string = repr(value)
+    return field(default=lambda: eval(string))
+
+
+# Setup Enum load/dump infrastructure
 
 def register_enum(cls: type):
     cls.to_yaml = _EnumMixin.to_yaml
@@ -109,6 +141,8 @@ class _EnumMixin:
     def to_yaml(cls, representer: Representer, node: 'Enum'):
         return representer.represent_str(node._name_)
 
+
+# Miscellaneous
 
 class OvgenError(Exception):
     pass
