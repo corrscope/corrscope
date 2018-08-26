@@ -105,11 +105,14 @@ class CorrelationTrigger(Trigger):
             fps=self._fps
         )
 
-        # Precompute tables
+        # Precompute edge trigger step
         self._windowed_step = self._calc_step()
 
         # Input data taper (zeroes out all data older than 1 frame old)
         self._data_taper = self._calc_data_taper()  # Rejected idea: right cosine taper
+
+        # For debug output
+        self.save_window = False
 
     def _calc_step(self):
         """ Step function used for approximate edge triggering. """
@@ -140,6 +143,7 @@ class CorrelationTrigger(Trigger):
         # Generate left half-taper to prevent correlating with 1-frame-old data.
         data_window = np.ones(N)
         data_window[:halfN] = np.minimum(data_window[:halfN], taper)
+
         return data_window
 
     def get_trigger(self, index: int) -> int:
@@ -160,6 +164,9 @@ class CorrelationTrigger(Trigger):
 
         window = np.minimum(falloff_window, self._data_taper)
         data *= window
+
+        if self.save_window:
+            self._prev_window = window
 
         # prev_buffer
         prev_buffer = self._windowed_step + self._buffer
