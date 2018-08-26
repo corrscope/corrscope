@@ -108,4 +108,18 @@ def test_trigger_subsampling_edges(cfg: CorrelationTriggerConfig):
     trigger.get_trigger(50000)
 
 
+# Test the ability to load legacy TriggerConfig
+
+def test_load_trigger_config():
+    from ovgenpy.config import yaml
+
+    # Ensure no exceptions
+    yaml.load('''\
+!CorrelationTriggerConfig
+  trigger_strength: 3
+  use_edge_trigger: false
+  responsiveness: 0.2
+  falloff_width: 2
+''')
+
 # TODO test_period get_period()
