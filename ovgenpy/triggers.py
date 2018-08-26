@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 # Abstract classes
 
-# TODO rename nsamp to trigger_nsamp or tsamp or wsamp
+# FIXME rename nsamp to trigger_nsamp or tsamp
 class ITriggerConfig:
     cls: Type['Trigger']
 
@@ -39,6 +39,7 @@ def register_trigger(config_t: Type[ITriggerConfig]):
 class Trigger(ABC):
     def __init__(self, wave: 'Wave', cfg: ITriggerConfig, nsamp: int, subsampling: int,
                  nsamp_frame: int):
+        # FIXME replace nsamp_frame with frame_time, add _time2tsamp() method
         self.cfg = cfg
         self._wave = wave
 

@@ -41,15 +41,16 @@ class Channel:
         self.trigger_subsampling = subsampling * cfg.trigger_width_ratio
         self.render_subsampling = subsampling * cfg.render_width_ratio
 
-        # Compute nsamp and nsamp_frame.
+        # Compute nsamp and tsamp_frame.
         nsamp = ovgen_cfg.render_width_s * self.wave.smp_s / subsampling
         self.nsamp = round(nsamp)
 
         del subsampling
         del nsamp
 
-        nsamp_frame = (1 / ovgen_cfg.fps) * self.wave.smp_s
-        nsamp_frame = round(nsamp_frame)
+        # FIXME unit test
+        frame_time = (1 / ovgen_cfg.fps)
+        tsamp_frame = self.time2tsamp(frame_time)
 
         # Create a Trigger object.
         tcfg = cfg.trigger or ovgen_cfg.trigger
@@ -57,6 +58,8 @@ class Channel:
             wave=self.wave,
             nsamp=self.nsamp,
             subsampling=self.trigger_subsampling,
-            nsamp_frame=nsamp_frame
+            nsamp_frame=tsamp_frame
         )
 
+    def time2tsamp(self, time: float):
+        return round(time * self.wave.smp_s / self.trigger_subsampling)
