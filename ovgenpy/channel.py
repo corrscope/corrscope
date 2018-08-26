@@ -14,8 +14,9 @@ class ChannelConfig:
     wav_path: str
 
     trigger: 'ITriggerConfig' = None    # TODO test channel-specific triggers
-    trigger_width_ratio: int = 1
-    render_width_ratio: int = 1
+    # Multiplies how wide the window is, in milliseconds.
+    trigger_width: int = 1
+    render_width: int = 1
 
     ampl_ratio: float = 1.0     # TODO use amplification = None instead?
     line_color: Any = None
@@ -25,7 +26,7 @@ class Channel:
     # Shared between trigger and renderer.
     window_samp: int
 
-    # Product of ovgen_cfg.subsampling and trigger/render_width_ratio.
+    # Product of ovgen_cfg.subsampling and trigger/render_width.
     trigger_subsampling: int
     render_subsampling: int
 
@@ -38,8 +39,8 @@ class Channel:
         self.wave = Wave(wcfg, cfg.wav_path)
 
         # Compute subsampling (array stride).
-        self.trigger_subsampling = subsampling * cfg.trigger_width_ratio
-        self.render_subsampling = subsampling * cfg.render_width_ratio
+        self.trigger_subsampling = subsampling * cfg.trigger_width
+        self.render_subsampling = subsampling * cfg.render_width
 
         # Compute window_samp and tsamp_frame.
         nsamp = ovgen_cfg.render_width_s * self.wave.smp_s / subsampling
