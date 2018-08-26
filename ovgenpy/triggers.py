@@ -45,7 +45,10 @@ class Trigger(ABC):
         self._fps = fps
 
         frame_dur = 1 / fps
+        # Subsamples per frame
         self._tsamp_frame = self.time2tsamp(frame_dur)
+        # Samples per frame
+        self._real_samp_frame = round(frame_dur * self._wave.smp_s)
 
     def time2tsamp(self, time: float):
         return round(time * self._wave.smp_s / self._subsampling)
@@ -65,6 +68,7 @@ class Trigger(ABC):
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
     edge_strength: float = 10
+    lag_prevention: float = 0.25
     trigger_diameter: float = 0.5
     trigger_falloff: Tuple[float, float] = (4, 1)
     use_edge_trigger: bool = True
@@ -132,10 +136,23 @@ class CorrelationTrigger(Trigger):
         """
         N = self._buffer_nsamp
         halfN = N // 2
+
+        # To avoid cutting off data, use a narrow transition zone (invariant to
+        # subsampling).
+        transition_nsamp = round(self._real_samp_frame * self.cfg.lag_prevention)
         tsamp_frame = self._tsamp_frame
 
         # Left half of a Hann cosine taper
-        taper = windows.hann(tsamp_frame * 2)[:tsamp_frame]
+        # Width = min(subsampling*frame * lag_prevention, 1 frame)
+
+        width = min(transition_nsamp, tsamp_frame)
+        taper = windows.hann(width * 2)[:width]
+
+        # Right-pad taper to 1 frame long
+        if width < tsamp_frame:
+            taper = np.pad(taper, (0, tsamp_frame - width), 'constant',
+                           constant_values=1)
+        assert len(taper) == tsamp_frame
 
         # Reshape taper to left `halfN` of data_window (right-aligned).
         taper = leftpad(taper, halfN)
