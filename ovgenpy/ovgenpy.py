@@ -36,11 +36,15 @@ class Config:
     fps: int
     begin_time: float = 0
 
-    subsampling: int
+    subsampling: int    # TODO optional=1
 
     width_ms: int
-    channels: List[ChannelConfig] = field(default_factory=list)
+    trigger_width: int = 1
+    render_width: int = 1
     trigger: ITriggerConfig  # Can be overriden per Wave
+
+    # Can override trigger_width, render_width, trigger
+    channels: List[ChannelConfig] = field(default_factory=list)
 
     amplification: float
     layout: LayoutConfig
