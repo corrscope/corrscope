@@ -5,7 +5,7 @@ import numpy as np
 from scipy import signal
 from scipy.signal import windows
 
-from ovgenpy.config import register_config, OvgenError
+from ovgenpy.config import register_config, OvgenError, Alias
 from ovgenpy.util import find
 from ovgenpy.utils.windows import midpad, leftpad
 from ovgenpy.wave import FLOAT
@@ -72,6 +72,11 @@ class CorrelationTriggerConfig(ITriggerConfig):
     # _update_buffer
     responsiveness: float = 0.1
     buffer_falloff: float = 0.5
+
+    # region Legacy Aliases
+    trigger_strength = Alias('edge_strength')
+    falloff_width = Alias('buffer_falloff')
+    # endregion
 
 
 @register_trigger(CorrelationTriggerConfig)

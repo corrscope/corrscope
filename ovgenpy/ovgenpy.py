@@ -6,7 +6,7 @@ from typing import Optional, List, Union, TYPE_CHECKING
 
 from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
-from ovgenpy.config import register_config, register_enum
+from ovgenpy.config import register_config, register_enum, Ignored
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig
 from ovgenpy.utils import keyword_dataclasses as dc
@@ -49,6 +49,10 @@ class Config:
 
     show_buffer: bool = False
     benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
+
+    # region Legacy Fields
+    wav_prefix = Ignored
+    # endregion
 
     @property
     def render_width_s(self) -> float:
