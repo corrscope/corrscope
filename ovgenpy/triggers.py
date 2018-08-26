@@ -20,9 +20,8 @@ if TYPE_CHECKING:
 class ITriggerConfig:
     cls: Type['Trigger']
 
-    def __call__(self, wave: 'Wave', nsamp: int, subsampling: int, nsamp_frame: int):
-        return self.cls(wave, cfg=self, nsamp=nsamp, subsampling=subsampling,
-                        nsamp_frame=nsamp_frame)
+    def __call__(self, wave: 'Wave', nsamp: int, subsampling: int, fps: float):
+        return self.cls(wave, cfg=self, nsamp=nsamp, subsampling=subsampling, fps=fps)
 
 
 def register_trigger(config_t: Type[ITriggerConfig]):
@@ -38,14 +37,19 @@ def register_trigger(config_t: Type[ITriggerConfig]):
 
 class Trigger(ABC):
     def __init__(self, wave: 'Wave', cfg: ITriggerConfig, nsamp: int, subsampling: int,
-                 nsamp_frame: int):
-        # FIXME replace nsamp_frame with frame_time, add _time2tsamp() method
+                 fps: float):
         self.cfg = cfg
         self._wave = wave
 
         self._nsamp = nsamp
         self._subsampling = subsampling
-        self._nsamp_frame = nsamp_frame
+        self._fps = fps
+
+        frame_dur = 1 / fps
+        self._nsamp_frame = self.time2tsamp(frame_dur)
+
+    def time2tsamp(self, time: float):
+        return round(time * self._wave.smp_s / self._subsampling)
 
     @abstractmethod
     def get_trigger(self, index: int) -> int:
@@ -94,7 +98,7 @@ class CorrelationTrigger(Trigger):
             ITriggerConfig(),
             nsamp=self.ZERO_CROSSING_SCAN,
             subsampling=1,
-            nsamp_frame=self._nsamp_frame
+            fps=self._fps
         )
 
         # Precompute tables

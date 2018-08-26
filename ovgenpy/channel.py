@@ -48,18 +48,12 @@ class Channel:
         del subsampling
         del nsamp
 
-        # FIXME unit test
-        frame_time = (1 / ovgen_cfg.fps)
-        tsamp_frame = self.time2tsamp(frame_time)
-
         # Create a Trigger object.
         tcfg = cfg.trigger or ovgen_cfg.trigger
         self.trigger = tcfg(
             wave=self.wave,
             nsamp=self.nsamp,
             subsampling=self.trigger_subsampling,
-            nsamp_frame=tsamp_frame
+            fps=ovgen_cfg.fps
         )
 
-    def time2tsamp(self, time: float):
-        return round(time * self.wave.smp_s / self.trigger_subsampling)
