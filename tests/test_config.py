@@ -4,8 +4,7 @@ import sys
 import pytest
 from ruamel.yaml import yaml_object
 
-from ovgenpy.config import register_config, yaml, Alias
-
+from ovgenpy.config import register_config, yaml, Alias, Ignored
 
 # YAML Idiosyncrasies: https://docs.saltstack.com/en/develop/topics/troubleshooting/yaml_idiosyncrasies.html
 
@@ -82,7 +81,7 @@ b: b
 def test_dump_load_aliases():
     """ Ensure dumping and loading `xx=Alias('x')` works.
     Ensure loading `{x=1, xx=1}` raises an error.
-    Does not check constructor `Config(xx=1)`. """
+    Does not check constructor `Config(xx=1)`."""
     @register_config
     class Config:
         x: int
@@ -113,6 +112,31 @@ xx: 1
     '''
     with pytest.raises(TypeError):
         yaml.load(s)
+
+
+def test_dump_load_ignored():
+    """ Ensure loading `xx=Ignored` works.
+    Does not check constructor `Config(xx=1)`.
+    """
+    @register_config
+    class Config:
+        xx = Ignored
+
+    # Test dumping
+    assert len(fields(Config)) == 0
+    cfg = Config()
+    s = yaml.dump(cfg)
+    assert s == '''\
+!Config {}
+'''
+    assert yaml.load(s) == cfg
+
+    # Test loading
+    s = '''\
+!Config
+xx: 1
+'''
+    assert yaml.load(s) == Config()
 
 
 def test_load_argument_validation():

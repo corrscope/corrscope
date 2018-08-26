@@ -93,19 +93,21 @@ class _ConfigMixin:
         Then call the dataclass constructor (to validate parameters). """
 
         for key, value in dict(state).items():
-            classvar = getattr(self, key, None)
-            if not isinstance(classvar, Alias):
-                continue
+            class_var = getattr(self, key, None)
 
-            target = classvar.key
-            if target in state:
-                raise TypeError(
-                    f'{type(self).__name__} received both Alias {key} and equivalent '
-                    f'{target}'
-                )
+            if class_var is Ignored:
+                del state[key]
 
-            state[target] = value
-            del state[key]
+            if isinstance(class_var, Alias):
+                target = class_var.key
+                if target in state:
+                    raise TypeError(
+                        f'{type(self).__name__} received both Alias {key} and '
+                        f'equivalent {target}'
+                    )
+
+                state[target] = value
+                del state[key]
 
         obj = type(self)(**state)
         self.__dict__ = obj.__dict__
@@ -121,6 +123,8 @@ class Alias:
     """
     key: str
 
+
+Ignored = object()
 
 # Unused
 def default(value):
