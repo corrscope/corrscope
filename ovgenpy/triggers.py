@@ -64,14 +64,20 @@ class Trigger(ABC):
 
 # CorrelationTrigger
 
-@register_config(always_dump='*')
+@register_config(always_dump='''
+    use_edge_trigger
+    edge_strength
+    responsiveness
+    buffer_falloff
+''')
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
-    edge_strength: float = 10
-    lag_prevention: float = 0.25
-    trigger_diameter: float = 0.5
-    trigger_falloff: Tuple[float, float] = (4, 1)
     use_edge_trigger: bool = True
+    edge_strength: float = 10.0
+    trigger_diameter: float = 0.5
+
+    trigger_falloff: Tuple[float, float] = (4.0, 1.0)
+    lag_prevention: float = 0.25
 
     # _update_buffer
     responsiveness: float = 0.1
