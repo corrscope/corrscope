@@ -4,7 +4,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from ovgenpy import triggers
-from ovgenpy.triggers import CorrelationTriggerConfig
+from ovgenpy.triggers import CorrelationTriggerConfig, CorrelationTrigger
 from ovgenpy.wave import Wave
 
 triggers.SHOW_TRIGGER = False
@@ -106,6 +106,29 @@ def test_trigger_subsampling_edges(cfg: CorrelationTriggerConfig):
     trigger.get_trigger(0)
     trigger.get_trigger(-1000)
     trigger.get_trigger(50000)
+
+
+def test_trigger_should_recalc_window():
+    cfg = CorrelationTriggerConfig(recalc_semitones=1.0)
+    wave = Wave(None, 'tests/sine440.wav')
+    trigger: CorrelationTrigger = cfg(wave, tsamp=1000, subsampling=1, fps=FPS)
+
+    for x in [0, 1, 1000]:
+        assert trigger._is_window_invalid(x), x
+
+    trigger._prev_period = 100
+
+    for x in [99, 101]:
+        assert not trigger._is_window_invalid(x), x
+    for x in [0, 80, 120]:
+        assert trigger._is_window_invalid(x), x
+
+    trigger._prev_period = 0
+
+    x = 0
+    assert not trigger._is_window_invalid(x), x
+    for x in [1, 100]:
+        assert trigger._is_window_invalid(x), x
 
 
 # Test the ability to load legacy TriggerConfig

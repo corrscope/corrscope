@@ -77,6 +77,7 @@ class CorrelationTriggerConfig(ITriggerConfig):
     trigger_diameter: float = 0.5
 
     trigger_falloff: Tuple[float, float] = (4.0, 1.0)
+    recalc_semitones: float = 1.0
     lag_prevention: float = 0.25
 
     # _update_buffer
@@ -133,7 +134,11 @@ class CorrelationTrigger(Trigger):
         # Input data taper (zeroes out all data older than 1 frame old)
         self._data_taper = self._calc_data_taper()  # Rejected idea: right cosine taper
 
-        # For debug output
+        # Will be overwritten on the first frame.
+        self._prev_period = None
+        self._prev_window = None
+
+        # For debug output (FIXME remove, we always save window)
         self.save_window = False
 
     def _calc_step(self):
@@ -194,14 +199,18 @@ class CorrelationTrigger(Trigger):
 
         # Window data
         period = get_period(data)
-        diameter, falloff = [round(period * x) for x in self.cfg.trigger_falloff]
-        falloff_window = cosine_flat(N, diameter, falloff)
 
-        window = np.minimum(falloff_window, self._data_taper)
-        data *= window
+        if self._is_window_invalid(period):
+            diameter, falloff = [round(period * x) for x in self.cfg.trigger_falloff]
+            falloff_window = cosine_flat(N, diameter, falloff)
+            window = np.minimum(falloff_window, self._data_taper)
 
-        if self.save_window:
+            self._prev_period = period
             self._prev_window = window
+        else:
+            window = self._prev_window
+
+        data *= window
 
         # prev_buffer
         prev_buffer = self._windowed_step + self._buffer
@@ -245,6 +254,23 @@ class CorrelationTrigger(Trigger):
             return self._zero_trigger.get_trigger(trigger)
         else:
             return trigger
+
+    def _is_window_invalid(self, period):
+        """ Returns True if pitch has changed more than `recalc_semitones`. """
+
+        prev = self._prev_period
+
+        if prev is None:
+            return True
+        elif prev * period == 0:
+            return prev != period
+        else:
+            semitones = abs(np.log(period/prev) / np.log(2) * 12)
+
+            # If semitones == recalc_semitones == 0, do NOT recalc.
+            if semitones <= self.cfg.recalc_semitones:
+                return False
+            return True
 
     def _update_buffer(self, data: np.ndarray, wave_period: int) -> None:
         """
