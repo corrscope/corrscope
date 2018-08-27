@@ -1,5 +1,3 @@
-import os
-import subprocess
 from typing import TYPE_CHECKING
 
 import pytest
@@ -42,6 +40,7 @@ def test_output():
 # Ensure ovgen terminates FFplay upon exceptions.
 
 
+@pytest.mark.usefixtures('Popen')
 def test_terminate_ffplay(Popen):
     """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
     exceptions occur.
@@ -58,6 +57,7 @@ def test_terminate_ffplay(Popen):
             popen.terminate.assert_called()
 
 
+@pytest.mark.usefixtures('Popen')
 def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
     """ Integration test: Ensure ffmpeg and ffplay are terminated when Python exceptions
     occur. """
@@ -84,17 +84,6 @@ def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
 # TODO integration test without audio
 
 # TODO integration test on ???
-
-
-@pytest.fixture
-def Popen(mocker: 'pytest_mock.MockFixture'):
-    Popen = mocker.patch.object(subprocess, 'Popen', autospec=True).return_value
-
-    Popen.stdin = open(os.devnull, "wb")
-    Popen.stdout = open(os.devnull, "rb")
-    Popen.wait.return_value = 0
-
-    yield Popen
 
 
 class DummyException(Exception):
