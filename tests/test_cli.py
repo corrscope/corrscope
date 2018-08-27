@@ -6,17 +6,20 @@ import click
 import pytest
 from click.testing import CliRunner
 
+import ovgenpy.channel
 from ovgenpy import cli
 from ovgenpy.cli import YAML_NAME
 from ovgenpy.config import yaml
-from ovgenpy.ovgenpy import Config
+from ovgenpy.ovgenpy import Config, Ovgen
+from ovgenpy.util import pushd
+
 
 if TYPE_CHECKING:
     import pytest_mock
 
 
-def call_main(args):
-    return CliRunner().invoke(cli.main, args, catch_exceptions=False, standalone_mode=False)
+def call_main(argv):
+    return CliRunner().invoke(cli.main, argv, catch_exceptions=False, standalone_mode=False)
 
 
 # ovgenpy configuration sinks
@@ -100,3 +103,38 @@ def test_write_dir(yaml_sink):
 
     # Ensure config paths are valid.
     assert outpath.parent / cfg.master_audio == audio_path
+
+
+@pytest.fixture
+def Wave(mocker):
+    """ Logs all calls, and returns a real Wave object. """
+    Wave = mocker.spy(ovgenpy.channel, 'Wave')
+    yield Wave
+
+
+@pytest.mark.usefixtures('Popen')
+def test_load_yaml_another_dir(yaml_sink, Popen, Wave):
+    """ Loading `another/dir/YAML` should resolve `master_audio`, `channels[].wav_path`,
+    and video `path` from `another/dir`. """
+
+    with pushd('tests'):
+        arg_str = 'sine440.wav -a sine440.wav -o foo.mp4'
+        cfg, outpath = yaml_sink(arg_str)   # type: Config, Path
+
+    cfg.begin_time = 100    # To skip all actual rendering
+    ovgen = Ovgen(cfg, 'tests')
+    ovgen.play()
+
+    # Test `wave_path`
+    args, kwargs = Wave.call_args
+    cfg, wave_path = args
+    assert wave_path == 'tests/sine440.wav'
+
+    # Test output `master_audio` and video `path`
+    args, kwargs = Popen.call_args
+    argv = args[0]
+    assert argv[-1] == 'tests/foo.mp4'
+    assert '-i tests/sine440.wav' in ' '.join(argv)
+
+
+# TODO integration test without --audio
