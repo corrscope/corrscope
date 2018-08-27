@@ -80,3 +80,17 @@ def test_file_dirs(any_sink, wav_dir):
     assert isinstance(cfg, Config)
 
     assert [chan.wav_path for chan in cfg.channels] == wavs
+
+
+def test_write_dir(yaml_sink):
+    """ Loading `--audio another/dir` should write YAML to current dir. """
+
+    audio_path = Path('tests/sine440.wav')
+    arg_str = f'tests -a {audio_path} -w'
+
+    cfg, outpath = yaml_sink(arg_str)
+    assert isinstance(outpath, Path)
+
+    assert outpath.parent == '.'
+    assert outpath.name == outpath
+    assert outpath == audio_path.with_suffix(YAML_NAME).name
