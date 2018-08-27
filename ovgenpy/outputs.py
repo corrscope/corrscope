@@ -3,7 +3,7 @@ import shlex
 import subprocess
 from abc import ABC, abstractmethod
 from os.path import abspath
-from typing import TYPE_CHECKING, Type, List, Union
+from typing import TYPE_CHECKING, Type, List, Union, Optional
 
 from ovgenpy.config import register_config
 
@@ -124,7 +124,8 @@ class PipeOutput(Output):
 
 @register_config
 class FFmpegOutputConfig(IOutputConfig):
-    path: str
+    # path=None writes to stdout.
+    path: Optional[str]
     args: str = ''
 
     # Do not use `-movflags faststart`, I get corrupted mp4 files (missing MOOV)
@@ -142,7 +143,13 @@ class FFmpegOutput(PipeOutput):
         ffmpeg = _FFmpegCommand([FFMPEG, '-y'], ovgen_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append(cfg.args)
-        self.open(ffmpeg.popen([abspath(cfg.path)], self.bufsize))
+
+        if cfg.path is None:
+            video_path = '-'    # Write to stdout
+        else:
+            video_path = abspath(cfg.path)
+
+        self.open(ffmpeg.popen([video_path], self.bufsize))
 
 
 # FFplayOutput
