@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Type, Tuple
 
 import numpy as np
 from scipy import signal
+from scipy.signal import windows
 
-from ovgenpy.config import register_config, OvgenError
+from ovgenpy.config import register_config, OvgenError, Alias
 from ovgenpy.util import find
+from ovgenpy.utils.windows import midpad, leftpad
 from ovgenpy.wave import FLOAT
 
 
@@ -17,8 +19,8 @@ if TYPE_CHECKING:
 class ITriggerConfig:
     cls: Type['Trigger']
 
-    def __call__(self, wave: 'Wave', nsamp: int, subsampling: int):
-        return self.cls(wave, cfg=self, nsamp=nsamp, subsampling=subsampling)
+    def __call__(self, wave: 'Wave', tsamp: int, subsampling: int, fps: float):
+        return self.cls(wave, cfg=self, tsamp=tsamp, subsampling=subsampling, fps=fps)
 
 
 def register_trigger(config_t: Type[ITriggerConfig]):
@@ -33,12 +35,23 @@ def register_trigger(config_t: Type[ITriggerConfig]):
 
 
 class Trigger(ABC):
-    def __init__(self, wave: 'Wave', cfg: ITriggerConfig, nsamp: int, subsampling: int):
+    def __init__(self, wave: 'Wave', cfg: ITriggerConfig, tsamp: int, subsampling: int,
+                 fps: float):
         self.cfg = cfg
         self._wave = wave
 
-        self._nsamp = nsamp
+        self._tsamp = tsamp
         self._subsampling = subsampling
+        self._fps = fps
+
+        frame_dur = 1 / fps
+        # Subsamples per frame
+        self._tsamp_frame = self.time2tsamp(frame_dur)
+        # Samples per frame
+        self._real_samp_frame = round(frame_dur * self._wave.smp_s)
+
+    def time2tsamp(self, time: float):
+        return round(time * self._wave.smp_s / self._subsampling)
 
     @abstractmethod
     def get_trigger(self, index: int) -> int:
@@ -51,15 +64,42 @@ class Trigger(ABC):
 
 # CorrelationTrigger
 
-@register_config
+@register_config(always_dump='''
+    use_edge_trigger
+    edge_strength
+    responsiveness
+    buffer_falloff
+''')
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
-    trigger_strength: float
-    use_edge_trigger: bool
+    use_edge_trigger: bool = True
+    edge_strength: float = 10.0
+    trigger_diameter: float = 0.5
+
+    trigger_falloff: Tuple[float, float] = (4.0, 1.0)
+    recalc_semitones: float = 1.0
+    lag_prevention: float = 0.25
 
     # _update_buffer
-    responsiveness: float
-    falloff_width: float
+    responsiveness: float = 0.1
+    buffer_falloff: float = 0.5
+
+    # region Legacy Aliases
+    trigger_strength = Alias('edge_strength')
+    falloff_width = Alias('buffer_falloff')
+    # endregion
+
+    def __post_init__(self):
+        self._validate_param('lag_prevention', 0, 1)
+        self._validate_param('responsiveness', 0, 1)
+        # TODO trigger_falloff >= 0
+        self._validate_param('buffer_falloff', 0, np.inf)
+
+    def _validate_param(self, key: str, begin, end):
+        value = getattr(self, key)
+        if not begin <= value <= end:
+            raise ValueError(
+                f'Invalid {key}={value} (should be within [{begin}, {end}])')
 
 
 @register_trigger(CorrelationTriggerConfig)
@@ -70,11 +110,11 @@ class CorrelationTrigger(Trigger):
 
     def __init__(self, *args, **kwargs):
         """
-        Correlation-based trigger which looks at a window of `trigger_nsamp` samples.
+        Correlation-based trigger which looks at a window of `trigger_tsamp` samples.
         it's complicated
         """
         Trigger.__init__(self, *args, **kwargs)
-        self._buffer_nsamp = self._nsamp
+        self._buffer_nsamp = self._tsamp
 
         # Create correlation buffer (containing a series of old data)
         self._buffer = np.zeros(self._buffer_nsamp, dtype=FLOAT)    # type: np.ndarray[FLOAT]
@@ -83,38 +123,94 @@ class CorrelationTrigger(Trigger):
         self._zero_trigger = ZeroCrossingTrigger(
             self._wave,
             ITriggerConfig(),
-            nsamp=self.ZERO_CROSSING_SCAN,
+            tsamp=self.ZERO_CROSSING_SCAN,
             subsampling=1,
+            fps=self._fps
         )
 
-        # Precompute tables
-        trigger_strength = self.cfg.trigger_strength
+        # Precompute edge trigger step
+        self._windowed_step = self._calc_step()
+
+        # Input data taper (zeroes out all data older than 1 frame old)
+        self._data_taper = self._calc_data_taper()  # Rejected idea: right cosine taper
+
+        # Will be overwritten on the first frame.
+        self._prev_period = None
+        self._prev_window = None
+
+        # For debug output (FIXME remove, we always save window)
+        self.save_window = False
+
+    def _calc_step(self):
+        """ Step function used for approximate edge triggering. """
+        edge_strength = self.cfg.edge_strength
         N = self._buffer_nsamp
         halfN = N // 2
 
-        # Step function (get_trigger)
-        step = np.empty(N, dtype=FLOAT)     # type: np.ndarray[FLOAT]
-        step[:halfN] = -trigger_strength / 2
-        step[halfN:] = trigger_strength / 2
+        step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
+        step[:halfN] = -edge_strength / 2
+        step[halfN:] = edge_strength / 2
+        step *= windows.gaussian(N, std=halfN / 3)
+        return step
 
-        step *= signal.gaussian(N, std = halfN / 3)
-        self._windowed_step = step
+    def _calc_data_taper(self):
+        """ Input data window. Zeroes out all data older than 1 frame old.
+        See https://github.com/nyanpasu64/ovgenpy/wiki/Correlation-Trigger
+        """
+        N = self._buffer_nsamp
+        halfN = N // 2
 
-        # Input data window (narrower for long subsampled data)
-        self._data_window = signal.gaussian(N, std=halfN / np.sqrt(self._subsampling))
+        # To avoid cutting off data, use a narrow transition zone (invariant to
+        # subsampling).
+        transition_nsamp = round(self._real_samp_frame * self.cfg.lag_prevention)
+        tsamp_frame = self._tsamp_frame
+
+        # Left half of a Hann cosine taper
+        # Width = min(subsampling*frame * lag_prevention, 1 frame)
+
+        width = min(transition_nsamp, tsamp_frame)
+        taper = windows.hann(width * 2)[:width]
+
+        # Right-pad taper to 1 frame long
+        if width < tsamp_frame:
+            taper = np.pad(taper, (0, tsamp_frame - width), 'constant',
+                           constant_values=1)
+        assert len(taper) == tsamp_frame
+
+        # Reshape taper to left `halfN` of data_window (right-aligned).
+        taper = leftpad(taper, halfN)
+
+        # Generate left half-taper to prevent correlating with 1-frame-old data.
+        data_window = np.ones(N)
+        data_window[:halfN] = np.minimum(data_window[:halfN], taper)
+
+        return data_window
 
     def get_trigger(self, index: int) -> int:
         """
         :param index: sample index
         :return: new sample index, corresponding to rising edge
         """
+        N = self._buffer_nsamp
         use_edge_trigger = self.cfg.use_edge_trigger
 
-        N = self._buffer_nsamp
-
-        # data = windowed
+        # Get data
         data = self._wave.get_around(index, N, self._subsampling)
-        data *= self._data_window
+
+        # Window data
+        period = get_period(data)
+
+        if self._is_window_invalid(period):
+            diameter, falloff = [round(period * x) for x in self.cfg.trigger_falloff]
+            falloff_window = cosine_flat(N, diameter, falloff)
+            window = np.minimum(falloff_window, self._data_taper)
+
+            self._prev_period = period
+            self._prev_window = window
+        else:
+            window = self._prev_window
+
+        data *= window
 
         # prev_buffer
         prev_buffer = self._windowed_step + self._buffer
@@ -137,7 +233,7 @@ class CorrelationTrigger(Trigger):
 
         # Find optimal offset (within ±N//4)
         mid = N-1
-        radius = N//4
+        radius = round(N * self.cfg.trigger_diameter / 2)
 
         left = mid - radius
         right = mid + radius + 1
@@ -152,21 +248,38 @@ class CorrelationTrigger(Trigger):
 
         # Update correlation buffer (distinct from visible area)
         aligned = self._wave.get_around(trigger, self._buffer_nsamp, self._subsampling)
-        self._update_buffer(aligned)
+        self._update_buffer(aligned, period)
 
         if use_edge_trigger:
             return self._zero_trigger.get_trigger(trigger)
         else:
             return trigger
 
-    def _update_buffer(self, data: np.ndarray) -> None:
+    def _is_window_invalid(self, period):
+        """ Returns True if pitch has changed more than `recalc_semitones`. """
+
+        prev = self._prev_period
+
+        if prev is None:
+            return True
+        elif prev * period == 0:
+            return prev != period
+        else:
+            semitones = abs(np.log(period/prev) / np.log(2) * 12)
+
+            # If semitones == recalc_semitones == 0, do NOT recalc.
+            if semitones <= self.cfg.recalc_semitones:
+                return False
+            return True
+
+    def _update_buffer(self, data: np.ndarray, wave_period: int) -> None:
         """
         Update self._buffer by adding `data` and a step function.
         Data is reshaped to taper away from the center.
 
         :param data: Wave data. WILL BE MODIFIED.
         """
-        falloff_width = self.cfg.falloff_width
+        buffer_falloff = self.cfg.buffer_falloff
         responsiveness = self.cfg.responsiveness
 
         N = len(data)
@@ -176,9 +289,7 @@ class CorrelationTrigger(Trigger):
 
         # New waveform
         self._normalize_buffer(data)
-
-        wave_period = get_period(data)
-        window = signal.gaussian(N, std = wave_period * falloff_width)
+        window = windows.gaussian(N, std = wave_period * buffer_falloff)
         data *= window
 
         # Old buffer
@@ -211,7 +322,17 @@ def get_period(data: np.ndarray) -> int:
 
     crossX = zero_crossings[0]
     peakX = crossX + np.argmax(corr[crossX:])
-    return peakX
+    return int(peakX)
+
+
+def cosine_flat(n: int, diameter: int, falloff: int):
+    cosine = windows.hann(falloff * 2)
+    left, right = cosine[:falloff], cosine[falloff:]
+
+    window = np.concatenate([left, np.ones(diameter), right])
+
+    padded = midpad(window, n)
+    return padded
 
 
 def lerp(x: np.ndarray, y: np.ndarray, a: float):
@@ -227,7 +348,7 @@ class ZeroCrossingTrigger(Trigger):
             raise OvgenError(
                 f'ZeroCrossingTrigger with subsampling != 1 is not implemented '
                 f'(supplied {self._subsampling})')
-        nsamp = self._nsamp
+        tsamp = self._tsamp
 
         if not 0 <= index < self._wave.nsamp:
             return index
@@ -243,7 +364,7 @@ class ZeroCrossingTrigger(Trigger):
         else:   # self._wave[sample] == 0
             return index + 1
 
-        data = self._wave[index : index + (direction * nsamp) : direction]
+        data = self._wave[index : index + (direction * tsamp) : direction]
         intercepts = find(data, test)
         try:
             (delta,), value = next(intercepts)

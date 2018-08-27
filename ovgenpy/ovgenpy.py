@@ -2,13 +2,14 @@
 import time
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
+from types import SimpleNamespace
 from typing import Optional, List, Union, TYPE_CHECKING
 
 from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
-from ovgenpy.config import register_config, register_enum
+from ovgenpy.config import register_config, register_enum, Ignored
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
-from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig
+from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, Trigger
 from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field
 from ovgenpy.wave import Wave
@@ -35,11 +36,15 @@ class Config:
     fps: int
     begin_time: float = 0
 
-    channels: List[ChannelConfig] = field(default_factory=list)
+    subsampling: int    # TODO optional=1
 
     width_ms: int
-    subsampling: int
-    trigger: ITriggerConfig  # Maybe overriden per Wave
+    trigger_width: int = 1
+    render_width: int = 1
+    trigger: ITriggerConfig  # Can be overriden per Wave
+
+    # Can override trigger_width, render_width, trigger
+    channels: List[ChannelConfig] = field(default_factory=list)
 
     amplification: float
     layout: LayoutConfig
@@ -47,8 +52,12 @@ class Config:
 
     outputs: List[outputs.IOutputConfig]
 
-    show_buffer: bool = False
+    show_internals: List[str] = field(default_factory=list)
     benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
+
+    # region Legacy Fields
+    wav_prefix = Ignored
+    # endregion
 
     @property
     def render_width_s(self) -> float:
@@ -76,13 +85,7 @@ def default_config(**kwargs):
 
         width_ms=25,
         subsampling=1,
-        trigger=CorrelationTriggerConfig(
-            trigger_strength=10,
-            use_edge_trigger=True,
-
-            responsiveness=0.1,
-            falloff_width=0.5,
-        ),
+        trigger=CorrelationTriggerConfig(),
 
         amplification=1,
         layout=LayoutConfig(ncols=1),
@@ -146,15 +149,34 @@ class Ovgen:
         renderer = self._load_renderer()
 
         # Display buffers, for debugging purposes.
-        show_buffer = self.cfg.show_buffer
-        if show_buffer:
+        internals = self.cfg.show_internals
+        extra_outputs = SimpleNamespace()
+        if internals:
             from ovgenpy.outputs import FFplayOutputConfig
             from ovgenpy.utils.keyword_dataclasses import replace
 
             no_audio = replace(self.cfg, master_audio='')
 
-            buf_render = self._load_renderer()
-            buf_output = FFplayOutputConfig()(no_audio)
+            ovgen = self
+
+            class RenderOutput:
+                def __init__(self):
+                    self.renderer = ovgen._load_renderer()
+                    self.output = FFplayOutputConfig()(no_audio)
+
+                def render_frame(self, datas):
+                    self.renderer.render_frame(datas)
+                    self.output.write_frame(self.renderer.get_frame())
+
+        extra_outputs.window = None
+        if 'window' in internals:
+            for trigger in self.triggers:   # type: CorrelationTrigger
+                trigger.save_window = True
+            extra_outputs.window = RenderOutput()
+
+        extra_outputs.buffer = None
+        if 'buffer' in internals:
+            extra_outputs.buffer = RenderOutput()
 
         if PRINT_TIMESTAMP:
             begin = time.perf_counter()
@@ -184,13 +206,19 @@ class Ovgen:
                         trigger_sample = sample
 
                     datas.append(wave.get_around(
-                        trigger_sample, channel.nsamp, channel.render_subsampling))
+                        trigger_sample, channel.window_samp, channel.render_subsampling))
 
                 # Display buffers, for debugging purposes.
-                if show_buffer:
+
+                if extra_outputs.window:
                     triggers: List['CorrelationTrigger'] = self.triggers
-                    buf_render.render_frame([trigger._buffer for trigger in triggers])
-                    buf_output.write_frame(buf_render.get_frame())
+                    extra_outputs.window.render_frame(
+                        [trigger._prev_window for trigger in triggers])
+
+                if extra_outputs.buffer:
+                    triggers: List['CorrelationTrigger'] = self.triggers
+                    extra_outputs.buffer.render_frame(
+                        [trigger._buffer for trigger in triggers])
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame

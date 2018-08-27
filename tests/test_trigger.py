@@ -4,9 +4,8 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from ovgenpy import triggers
-from ovgenpy.triggers import CorrelationTriggerConfig
+from ovgenpy.triggers import CorrelationTriggerConfig, CorrelationTrigger
 from ovgenpy.wave import Wave
-
 
 triggers.SHOW_TRIGGER = False
 
@@ -15,13 +14,14 @@ triggers.SHOW_TRIGGER = False
 def cfg(request):
     use_edge_trigger = request.param
     return CorrelationTriggerConfig(
-        trigger_strength=1,
         use_edge_trigger=use_edge_trigger,
-
         responsiveness=1,
-        falloff_width=2,
     )
 
+
+# I regret adding the nsamp_frame parameter. It makes unit tests hard.
+
+FPS = 60
 
 def test_trigger(cfg: CorrelationTriggerConfig):
     wave = Wave(None, 'tests/impulse24000.wav')
@@ -30,7 +30,7 @@ def test_trigger(cfg: CorrelationTriggerConfig):
     plot = False
     x0 = 24000
     x = x0 - 500
-    trigger = cfg(wave, 4000, subsampling=1)
+    trigger = cfg(wave, 4000, subsampling=1, fps=FPS)
 
     if plot:
         BIG = 0.95
@@ -63,8 +63,8 @@ def test_trigger_subsampling(cfg: CorrelationTriggerConfig):
     iters = 5
     x0 = 24000
     subsampling = 4
-    trigger = cfg(wave, nsamp=100, subsampling=subsampling)
-    # real nsamp = nsamp*subsampling
+    trigger = cfg(wave, tsamp=100, subsampling=subsampling, fps=FPS)
+    # real window_samp = window_samp*subsampling
     # period = 109
 
     for i in range(1, iters):
@@ -99,13 +99,50 @@ def test_trigger_subsampling_edges(cfg: CorrelationTriggerConfig):
 
     iters = 5
     subsampling = 4
-    trigger = cfg(wave, nsamp=100, subsampling=subsampling)
-    # real nsamp = nsamp*subsampling
+    trigger = cfg(wave, tsamp=100, subsampling=subsampling, fps=FPS)
+    # real window_samp = window_samp*subsampling
     # period = 109
 
     trigger.get_trigger(0)
     trigger.get_trigger(-1000)
     trigger.get_trigger(50000)
 
+
+def test_trigger_should_recalc_window():
+    cfg = CorrelationTriggerConfig(recalc_semitones=1.0)
+    wave = Wave(None, 'tests/sine440.wav')
+    trigger: CorrelationTrigger = cfg(wave, tsamp=1000, subsampling=1, fps=FPS)
+
+    for x in [0, 1, 1000]:
+        assert trigger._is_window_invalid(x), x
+
+    trigger._prev_period = 100
+
+    for x in [99, 101]:
+        assert not trigger._is_window_invalid(x), x
+    for x in [0, 80, 120]:
+        assert trigger._is_window_invalid(x), x
+
+    trigger._prev_period = 0
+
+    x = 0
+    assert not trigger._is_window_invalid(x), x
+    for x in [1, 100]:
+        assert trigger._is_window_invalid(x), x
+
+
+# Test the ability to load legacy TriggerConfig
+
+def test_load_trigger_config():
+    from ovgenpy.config import yaml
+
+    # Ensure no exceptions
+    yaml.load('''\
+!CorrelationTriggerConfig
+  trigger_strength: 3
+  use_edge_trigger: false
+  responsiveness: 0.2
+  falloff_width: 2
+''')
 
 # TODO test_period get_period()
