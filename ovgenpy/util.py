@@ -80,19 +80,20 @@ def find(a: 'np.ndarray[T]', predicate: 'Callable[[np.ndarray[T]], np.ndarray[bo
         i0 = i1
 
 
-# Adapted from https://stackoverflow.com/a/9458386
-def curry(x, argc=None):
-    if argc is None:
-        argc = x.__code__.co_argcount
-
-    @wraps(x)
-    def p(*a):
-        if len(a) == argc:
-            return x(*a)
-
-        def q(*b):
-            return x(*(a + b))
-
-        return curry(q, argc - len(a))
-
-    return p
+# # Adapted from https://stackoverflow.com/a/9458386
+# def curry(x, argc=None):
+#     if argc is None:
+#         argc = x.__code__.co_argcount
+#
+#     @wraps(x)
+#     def p(*a):
+#         if len(a) == argc:
+#             return x(*a)
+#
+#         def q(*b):
+#             return x(*(a + b))
+#
+#         return curry(q, argc - len(a))
+#
+#     del p.__wrapped__
+#     return p
