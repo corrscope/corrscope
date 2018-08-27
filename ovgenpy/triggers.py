@@ -233,14 +233,14 @@ class CorrelationTrigger(Trigger):
 
         # Update correlation buffer (distinct from visible area)
         aligned = self._wave.get_around(trigger, self._buffer_nsamp, self._subsampling)
-        self._update_buffer(aligned)
+        self._update_buffer(aligned, period)
 
         if use_edge_trigger:
             return self._zero_trigger.get_trigger(trigger)
         else:
             return trigger
 
-    def _update_buffer(self, data: np.ndarray) -> None:
+    def _update_buffer(self, data: np.ndarray, wave_period: int) -> None:
         """
         Update self._buffer by adding `data` and a step function.
         Data is reshaped to taper away from the center.
@@ -257,8 +257,6 @@ class CorrelationTrigger(Trigger):
 
         # New waveform
         self._normalize_buffer(data)
-
-        wave_period = get_period(data)
         window = windows.gaussian(N, std = wave_period * buffer_falloff)
         data *= window
 
