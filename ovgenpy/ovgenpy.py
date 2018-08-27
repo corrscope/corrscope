@@ -10,6 +10,7 @@ from ovgenpy.channel import Channel, ChannelConfig
 from ovgenpy.config import register_config, register_enum, Ignored
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, Trigger
+from ovgenpy.util import pushd
 from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field
 from ovgenpy.wave import Wave
@@ -97,8 +98,9 @@ def default_config(**kwargs):
 
 
 class Ovgen:
-    def __init__(self, cfg: Config):
+    def __init__(self, cfg: Config, cfg_dir: str):
         self.cfg = cfg
+        self.cfg_dir = cfg_dir
         self.has_played = False
 
         if len(self.cfg.channels) == 0:
@@ -110,19 +112,21 @@ class Ovgen:
     nchan: int
 
     def _load_channels(self):
-        self.channels = [Channel(ccfg, self.cfg) for ccfg in self.cfg.channels]
-        self.waves = [channel.wave for channel in self.channels]
-        self.triggers = [channel.trigger for channel in self.channels]
-        self.nchan = len(self.channels)
+        with pushd(self.cfg_dir):
+            self.channels = [Channel(ccfg, self.cfg) for ccfg in self.cfg.channels]
+            self.waves = [channel.wave for channel in self.channels]
+            self.triggers = [channel.trigger for channel in self.channels]
+            self.nchan = len(self.channels)
 
     @contextmanager
     def _load_outputs(self):
-        with ExitStack() as stack:
-            self.outputs = [
-                stack.enter_context(output_cfg(self.cfg))
-                for output_cfg in self.cfg.outputs
-            ]
-            yield
+        with pushd(self.cfg_dir):
+            with ExitStack() as stack:
+                self.outputs = [
+                    stack.enter_context(output_cfg(self.cfg))
+                    for output_cfg in self.cfg.outputs
+                ]
+                yield
 
     def _load_renderer(self):
         renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan)
