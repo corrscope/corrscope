@@ -7,6 +7,7 @@ import pytest
 from click.testing import CliRunner
 
 from ovgenpy import cli
+from ovgenpy.cli import YAML_NAME
 from ovgenpy.config import yaml
 from ovgenpy.ovgenpy import Config
 
@@ -83,14 +84,19 @@ def test_file_dirs(any_sink, wav_dir):
 
 
 def test_write_dir(yaml_sink):
-    """ Loading `--audio another/dir` should write YAML to current dir. """
+    """ Loading `--audio another/dir` should write YAML to current dir.
+    Writing YAML to audio dir: causes relative paths (relative to pwd) to break. """
 
     audio_path = Path('tests/sine440.wav')
-    arg_str = f'tests -a {audio_path} -w'
+    arg_str = f'tests -a {audio_path}'
 
-    cfg, outpath = yaml_sink(arg_str)
+    cfg, outpath = yaml_sink(arg_str)   # type: Config, Path
     assert isinstance(outpath, Path)
 
-    assert outpath.parent == '.'
-    assert outpath.name == outpath
-    assert outpath == audio_path.with_suffix(YAML_NAME).name
+    # Ensure YAML config written to current dir.
+    assert outpath.parent == Path()
+    assert outpath.name == str(outpath)
+    assert str(outpath) == audio_path.with_suffix(YAML_NAME).name
+
+    # Ensure config paths are valid.
+    assert outpath.parent / cfg.master_audio == audio_path
