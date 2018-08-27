@@ -18,7 +18,7 @@ pip install -e .
 Conda env:
 ```shell
 # create conda env
-??? how to setup.py
+??? how to setup.py? https://github.com/conda/conda-docs/issues/435
 ```
 
 ## Usage
