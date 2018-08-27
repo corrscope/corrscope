@@ -1,5 +1,4 @@
-import os
-import subprocess
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -15,14 +14,13 @@ if TYPE_CHECKING:
     import pytest_mock
 
 CFG = default_config(render=RendererConfig(WIDTH, HEIGHT))
-STDOUT_CFG = FFmpegOutputConfig('-', '-f nut')
+NULL_CFG = FFmpegOutputConfig(None, '-f null')
 
 
 def test_render_output():
     """ Ensure rendering to output does not raise exceptions. """
     renderer = MatplotlibRenderer(CFG.render, CFG.layout, nplots=1)
-    output_cfg = FFmpegOutputConfig('-', '-f nut')
-    out = FFmpegOutput(CFG, output_cfg)
+    out: FFmpegOutput = NULL_CFG(CFG)
 
     renderer.render_frame([ALL_ZEROS])
     out.write_frame(renderer.get_frame())
@@ -31,17 +29,20 @@ def test_render_output():
 
 
 def test_output():
-    out = FFmpegOutput(CFG, STDOUT_CFG)
+    out: FFmpegOutput = NULL_CFG(CFG)
 
     frame = bytes(WIDTH * HEIGHT * RGB_DEPTH)
     out.write_frame(frame)
 
     assert out.close() == 0
+    # Ensure video is written to stdout, and not current directory.
+    assert not Path('-').exists()
 
 
 # Ensure ovgen terminates FFplay upon exceptions.
 
 
+@pytest.mark.usefixtures('Popen')
 def test_terminate_ffplay(Popen):
     """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
     exceptions occur.
@@ -58,6 +59,7 @@ def test_terminate_ffplay(Popen):
             popen.terminate.assert_called()
 
 
+@pytest.mark.usefixtures('Popen')
 def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
     """ Integration test: Ensure ffmpeg and ffplay are terminated when Python exceptions
     occur. """
@@ -67,7 +69,7 @@ def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
         master_audio='tests/sine440.wav',
         outputs=[FFplayOutputConfig()]
     )
-    ovgen = Ovgen(cfg)
+    ovgen = Ovgen(cfg, '.')
 
     render_frame = mocker.patch.object(MatplotlibRenderer, 'render_frame')
     render_frame.side_effect = DummyException()
@@ -84,17 +86,6 @@ def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
 # TODO integration test without audio
 
 # TODO integration test on ???
-
-
-@pytest.fixture
-def Popen(mocker: 'pytest_mock.MockFixture'):
-    Popen = mocker.patch.object(subprocess, 'Popen', autospec=True).return_value
-
-    Popen.stdin = open(os.devnull, "wb")
-    Popen.stdout = open(os.devnull, "rb")
-    Popen.wait.return_value = 0
-
-    yield Popen
 
 
 class DummyException(Exception):

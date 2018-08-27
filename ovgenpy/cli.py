@@ -47,7 +47,7 @@ PROFILE_DUMP_NAME = 'cprofile'
         'Config: Output video path')
 # Disables GUI
 @click.option('--write', '-w', is_flag=True, help=
-        "Write config YAML file to path (don't open GUI).")
+        "Write config YAML file to current directory (don't open GUI).")
 @click.option('--play', '-p', is_flag=True, help=
         "Preview or render (don't open GUI).")
 # Debugging
@@ -86,6 +86,7 @@ def main(
 
     # Create cfg: Config object.
     cfg: Config = None
+    cfg_dir: str = None
 
     wav_list: List[Path] = []
     for name in files:
@@ -106,6 +107,7 @@ def main(
                 raise click.ClickException(
                     f'When supplying config {path}, you cannot supply other files/folders')
             cfg = yaml.load(path)
+            cfg_dir = path.parent
             break
 
         else:
@@ -136,6 +138,7 @@ def main(
             # amplification...render=default,
             outputs=outputs
         )
+        cfg_dir = '.'
 
     if show_gui:
         raise OvgenError('GUI not implemented')
@@ -144,11 +147,13 @@ def main(
             raise click.ClickException('Must specify files or folders to play')
         if write:
             if audio:
-                write_path = Path(audio).with_suffix(YAML_NAME)
+                # Write file to current working dir, not audio dir.
+                audio_name = Path(audio).name
+                # Add .yaml extension
+                write_path = Path(audio_name).with_suffix(YAML_NAME)
             else:
                 write_path = DEFAULT_CONFIG_PATH
 
-            # TODO test writing YAML file
             yaml.dump(cfg, write_path)
 
         if play:
@@ -169,4 +174,4 @@ def main(
                 cProfile.runctx('Ovgen(cfg).play()', globals(), locals(), path)
 
             else:
-                Ovgen(cfg).play()
+                Ovgen(cfg, cfg_dir).play()
