@@ -296,7 +296,7 @@ def get_period(data: np.ndarray) -> int:
 
     crossX = zero_crossings[0]
     peakX = crossX + np.argmax(corr[crossX:])
-    return peakX
+    return int(peakX)
 
 
 def cosine_flat(n: int, diameter: int, falloff: int):
