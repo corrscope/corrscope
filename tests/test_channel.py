@@ -64,7 +64,7 @@ def test_channel_subsampling(
     assert trigger._subsampling == channel.trigger_subsampling
 
     # Ensure ovgenpy calls render using channel.window_samp and render_subsampling.
-    ovgen = Ovgen(cfg)
+    ovgen = Ovgen(cfg, '.')
     renderer = mocker.patch.object(Ovgen, '_load_renderer').return_value
     ovgen.play()
 

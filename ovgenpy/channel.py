@@ -1,3 +1,4 @@
+from os.path import abspath
 from typing import TYPE_CHECKING, Any
 
 from ovgenpy.config import register_config, Alias
@@ -42,7 +43,7 @@ class Channel:
 
         # Create a Wave object.
         wcfg = _WaveConfig(amplification=ovgen_cfg.amplification * cfg.ampl_ratio)
-        self.wave = Wave(wcfg, cfg.wav_path)
+        self.wave = Wave(wcfg, abspath(cfg.wav_path))
 
         # Compute subsampling (array stride).
         tw = coalesce(cfg.trigger_width, ovgen_cfg.trigger_width)
