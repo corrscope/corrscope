@@ -67,7 +67,7 @@ def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
         master_audio='tests/sine440.wav',
         outputs=[FFplayOutputConfig()]
     )
-    ovgen = Ovgen(cfg)
+    ovgen = Ovgen(cfg, '.')
 
     render_frame = mocker.patch.object(MatplotlibRenderer, 'render_frame')
     render_frame.side_effect = DummyException()

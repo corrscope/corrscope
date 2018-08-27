@@ -86,6 +86,7 @@ def main(
 
     # Create cfg: Config object.
     cfg: Config = None
+    cfg_dir: str = None
 
     wav_list: List[Path] = []
     for name in files:
@@ -106,6 +107,7 @@ def main(
                 raise click.ClickException(
                     f'When supplying config {path}, you cannot supply other files/folders')
             cfg = yaml.load(path)
+            cfg_dir = path.parent
             break
 
         else:
@@ -136,6 +138,7 @@ def main(
             # amplification...render=default,
             outputs=outputs
         )
+        cfg_dir = '.'
 
     if show_gui:
         raise OvgenError('GUI not implemented')
@@ -171,4 +174,4 @@ def main(
                 cProfile.runctx('Ovgen(cfg).play()', globals(), locals(), path)
 
             else:
-                Ovgen(cfg).play()
+                Ovgen(cfg, cfg_dir).play()

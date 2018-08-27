@@ -1,4 +1,5 @@
 import shlex
+from os.path import abspath
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
@@ -12,7 +13,6 @@ from ovgenpy.cli import YAML_NAME
 from ovgenpy.config import yaml
 from ovgenpy.ovgenpy import Config, Ovgen
 from ovgenpy.util import pushd
-
 
 if TYPE_CHECKING:
     import pytest_mock
@@ -49,7 +49,8 @@ def player_sink(mocker) -> Callable:
         call_main(argv)
 
         Ovgen.assert_called_once()
-        (cfg,), kwargs = Ovgen.call_args
+        args, kwargs = Ovgen.call_args
+        cfg = args[0]
 
         assert isinstance(cfg, Config)
         return cfg,
@@ -105,36 +106,39 @@ def test_write_dir(yaml_sink):
     assert outpath.parent / cfg.master_audio == audio_path
 
 
-@pytest.fixture
-def Wave(mocker):
-    """ Logs all calls, and returns a real Wave object. """
-    Wave = mocker.spy(ovgenpy.channel, 'Wave')
-    yield Wave
-
-
 @pytest.mark.usefixtures('Popen')
-def test_load_yaml_another_dir(yaml_sink, Popen, Wave):
-    """ Loading `another/dir/YAML` should resolve `master_audio`, `channels[].wav_path`,
-    and video `path` from `another/dir`. """
+def test_load_yaml_another_dir(yaml_sink, mocker, Popen):
+    """ YAML file located in `another/dir` should resolve `master_audio`, `channels[].
+    wav_path`, and video `path` from `another/dir`. """
 
-    with pushd('tests'):
-        arg_str = 'sine440.wav -a sine440.wav -o foo.mp4'
+    subdir = 'tests'
+    wav = 'sine440.wav'
+    mp4 = 'foo.mp4'
+    with pushd(subdir):
+        arg_str = f'{wav} -a {wav} -o {mp4}'
         cfg, outpath = yaml_sink(arg_str)   # type: Config, Path
 
     cfg.begin_time = 100    # To skip all actual rendering
-    ovgen = Ovgen(cfg, 'tests')
+
+    # Log execution of Ovgen().play()
+    Wave = mocker.spy(ovgenpy.channel, 'Wave')
+    ovgen = Ovgen(cfg, subdir)
     ovgen.play()
+
+    # Compute absolute paths
+    wav_abs = abspath(f'{subdir}/{wav}')
+    mp4_abs = abspath(f'{subdir}/{mp4}')
 
     # Test `wave_path`
     args, kwargs = Wave.call_args
     cfg, wave_path = args
-    assert wave_path == 'tests/sine440.wav'
+    assert wave_path == wav_abs
 
     # Test output `master_audio` and video `path`
     args, kwargs = Popen.call_args
     argv = args[0]
-    assert argv[-1] == 'tests/foo.mp4'
-    assert '-i tests/sine440.wav' in ' '.join(argv)
+    assert argv[-1] == mp4_abs
+    assert f'-i {wav_abs}' in ' '.join(argv)
 
 
 # TODO integration test without --audio
