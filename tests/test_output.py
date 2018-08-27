@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -13,14 +14,13 @@ if TYPE_CHECKING:
     import pytest_mock
 
 CFG = default_config(render=RendererConfig(WIDTH, HEIGHT))
-STDOUT_CFG = FFmpegOutputConfig('-', '-f nut')
+NULL_CFG = FFmpegOutputConfig(None, '-f null')
 
 
 def test_render_output():
     """ Ensure rendering to output does not raise exceptions. """
     renderer = MatplotlibRenderer(CFG.render, CFG.layout, nplots=1)
-    output_cfg = FFmpegOutputConfig('-', '-f nut')
-    out = FFmpegOutput(CFG, output_cfg)
+    out: FFmpegOutput = NULL_CFG(CFG)
 
     renderer.render_frame([ALL_ZEROS])
     out.write_frame(renderer.get_frame())
@@ -29,12 +29,14 @@ def test_render_output():
 
 
 def test_output():
-    out = FFmpegOutput(CFG, STDOUT_CFG)
+    out: FFmpegOutput = NULL_CFG(CFG)
 
     frame = bytes(WIDTH * HEIGHT * RGB_DEPTH)
     out.write_frame(frame)
 
     assert out.close() == 0
+    # Ensure video is written to stdout, and not current directory.
+    assert not Path('-').exists()
 
 
 # Ensure ovgen terminates FFplay upon exceptions.
