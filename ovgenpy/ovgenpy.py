@@ -30,13 +30,13 @@ class BenchmarkMode(IntEnum):
     OUTPUT = 3
 
 
-@register_config(always_dump='begin_time')
+@register_config(always_dump='begin_time subsampling')
 class Config:
     master_audio: Optional[str]
     fps: int
     begin_time: float = 0
 
-    subsampling: int    # TODO optional=1
+    subsampling: int = 1
 
     width_ms: int
     trigger_width: int = 1
@@ -79,21 +79,18 @@ def default_config(**kwargs):
     cfg = Config(
         master_audio='',
         fps=_FPS,
-        # begin_time=0,
-
-        channels=[],
 
         width_ms=25,
-        subsampling=1,
         trigger=CorrelationTriggerConfig(),
+        channels=[],
 
         amplification=1,
         layout=LayoutConfig(ncols=1),
         render=RendererConfig(1280, 720),
 
         outputs=[
-            # outputs.FFmpegOutputConfig(output),
             outputs.FFplayOutputConfig(),
+            # outputs.FFmpegOutputConfig(video_path),
         ]
     )
     return dc.replace(cfg, **kwargs)
