@@ -155,12 +155,17 @@ def main(
             if profile:
                 import cProfile
 
+                # Pycharm can't load CProfile files with dots in the name.
+                profile_dump_name = Path(files[0]).name.split('.')[0]
+                profile_dump_name += f'-{PROFILE_DUMP_NAME}'
+
                 # Write stats to unused filename
                 for i in count():
-                    path = Path(PROFILE_DUMP_NAME + str(i))
+                    path = Path(profile_dump_name + str(i))
                     if not path.exists():
                         break
 
+                # noinspection PyUnboundLocalVariable
                 cProfile.runctx('Ovgen(cfg).play()', globals(), locals(), path)
 
             else:

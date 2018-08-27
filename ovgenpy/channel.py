@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any
 
-from ovgenpy.config import register_config
+from ovgenpy.config import register_config, Alias
+from ovgenpy.util import coalesce
 from ovgenpy.wave import _WaveConfig, Wave
 
 
@@ -14,18 +15,24 @@ class ChannelConfig:
     wav_path: str
 
     trigger: 'ITriggerConfig' = None    # TODO test channel-specific triggers
-    trigger_width_ratio: int = 1
-    render_width_ratio: int = 1
+    # Multiplies how wide the window is, in milliseconds.
+    trigger_width: int = None
+    render_width: int = None
 
     ampl_ratio: float = 1.0     # TODO use amplification = None instead?
     line_color: Any = None
 
+    # region Legacy Fields
+    trigger_width_ratio = Alias('trigger_width')
+    render_width_ratio = Alias('render_width')
+    # endregion
+
 
 class Channel:
     # Shared between trigger and renderer.
-    nsamp: int
+    window_samp: int
 
-    # Product of ovgen_cfg.subsampling and trigger/render_width_ratio.
+    # Product of ovgen_cfg.subsampling and trigger/render_width.
     trigger_subsampling: int
     render_subsampling: int
 
@@ -37,21 +44,26 @@ class Channel:
         wcfg = _WaveConfig(amplification=ovgen_cfg.amplification * cfg.ampl_ratio)
         self.wave = Wave(wcfg, cfg.wav_path)
 
-        # Compute nsamp.
-        nsamp = ovgen_cfg.render_width_s * self.wave.smp_s / subsampling
-        self.nsamp = round(nsamp)
-        del nsamp
-
         # Compute subsampling (array stride).
-        self.trigger_subsampling = subsampling * cfg.trigger_width_ratio
-        self.render_subsampling = subsampling * cfg.render_width_ratio
+        tw = coalesce(cfg.trigger_width, ovgen_cfg.trigger_width)
+        self.trigger_subsampling = subsampling * tw
+
+        rw = coalesce(cfg.render_width, ovgen_cfg.render_width)
+        self.render_subsampling = subsampling * rw
+
+        # Compute window_samp and tsamp_frame.
+        nsamp = ovgen_cfg.render_width_s * self.wave.smp_s / subsampling
+        self.window_samp = round(nsamp)
+
         del subsampling
+        del nsamp
 
         # Create a Trigger object.
         tcfg = cfg.trigger or ovgen_cfg.trigger
         self.trigger = tcfg(
             wave=self.wave,
-            nsamp=self.nsamp,
-            subsampling=self.trigger_subsampling
+            tsamp=self.window_samp,
+            subsampling=self.trigger_subsampling,
+            fps=ovgen_cfg.fps
         )
 
