@@ -56,9 +56,16 @@ class _FFmpegCommand:
 
         self.templates += ffmpeg_input_video(ovgen_cfg)  # video
         if ovgen_cfg.master_audio:
-            audio_path = shlex.quote(abspath(ovgen_cfg.master_audio))
+            # Load master audio and trim to timestamps.
+
             self.templates.append(f'-ss {ovgen_cfg.begin_time}')
+
+            audio_path = shlex.quote(abspath(ovgen_cfg.master_audio))
             self.templates += ffmpeg_input_audio(audio_path)    # audio
+
+            if ovgen_cfg.end_time is not None:
+                dur = ovgen_cfg.end_time - ovgen_cfg.begin_time
+                self.templates.append(f'-to {dur}')
 
     def add_output(self, cfg: 'Union[FFmpegOutputConfig, FFplayOutputConfig]') -> None:
         self.templates.append(cfg.video_template)  # video
