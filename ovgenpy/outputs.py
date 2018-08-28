@@ -122,9 +122,19 @@ class PipeOutput(Output):
         return retval   # final value
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
         if exc_type is not None:
+            e = None
             for popen in self._pipeline:
                 popen.terminate()
+                # https://stackoverflow.com/a/49038779/2683842
+                try:
+                    popen.wait(1)   # timeout=seconds
+                except subprocess.TimeoutExpired as e:
+                    popen.kill()
+
+            if e:
+                raise e
 
 
 # FFmpegOutput
@@ -184,6 +194,8 @@ class FFplayOutput(PipeOutput):
         p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
 
         p1.stdout.close()
+        # assert p2.stdin is None   # True unless Popen is being mocked (test_output).
+
         self.open(p1, p2)
 
 
