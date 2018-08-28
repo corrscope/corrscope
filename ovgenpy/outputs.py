@@ -145,8 +145,7 @@ class FFmpegOutputConfig(IOutputConfig):
     path: Optional[str]
     args: str = ''
 
-    # Do not use `-movflags faststart`, I get corrupted mp4 files (missing MOOV)
-    video_template: str = '-c:v libx264 -crf 18 -preset superfast'
+    video_template: str = '-c:v libx264 -crf 18 -preset superfast -movflags faststart'
     audio_template: str = '-c:a aac -b:a 384k'
 
 
