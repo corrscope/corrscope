@@ -83,6 +83,7 @@ def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
         popen.terminate.assert_called()
 
 
+@pytest.mark.skip('Launches ffmpeg and ffplay processes, creating a ffplay window')
 def test_ovgen_terminate_works():
     """ Ensure that ffmpeg/ffplay terminate quickly after Python exceptions, when
     `popen.terminate()` is called. """
