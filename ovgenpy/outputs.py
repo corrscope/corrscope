@@ -49,7 +49,7 @@ def register_output(config_t: Type[IOutputConfig]):
 
 # FFmpeg command line generation
 
-class _FFmpegCommand:
+class _FFmpegProcess:
     def __init__(self, templates: List[str], ovgen_cfg: 'Config'):
         self.templates = templates
         self.ovgen_cfg = ovgen_cfg
@@ -147,7 +147,7 @@ class FFmpegOutput(PipeOutput):
     def __init__(self, ovgen_cfg: 'Config', cfg: FFmpegOutputConfig):
         super().__init__(ovgen_cfg, cfg)
 
-        ffmpeg = _FFmpegCommand([FFMPEG, '-y'], ovgen_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG, '-y'], ovgen_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append(cfg.args)
 
@@ -174,7 +174,7 @@ class FFplayOutput(PipeOutput):
     def __init__(self, ovgen_cfg: 'Config', cfg: FFplayOutputConfig):
         super().__init__(ovgen_cfg, cfg)
 
-        ffmpeg = _FFmpegCommand([FFMPEG], ovgen_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG], ovgen_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append('-f nut')
 
