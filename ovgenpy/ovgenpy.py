@@ -10,7 +10,7 @@ from ovgenpy.channel import Channel, ChannelConfig
 from ovgenpy.config import register_config, register_enum, Ignored
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, Trigger
-from ovgenpy.util import pushd
+from ovgenpy.util import pushd, coalesce
 from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field
 from ovgenpy.wave import Wave
@@ -31,11 +31,12 @@ class BenchmarkMode(IntEnum):
     OUTPUT = 3
 
 
-@register_config(always_dump='begin_time subsampling')
+@register_config(always_dump='begin_time end_time subsampling')
 class Config:
     master_audio: Optional[str]
     fps: int
     begin_time: float = 0
+    end_time: float = None
 
     subsampling: int = 1
 
@@ -144,7 +145,7 @@ class Ovgen:
 
         begin_frame = round(fps * self.cfg.begin_time)
 
-        end_frame = fps * self.waves[0].get_s()
+        end_frame = fps * coalesce(self.cfg.end_time, self.waves[0].get_s())
         end_frame = int(end_frame) + 1
 
         renderer = self._load_renderer()
