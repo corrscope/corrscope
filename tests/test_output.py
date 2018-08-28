@@ -61,8 +61,8 @@ def test_terminate_ffplay(Popen):
 
 @pytest.mark.usefixtures('Popen')
 def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
-    """ Integration test: Ensure ffmpeg and ffplay are terminated when Python exceptions
-    occur. """
+    """ Integration test: Ensure ovgenpy calls terminate() on ffmpeg and ffplay when
+    Python exceptions occur. """
 
     cfg = default_config(
         channels=[ChannelConfig('tests/sine440.wav')],
@@ -81,6 +81,24 @@ def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
 
     for popen in output._pipeline:
         popen.terminate.assert_called()
+
+
+def test_ovgen_terminate_works():
+    """ Ensure that ffmpeg/ffplay terminate quickly after Python exceptions, when
+    `popen.terminate()` is called. """
+
+    cfg = default_config(
+        channels=[ChannelConfig('tests/sine440.wav')],
+        master_audio='tests/sine440.wav',
+        outputs=[FFplayOutputConfig()],
+        end_time=0.5,   # Reduce test duration
+    )
+    ovgen = Ovgen(cfg, '.')
+    ovgen.raise_on_teardown = DummyException
+
+    with pytest.raises(DummyException):
+        # Raises `subprocess.TimeoutExpired` if popen.terminate() doesn't work.
+        ovgen.play()
 
 
 # TODO integration test without audio
