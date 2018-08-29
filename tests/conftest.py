@@ -14,8 +14,11 @@ def Popen(mocker: 'pytest_mock.MockFixture'):
 
     def popen_factory(*args, **kwargs):
         popen = mocker.create_autospec(real_Popen)
-        popen.stdin = open(os.devnull, "wb")
-        popen.stdout = open(os.devnull, "rb")
+
+        popen.stdin = mocker.mock_open()(os.devnull, "wb")
+        popen.stdout = mocker.mock_open()(os.devnull, "rb")
+        assert popen.stdin != popen.stdout
+
         popen.wait.return_value = 0
         return popen
 
