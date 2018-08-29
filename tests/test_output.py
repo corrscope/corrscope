@@ -39,9 +39,24 @@ def test_output():
     assert not Path('-').exists()
 
 
+# Ensure ovgen closes pipe to output upon completion.
+@pytest.mark.usefixtures('Popen')
+def test_close_output(Popen):
+    """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
+    exceptions occur.
+    """
+
+    ffplay_cfg = FFplayOutputConfig()
+    output: FFplayOutput
+    with ffplay_cfg(CFG) as output:
+        pass
+
+    output._pipeline[0].stdin.close.assert_called()
+    for popen in output._pipeline:
+        popen.wait.assert_called()  # Does wait() need to be called?
+
+
 # Ensure ovgen terminates FFplay upon exceptions.
-
-
 @pytest.mark.usefixtures('Popen')
 def test_terminate_ffplay(Popen):
     """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
