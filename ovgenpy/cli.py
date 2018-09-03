@@ -103,7 +103,7 @@ def main(
     # Create cfg: Config object.
     cfg: Optional[Config] = None
     cfg_path: Optional[Path] = None
-    cfg_dir: Optional[str] = None  # Changing to Path will take a lot of refactoring.
+    cfg_dir: Optional[str] = None
 
     wav_list: List[Path] = []
     for name in files:
@@ -145,6 +145,7 @@ def main(
             wav_list += matches
 
     if not cfg:
+        # cfg and cfg_dir are always initialized together.
         channels = [ChannelConfig(str(wav_path)) for wav_path in wav_list]
 
         cfg = default_config(
@@ -157,7 +158,8 @@ def main(
         cfg_dir = '.'
 
     if show_gui:
-        raise click.UsageError('GUI not implemented')
+        from ovgenpy import gui
+        gui.gui_main(cfg, cfg_dir)
     else:
         if not files:
             raise click.UsageError('Must specify files or folders to play')
