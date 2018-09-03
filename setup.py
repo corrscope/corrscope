@@ -14,5 +14,6 @@ setup(
         'numpy', 'scipy', 'click', 'ruamel.yaml',
         'matplotlib',
         'attrs>=18.2.0',
+        'PyQt5',
     ]
 )

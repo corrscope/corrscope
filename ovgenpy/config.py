@@ -161,3 +161,4 @@ class OvgenWarning(UserWarning):
     (Should be) caught by GUI and displayed to user. """
     pass
 
+ValidationError = OvgenError
