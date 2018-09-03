@@ -87,12 +87,16 @@ def test_file_dirs(any_sink, wav_dir):
     assert [chan.wav_path for chan in cfg.channels] == wavs
 
 
+def q(path: Path) -> str:
+    return shlex.quote(str(path))
+
+
 def test_write_dir(yaml_sink):
     """ Loading `--audio another/dir` should write YAML to current dir.
     Writing YAML to audio dir: causes relative paths (relative to pwd) to break. """
 
     audio_path = Path('tests/sine440.wav')
-    arg_str = f'tests -a {audio_path}'
+    arg_str = f'tests -a {q(audio_path)}'
 
     cfg, outpath = yaml_sink(arg_str)   # type: Config, Path
     assert isinstance(outpath, Path)
