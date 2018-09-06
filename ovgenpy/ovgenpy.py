@@ -232,8 +232,13 @@ class Ovgen:
                         for output in self.outputs:
                             output.write_frame(frame)
 
+            if self.raise_on_teardown:
+                raise self.raise_on_teardown
+
         if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
             dtime = time.perf_counter() - begin
             render_fps = (end_frame - begin_frame) / dtime
             print(f'FPS = {render_fps}')
+
+    raise_on_teardown: Exception = None

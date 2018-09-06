@@ -39,9 +39,24 @@ def test_output():
     assert not Path('-').exists()
 
 
+# Ensure ovgen closes pipe to output upon completion.
+@pytest.mark.usefixtures('Popen')
+def test_close_output(Popen):
+    """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
+    exceptions occur.
+    """
+
+    ffplay_cfg = FFplayOutputConfig()
+    output: FFplayOutput
+    with ffplay_cfg(CFG) as output:
+        pass
+
+    output._pipeline[0].stdin.close.assert_called()
+    for popen in output._pipeline:
+        popen.wait.assert_called()  # Does wait() need to be called?
+
+
 # Ensure ovgen terminates FFplay upon exceptions.
-
-
 @pytest.mark.usefixtures('Popen')
 def test_terminate_ffplay(Popen):
     """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
@@ -61,8 +76,8 @@ def test_terminate_ffplay(Popen):
 
 @pytest.mark.usefixtures('Popen')
 def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
-    """ Integration test: Ensure ffmpeg and ffplay are terminated when Python exceptions
-    occur. """
+    """ Integration test: Ensure ovgenpy calls terminate() on ffmpeg and ffplay when
+    Python exceptions occur. """
 
     cfg = default_config(
         channels=[ChannelConfig('tests/sine440.wav')],
@@ -81,6 +96,25 @@ def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
 
     for popen in output._pipeline:
         popen.terminate.assert_called()
+
+
+@pytest.mark.skip('Launches ffmpeg and ffplay processes, creating a ffplay window')
+def test_ovgen_terminate_works():
+    """ Ensure that ffmpeg/ffplay terminate quickly after Python exceptions, when
+    `popen.terminate()` is called. """
+
+    cfg = default_config(
+        channels=[ChannelConfig('tests/sine440.wav')],
+        master_audio='tests/sine440.wav',
+        outputs=[FFplayOutputConfig()],
+        end_time=0.5,   # Reduce test duration
+    )
+    ovgen = Ovgen(cfg, '.')
+    ovgen.raise_on_teardown = DummyException
+
+    with pytest.raises(DummyException):
+        # Raises `subprocess.TimeoutExpired` if popen.terminate() doesn't work.
+        ovgen.play()
 
 
 # TODO integration test without audio
