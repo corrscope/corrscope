@@ -49,7 +49,7 @@ def register_output(config_t: Type[IOutputConfig]):
 
 # FFmpeg command line generation
 
-class _FFmpegCommand:
+class _FFmpegProcess:
     def __init__(self, templates: List[str], ovgen_cfg: 'Config'):
         self.templates = templates
         self.ovgen_cfg = ovgen_cfg
@@ -122,9 +122,19 @@ class PipeOutput(Output):
         return retval   # final value
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
         if exc_type is not None:
+            e = None
             for popen in self._pipeline:
                 popen.terminate()
+                # https://stackoverflow.com/a/49038779/2683842
+                try:
+                    popen.wait(1)   # timeout=seconds
+                except subprocess.TimeoutExpired as e:
+                    popen.kill()
+
+            if e:
+                raise e
 
 
 # FFmpegOutput
@@ -135,8 +145,7 @@ class FFmpegOutputConfig(IOutputConfig):
     path: Optional[str]
     args: str = ''
 
-    # Do not use `-movflags faststart`, I get corrupted mp4 files (missing MOOV)
-    video_template: str = '-c:v libx264 -crf 18 -preset superfast'
+    video_template: str = '-c:v libx264 -crf 18 -preset superfast -movflags faststart'
     audio_template: str = '-c:a aac -b:a 384k'
 
 
@@ -147,7 +156,7 @@ class FFmpegOutput(PipeOutput):
     def __init__(self, ovgen_cfg: 'Config', cfg: FFmpegOutputConfig):
         super().__init__(ovgen_cfg, cfg)
 
-        ffmpeg = _FFmpegCommand([FFMPEG, '-y'], ovgen_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG, '-y'], ovgen_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append(cfg.args)
 
@@ -174,7 +183,7 @@ class FFplayOutput(PipeOutput):
     def __init__(self, ovgen_cfg: 'Config', cfg: FFplayOutputConfig):
         super().__init__(ovgen_cfg, cfg)
 
-        ffmpeg = _FFmpegCommand([FFMPEG], ovgen_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG], ovgen_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append('-f nut')
 
@@ -184,6 +193,8 @@ class FFplayOutput(PipeOutput):
         p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
 
         p1.stdout.close()
+        # assert p2.stdin is None   # True unless Popen is being mocked (test_output).
+
         self.open(p1, p2)
 
 
