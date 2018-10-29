@@ -5,7 +5,7 @@ from matplotlib.figure import Figure
 
 from ovgenpy import triggers
 from ovgenpy.triggers import CorrelationTriggerConfig, CorrelationTrigger, \
-    PerFrameCache, ZeroCrossingTriggerConfig
+    PerFrameCache, ZeroCrossingTriggerConfig, LocalPostTriggerConfig
 from ovgenpy.wave import Wave
 
 triggers.SHOW_TRIGGER = False
@@ -20,7 +20,11 @@ def cfg(request):
     )
 
 
-@pytest.fixture(scope='session', params=[None, ZeroCrossingTriggerConfig()])
+@pytest.fixture(scope='session', params=[
+    None,
+    ZeroCrossingTriggerConfig(),
+    LocalPostTriggerConfig(strength=1)
+])
 def post_cfg(request):
     post = request.param
     return CorrelationTriggerConfig(

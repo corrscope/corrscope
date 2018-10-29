@@ -20,6 +20,10 @@ def coalesce(*args):
     return args[-1]
 
 
+def obj_name(obj) -> str:
+    return type(obj).__name__
+
+
 T = TypeVar('T')
 
 # Adapted from https://github.com/numpy/numpy/issues/2269#issuecomment-14436725
