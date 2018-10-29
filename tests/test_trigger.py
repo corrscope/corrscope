@@ -4,7 +4,8 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from ovgenpy import triggers
-from ovgenpy.triggers import CorrelationTriggerConfig, CorrelationTrigger, PerFrameCache
+from ovgenpy.triggers import CorrelationTriggerConfig, CorrelationTrigger, \
+    PerFrameCache, ZeroCrossingTriggerConfig
 from ovgenpy.wave import Wave
 
 triggers.SHOW_TRIGGER = False
@@ -16,6 +17,16 @@ def cfg(request):
     return CorrelationTriggerConfig(
         use_edge_trigger=use_edge_trigger,
         responsiveness=1,
+    )
+
+
+@pytest.fixture(scope='session', params=[None, ZeroCrossingTriggerConfig()])
+def post_cfg(request):
+    post = request.param
+    return CorrelationTriggerConfig(
+        use_edge_trigger=False,
+        responsiveness=1,
+        post=post
     )
 
 
@@ -71,7 +82,6 @@ def test_trigger_subsampling(cfg: CorrelationTriggerConfig):
 
     for i in range(1, iters):
         offset = trigger.get_trigger(x0, cache)
-        print(offset)
 
         # Debugging CorrelationTrigger.get_trigger:
         # from matplotlib import pyplot as plt
@@ -84,15 +94,40 @@ def test_trigger_subsampling(cfg: CorrelationTriggerConfig):
         # After truncation, corr[mid+1] is almost identical to corr[mid], for
         # reasons I don't understand (mid+1 > mid because dithering?).
         if not cfg.use_edge_trigger:
-            assert (offset - x0) % subsampling == 0
-            assert abs(offset - x0) < 10
+            assert (offset - x0) % subsampling == 0, f'iteration {i}'
+            assert abs(offset - x0) < 10, f'iteration {i}'
 
         # The edge trigger activates at x0+1=24001. Likely related: it triggers
         # when moving from <=0 to >0. This is a necessary evil, in order to
         # recognize 0-to-positive edges while testing tests/impulse24000.wav .
 
         else:
-            assert abs(offset - x0) <= 2
+            # If assertion fails, remove it.
+            assert (offset - x0) % subsampling != 0, f'iteration {i}'
+            assert abs(offset - x0) <= 2, f'iteration {i}'
+
+
+def test_post_trigger_subsampling(post_cfg: CorrelationTriggerConfig):
+    cfg = post_cfg
+
+    wave = Wave(None, 'tests/sine440.wav')
+    iters = 5
+    x0 = 24000
+    subsampling = 4
+    trigger = cfg(wave, tsamp=100, subsampling=subsampling, fps=FPS)
+
+    cache = PerFrameCache()
+    for i in range(1, iters):
+        offset = trigger.get_trigger(x0, cache)
+
+        if not cfg.post:
+            assert (offset - x0) % subsampling == 0, f'iteration {i}'
+            assert abs(offset - x0) < 10, f'iteration {i}'
+
+        else:
+            # If assertion fails, remove it.
+            assert (offset - x0) % subsampling != 0, f'iteration {i}'
+            assert abs(offset - x0) <= 2, f'iteration {i}'
 
 
 def test_trigger_subsampling_edges(cfg: CorrelationTriggerConfig):
