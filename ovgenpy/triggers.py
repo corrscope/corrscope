@@ -456,6 +456,16 @@ class LocalPostTrigger(PostTrigger):
         assert len(corr) == 2*N - 1
         mid = N-1
 
+        # If we're near a falling edge, don't try to make drastic changes.
+        if corr[mid] < 0:
+            # Give up early.
+            return index
+
+        # Don't punish negative results too much.
+        # (probably useless. if corr[mid] >= 0,
+        # all other negative entries will never be optimal.)
+        # np.abs(corr, out=corr)
+
         # Subtract cost function
         cost = self._cost_norm / cache.period
         corr -= cost

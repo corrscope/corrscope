@@ -88,7 +88,7 @@ def default_config(**kwargs):
             edge_strength=0,
             responsiveness=0.5,
             use_edge_trigger=False,
-            post=LocalPostTriggerConfig(strength=1),    # FIXME
+            post=LocalPostTriggerConfig(strength=0.1),
         ),
         channels=[],
 
