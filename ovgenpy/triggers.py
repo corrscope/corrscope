@@ -195,7 +195,8 @@ class CorrelationTrigger(Trigger):
         use_edge_trigger = self.cfg.use_edge_trigger
 
         # Get data
-        data = self._wave.get_around(index, N, self._subsampling)
+        subsampling = self._subsampling
+        data = self._wave.get_around(index, N, subsampling)
 
         # Window data
         period = get_period(data)
@@ -231,7 +232,7 @@ class CorrelationTrigger(Trigger):
         corr = signal.correlate(data, prev_buffer)
         assert len(corr) == 2*N - 1
 
-        # Find optimal offset (within ±N//4)
+        # Find optimal offset (within trigger_diameter, default=±N/4)
         mid = N-1
         radius = round(N * self.cfg.trigger_diameter / 2)
 
@@ -244,10 +245,10 @@ class CorrelationTrigger(Trigger):
         # argmax(corr) == mid + peak_offset == (data >> peak_offset)
         # peak_offset == argmax(corr) - mid
         peak_offset = np.argmax(corr) - mid   # type: int
-        trigger = index + (self._subsampling * peak_offset)
+        trigger = index + (subsampling * peak_offset)
 
         # Update correlation buffer (distinct from visible area)
-        aligned = self._wave.get_around(trigger, self._buffer_nsamp, self._subsampling)
+        aligned = self._wave.get_around(trigger, self._buffer_nsamp, subsampling)
         self._update_buffer(aligned, period)
 
         if use_edge_trigger:
