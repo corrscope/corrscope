@@ -9,7 +9,7 @@ from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
 from ovgenpy.config import register_config, register_enum, Ignored
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
-from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, Trigger
+from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from ovgenpy.util import pushd, coalesce
 from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field
@@ -203,7 +203,8 @@ class Ovgen:
                     sample = round(wave.smp_s * time_seconds)
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
-                        trigger_sample = channel.trigger.get_trigger(sample)
+                        cache = PerFrameCache()
+                        trigger_sample = channel.trigger.get_trigger(sample, cache)
                     else:
                         trigger_sample = sample
 
