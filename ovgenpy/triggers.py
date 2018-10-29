@@ -152,7 +152,6 @@ class CorrelationTriggerConfig(ITriggerConfig):
 
 @register_trigger(CorrelationTriggerConfig)
 class CorrelationTrigger(Trigger):
-    MIN_AMPLITUDE = 0.01
     cfg: CorrelationTriggerConfig
 
     def __init__(self, *args, **kwargs):
@@ -323,21 +322,28 @@ class CorrelationTrigger(Trigger):
                              f'CorrelationTrigger {self._buffer_nsamp}')
 
         # New waveform
-        self._normalize_buffer(data)
+        normalize_buffer(data)
         window = windows.gaussian(N, std = wave_period * buffer_falloff)
         data *= window
 
         # Old buffer
-        self._normalize_buffer(self._buffer)
+        normalize_buffer(self._buffer)
         self._buffer = lerp(self._buffer, data, responsiveness)
 
-    # const method
-    def _normalize_buffer(self, data: np.ndarray) -> None:
-        """
-        Rescales `data` in-place.
-        """
-        peak = np.amax(abs(data))
-        data /= max(peak, self.MIN_AMPLITUDE)
+
+# get_trigger()
+
+def calc_step(nsamp: int, peak: float, stdev: float):
+    """ Step function used for approximate edge triggering.
+    TODO deduplicate CorrelationTrigger._calc_step() """
+    N = nsamp
+    halfN = N // 2
+
+    step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
+    step[:halfN] = -peak / 2
+    step[halfN:] = peak / 2
+    step *= windows.gaussian(N, std=halfN * stdev)
+    return step
 
 
 def get_period(data: np.ndarray) -> int:
@@ -370,21 +376,20 @@ def cosine_flat(n: int, diameter: int, falloff: int):
     return padded
 
 
+# update_buffer()
+
+MIN_AMPLITUDE = 0.01
+
+def normalize_buffer(data: np.ndarray) -> None:
+    """
+    Rescales `data` in-place.
+    """
+    peak = np.amax(abs(data))
+    data /= max(peak, MIN_AMPLITUDE)
+
+
 def lerp(x: np.ndarray, y: np.ndarray, a: float):
     return x * (1 - a) + y * a
-
-
-def calc_step(nsamp: int, peak: float, stdev: float):
-    """ Step function used for approximate edge triggering.
-    TODO deduplicate CorrelationTrigger._calc_step() """
-    N = nsamp
-    halfN = N // 2
-
-    step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
-    step[:halfN] = -peak / 2
-    step[halfN:] = peak / 2
-    step *= windows.gaussian(N, std=halfN * stdev)
-    return step
 
 
 #### Post-processing triggers
@@ -437,6 +442,7 @@ class LocalPostTrigger(PostTrigger):
 
         # Get data
         data = self._wave.get_around(index, N, self._subsampling)
+        normalize_buffer(data)
         data *= self._data_window
 
         # Window data
