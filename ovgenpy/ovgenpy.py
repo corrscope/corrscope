@@ -9,7 +9,8 @@ from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
 from ovgenpy.config import register_config, register_enum, Ignored
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
-from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
+from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache, \
+    LocalPostTriggerConfig
 from ovgenpy.util import pushd, coalesce
 from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field
@@ -83,7 +84,12 @@ def default_config(**kwargs):
         fps=_FPS,
 
         width_ms=25,
-        trigger=CorrelationTriggerConfig(),
+        trigger=CorrelationTriggerConfig(
+            edge_strength=0,
+            responsiveness=0.5,
+            use_edge_trigger=False,
+            post=LocalPostTriggerConfig(strength=1),
+        ),
         channels=[],
 
         amplification=1,

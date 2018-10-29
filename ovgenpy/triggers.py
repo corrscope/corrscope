@@ -7,8 +7,8 @@ from scipy import signal
 from scipy.signal import windows
 
 from ovgenpy.config import register_config, OvgenError, Alias
-from ovgenpy.util import find
-from ovgenpy.utils.keyword_dataclasses import dataclass, InitVar, field
+from ovgenpy.util import find, obj_name
+from ovgenpy.utils.keyword_dataclasses import dataclass
 from ovgenpy.utils.windows import midpad, leftpad
 from ovgenpy.wave import FLOAT
 
@@ -49,6 +49,7 @@ class Trigger(ABC):
         self.cfg = cfg
         self._wave = wave
 
+        # TODO rename tsamp to buffer_nsamp
         self._tsamp = tsamp
         self._subsampling = subsampling
         self._fps = fps
@@ -59,6 +60,7 @@ class Trigger(ABC):
         # Samples per frame
         self._real_samp_frame = round(frame_dur * self._wave.smp_s)
 
+        # TODO rename to post_trigger
         if cfg.post:
             # Create a post-processing trigger, with narrow nsamp and no subsampling.
             # This improves speed and precision.
@@ -115,7 +117,7 @@ class CorrelationTriggerConfig(ITriggerConfig):
 
     # _update_buffer
     responsiveness: float = 0.1
-    buffer_falloff: float = 0.5
+    buffer_falloff: float = 0.5  # Gaussian std = wave_period * buffer_falloff
 
     # region Legacy Aliases
     trigger_strength = Alias('edge_strength')
@@ -372,6 +374,104 @@ def lerp(x: np.ndarray, y: np.ndarray, a: float):
     return x * (1 - a) + y * a
 
 
+def calc_step(nsamp: int, peak: float, stdev: float):
+    """ Step function used for approximate edge triggering.
+    TODO deduplicate CorrelationTrigger._calc_step() """
+    N = nsamp
+    halfN = N // 2
+
+    step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
+    step[:halfN] = -peak / 2
+    step[halfN:] = peak / 2
+    step *= windows.gaussian(N, std=halfN * stdev)
+    return step
+
+
+#### Post-processing triggers
+
+class PostTrigger(Trigger, ABC):
+    """ A post-processing trigger should have subsampling=1,
+     and no more post triggers. This is subject to change. """
+    def __init__(self, *args, **kwargs):
+        Trigger.__init__(self, *args, **kwargs)
+
+        if self._subsampling != 1:
+            raise OvgenError(
+                f'{obj_name(self)} with subsampling != 1 is not allowed '
+                f'(supplied {self._subsampling})')
+
+        if self.post:
+            raise OvgenError(
+                f'Passing {obj_name(self)} a post_trigger is not allowed '
+                f'({obj_name(self.post)})'
+            )
+
+
+# Local edge-finding trigger
+
+@register_config(always_dump='strength')
+class LocalPostTriggerConfig(ITriggerConfig):
+    strength: float  # Coefficient
+
+@register_trigger(LocalPostTriggerConfig)
+class LocalPostTrigger(PostTrigger):
+    cfg: LocalPostTriggerConfig
+
+    def __init__(self, *args, **kwargs):
+        PostTrigger.__init__(self, *args, **kwargs)
+        self._buffer_nsamp = self._tsamp
+
+        # Precompute data window... TODO Hann, or extract fancy dynamic-width from CorrelationTrigger?
+        self._data_window = windows.hann(self._buffer_nsamp).astype(FLOAT)
+
+        # Precompute edge correlation buffer
+        self._windowed_step = calc_step(self._tsamp, self.cfg.strength, 1/3)
+
+        # Precompute normalized _cost_norm function
+        N = self._buffer_nsamp
+        corr_len = 2*N - 1
+        self._cost_norm = (np.arange(corr_len, dtype=FLOAT) - N) ** 2
+
+    def get_trigger(self, index: int, cache: 'PerFrameCache') -> int:
+        N = self._buffer_nsamp
+
+        # Get data
+        data = self._wave.get_around(index, N, self._subsampling)
+        data *= self._data_window
+
+        # Window data
+        if cache.period is None:
+            raise ValueError(
+                "Missing 'cache.period', try stacking CorrelationTrigger "
+                "before LocalPostTrigger")
+
+        # To avoid sign errors, see comment in CorrelationTrigger.get_trigger().
+        corr = signal.correlate(data, self._windowed_step)
+        assert len(corr) == 2*N - 1
+        mid = N-1
+
+        # Subtract cost function
+        cost = self._cost_norm / cache.period
+        corr -= cost
+
+        # Find optimal offset (within ±N/4)
+        mid = N-1
+        radius = round(N / 4)
+
+        left = mid - radius
+        right = mid + radius + 1
+
+        corr = corr[left:right]
+        mid = mid - left
+
+        peak_offset = np.argmax(corr) - mid   # type: int
+        trigger = index + (self._subsampling * peak_offset)
+
+        return trigger
+
+def seq_along(a: np.ndarray):
+    return np.arange(len(a))
+
 # ZeroCrossingTrigger
 
 @register_config
@@ -380,17 +480,12 @@ class ZeroCrossingTriggerConfig(ITriggerConfig):
 
 
 @register_trigger(ZeroCrossingTriggerConfig)
-class ZeroCrossingTrigger(Trigger):
+class ZeroCrossingTrigger(PostTrigger):
     # ZeroCrossingTrigger is only used as a postprocessing trigger.
     # subsampling is only passed 1, for improved precision.
 
     def get_trigger(self, index: int, cache: 'PerFrameCache'):
         # 'cache' is unused.
-
-        if self._subsampling != 1:
-            raise OvgenError(
-                f'ZeroCrossingTrigger with subsampling != 1 is not implemented '
-                f'(supplied {self._subsampling})')
         tsamp = self._tsamp
 
         if not 0 <= index < self._wave.nsamp:
