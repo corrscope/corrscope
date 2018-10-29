@@ -1,5 +1,6 @@
+import warnings
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Type, Tuple, Optional
+from typing import TYPE_CHECKING, Type, Tuple, Optional, ClassVar
 
 import numpy as np
 from scipy import signal
@@ -7,7 +8,7 @@ from scipy.signal import windows
 
 from ovgenpy.config import register_config, OvgenError, Alias
 from ovgenpy.util import find
-from ovgenpy.utils.keyword_dataclasses import dataclass
+from ovgenpy.utils.keyword_dataclasses import dataclass, InitVar, field
 from ovgenpy.utils.windows import midpad, leftpad
 from ovgenpy.wave import FLOAT
 
@@ -17,10 +18,15 @@ if TYPE_CHECKING:
 
 # Abstract classes
 
+@dataclass
 class ITriggerConfig:
-    cls: Type['Trigger']
+    cls: ClassVar[Type['Trigger']]
 
-    def __call__(self, wave: 'Wave', tsamp: int, subsampling: int, fps: float):
+    # Optional trigger for postprocessing
+    post: 'ITriggerConfig' = None
+
+    def __call__(self, wave: 'Wave', tsamp: int, subsampling: int, fps: float) \
+            -> 'Trigger':
         return self.cls(wave, cfg=self, tsamp=tsamp, subsampling=subsampling, fps=fps)
 
 
@@ -36,6 +42,8 @@ def register_trigger(config_t: Type[ITriggerConfig]):
 
 
 class Trigger(ABC):
+    POST_PROCESSING_NSAMP = 256
+
     def __init__(self, wave: 'Wave', cfg: ITriggerConfig, tsamp: int, subsampling: int,
                  fps: float):
         self.cfg = cfg
@@ -50,6 +58,13 @@ class Trigger(ABC):
         self._tsamp_frame = self.time2tsamp(frame_dur)
         # Samples per frame
         self._real_samp_frame = round(frame_dur * self._wave.smp_s)
+
+        if cfg.post:
+            # Create a post-processing trigger, with narrow nsamp and no subsampling.
+            # This improves speed and precision.
+            self.post = cfg.post(wave, self.POST_PROCESSING_NSAMP, 1, fps)
+        else:
+            self.post = None
 
     def time2tsamp(self, time: float):
         return round(time * self._wave.smp_s / self._subsampling)
@@ -91,7 +106,6 @@ class PerFrameCache:
 ''')
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
-    use_edge_trigger: bool = True
     edge_strength: float = 10.0
     trigger_diameter: float = 0.5
 
@@ -106,6 +120,10 @@ class CorrelationTriggerConfig(ITriggerConfig):
     # region Legacy Aliases
     trigger_strength = Alias('edge_strength')
     falloff_width = Alias('buffer_falloff')
+
+    # Problem: InitVar with default values are (wrongly) accessible on object instances.
+    # use_edge_trigger is False but self.use_edge_trigger is True, wtf?
+    use_edge_trigger: bool = True
     # endregion
 
     def __post_init__(self):
@@ -113,6 +131,15 @@ class CorrelationTriggerConfig(ITriggerConfig):
         self._validate_param('responsiveness', 0, 1)
         # TODO trigger_falloff >= 0
         self._validate_param('buffer_falloff', 0, np.inf)
+
+        if self.use_edge_trigger:
+            if self.post:
+                warnings.warn(
+                    "Ignoring old `CorrelationTriggerConfig.use_edge_trigger` flag, "
+                    "overriden by newer `post` flag."
+                )
+            else:
+                self.post = ZeroCrossingTriggerConfig()
 
     def _validate_param(self, key: str, begin, end):
         value = getattr(self, key)
@@ -124,7 +151,6 @@ class CorrelationTriggerConfig(ITriggerConfig):
 @register_trigger(CorrelationTriggerConfig)
 class CorrelationTrigger(Trigger):
     MIN_AMPLITUDE = 0.01
-    ZERO_CROSSING_SCAN = 256
     cfg: CorrelationTriggerConfig
 
     def __init__(self, *args, **kwargs):
@@ -137,15 +163,6 @@ class CorrelationTrigger(Trigger):
 
         # Create correlation buffer (containing a series of old data)
         self._buffer = np.zeros(self._buffer_nsamp, dtype=FLOAT)    # type: np.ndarray[FLOAT]
-
-        # Create zero crossing trigger, for postprocessing results
-        self._zero_trigger = ZeroCrossingTrigger(
-            self._wave,
-            ITriggerConfig(),
-            tsamp=self.ZERO_CROSSING_SCAN,
-            subsampling=1,
-            fps=self._fps
-        )
 
         # Precompute edge trigger step
         self._windowed_step = self._calc_step()
@@ -207,7 +224,6 @@ class CorrelationTrigger(Trigger):
 
     def get_trigger(self, index: int, cache: 'PerFrameCache') -> int:
         N = self._buffer_nsamp
-        use_edge_trigger = self.cfg.use_edge_trigger
 
         # Get data
         subsampling = self._subsampling
@@ -267,8 +283,8 @@ class CorrelationTrigger(Trigger):
         aligned = self._wave.get_around(trigger, self._buffer_nsamp, subsampling)
         self._update_buffer(aligned, period)
 
-        if use_edge_trigger:
-            return self._zero_trigger.get_trigger(trigger, cache)
+        if self.post:
+            return self.post.get_trigger(trigger, cache)
         else:
             return trigger
 
@@ -358,6 +374,12 @@ def lerp(x: np.ndarray, y: np.ndarray, a: float):
 
 # ZeroCrossingTrigger
 
+@register_config
+class ZeroCrossingTriggerConfig(ITriggerConfig):
+    pass
+
+
+@register_trigger(ZeroCrossingTriggerConfig)
 class ZeroCrossingTrigger(Trigger):
     # ZeroCrossingTrigger is only used as a postprocessing trigger.
     # subsampling is only passed 1, for improved precision.
