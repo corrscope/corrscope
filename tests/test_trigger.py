@@ -4,7 +4,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from ovgenpy import triggers
-from ovgenpy.triggers import CorrelationTriggerConfig, CorrelationTrigger
+from ovgenpy.triggers import CorrelationTriggerConfig, CorrelationTrigger, PerFrameCache
 from ovgenpy.wave import Wave
 
 triggers.SHOW_TRIGGER = False
@@ -30,7 +30,7 @@ def test_trigger(cfg: CorrelationTriggerConfig):
     plot = False
     x0 = 24000
     x = x0 - 500
-    trigger = cfg(wave, 4000, subsampling=1, fps=FPS)
+    trigger: CorrelationTrigger = cfg(wave, 4000, subsampling=1, fps=FPS)
 
     if plot:
         BIG = 0.95
@@ -45,7 +45,7 @@ def test_trigger(cfg: CorrelationTriggerConfig):
 
     for i, ax in enumerate(axes):
         if i:
-            offset = trigger.get_trigger(x)
+            offset = trigger.get_trigger(x, PerFrameCache())
             print(offset)
             assert offset == x0
         if plot:
@@ -67,8 +67,10 @@ def test_trigger_subsampling(cfg: CorrelationTriggerConfig):
     # real window_samp = window_samp*subsampling
     # period = 109
 
+    cache = PerFrameCache()
+
     for i in range(1, iters):
-        offset = trigger.get_trigger(x0)
+        offset = trigger.get_trigger(x0, cache)
         print(offset)
 
         # Debugging CorrelationTrigger.get_trigger:
@@ -103,9 +105,9 @@ def test_trigger_subsampling_edges(cfg: CorrelationTriggerConfig):
     # real window_samp = window_samp*subsampling
     # period = 109
 
-    trigger.get_trigger(0)
-    trigger.get_trigger(-1000)
-    trigger.get_trigger(50000)
+    trigger.get_trigger(0, PerFrameCache())
+    trigger.get_trigger(-1000, PerFrameCache())
+    trigger.get_trigger(50000, PerFrameCache())
 
 
 def test_trigger_should_recalc_window():

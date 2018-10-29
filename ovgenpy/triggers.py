@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Type, Tuple
+from typing import TYPE_CHECKING, Type, Tuple, Optional
 
 import numpy as np
 from scipy import signal
@@ -7,6 +7,7 @@ from scipy.signal import windows
 
 from ovgenpy.config import register_config, OvgenError, Alias
 from ovgenpy.util import find
+from ovgenpy.utils.keyword_dataclasses import dataclass
 from ovgenpy.utils.windows import midpad, leftpad
 from ovgenpy.wave import FLOAT
 
@@ -54,12 +55,30 @@ class Trigger(ABC):
         return round(time * self._wave.smp_s / self._subsampling)
 
     @abstractmethod
-    def get_trigger(self, index: int) -> int:
+    def get_trigger(self, index: int, cache: 'PerFrameCache') -> int:
         """
         :param index: sample index
+        :param cache: Information shared across all stacked triggers,
+            May be mutated by function.
         :return: new sample index, corresponding to rising edge
         """
         ...
+
+
+@dataclass
+class PerFrameCache:
+    """
+    The estimated period of a wave region (Wave.get_around())
+    is approximately constant, even when multiple triggers are stacked
+    and each is called at a slightly different point.
+
+    For each unique (frame, channel), all stacked triggers are passed the same
+    TriggerFrameCache object.
+    """
+
+    # NOTE: period is a *non-subsampled* period.
+    # The period of subsampled data must be multiplied by subsampling factor.
+    period: Optional[int] = None
 
 
 # CorrelationTrigger
@@ -186,11 +205,7 @@ class CorrelationTrigger(Trigger):
 
         return data_window
 
-    def get_trigger(self, index: int) -> int:
-        """
-        :param index: sample index
-        :return: new sample index, corresponding to rising edge
-        """
+    def get_trigger(self, index: int, cache: 'PerFrameCache') -> int:
         N = self._buffer_nsamp
         use_edge_trigger = self.cfg.use_edge_trigger
 
@@ -200,6 +215,7 @@ class CorrelationTrigger(Trigger):
 
         # Window data
         period = get_period(data)
+        cache.period = period * subsampling
 
         if self._is_window_invalid(period):
             diameter, falloff = [round(period * x) for x in self.cfg.trigger_falloff]
@@ -252,7 +268,7 @@ class CorrelationTrigger(Trigger):
         self._update_buffer(aligned, period)
 
         if use_edge_trigger:
-            return self._zero_trigger.get_trigger(trigger)
+            return self._zero_trigger.get_trigger(trigger, cache)
         else:
             return trigger
 
@@ -343,8 +359,12 @@ def lerp(x: np.ndarray, y: np.ndarray, a: float):
 # ZeroCrossingTrigger
 
 class ZeroCrossingTrigger(Trigger):
-    # TODO support subsampling
-    def get_trigger(self, index: int):
+    # ZeroCrossingTrigger is only used as a postprocessing trigger.
+    # subsampling is only passed 1, for improved precision.
+
+    def get_trigger(self, index: int, cache: 'PerFrameCache'):
+        # 'cache' is unused.
+
         if self._subsampling != 1:
             raise OvgenError(
                 f'ZeroCrossingTrigger with subsampling != 1 is not implemented '
@@ -398,5 +418,5 @@ class NullTriggerConfig(ITriggerConfig):
 
 @register_trigger(NullTriggerConfig)
 class NullTrigger(Trigger):
-    def get_trigger(self, index: int) -> int:
+    def get_trigger(self, index: int, cache: 'PerFrameCache') -> int:
         return index
