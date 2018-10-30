@@ -1,7 +1,7 @@
 from io import StringIO
 from typing import ClassVar, TYPE_CHECKING
 
-from ovgenpy.utils.keyword_dataclasses import dataclass, fields, field
+from ovgenpy.utils.keyword_dataclasses import dataclass, fields, Field, MISSING
 # from dataclasses import dataclass, fields
 from ruamel.yaml import yaml_object, YAML, Representer
 
@@ -73,7 +73,7 @@ class _ConfigMixin:
         state = {}
         cls = type(self)
 
-        for field in fields(self):
+        for field in fields(self):  # type: Field
             name = field.name
             value = getattr(self, name)
 
@@ -81,9 +81,13 @@ class _ConfigMixin:
                 state[name] = value
                 continue
 
-            default = getattr(cls, name, object())
-            if value != default:
-                state[name] = value
+            if field.default == value:
+                continue
+            if field.default_factory is not MISSING \
+                    and field.default_factory() == value:
+                continue
+
+            state[name] = value
 
         return state
 

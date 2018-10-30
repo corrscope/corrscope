@@ -10,6 +10,5 @@ setup(
     author_email='',
     description='',
     tests_require=['pytest', 'pytest-pycharm', 'hypothesis'],
-    install_requires=['numpy', 'scipy', 'imageio', 'click', 'matplotlib',
-                      'dataclasses;python_version<"3.7"', 'ruamel.yaml']
+    install_requires=['numpy', 'scipy', 'imageio', 'click', 'matplotlib', 'ruamel.yaml']
 )
