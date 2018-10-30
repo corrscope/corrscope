@@ -10,5 +10,5 @@ setup(
     author_email='',
     description='',
     tests_require=['pytest', 'pytest-pycharm', 'hypothesis'],
-    install_requires=['numpy', 'scipy', 'imageio', 'click', 'matplotlib', 'ruamel.yaml']
+    install_requires=['numpy', 'scipy', 'click', 'matplotlib', 'ruamel.yaml']
 )
