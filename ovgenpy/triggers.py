@@ -96,6 +96,7 @@ class PerFrameCache:
     # NOTE: period is a *non-subsampled* period.
     # The period of subsampled data must be multiplied by subsampling factor.
     period: Optional[int] = None
+    mean: Optional[float] = None
 
 
 # CorrelationTrigger
@@ -229,6 +230,8 @@ class CorrelationTrigger(Trigger):
         # Get data
         subsampling = self._subsampling
         data = self._wave.get_around(index, N, subsampling)
+        cache.mean = np.mean(data)
+        data -= cache.mean
 
         # Window data
         period = get_period(data)
@@ -282,7 +285,7 @@ class CorrelationTrigger(Trigger):
 
         # Update correlation buffer (distinct from visible area)
         aligned = self._wave.get_around(trigger, self._buffer_nsamp, subsampling)
-        self._update_buffer(aligned, period)
+        self._update_buffer(aligned, cache)
 
         if self.post:
             return self.post.get_trigger(trigger, cache)
@@ -306,7 +309,7 @@ class CorrelationTrigger(Trigger):
                 return False
             return True
 
-    def _update_buffer(self, data: np.ndarray, wave_period: int) -> None:
+    def _update_buffer(self, data: np.ndarray, cache: PerFrameCache) -> None:
         """
         Update self._buffer by adding `data` and a step function.
         Data is reshaped to taper away from the center.
@@ -322,8 +325,9 @@ class CorrelationTrigger(Trigger):
                              f'CorrelationTrigger {self._buffer_nsamp}')
 
         # New waveform
+        data -= cache.mean
         normalize_buffer(data)
-        window = windows.gaussian(N, std = wave_period * buffer_falloff)
+        window = windows.gaussian(N, std = cache.period * buffer_falloff)
         data *= window
 
         # Old buffer
@@ -442,6 +446,7 @@ class LocalPostTrigger(PostTrigger):
 
         # Get data
         data = self._wave.get_around(index, N, self._subsampling)
+        data -= cache.mean
         normalize_buffer(data)
         data *= self._data_window
 
