@@ -9,7 +9,8 @@ from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
 from ovgenpy.config import register_config, register_enum, Ignored
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
-from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, Trigger
+from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache, \
+    LocalPostTriggerConfig
 from ovgenpy.util import pushd, coalesce
 from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field
@@ -38,17 +39,18 @@ class Config:
     begin_time: float = 0
     end_time: float = None
 
-    subsampling: int = 1
-
     width_ms: int
+    subsampling: int = 1
     trigger_width: int = 1
     render_width: int = 1
+
+    amplification: float
+
     trigger: ITriggerConfig  # Can be overriden per Wave
 
     # Can override trigger_width, render_width, trigger
     channels: List[ChannelConfig] = field(default_factory=list)
 
-    amplification: float
     layout: LayoutConfig
     render: RendererConfig
 
@@ -81,14 +83,21 @@ def default_config(**kwargs):
     cfg = Config(
         master_audio='',
         fps=_FPS,
+        amplification=1,
 
-        width_ms=25,
-        trigger=CorrelationTriggerConfig(),
+        width_ms=40,
+        subsampling=2,
+        trigger=CorrelationTriggerConfig(
+            edge_strength=2,
+            responsiveness=0.5,
+            use_edge_trigger=False,
+            # Removed due to speed hit.
+            # post=LocalPostTriggerConfig(strength=0.1),
+        ),
         channels=[],
 
-        amplification=1,
-        layout=LayoutConfig(ncols=1),
-        render=RendererConfig(1280, 720),
+        layout=LayoutConfig(ncols=2),
+        render=RendererConfig(800, 480),
 
         outputs=[
             outputs.FFplayOutputConfig(),
@@ -203,7 +212,8 @@ class Ovgen:
                     sample = round(wave.smp_s * time_seconds)
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
-                        trigger_sample = channel.trigger.get_trigger(sample)
+                        cache = PerFrameCache()
+                        trigger_sample = channel.trigger.get_trigger(sample, cache)
                     else:
                         trigger_sample = sample
 

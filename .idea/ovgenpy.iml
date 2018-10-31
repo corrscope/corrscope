@@ -2,6 +2,7 @@
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/.hypothesis" />
       <excludeFolder url="file://$MODULE_DIR$/.ipynb_checkpoints" />
       <excludeFolder url="file://$MODULE_DIR$/.pytest_cache" />
       <excludeFolder url="file://$MODULE_DIR$/ovgenpy.egg-info" />
@@ -13,7 +14,7 @@
     <option name="requirementsPath" value="" />
   </component>
   <component name="TestRunnerService">
-    <option name="projectConfiguration" value="py.test" />
+    <option name="projectConfiguration" value="pytest" />
     <option name="PROJECT_TEST_RUNNER" value="py.test" />
   </component>
 </module>
