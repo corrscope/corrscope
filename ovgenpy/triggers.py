@@ -327,7 +327,8 @@ class CorrelationTrigger(Trigger):
         # New waveform
         data -= cache.mean
         normalize_buffer(data)
-        window = windows.gaussian(N, std = cache.period * buffer_falloff)
+        window = windows.gaussian(N, std =
+            (cache.period / self._subsampling) * buffer_falloff)
         data *= window
 
         # Old buffer
