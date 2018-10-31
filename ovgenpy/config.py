@@ -152,7 +152,8 @@ class _EnumMixin:
 
 # Miscellaneous
 
-class OvgenError(Exception):
+class OvgenError(ValueError):
+    """ Error caused by invalid end-user input (via CLI or YAML config). """
     pass
 
 

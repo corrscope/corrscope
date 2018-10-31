@@ -182,9 +182,9 @@ class MatplotlibRenderer:
 
 @register_config(always_dump='orientation')
 class LayoutConfig:
+    orientation: str = 'h'
     nrows: Optional[int] = None
     ncols: Optional[int] = None
-    orientation: str = 'h'
 
     def __post_init__(self):
         if not self.nrows:

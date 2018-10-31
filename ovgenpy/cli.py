@@ -96,7 +96,7 @@ def main(
             if len(files) > 1:
                 # Warning is technically optional, since wav_prefix has been removed.
                 raise click.ClickException(
-                    f'When supplying folder {path}, you cannot supply other files/folders')
+                    f'Cannot supply multiple arguments when providing folder {path}')
             matches = sorted(path.glob('*.wav'))
             wav_list += matches
             break
@@ -105,7 +105,7 @@ def main(
             # Load a YAML file to cfg, and skip default_config().
             if len(files) > 1:
                 raise click.ClickException(
-                    f'When supplying config {path}, you cannot supply other files/folders')
+                    f'Cannot supply multiple arguments when providing config {path}')
             cfg = yaml.load(path)
             cfg_dir = path.parent
             break
