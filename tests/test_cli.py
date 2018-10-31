@@ -11,6 +11,7 @@ import ovgenpy.channel
 from ovgenpy import cli
 from ovgenpy.cli import YAML_NAME
 from ovgenpy.config import yaml
+from ovgenpy.outputs import FFmpegOutputConfig
 from ovgenpy.ovgenpy import Config, Ovgen
 from ovgenpy.util import pushd
 
@@ -117,16 +118,20 @@ def test_load_yaml_another_dir(yaml_sink, mocker, Popen):
 
     subdir = 'tests'
     wav = 'sine440.wav'
-    mp4 = 'foo.mp4'
+    mp4 = 'sine440.mp4'
     with pushd(subdir):
-        arg_str = f'{wav} -a {wav} -o {mp4}'
+        arg_str = f'{wav} -a {wav}'
         cfg, outpath = yaml_sink(arg_str)   # type: Config, Path
 
     cfg.begin_time = 100    # To skip all actual rendering
 
     # Log execution of Ovgen().play()
     Wave = mocker.spy(ovgenpy.channel, 'Wave')
-    ovgen = Ovgen(cfg, subdir)
+
+    # Issue: this test does not use cli.main() to compute output path.
+    # Possible solution: Call cli.main() via Click runner.
+    output = FFmpegOutputConfig(cli.get_path(cfg.master_audio, cli.VIDEO_NAME))
+    ovgen = Ovgen(cfg, subdir, [output])
     ovgen.play()
 
     # Compute absolute paths

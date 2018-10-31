@@ -6,7 +6,7 @@ import click
 
 from ovgenpy.channel import ChannelConfig
 from ovgenpy.config import OvgenError, yaml
-from ovgenpy.outputs import FFmpegOutputConfig, FFplayOutputConfig
+from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from ovgenpy.ovgenpy import default_config, Config, Ovgen
 
 
@@ -31,7 +31,21 @@ OutFile = click.Path(dir_okay=False)
 YAML_EXTS = ['.yaml']
 # Default extension when writing Config.
 YAML_NAME = YAML_EXTS[0]
-DEFAULT_CONFIG_PATH = Path('ovgenpy').with_suffix(YAML_NAME)
+
+# Default output extension
+VIDEO_NAME = '.mp4'
+
+
+def get_path(audio_file: Optional[str], ext: str) -> Path:
+    # Write file to current working dir, not audio dir.
+    if audio_file:
+        name = Path(audio_file).name
+    else:
+        name = 'ovgenpy'
+
+    # Add extension
+    return Path(name).with_suffix(ext)
+
 
 PROFILE_DUMP_NAME = 'cprofile'
 
@@ -43,13 +57,13 @@ PROFILE_DUMP_NAME = 'cprofile'
 # Incorrect [option] name order: https://github.com/pallets/click/issues/793
 @click.option('--audio', '-a', type=File, help=
         'Config: Input path for master audio file')
-@click.option('--video-output', '-o', type=OutFile, help=
-        'Config: Output video path')
 # Disables GUI
 @click.option('--write', '-w', is_flag=True, help=
         "Write config YAML file to current directory (don't open GUI).")
 @click.option('--play', '-p', is_flag=True, help=
-        "Preview or render (don't open GUI).")
+        "Preview (don't open GUI).")
+@click.option('--render', '-r', is_flag=True, help=
+        "Render and encode MP4 video (don't open GUI).")
 # Debugging
 @click.option('--profile', is_flag=True, help=
         'Debug: Write CProfiler snapshot')
@@ -57,10 +71,10 @@ def main(
         files: Tuple[str],
         # cfg
         audio: Optional[str],
-        video_output: Optional[str],
         # gui
         write: bool,
         play: bool,
+        render: bool,
         profile: bool,
 ):
     """Intelligent oscilloscope visualizer for .wav files.
@@ -82,11 +96,12 @@ def main(
     # - You can specify as many wildcards or wav files as you want.
     # - You can only supply one folder, with no files/wildcards.
 
-    show_gui = (not write and not play)
+    show_gui = not any([write, play, render])
 
     # Create cfg: Config object.
     cfg: Config = None
-    cfg_dir: str = None
+    cfg_path: Path = None
+    cfg_dir: str = None  # Changing to Path will take a lot of refactoring.
 
     wav_list: List[Path] = []
     for name in files:
@@ -107,7 +122,8 @@ def main(
                 raise click.ClickException(
                     f'Cannot supply multiple arguments when providing config {path}')
             cfg = yaml.load(path)
-            cfg_dir = path.parent
+            cfg_path = path
+            cfg_dir = str(path.parent)
             break
 
         else:
@@ -122,13 +138,7 @@ def main(
 
     if not cfg:
         wav_list = [str(wav_path) for wav_path in wav_list]
-
         channels = [ChannelConfig(wav_path) for wav_path in wav_list]
-
-        if video_output:
-            outputs = [FFmpegOutputConfig(video_output)]
-        else:
-            outputs = [FFplayOutputConfig()]
 
         cfg = default_config(
             master_audio=audio,
@@ -136,7 +146,6 @@ def main(
             channels=channels,
             # width_ms...trigger=default,
             # amplification...render=default,
-            outputs=outputs
         )
         cfg_dir = '.'
 
@@ -146,17 +155,19 @@ def main(
         if not files:
             raise click.ClickException('Must specify files or folders to play')
         if write:
-            if audio:
-                # Write file to current working dir, not audio dir.
-                audio_name = Path(audio).name
-                # Add .yaml extension
-                write_path = Path(audio_name).with_suffix(YAML_NAME)
-            else:
-                write_path = DEFAULT_CONFIG_PATH
-
+            write_path = get_path(audio, YAML_NAME)
             yaml.dump(cfg, write_path)
 
+        outputs = []  # type: List[IOutputConfig]
+
         if play:
+            outputs.append(FFplayOutputConfig())
+
+        if render:
+            video_path = get_path(cfg_path or audio, VIDEO_NAME)
+            outputs.append(FFmpegOutputConfig(video_path))
+
+        if outputs:
             if profile:
                 import cProfile
 
@@ -174,4 +185,4 @@ def main(
                 cProfile.runctx('Ovgen(cfg).play()', globals(), locals(), path)
 
             else:
-                Ovgen(cfg, cfg_dir).play()
+                Ovgen(cfg, cfg_dir, outputs).play()
