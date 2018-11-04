@@ -1,11 +1,12 @@
-from typing import Optional, List, TYPE_CHECKING, TypeVar, Callable, Any
+from typing import Optional, List, TYPE_CHECKING, Any
 
 import matplotlib
 import numpy as np
 
 from ovgenpy.config import register_config
+from ovgenpy.layout import RendererLayout
 from ovgenpy.outputs import RGB_DEPTH
-from ovgenpy.util import ceildiv, coalesce
+from ovgenpy.util import coalesce
 
 matplotlib.use('agg')
 from matplotlib import pyplot as plt
@@ -180,82 +181,3 @@ class MatplotlibRenderer:
         return buffer_rgb
 
 
-@register_config(always_dump='orientation')
-class LayoutConfig:
-    orientation: str = 'h'
-    nrows: Optional[int] = None
-    ncols: Optional[int] = None
-
-    def __post_init__(self):
-        if not self.nrows:
-            self.nrows = None
-        if not self.ncols:
-            self.ncols = None
-
-        if self.nrows and self.ncols:
-            raise ValueError('cannot manually assign both nrows and ncols')
-
-        if not self.nrows and not self.ncols:
-            self.ncols = 1
-
-
-Region = TypeVar('Region')
-RegionFactory = Callable[[int, int], Region]   # f(row, column) -> Region
-
-
-class RendererLayout:
-    VALID_ORIENTATIONS = ['h', 'v']
-
-    def __init__(self, cfg: LayoutConfig, nplots: int):
-        self.cfg = cfg
-        self.nplots = nplots
-
-        # Setup layout
-        self.nrows, self.ncols = self._calc_layout()
-
-        self.orientation = cfg.orientation
-        if self.orientation not in self.VALID_ORIENTATIONS:
-            raise ValueError(f'Invalid orientation {self.orientation} not in '
-                             f'{self.VALID_ORIENTATIONS}')
-
-    def _calc_layout(self):
-        """
-        Inputs: self.cfg, self.waves
-        :return: (nrows, ncols)
-        """
-        cfg = self.cfg
-
-        if cfg.nrows:
-            nrows = cfg.nrows
-            if nrows is None:
-                raise ValueError('invalid cfg: rows_first is True and nrows is None')
-            ncols = ceildiv(self.nplots, nrows)
-        else:
-            ncols = cfg.ncols
-            if ncols is None:
-                raise ValueError('invalid cfg: rows_first is False and ncols is None')
-            nrows = ceildiv(self.nplots, ncols)
-
-        return nrows, ncols
-
-    def arrange(self, region_factory: RegionFactory) -> List[Region]:
-        """ Generates an array of regions.
-
-        index, row, column are fed into region_factory in a row-major order [row][col].
-        The results are possibly reshaped into column-major order [col][row].
-        """
-        nspaces = self.nrows * self.ncols
-        inds = np.arange(nspaces)
-        rows, cols = np.unravel_index(inds, (self.nrows, self.ncols))
-
-        row_col = list(zip(rows, cols))
-        regions = np.empty(len(row_col), dtype=object)          # type: np.ndarray[Region]
-        regions[:] = [region_factory(*rc) for rc in row_col]
-
-        regions2d = regions.reshape((self.nrows, self.ncols))   # type: np.ndarray[Region]
-
-        # if column major:
-        if self.orientation == 'v':
-            regions2d = regions2d.T
-
-        return regions2d.flatten()[:self.nplots].tolist()

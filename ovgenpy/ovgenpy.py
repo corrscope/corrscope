@@ -8,7 +8,8 @@ from typing import Optional, List, Union, TYPE_CHECKING
 from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
 from ovgenpy.config import register_config, register_enum, Ignored
-from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
+from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
+from ovgenpy.layout import LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache, \
     LocalPostTriggerConfig
 from ovgenpy.util import pushd, coalesce
