@@ -1,10 +1,11 @@
+from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING, Any
 
 import matplotlib
 import numpy as np
 
 from ovgenpy.config import register_config
-from ovgenpy.layout import RendererLayout
+from ovgenpy.layout import RendererLayout, LayoutConfig
 from ovgenpy.outputs import RGB_DEPTH
 from ovgenpy.util import coalesce
 
@@ -39,7 +40,23 @@ class RendererConfig:
     create_window: bool = False
 
 
-class MatplotlibRenderer:
+class Renderer(ABC):
+    def __init__(self, cfg: RendererConfig, lcfg: 'LayoutConfig', nplots: int):
+        self.cfg = cfg
+        self.nplots = nplots
+        self.layout = RendererLayout(lcfg, nplots)
+
+    @abstractmethod
+    def set_colors(self, channel_cfgs: List['ChannelConfig']) -> None: ...
+
+    @abstractmethod
+    def render_frame(self, datas: List[np.ndarray]) -> None: ...
+
+    @abstractmethod
+    def get_frame(self) -> bytes: ...
+
+
+class MatplotlibRenderer(Renderer):
     """
     Renderer backend which takes data and produces images.
     Does not touch Wave or Channel.
@@ -62,17 +79,15 @@ class MatplotlibRenderer:
 
     DPI = 96
 
-    def __init__(self, cfg: RendererConfig, lcfg: 'LayoutConfig', nplots: int):
-        self.cfg = cfg
-        self.nplots = nplots
-        self.layout = RendererLayout(lcfg, nplots)
+    def __init__(self, *args, **kwargs):
+        Renderer.__init__(self, *args, **kwargs)
 
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
         self._fig: 'Figure' = None
         self._axes: List['Axes'] = None        # set by set_layout()
         self._lines: List['Line2D'] = None     # set by render_frame() first call
 
-        self._line_colors: List = [None] * nplots
+        self._line_colors: List = [None] * self.nplots
 
         self._set_layout()   # mutates self
 
@@ -179,5 +194,4 @@ class MatplotlibRenderer:
         assert len(buffer_rgb) == w * h * RGB_DEPTH
 
         return buffer_rgb
-
 
