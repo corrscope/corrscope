@@ -248,8 +248,10 @@ class RendererLayout:
         inds = np.arange(nspaces)
         rows, cols = np.unravel_index(inds, (self.nrows, self.ncols))
 
-        row_col = np.array([rows, cols]).T
-        regions = np.array([region_factory(*rc) for rc in row_col])  # type: np.ndarray[Region]
+        row_col = list(zip(rows, cols))
+        regions = np.empty(len(row_col), dtype=object)          # type: np.ndarray[Region]
+        regions[:] = [region_factory(*rc) for rc in row_col]
+
         regions2d = regions.reshape((self.nrows, self.ncols))   # type: np.ndarray[Region]
 
         # if column major:
