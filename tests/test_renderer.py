@@ -32,13 +32,13 @@ def test_default_colors(bg_str, fg_str):
     lcfg = LayoutConfig()
     nplots = 1
 
-    r = MatplotlibRenderer(cfg, lcfg, nplots)
+    r = MatplotlibRenderer(cfg, lcfg, nplots, None)
     verify(r, bg_str, fg_str)
 
     # Ensure default ChannelConfig(line_color=None) does not override line color
-    r = MatplotlibRenderer(cfg, lcfg, nplots)
     chan = ChannelConfig(wav_path='')
-    r.set_colors([chan] * nplots)
+    channels = [chan] * nplots
+    r = MatplotlibRenderer(cfg, lcfg, nplots, channels)
     verify(r, bg_str, fg_str)
 
 
@@ -54,9 +54,9 @@ def test_line_colors(bg_str, fg_str):
     lcfg = LayoutConfig()
     nplots = 1
 
-    r = MatplotlibRenderer(cfg, lcfg, nplots)
     chan = ChannelConfig(wav_path='', line_color=fg_str)
-    r.set_colors([chan] * nplots)
+    channels = [chan] * nplots
+    r = MatplotlibRenderer(cfg, lcfg, nplots, channels)
     verify(r, bg_str, fg_str)
 
 
