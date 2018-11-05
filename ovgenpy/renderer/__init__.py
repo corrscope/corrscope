@@ -7,6 +7,7 @@ import numpy as np
 from ovgenpy.config import register_config
 from ovgenpy.layout import RendererLayout, LayoutConfig
 from ovgenpy.outputs import RGB_DEPTH
+from ovgenpy.renderer.vispy_canvas import MyCanvas
 from ovgenpy.util import coalesce
 
 matplotlib.use('agg')
@@ -18,6 +19,9 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
     from matplotlib.lines import Line2D
     from ovgenpy.channel import ChannelConfig
+
+
+DPI = 96
 
 
 def default_color():
@@ -84,9 +88,6 @@ class MatplotlibRenderer(Renderer):
     - changing scan_nsamp (cannot be hotswapped, since correlation buffer is incompatible)
     So don't.
     """
-
-    DPI = 96
-
     def __init__(self, *args, **kwargs):
         Renderer.__init__(self, *args, **kwargs)
 
@@ -128,10 +129,10 @@ class MatplotlibRenderer(Renderer):
         self._axes = self.layout.arrange(lambda row, col: axes2d[row, col])
 
         # Setup figure geometry
-        self._fig.set_dpi(self.DPI)
+        self._fig.set_dpi(DPI)
         self._fig.set_size_inches(
-            self.cfg.width / self.DPI,
-            self.cfg.height / self.DPI
+            self.cfg.width / DPI,
+            self.cfg.height / DPI
         )
         if self.cfg.create_window:
             plt.show(block=False)
@@ -189,3 +190,24 @@ class MatplotlibRenderer(Renderer):
 
         return buffer_rgb
 
+
+class VispyRenderer(Renderer):
+    def __init__(self, *args, **kwargs):
+        Renderer.__init__(self, *args, **kwargs)
+
+        self._line_colors: List = [None] * self.nplots
+        self.canvas = MyCanvas((self.cfg.width, self.cfg.height))
+
+    def set_colors(self, channel_cfgs: List['ChannelConfig']) -> None:
+        if len(channel_cfgs) != self.nplots:
+            raise ValueError(
+                f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
+            )
+
+        self._line_colors = [cfg.line_color for cfg in channel_cfgs]
+
+    def render_frame(self, datas: List[np.ndarray]) -> None:
+        pass
+
+    def get_frame(self) -> bytes:
+        pass
