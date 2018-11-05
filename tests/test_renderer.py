@@ -72,7 +72,8 @@ def verify(r: MatplotlibRenderer, bg_str, fg_str):
     assert (frame_colors[0] == bg_u8).all()
 
     # Ensure foreground is present
-    assert np.prod(frame_colors == fg_u8, axis=-1).any()
+    assert np.prod(frame_colors == fg_u8, axis=-1).any(), \
+        'incorrect foreground, it might be 136 = #888888'
 
     assert (np.amax(frame_colors, axis=0) == np.maximum(bg_u8, fg_u8)).all()
     assert (np.amin(frame_colors, axis=0) == np.minimum(bg_u8, fg_u8)).all()
