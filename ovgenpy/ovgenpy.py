@@ -140,8 +140,8 @@ class Ovgen:
                 yield
 
     def _load_renderer(self):
-        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan)
-        renderer.set_colors(self.cfg.channels)
+        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan,
+                                      self.cfg.channels)
         return renderer
 
     def play(self):

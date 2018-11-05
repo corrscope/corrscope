@@ -70,7 +70,7 @@ def test_renderer_layout():
     lcfg = LayoutConfig(ncols=2)
     nplots = 15
 
-    r = MatplotlibRenderer(cfg, lcfg, nplots)
+    r = MatplotlibRenderer(cfg, lcfg, nplots, None)
 
     # 2 columns, 8 rows
     assert r.layout.ncols == 2

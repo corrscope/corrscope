@@ -41,13 +41,21 @@ class RendererConfig:
 
 
 class Renderer(ABC):
-    def __init__(self, cfg: RendererConfig, lcfg: 'LayoutConfig', nplots: int):
+    def __init__(self, cfg: RendererConfig, lcfg: 'LayoutConfig', nplots: int,
+                 channel_cfgs: Optional[List['ChannelConfig']]):
         self.cfg = cfg
         self.nplots = nplots
         self.layout = RendererLayout(lcfg, nplots)
 
-    @abstractmethod
-    def set_colors(self, channel_cfgs: List['ChannelConfig']) -> None: ...
+        # Load line colors.
+        if channel_cfgs is not None:
+            if len(channel_cfgs) != self.nplots:
+                raise ValueError(
+                    f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
+                )
+            self._line_colors = [cfg.line_color for cfg in channel_cfgs]
+        else:
+            self._line_colors = [None] * self.nplots
 
     @abstractmethod
     def render_frame(self, datas: List[np.ndarray]) -> None: ...
@@ -86,8 +94,6 @@ class MatplotlibRenderer(Renderer):
         self._fig: 'Figure' = None
         self._axes: List['Axes'] = None        # set by set_layout()
         self._lines: List['Line2D'] = None     # set by render_frame() first call
-
-        self._line_colors: List = [None] * self.nplots
 
         self._set_layout()   # mutates self
 
@@ -129,18 +135,6 @@ class MatplotlibRenderer(Renderer):
         )
         if self.cfg.create_window:
             plt.show(block=False)
-
-    def set_colors(self, channel_cfgs: List['ChannelConfig']):
-        if len(channel_cfgs) != self.nplots:
-            raise ValueError(
-                f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
-            )
-
-        if self._lines is not None:
-            raise ValueError(
-                f'cannot set line colors after calling render_frame()'
-            )
-        self._line_colors = [cfg.line_color for cfg in channel_cfgs]
 
     def render_frame(self, datas: List[np.ndarray]) -> None:
         ndata = len(datas)
