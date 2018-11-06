@@ -176,9 +176,6 @@ class CorrelationTrigger(Trigger):
         self._prev_period = None
         self._prev_window = None
 
-        # For debug output (FIXME remove, we always save window)
-        self.save_window = False
-
     def _calc_step(self):
         """ Step function used for approximate edge triggering. """
         edge_strength = self.cfg.edge_strength
