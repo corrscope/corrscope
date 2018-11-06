@@ -180,8 +180,6 @@ class Ovgen:
 
         extra_outputs.window = None
         if 'window' in internals:
-            for trigger in self.triggers:   # type: CorrelationTrigger
-                trigger.save_window = True
             extra_outputs.window = RenderOutput()
 
         extra_outputs.buffer = None
