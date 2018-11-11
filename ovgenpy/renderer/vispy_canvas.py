@@ -28,6 +28,9 @@ class CanvasParam:
 
 # TODO move into .renderer
 class MyCanvas(app.Canvas):
+    """ Canvas which draws a grid of lines.
+    Modify `lines_ys` to change plotted data.
+    """
 
     # self._fig, axes2d = plt.subplots(self.layout.nrows, self.layout.ncols...)
     def __init__(self, cfg: 'CanvasParam'):
@@ -43,13 +46,14 @@ class MyCanvas(app.Canvas):
         # FBO.
         self.fbo = gloo.FrameBuffer(self.rendertex, gloo.RenderBuffer(self.size))
 
+    # lines_ys[chan] = lines_coords[chan][1]
+    # Modify `lines_ys` to change plotted data.
+    lines_ys: List[np.ndarray] = None
+
     # lines_coords[chan] is a 2D ndarray.
     # lines_coords[chan][0] = xs, precomputed in create_lines()
     # lines_coords[chan][1] = ys, updated once per frame.
-    lines_coords: List[np.ndarray]
-
-    # lines_ys[chan] = lines_coords[chan][1]
-    lines_ys: List[np.ndarray]
+    _lines_coords: List[np.ndarray]
 
     # Vispy line objects.
     _lines: List[visuals.LineVisual]
@@ -57,7 +61,7 @@ class MyCanvas(app.Canvas):
     visuals: list
 
     def create_lines(self, lines_nsamp: List[int], layout: RendererLayout):
-        self.lines_coords = []
+        self._lines_coords = []
         self.lines_ys = []
         self._lines = []
 
@@ -67,7 +71,7 @@ class MyCanvas(app.Canvas):
         for i, nsamp in enumerate(lines_nsamp):
             # Create line coordinates (x, y).
             line_coords = np.empty((nsamp, 2))
-            self.lines_coords.append(line_coords)
+            self._lines_coords.append(line_coords)
 
             # xs ranges from 0..1 inclusive.
             line_coords[:, 0] = np.linspace(0, 1, nsamp)
