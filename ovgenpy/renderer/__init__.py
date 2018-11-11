@@ -207,6 +207,7 @@ class VispyRenderer(Renderer):
             self.canvas.create_lines([len(data) for data in datas], self.layout)
 
         self.canvas.set_ys(datas)
+        self.canvas.events.draw()
 
     # override
     def get_frame(self) -> bytes:
