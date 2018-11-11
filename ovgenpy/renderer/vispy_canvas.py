@@ -88,7 +88,7 @@ class MyCanvas(app.Canvas):
             line_coords[:, 0] = np.linspace(0, 1, nsamp)
 
             # ys ranges from -1..1 inclusive.
-            line_coords[:, 1] = 0
+            line_coords[:, 1] = np.random.random(nsamp)*2-1
             self._lines_ys.append(line_coords[:, 1])
 
             # Create line and transform to correct position.
@@ -97,7 +97,8 @@ class MyCanvas(app.Canvas):
             self._lines.append(line)
 
             # redraw the canvas if any visuals request an update
-            # TODO unneeded??? line.events.update.connect(lambda evt: self.update())
+            # TODO unneeded???
+            line.events.update.connect(lambda evt: self.update())
 
         self._visuals = self._lines
         self.on_resize(None)
@@ -113,7 +114,7 @@ class MyCanvas(app.Canvas):
         """ Called by canvas.events.draw(). """
         with self._fbo:
             # TODO why is `set_viewport` redundant with `on_resize` above?
-            gloo.set_viewport(0, 0, *self.size)
+            # gloo.set_viewport(0, 0, *self.size)
             gloo.clear('black')
             for visual in self._visuals:
                 visual.draw()
