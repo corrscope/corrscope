@@ -200,7 +200,10 @@ class VispyRenderer(Renderer):
 
     # override
     def render_frame(self, datas: List[np.ndarray]) -> None:
-        pass
+        if not self.canvas._lines_ys:
+            self.canvas.create_lines([len(data) for data in datas], self.layout)
+
+        self.canvas.set_ys(datas)
 
     # override
     def get_frame(self) -> bytes:

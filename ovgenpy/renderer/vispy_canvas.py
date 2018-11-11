@@ -47,8 +47,13 @@ class MyCanvas(app.Canvas):
         self._fbo = gloo.FrameBuffer(self._rendertex, gloo.RenderBuffer(self.size))
 
     # lines_ys[chan] = lines_coords[chan][1]
-    # Modify `lines_ys` to change plotted data.
-    lines_ys: List[np.ndarray] = None
+    _lines_ys: List[np.ndarray] = None
+
+    def set_ys(self, lines_ys: List[np.ndarray]):
+        """ Assigns a list of ydata. """
+        for i, ys in enumerate(lines_ys):
+            self._lines_ys[i] = lines_ys
+        self.update()   # TODO ????
 
     # lines_coords[chan] is a 2D ndarray.
     # lines_coords[chan][0] = xs, precomputed in create_lines()
@@ -62,7 +67,7 @@ class MyCanvas(app.Canvas):
 
     def create_lines(self, lines_nsamp: List[int], layout: RendererLayout):
         self._lines_coords = []
-        self.lines_ys = []
+        self._lines_ys = []
         self._lines = []
 
         # 1D list of Vispy transforms, satisfying layout.
@@ -78,7 +83,7 @@ class MyCanvas(app.Canvas):
 
             # ys ranges from -1..1 inclusive.
             line_coords[:, 1] = 0
-            self.lines_ys.append(line_coords[:, 1])
+            self._lines_ys.append(line_coords[:, 1])
 
             # Create line and transform to correct position.
             line = visuals.LineVisual(pos=line_coords)  # TODO color, width
@@ -86,7 +91,7 @@ class MyCanvas(app.Canvas):
             self._lines.append(line)
 
             # redraw the canvas if any visuals request an update
-            line.events.update.connect(lambda evt: self.update())
+            # TODO unneeded??? line.events.update.connect(lambda evt: self.update())
 
         self._visuals = self._lines
         self.on_resize(None)
