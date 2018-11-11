@@ -8,7 +8,7 @@ from typing import Optional, List, Union, TYPE_CHECKING
 from ovgenpy import outputs
 from ovgenpy.channel import Channel, ChannelConfig
 from ovgenpy.config import register_config, register_enum, Ignored
-from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
+from ovgenpy.renderer import VispyRenderer, RendererConfig
 from ovgenpy.layout import LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache, \
     LocalPostTriggerConfig
@@ -140,8 +140,12 @@ class Ovgen:
                 yield
 
     def _load_renderer(self):
-        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan,
-                                      self.cfg.channels)
+        renderer = VispyRenderer(
+            self.cfg.render,
+            self.cfg.layout,
+            self.nchan,
+            self.cfg.channels
+        )
         return renderer
 
     def play(self):
