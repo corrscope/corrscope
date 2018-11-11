@@ -122,8 +122,13 @@ class PipeOutput(Output):
         return retval   # final value
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-        if exc_type is not None:
+        if exc_type is None:
+            self.close()
+        else:
+            # Calling self.close() is bad.
+            # If exception occurred but ffplay continues running.
+            # popen.wait() will prevent stack trace from showing up.
+
             e = None
             for popen in self._pipeline:
                 popen.terminate()
