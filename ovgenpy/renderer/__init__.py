@@ -207,4 +207,5 @@ class VispyRenderer(Renderer):
 
     # override
     def get_frame(self) -> bytes:
-        pass
+        data: np.ndarray = self.canvas.im
+        return data.tobytes()

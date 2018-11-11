@@ -111,7 +111,7 @@ class MyCanvas(app.Canvas):
             gloo.clear('black')
             for visual in self._visuals:
                 visual.draw()
-            self.im = _screenshot((0, 0, self.size[0], self.size[1]))
+            self.im = _screenshot((0, 0, self.size[0], self.size[1]), alpha=False)
 
 
 def transform_grid(cfg: 'CanvasParam', layout: 'RendererLayout') -> List[STTransform]:
