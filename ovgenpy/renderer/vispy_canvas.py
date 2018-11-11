@@ -15,12 +15,13 @@ RGBA_DEPTH = 4
 
 
 @dataclass
-class CanvasConfig:
+class CanvasParam:
+    """ Unlike other config classes, this is internal and not saved to YAML. """
     width: int
     height: int
 
-    nrows: int
-    ncols: int
+    # nrows: int
+    # ncols: int
 
     # TODO colors
 
@@ -29,7 +30,7 @@ class CanvasConfig:
 class MyCanvas(app.Canvas):
 
     # self._fig, axes2d = plt.subplots(self.layout.nrows, self.layout.ncols...)
-    def __init__(self, cfg: 'CanvasConfig'):
+    def __init__(self, cfg: 'CanvasParam'):
         self.cfg = cfg
 
         # (800, 600) is landscape.
@@ -55,12 +56,13 @@ class MyCanvas(app.Canvas):
     # All draw()able Vispy elements.
     visuals: list
 
-    def create_lines(self, lines_nsamp: List[int]):
+    def create_lines(self, lines_nsamp: List[int], layout: RendererLayout):
         self.lines_coords = []
         self.lines_ys = []
         self._lines = []
 
-        # A bit confusing, be sure to check for bugs.
+        # 1D list of Vispy transforms, satisfying layout.
+        transforms = transform_grid(self.cfg, layout)
 
         for i, nsamp in enumerate(lines_nsamp):
             # Create line coordinates (x, y).
@@ -74,21 +76,14 @@ class MyCanvas(app.Canvas):
             line_coords[:, 1] = 0
             self.lines_ys.append(line_coords[:, 1])
 
-            # Create line.
+            # Create line and transform to correct position.
             line = visuals.LineVisual(pos=line_coords)  # TODO color, width
+            line.transform = transforms[i]
             self._lines.append(line)
-
-            # Compute proper grid coordinate.
-            x = ...
-            y = ...
-
-            line.transform = STTransform(translate=[x, y])
 
             # redraw the canvas if any visuals request an update
             line.events.update.connect(lambda evt: self.update())
 
-
-        # All drawable elements.
         self.visuals = self._lines
         self.on_resize(None)
 
@@ -110,9 +105,9 @@ class MyCanvas(app.Canvas):
             self.im = _screenshot((0, 0, self.size[0], self.size[1]))
 
 
-def grid(cfg: 'CanvasConfig') -> List[STTransform]:
+def transform_grid(cfg: 'CanvasParam', layout: 'RendererLayout') -> List[STTransform]:
     """
-    Generates a row-major grid of transformations.
+    Returns a 1D list of Vispy transforms, satisfying the layout given.
     Compare with Matplotlib Figure.subplots().
 
     vispy coords:
@@ -120,7 +115,9 @@ def grid(cfg: 'CanvasConfig') -> List[STTransform]:
     coord = (x, y) = (right, down)
     TODO
     """
-    transforms = []
+
+    # below[row,col] = transform
+    transforms = np.empty((layout.nrows, layout.ncols), object)  # type: np.ndarray[STTransform]
 
     xticks = fenceposts(cfg.width, cfg.ncols)
     widths = np.diff(xticks)
@@ -128,24 +125,26 @@ def grid(cfg: 'CanvasConfig') -> List[STTransform]:
     yticks = fenceposts(cfg.height, cfg.nrows)
     heights = np.diff(yticks)
 
-    # Matplotlib uses GridSpec to generate coordinates.
-    for yidx in range(cfg.nrows):
-        y = yticks[yidx]
-        height = heights[yidx]
+    for yrow in range(layout.nrows):
+        y = yticks[yrow]
+        height = heights[yrow]
         # ys: Rescale -1 to y+height-1, 1 to y(+1?)
         yscale = -(height//2 - 1)
         y += height//2
 
-        for xidx in range(cfg.ncols):
-            x = xticks[xidx]
-            width = widths[xidx]
+        for xcol in range(layout.ncols):
+            x = xticks[xcol]
+            width = widths[xcol]
             # xs: Rescale 0 to x, 1 to x+width-1.
             xscale = width
 
             tf = STTransform(scale=(xscale, yscale), translate=(x, y))
-            transforms.append(tf)
+            transforms[yrow, xcol] = tf
 
-    return transforms
+    # Now apply `layout`.
+    arrangement = layout.arrange(lambda row, col: transforms[row, col])
+    return arrangement
+
 
 def fenceposts(stop: int, n: int) -> 'np.ndarray[int]':
     """ Returns n+1 elements ranging from 0 to stop, inclusive. """
