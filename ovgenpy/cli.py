@@ -171,7 +171,7 @@ def main(
                         break
 
                 # noinspection PyUnboundLocalVariable
-                cProfile.runctx('Ovgen(cfg).play()', globals(), locals(), path)
+                cProfile.runctx('Ovgen(cfg, cfg_dir).play()', globals(), locals(), path)
 
             else:
                 Ovgen(cfg, cfg_dir).play()
