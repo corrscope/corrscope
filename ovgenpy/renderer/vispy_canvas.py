@@ -42,9 +42,9 @@ class MyCanvas(app.Canvas):
         app.Canvas.__init__(self, show=False, size=size)
 
         # Texture where we render the scene.
-        self.rendertex = gloo.Texture2D(shape=self.size + (RGBA_DEPTH,))
+        self._rendertex = gloo.Texture2D(shape=self.size + (RGBA_DEPTH,))
         # FBO.
-        self.fbo = gloo.FrameBuffer(self.rendertex, gloo.RenderBuffer(self.size))
+        self._fbo = gloo.FrameBuffer(self._rendertex, gloo.RenderBuffer(self.size))
 
     # lines_ys[chan] = lines_coords[chan][1]
     # Modify `lines_ys` to change plotted data.
@@ -58,7 +58,7 @@ class MyCanvas(app.Canvas):
     # Vispy line objects.
     _lines: List[visuals.LineVisual]
     # All draw()able Vispy elements.
-    visuals: list
+    _visuals: list
 
     def create_lines(self, lines_nsamp: List[int], layout: RendererLayout):
         self._lines_coords = []
@@ -88,23 +88,23 @@ class MyCanvas(app.Canvas):
             # redraw the canvas if any visuals request an update
             line.events.update.connect(lambda evt: self.update())
 
-        self.visuals = self._lines
+        self._visuals = self._lines
         self.on_resize(None)
 
     def on_resize(self, event):
         # Set canvas viewport and reconfigure visual transforms to match.
         vp = (0, 0, self.physical_size[0], self.physical_size[1])
         self.context.set_viewport(*vp)
-        for visual in self.visuals:
+        for visual in self._visuals:
             visual.transforms.configure(canvas=self, viewport=vp)
 
     def on_draw(self, event):
         """ Called by canvas.events.draw(). """
-        with self.fbo:
+        with self._fbo:
             # TODO why is `set_viewport` redundant with `on_resize` above?
             gloo.set_viewport(0, 0, *self.size)
             gloo.clear('black')
-            for visual in self.visuals:
+            for visual in self._visuals:
                 visual.draw()
             self.im = _screenshot((0, 0, self.size[0], self.size[1]))
 
