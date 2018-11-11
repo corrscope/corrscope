@@ -1,14 +1,14 @@
-from typing import Tuple, TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List
 
 import numpy as np
 from vispy import app, gloo, visuals
 from vispy.gloo.util import _screenshot
 from vispy.visuals.transforms import STTransform
 
+import ovgenpy.renderer
 from ovgenpy.utils.keyword_dataclasses import dataclass
 
 if TYPE_CHECKING:
-    from ovgenpy.renderer import RendererConfig
     from ovgenpy.layout import RendererLayout
 
 RGBA_DEPTH = 4
@@ -39,7 +39,7 @@ class MyCanvas(app.Canvas):
         # (800, 600) is landscape.
         # x,y = w,h
         size = (cfg.width, cfg.height)
-        app.Canvas.__init__(self, show=False, size=size)
+        app.Canvas.__init__(self, show=False, size=size, dpi=ovgenpy.renderer.DPI)
 
         # Texture where we render the scene.
         self._rendertex = gloo.Texture2D(shape=self.size + (RGBA_DEPTH,))
