@@ -198,16 +198,10 @@ class VispyRenderer(Renderer):
         self._line_colors: List = [None] * self.nplots
         self.canvas = MyCanvas((self.cfg.width, self.cfg.height))
 
-    def set_colors(self, channel_cfgs: List['ChannelConfig']) -> None:
-        if len(channel_cfgs) != self.nplots:
-            raise ValueError(
-                f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
-            )
-
-        self._line_colors = [cfg.line_color for cfg in channel_cfgs]
-
+    # override
     def render_frame(self, datas: List[np.ndarray]) -> None:
         pass
 
+    # override
     def get_frame(self) -> bytes:
         pass
