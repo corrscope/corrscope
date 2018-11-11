@@ -29,15 +29,13 @@ class CanvasConfig:
 class MyCanvas(app.Canvas):
 
     # self._fig, axes2d = plt.subplots(self.layout.nrows, self.layout.ncols...)
-    def __init__(self, cfg: 'RendererConfig', layout: 'RendererLayout'):
+    def __init__(self, cfg: 'CanvasConfig'):
+        self.cfg = cfg
+
         # (800, 600) is landscape.
         # x,y = w,h
         size = (cfg.width, cfg.height)
         app.Canvas.__init__(self, show=False, size=size)
-
-        # Subplot layout
-        self.nrows = layout.nrows
-        self.ncols = layout.ncols
 
         # Texture where we render the scene.
         self.rendertex = gloo.Texture2D(shape=self.size + (RGBA_DEPTH,))
@@ -63,21 +61,24 @@ class MyCanvas(app.Canvas):
         self._lines = []
 
         # A bit confusing, be sure to check for bugs.
-        yticks = fenceposts(self.physical_size[1], self.nrows)
-        xticks = fenceposts(self.physical_size[0], self.ncols)
 
         for i, nsamp in enumerate(lines_nsamp):
             # Create line coordinates (x, y).
-            # xs ranges from 0..1 inclusive.
-            # ys ranges from -1..1 inclusive.
-
             line_coords = np.empty((nsamp, 2))
+            self.lines_coords.append(line_coords)
+
+            # xs ranges from 0..1 inclusive.
             line_coords[:, 0] = np.linspace(0, 1, nsamp)
+
+            # ys ranges from -1..1 inclusive.
             line_coords[:, 1] = 0
+            self.lines_ys.append(line_coords[:, 1])
 
+            # Create line.
             line = visuals.LineVisual(pos=line_coords)  # TODO color, width
+            self._lines.append(line)
 
-            # Set line position and size.
+            # Compute proper grid coordinate.
             x = ...
             y = ...
 
@@ -86,9 +87,6 @@ class MyCanvas(app.Canvas):
             # redraw the canvas if any visuals request an update
             line.events.update.connect(lambda evt: self.update())
 
-            self.lines_coords.append(line_coords)
-            self.lines_ys.append(line_coords[:, 1])
-            self._lines.append(line)
 
         # All drawable elements.
         self.visuals = self._lines
@@ -104,6 +102,7 @@ class MyCanvas(app.Canvas):
     def on_draw(self, event):
         """ Called by canvas.events.draw(). """
         with self.fbo:
+            # TODO why is `set_viewport` redundant with `on_resize` above?
             gloo.set_viewport(0, 0, *self.size)
             gloo.clear('black')
             for visual in self.visuals:
@@ -111,7 +110,44 @@ class MyCanvas(app.Canvas):
             self.im = _screenshot((0, 0, self.size[0], self.size[1]))
 
 
-def fenceposts(max: int, n: int) -> 'np.ndarray[int]':
-    """ Returns n+1 elements ranging from 0 to max, inclusive. """
-    pts = np.linspace(0, max, n + 1)
+def grid(cfg: 'CanvasConfig') -> List[STTransform]:
+    """
+    Generates a row-major grid of transformations.
+    Compare with Matplotlib Figure.subplots().
+
+    vispy coords:
+    top left = (0,0)
+    coord = (x, y) = (right, down)
+    TODO
+    """
+    transforms = []
+
+    xticks = fenceposts(cfg.width, cfg.ncols)
+    widths = np.diff(xticks)
+
+    yticks = fenceposts(cfg.height, cfg.nrows)
+    heights = np.diff(yticks)
+
+    # Matplotlib uses GridSpec to generate coordinates.
+    for yidx in range(cfg.nrows):
+        y = yticks[yidx]
+        height = heights[yidx]
+        # ys: Rescale -1 to y+height-1, 1 to y(+1?)
+        yscale = -(height//2 - 1)
+        y += height//2
+
+        for xidx in range(cfg.ncols):
+            x = xticks[xidx]
+            width = widths[xidx]
+            # xs: Rescale 0 to x, 1 to x+width-1.
+            xscale = width
+
+            tf = STTransform(scale=(xscale, yscale), translate=(x, y))
+            transforms.append(tf)
+
+    return transforms
+
+def fenceposts(stop: int, n: int) -> 'np.ndarray[int]':
+    """ Returns n+1 elements ranging from 0 to stop, inclusive. """
+    pts = np.linspace(0, stop, n + 1)
     return pts.astype(int)
