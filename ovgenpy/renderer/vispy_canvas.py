@@ -61,9 +61,8 @@ class MyCanvas(app.Canvas):
     def set_ys(self, lines_ys: List[np.ndarray]):
         """ Assigns a list of ydata. """
         for i, ys in enumerate(lines_ys):
-            # FIXME why does this cause the program to stall?
-            self._lines_ys[i][:] = lines_ys
-        self.update()   # TODO ????
+            self._lines_ys[i][:] = ys
+        self.update()
 
     # lines_coords[chan] is a 2D ndarray.
     # lines_coords[chan][0] = xs, precomputed in create_lines()
@@ -92,7 +91,7 @@ class MyCanvas(app.Canvas):
             line_coords[:, 0] = np.linspace(0, 1, nsamp)
 
             # ys ranges from -1..1 inclusive.
-            line_coords[:, 1] = np.random.random(nsamp)*2-1
+            line_coords[:, 1] = 0
             self._lines_ys.append(line_coords[:, 1])
 
             # Create line and transform to correct position.
@@ -100,9 +99,9 @@ class MyCanvas(app.Canvas):
             line.transform = transforms[i]
             self._lines.append(line)
 
-            # redraw the canvas if any visuals request an update
-            # TODO unneeded???
-            # line.events.update.connect(lambda evt: self.update())
+            # Redrawing is handled by set_ys(), not visuals.
+            # Potential optimization: let visuals decide to not redraw the
+            # exact same data?
 
         self._visuals = self._lines
         self.set_visual_viewport()
