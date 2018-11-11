@@ -47,10 +47,13 @@ class MyCanvas(app.Canvas):
         size = (cfg.width, cfg.height)
         app.Canvas.__init__(self, show=False, size=size, dpi=ovgenpy.renderer.DPI)
 
+        # I have no clue why I need to swap width/height for texture/FBO.
+        size_swapped = self.size[::-1]
+
         # Texture where we render the scene.
-        self._rendertex = gloo.Texture2D(shape=self.size + (RGBA_DEPTH,))
+        self._rendertex = gloo.Texture2D(shape=size_swapped + (RGBA_DEPTH,))
         # FBO.
-        self._fbo = gloo.FrameBuffer(self._rendertex, gloo.RenderBuffer(self.size))
+        self._fbo = gloo.FrameBuffer(self._rendertex, gloo.RenderBuffer(size_swapped))
 
     # lines_ys[chan] = lines_coords[chan][1]
     _lines_ys: List[np.ndarray] = None
