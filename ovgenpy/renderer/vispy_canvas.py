@@ -14,6 +14,12 @@ if TYPE_CHECKING:
 RGBA_DEPTH = 4
 
 
+# Removing this line results in stderr messages:
+# WARNING: QOpenGLContext::swapBuffers() called with non-exposed window, behavior is undefined
+# IDK if pyglet also invokes undefined behavior under circumstances.
+app.use_app('pyglet')
+
+
 @dataclass
 class CanvasParam:
     """ Unlike other config classes, this is internal and not saved to YAML. """
