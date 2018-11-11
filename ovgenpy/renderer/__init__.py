@@ -7,7 +7,7 @@ import numpy as np
 from ovgenpy.config import register_config
 from ovgenpy.layout import RendererLayout, LayoutConfig
 from ovgenpy.outputs import RGB_DEPTH
-from ovgenpy.renderer.vispy_canvas import MyCanvas
+from ovgenpy.renderer.vispy_canvas import MyCanvas, CanvasParam
 from ovgenpy.util import coalesce
 
 matplotlib.use('agg')
@@ -194,9 +194,12 @@ class MatplotlibRenderer(Renderer):
 class VispyRenderer(Renderer):
     def __init__(self, *args, **kwargs):
         Renderer.__init__(self, *args, **kwargs)
+        cfg = self.cfg
 
         self._line_colors: List = [None] * self.nplots
-        self.canvas = MyCanvas((self.cfg.width, self.cfg.height))
+        self.canvas = MyCanvas(CanvasParam(
+            cfg.width, cfg.height
+        ))
 
     # override
     def render_frame(self, datas: List[np.ndarray]) -> None:

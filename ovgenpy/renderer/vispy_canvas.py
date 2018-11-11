@@ -65,7 +65,7 @@ class MyCanvas(app.Canvas):
     # All draw()able Vispy elements.
     _visuals: list
 
-    def create_lines(self, lines_nsamp: List[int], layout: RendererLayout):
+    def create_lines(self, lines_nsamp: List[int], layout: 'RendererLayout'):
         self._lines_coords = []
         self._lines_ys = []
         self._lines = []
@@ -128,10 +128,10 @@ def transform_grid(cfg: 'CanvasParam', layout: 'RendererLayout') -> List[STTrans
     # below[row,col] = transform
     transforms = np.empty((layout.nrows, layout.ncols), object)  # type: np.ndarray[STTransform]
 
-    xticks = fenceposts(cfg.width, cfg.ncols)
+    xticks = fenceposts(cfg.width, layout.ncols)
     widths = np.diff(xticks)
 
-    yticks = fenceposts(cfg.height, cfg.nrows)
+    yticks = fenceposts(cfg.height, layout.nrows)
     heights = np.diff(yticks)
 
     for yrow in range(layout.nrows):
