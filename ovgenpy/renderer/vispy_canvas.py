@@ -1,5 +1,6 @@
-from typing import Tuple, TYPE_CHECKING
+from typing import Tuple, TYPE_CHECKING, List
 
+import numpy as np
 from vispy import app, gloo, visuals
 from vispy.gloo.util import _screenshot
 from vispy.visuals.transforms import STTransform, NullTransform
@@ -12,6 +13,8 @@ RGBA_DEPTH = 4
 
 # TODO move into .renderer
 class MyCanvas(app.Canvas):
+
+    # self._fig, axes2d = plt.subplots(self.layout.nrows, self.layout.ncols...)
     def __init__(self, cfg: 'RendererConfig'):
         size = (cfg.height, cfg.width)  # eg. (800, 600) is landscape.
         app.Canvas.__init__(self, show=False, size=size)
@@ -21,36 +24,30 @@ class MyCanvas(app.Canvas):
         # FBO.
         self.fbo = gloo.FrameBuffer(self.rendertex, gloo.RenderBuffer(self.size))
 
+    lines_pos: List[np.ndarray]
+    # line_pos[chan] is a 2D ndarray.
+    # line_pos[chan][0] = xs, precomputed in create_lines()
+    # line_pos[chan][1] = ys, updated once per frame.
 
+    _lines: List[visuals.LineVisual]
 
+    def create_lines(self, lines_nsamp: List[int]):
+        self.lines_pos = []
 
+        for nsamp in lines_nsamp:
+            line_pos = np.empty((nsamp, 2))
+            line_pos
 
+        for i, line in enumerate(self._lines):
+            x = ...
+            y = ...
 
-        self.lines = [
-            # GL-method lines:
-            visuals.LineVisual(pos=pos, color=color, method='gl'),
-            visuals.LineVisual(pos=pos, color=(0, 0.5, 0.3, 1), method='gl'),
-            visuals.LineVisual(pos=pos, color=color, width=5, method='gl'),
-        ]
-        counts = [0, 0]
-        for i, line in enumerate(self.lines):
-            # arrange lines in a grid
-            tidx = (line.method == 'agg')
-            x = 400 * tidx
-            y = 140 * (counts[tidx] + 1)
-            counts[tidx] += 1
             line.transform = STTransform(translate=[x, y])
+
             # redraw the canvas if any visuals request an update
             line.events.update.connect(lambda evt: self.update())
 
-        self.texts = [
-            visuals.TextVisual(
-                'GL', bold=True, font_size=24, color='w', pos=(200, 40)
-            )
-        ]
-        for text in self.texts:
-            text.transform = NullTransform()
-        self.visuals = self.lines + self.texts
+        self.visuals = self._lines
         self.on_resize(None)
 
     def on_resize(self, event):
