@@ -58,7 +58,8 @@ class MyCanvas(app.Canvas):
     def set_ys(self, lines_ys: List[np.ndarray]):
         """ Assigns a list of ydata. """
         for i, ys in enumerate(lines_ys):
-            self._lines_ys[i] = lines_ys
+            # FIXME why does this cause the program to stall?
+            self._lines_ys[i][:] = lines_ys
         self.update()   # TODO ????
 
     # lines_coords[chan] is a 2D ndarray.
@@ -98,7 +99,7 @@ class MyCanvas(app.Canvas):
 
             # redraw the canvas if any visuals request an update
             # TODO unneeded???
-            line.events.update.connect(lambda evt: self.update())
+            # line.events.update.connect(lambda evt: self.update())
 
         self._visuals = self._lines
         self.on_resize(None)
