@@ -5,13 +5,12 @@ from enum import unique, IntEnum
 from types import SimpleNamespace
 from typing import Optional, List, Union, TYPE_CHECKING
 
-from ovgenpy import outputs
+from ovgenpy import outputs as outputs_
 from ovgenpy.channel import Channel, ChannelConfig
 from ovgenpy.config import register_config, register_enum, Ignored
 from ovgenpy.renderer import VispyRenderer, RendererConfig
 from ovgenpy.layout import LayoutConfig
-from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache, \
-    LocalPostTriggerConfig
+from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from ovgenpy.util import pushd, coalesce
 from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field
@@ -55,12 +54,14 @@ class Config:
     layout: LayoutConfig
     render: RendererConfig
 
-    outputs: List[outputs.IOutputConfig]
+    player: outputs_.IOutputConfig = outputs_.FFplayOutputConfig()
+    encoder: outputs_.IOutputConfig = outputs_.FFmpegOutputConfig(None)
 
     show_internals: List[str] = field(default_factory=list)
     benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
 
     # region Legacy Fields
+    outputs = Ignored
     wav_prefix = Ignored
     # endregion
 
@@ -99,27 +100,24 @@ def default_config(**kwargs):
 
         layout=LayoutConfig(ncols=2),
         render=RendererConfig(800, 480),
-
-        outputs=[
-            outputs.FFplayOutputConfig(),
-            # outputs.FFmpegOutputConfig(video_path),
-        ]
     )
     return dc.replace(cfg, **kwargs)
 
 
 class Ovgen:
-    def __init__(self, cfg: Config, cfg_dir: str):
+    def __init__(self, cfg: Config, cfg_dir: str,
+                 outputs: List[outputs_.IOutputConfig]):
         self.cfg = cfg
         self.cfg_dir = cfg_dir
         self.has_played = False
+        self.output_cfgs = outputs
 
         if len(self.cfg.channels) == 0:
             raise ValueError('Config.channels is empty')
 
     waves: List[Wave]
     channels: List[Channel]
-    outputs: List[outputs.Output]
+    outputs: List[outputs_.Output]
     nchan: int
 
     def _load_channels(self):
@@ -135,7 +133,7 @@ class Ovgen:
             with ExitStack() as stack:
                 self.outputs = [
                     stack.enter_context(output_cfg(self.cfg))
-                    for output_cfg in self.cfg.outputs
+                    for output_cfg in self.output_cfgs
                 ]
                 yield
 
@@ -164,6 +162,7 @@ class Ovgen:
 
         renderer = self._load_renderer()
 
+        # region show_internals
         # Display buffers, for debugging purposes.
         internals = self.cfg.show_internals
         extra_outputs = SimpleNamespace()
@@ -186,13 +185,12 @@ class Ovgen:
 
         extra_outputs.window = None
         if 'window' in internals:
-            for trigger in self.triggers:   # type: CorrelationTrigger
-                trigger.save_window = True
             extra_outputs.window = RenderOutput()
 
         extra_outputs.buffer = None
         if 'buffer' in internals:
             extra_outputs.buffer = RenderOutput()
+        # endregion
 
         if PRINT_TIMESTAMP:
             begin = time.perf_counter()
@@ -200,9 +198,9 @@ class Ovgen:
         benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
-        # For each frame, render each wave
         with self._load_outputs():
             prev = -1
+            # For each frame, render each wave
             for frame in range(begin_frame, end_frame):
                 time_seconds = frame / fps
 
