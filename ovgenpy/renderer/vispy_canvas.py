@@ -1,15 +1,19 @@
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING
 
 from vispy import app, gloo, visuals
 from vispy.gloo.util import _screenshot
 from vispy.visuals.transforms import STTransform, NullTransform
 
+if TYPE_CHECKING:
+    from ovgenpy.renderer import RendererConfig
+
 RGBA_DEPTH = 4
 
 
+# TODO move into .renderer
 class MyCanvas(app.Canvas):
-    def __init__(self, size: Tuple[int, int]):
-        """ size: (width, height) """
+    def __init__(self, cfg: 'RendererConfig'):
+        size = (cfg.height, cfg.width)  # eg. (800, 600) is landscape.
         app.Canvas.__init__(self, show=False, size=size)
 
         # Texture where we render the scene.
@@ -17,19 +21,16 @@ class MyCanvas(app.Canvas):
         # FBO.
         self.fbo = gloo.FrameBuffer(self.rendertex, gloo.RenderBuffer(self.size))
 
+
+
+
+
+
         self.lines = [
             # GL-method lines:
             visuals.LineVisual(pos=pos, color=color, method='gl'),
             visuals.LineVisual(pos=pos, color=(0, 0.5, 0.3, 1), method='gl'),
             visuals.LineVisual(pos=pos, color=color, width=5, method='gl'),
-            # GL-method: "connect" not available in AGG method yet
-
-            # only connect alternate vert pairs
-            visuals.LineVisual(pos=pos, color=(0, 0.5, 0.3, 1),
-                               connect='segments', method='gl'),
-            # connect specific pairs
-            visuals.LineVisual(pos=pos, color=(0, 0.5, 0.3, 1),
-                               connect=connect, method='gl'),
         ]
         counts = [0, 0]
         for i, line in enumerate(self.lines):
