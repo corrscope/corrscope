@@ -101,11 +101,12 @@ class MyCanvas(app.Canvas):
             line.events.update.connect(lambda evt: self.update())
 
         self._visuals = self._lines
-        self.on_resize(None)
+        self.set_visual_viewport()
 
-    def on_resize(self, event):
-        # Set canvas viewport and reconfigure visual transforms to match.
-        vp = (0, 0, self.physical_size[0], self.physical_size[1])
+    def set_visual_viewport(self):
+        # Ignore self.physical_size altogether,
+        # it's only meaningful when rendering to GUI (but I render to texture)
+        vp = (0, 0, *self.size)
         self.context.set_viewport(*vp)
         for visual in self._visuals:
             visual.transforms.configure(canvas=self, viewport=vp)
@@ -113,12 +114,10 @@ class MyCanvas(app.Canvas):
     def on_draw(self, event):
         """ Called by canvas.events.draw(). """
         with self._fbo:
-            # TODO why is `set_viewport` redundant with `on_resize` above?
-            # gloo.set_viewport(0, 0, *self.size)
             gloo.clear('black')
             for visual in self._visuals:
                 visual.draw()
-            self.im = _screenshot((0, 0, self.size[0], self.size[1]), alpha=False)
+            self.im = _screenshot(alpha=False)
 
 
 def transform_grid(cfg: 'CanvasParam', layout: 'RendererLayout') -> List[STTransform]:
