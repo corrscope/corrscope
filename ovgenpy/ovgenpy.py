@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import time
+from multiprocessing import Process, Queue
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
 from types import SimpleNamespace
-from typing import Optional, List, Union, TYPE_CHECKING
+from typing import Optional, List, Union, TYPE_CHECKING, Iterator, TypeVar
 
 from ovgenpy import outputs as outputs_
 from ovgenpy.channel import Channel, ChannelConfig
@@ -14,10 +15,11 @@ from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameC
 from ovgenpy.util import pushd, coalesce
 from ovgenpy.utils import keyword_dataclasses as dc
 from ovgenpy.utils.keyword_dataclasses import field, InitVar
-from ovgenpy.wave import Wave
 
 if TYPE_CHECKING:
+    from ovgenpy.wave import Wave
     from ovgenpy.triggers import CorrelationTrigger
+    import numpy as np
 
 
 PRINT_TIMESTAMP = True
@@ -133,7 +135,7 @@ class Ovgen:
         if len(self.cfg.channels) == 0:
             raise ValueError('Config.channels is empty')
 
-    waves: List[Wave]
+    waves: List['Wave']
     channels: List[Channel]
     outputs: List[outputs_.Output]
     nchan: int
@@ -144,21 +146,6 @@ class Ovgen:
             self.waves = [channel.wave for channel in self.channels]
             self.triggers = [channel.trigger for channel in self.channels]
             self.nchan = len(self.channels)
-
-    @contextmanager
-    def _load_outputs(self):
-        with pushd(self.cfg_dir):
-            with ExitStack() as stack:
-                self.outputs = [
-                    stack.enter_context(output_cfg(self.cfg))
-                    for output_cfg in self.output_cfgs
-                ]
-                yield
-
-    def _load_renderer(self):
-        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan,
-                                      self.cfg.channels)
-        return renderer
 
     def play(self):
         if self.has_played:
@@ -173,8 +160,6 @@ class Ovgen:
 
         end_frame = fps * coalesce(self.cfg.end_time, self.waves[0].get_s())
         end_frame = int(end_frame) + 1
-
-        renderer = self._load_renderer()
 
         # region show_internals
         # Display buffers, for debugging purposes.
@@ -212,8 +197,16 @@ class Ovgen:
         benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
-        with self._load_outputs():
-            prev = -1
+        render_queue = Queue(maxsize=3)  # TODO render_worker input queue size?
+        render_thread = Process(
+            name='render_thread',
+            target=self.render_worker,
+            args=(render_queue, benchmark_mode, not_benchmarking)
+        )
+        render_thread.start()
+
+        prev = -1
+        try:
             # For each frame, render each wave
             for frame in range(begin_frame, end_frame):
                 time_seconds = frame / fps
@@ -250,17 +243,17 @@ class Ovgen:
                 # endregion
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
-                    # Render frame
-                    renderer.render_frame(render_datas)
-                    frame = renderer.get_frame()
+                    # Type should match QueueMessage.
+                    render_queue.put(render_datas)
+                    # Processed by self.render_worker().
 
-                    if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
-                        # Output frame
-                        for output in self.outputs:
-                            output.write_frame(frame)
+        # Terminate render thread.
+        finally:
+            render_queue.put(None)
+        render_thread.join()
 
-            if self.raise_on_teardown:
-                raise self.raise_on_teardown
+        if self.raise_on_teardown:
+            raise self.raise_on_teardown
 
         if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
@@ -269,3 +262,51 @@ class Ovgen:
             print(f'FPS = {render_fps}')
 
     raise_on_teardown: Exception = None
+
+    #### Render/output thread
+    # message[chan] = trigger_sample (created by trigger)
+    QueueMessage = List['np.ndarray']
+
+    def render_worker(self, q: 'Queue[Optional[QueueMessage]]',
+                      benchmark_mode, not_benchmarking):
+        # assert threading.current_thread() != threading.main_thread()
+
+        # FIXME terminate main thread on exceptions like BrokenPipeError
+        renderer = self._load_renderer()
+        with self._load_outputs():
+            # foreach frame
+            for datas in iter_queue(q):
+                # Render frame
+                renderer.render_frame(datas)
+                frame = renderer.get_frame()
+
+                if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
+                    # Output frame
+                    for output in self.outputs:
+                        output.write_frame(frame)
+
+    @contextmanager
+    def _load_outputs(self):
+        with pushd(self.cfg_dir):
+            with ExitStack() as stack:
+                self.outputs = [
+                    stack.enter_context(output_cfg(self.cfg))
+                    for output_cfg in self.output_cfgs
+                ]
+                yield
+
+    def _load_renderer(self):
+        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan,
+                                      self.cfg.channels)
+        return renderer
+
+
+T = TypeVar('T')
+
+def iter_queue(q: 'Queue[Optional[T]]') -> Iterator[T]:
+    """ Yields elements of a threading queue, stops on None. """
+    while True:
+        item = q.get()
+        if item is None:
+            break
+        yield item
