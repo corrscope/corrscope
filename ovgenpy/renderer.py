@@ -33,7 +33,7 @@ class RendererConfig:
 
     bg_color: Any = 'black'
     init_line_color: Any = default_color()
-    line_width: Optional[float] = None  # TODO
+    line_width: Optional[float] = None
 
     create_window: bool = False
 
