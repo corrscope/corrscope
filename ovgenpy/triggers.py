@@ -280,14 +280,15 @@ class CorrelationTrigger(Trigger):
         peak_offset = np.argmax(corr) - mid   # type: int
         trigger = index + (subsampling * peak_offset)
 
+        # Apply post trigger (before updating correlation buffer)
+        if self.post:
+            trigger = self.post.get_trigger(trigger, cache)
+
         # Update correlation buffer (distinct from visible area)
         aligned = self._wave.get_around(trigger, self._buffer_nsamp, subsampling)
         self._update_buffer(aligned, cache)
 
-        if self.post:
-            return self.post.get_trigger(trigger, cache)
-        else:
-            return trigger
+        return trigger
 
     def _is_window_invalid(self, period):
         """ Returns True if pitch has changed more than `recalc_semitones`. """
