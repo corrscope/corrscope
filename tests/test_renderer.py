@@ -72,14 +72,6 @@ def test_vlayout(lcfg):
 
 
 def test_renderer():
-    """
-    TODO check image output using:
-    https://matplotlib.org/devel/testing.html#writing-an-image-comparison-test
-
-    https://stackoverflow.com/a/27950953
-    "[I]mage comparison tests end up bring more trouble than they are worth"
-    """
-
     # 2 columns
     cfg = RendererConfig(WIDTH, HEIGHT)
     lcfg = LayoutConfig(ncols=2)

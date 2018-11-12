@@ -108,13 +108,15 @@ def test_ovgen_terminate_works():
         outputs=[FFplayOutputConfig()],
         end_time=0.5,   # Reduce test duration
     )
-    ovgen = Ovgen(cfg, '.')
+    ovgen = Ovgen(cfg, '.')  # TODO fix skipped ffplay test
     ovgen.raise_on_teardown = DummyException
 
     with pytest.raises(DummyException):
         # Raises `subprocess.TimeoutExpired` if popen.terminate() doesn't work.
         ovgen.play()
 
+
+# TODO test to ensure ffplay is killed before it terminates
 
 # TODO integration test without audio
 

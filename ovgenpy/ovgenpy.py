@@ -18,7 +18,6 @@ from ovgenpy.wave import Wave
 if TYPE_CHECKING:
     from ovgenpy.triggers import CorrelationTrigger
 
-# cgitb.enable(format='text')
 
 PRINT_TIMESTAMP = True
 
