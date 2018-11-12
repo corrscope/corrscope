@@ -217,8 +217,7 @@ class Ovgen:
                     datas.append(wave.get_around(
                         trigger_sample, channel.window_samp, channel.render_subsampling))
 
-                # Display buffers, for debugging purposes.
-
+                # region Display buffers, for debugging purposes.
                 if extra_outputs.window:
                     triggers: List['CorrelationTrigger'] = self.triggers
                     extra_outputs.window.render_frame(
@@ -228,6 +227,7 @@ class Ovgen:
                     triggers: List['CorrelationTrigger'] = self.triggers
                     extra_outputs.buffer.render_frame(
                         [trigger._buffer for trigger in triggers])
+                # endregion
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
