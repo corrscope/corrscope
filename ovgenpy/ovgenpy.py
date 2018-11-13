@@ -29,8 +29,9 @@ PRINT_TIMESTAMP = True
 class BenchmarkMode(IntEnum):
     NONE = 0
     TRIGGER = 1
-    RENDER = 2
-    OUTPUT = 3
+    SEND_TO_WORKER = 2
+    RENDER = 3
+    OUTPUT = 4
 
 
 @register_config(always_dump='begin_time end_time subsampling')
@@ -221,7 +222,8 @@ class Ovgen:
                 for wave, channel in zip(self.waves, self.channels):
                     sample = round(wave.smp_s * time_seconds)
 
-                    if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
+                    if not_benchmarking or \
+                            BenchmarkMode.TRIGGER <= benchmark_mode <= BenchmarkMode.SEND_TO_WORKER:
                         cache = PerFrameCache()
                         trigger_sample = channel.trigger.get_trigger(sample, cache)
                     else:
@@ -242,7 +244,7 @@ class Ovgen:
                         [trigger._buffer for trigger in triggers])
                 # endregion
 
-                if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
+                if not_benchmarking or benchmark_mode >= BenchmarkMode.SEND_TO_WORKER:
                     # Type should match QueueMessage.
                     render_queue.put(render_datas)
                     # Processed by self.render_worker().
@@ -277,13 +279,14 @@ class Ovgen:
             # foreach frame
             for datas in iter_queue(q):
                 # Render frame
-                renderer.render_frame(datas)
-                frame = renderer.get_frame()
+                if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
+                    renderer.render_frame(datas)
+                    frame = renderer.get_frame()
 
-                if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
-                    # Output frame
-                    for output in self.outputs:
-                        output.write_frame(frame)
+                    if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
+                        # Output frame
+                        for output in self.outputs:
+                            output.write_frame(frame)
 
     @contextmanager
     def _load_outputs(self):
