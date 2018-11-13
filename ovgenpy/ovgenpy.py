@@ -252,7 +252,6 @@ class Ovgen:
         # Terminate render thread.
         finally:
             render_queue.put(None)
-        render_thread.join()
 
         if self.raise_on_teardown:
             raise self.raise_on_teardown
@@ -262,6 +261,9 @@ class Ovgen:
             dtime = time.perf_counter() - begin
             render_fps = (end_frame - begin_frame) / dtime
             print(f'FPS = {render_fps}')
+
+        # Print FPS before waiting for render thread to terminate.
+        render_thread.join()
 
     raise_on_teardown: Exception = None
 
