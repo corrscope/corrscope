@@ -1,11 +1,13 @@
-from typing import Optional, List, TYPE_CHECKING, TypeVar, Callable, Any
+from abc import ABC, abstractmethod
+from typing import Optional, List, TYPE_CHECKING, Any
 
 import matplotlib
 import numpy as np
 
 from ovgenpy.config import register_config
+from ovgenpy.layout import RendererLayout, LayoutConfig
 from ovgenpy.outputs import RGB_DEPTH
-from ovgenpy.util import ceildiv, coalesce
+from ovgenpy.util import coalesce
 
 matplotlib.use('agg')
 from matplotlib import pyplot as plt
@@ -38,7 +40,31 @@ class RendererConfig:
     create_window: bool = False
 
 
-class MatplotlibRenderer:
+class Renderer(ABC):
+    def __init__(self, cfg: RendererConfig, lcfg: 'LayoutConfig', nplots: int,
+                 channel_cfgs: Optional[List['ChannelConfig']]):
+        self.cfg = cfg
+        self.nplots = nplots
+        self.layout = RendererLayout(lcfg, nplots)
+
+        # Load line colors.
+        if channel_cfgs is not None:
+            if len(channel_cfgs) != self.nplots:
+                raise ValueError(
+                    f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
+                )
+            self._line_colors = [cfg.line_color for cfg in channel_cfgs]
+        else:
+            self._line_colors = [None] * self.nplots
+
+    @abstractmethod
+    def render_frame(self, datas: List[np.ndarray]) -> None: ...
+
+    @abstractmethod
+    def get_frame(self) -> bytes: ...
+
+
+class MatplotlibRenderer(Renderer):
     """
     Renderer backend which takes data and produces images.
     Does not touch Wave or Channel.
@@ -61,17 +87,13 @@ class MatplotlibRenderer:
 
     DPI = 96
 
-    def __init__(self, cfg: RendererConfig, lcfg: 'LayoutConfig', nplots: int):
-        self.cfg = cfg
-        self.nplots = nplots
-        self.layout = RendererLayout(lcfg, nplots)
+    def __init__(self, *args, **kwargs):
+        Renderer.__init__(self, *args, **kwargs)
 
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
         self._fig: 'Figure' = None
         self._axes: List['Axes'] = None        # set by set_layout()
         self._lines: List['Line2D'] = None     # set by render_frame() first call
-
-        self._line_colors: List = [None] * nplots
 
         self._set_layout()   # mutates self
 
@@ -113,18 +135,6 @@ class MatplotlibRenderer:
         )
         if self.cfg.create_window:
             plt.show(block=False)
-
-    def set_colors(self, channel_cfgs: List['ChannelConfig']):
-        if len(channel_cfgs) != self.nplots:
-            raise ValueError(
-                f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
-            )
-
-        if self._lines is not None:
-            raise ValueError(
-                f'cannot set line colors after calling render_frame()'
-            )
-        self._line_colors = [cfg.line_color for cfg in channel_cfgs]
 
     def render_frame(self, datas: List[np.ndarray]) -> None:
         ndata = len(datas)
@@ -179,81 +189,3 @@ class MatplotlibRenderer:
 
         return buffer_rgb
 
-
-@register_config(always_dump='orientation')
-class LayoutConfig:
-    orientation: str = 'h'
-    nrows: Optional[int] = None
-    ncols: Optional[int] = None
-
-    def __post_init__(self):
-        if not self.nrows:
-            self.nrows = None
-        if not self.ncols:
-            self.ncols = None
-
-        if self.nrows and self.ncols:
-            raise ValueError('cannot manually assign both nrows and ncols')
-
-        if not self.nrows and not self.ncols:
-            self.ncols = 1
-
-
-Region = TypeVar('Region')
-RegionFactory = Callable[[int, int], Region]   # f(row, column) -> Region
-
-
-class RendererLayout:
-    VALID_ORIENTATIONS = ['h', 'v']
-
-    def __init__(self, cfg: LayoutConfig, nplots: int):
-        self.cfg = cfg
-        self.nplots = nplots
-
-        # Setup layout
-        self.nrows, self.ncols = self._calc_layout()
-
-        self.orientation = cfg.orientation
-        if self.orientation not in self.VALID_ORIENTATIONS:
-            raise ValueError(f'Invalid orientation {self.orientation} not in '
-                             f'{self.VALID_ORIENTATIONS}')
-
-    def _calc_layout(self):
-        """
-        Inputs: self.cfg, self.waves
-        :return: (nrows, ncols)
-        """
-        cfg = self.cfg
-
-        if cfg.nrows:
-            nrows = cfg.nrows
-            if nrows is None:
-                raise ValueError('invalid cfg: rows_first is True and nrows is None')
-            ncols = ceildiv(self.nplots, nrows)
-        else:
-            ncols = cfg.ncols
-            if ncols is None:
-                raise ValueError('invalid cfg: rows_first is False and ncols is None')
-            nrows = ceildiv(self.nplots, ncols)
-
-        return nrows, ncols
-
-    def arrange(self, region_factory: RegionFactory) -> List[Region]:
-        """ Generates an array of regions.
-
-        index, row, column are fed into region_factory in a row-major order [row][col].
-        The results are possibly reshaped into column-major order [col][row].
-        """
-        nspaces = self.nrows * self.ncols
-        inds = np.arange(nspaces)
-        rows, cols = np.unravel_index(inds, (self.nrows, self.ncols))
-
-        row_col = np.array([rows, cols]).T
-        regions = np.array([region_factory(*rc) for rc in row_col])  # type: np.ndarray[Region]
-        regions2d = regions.reshape((self.nrows, self.ncols))   # type: np.ndarray[Region]
-
-        # if column major:
-        if self.orientation == 'v':
-            regions2d = regions2d.T
-
-        return regions2d.flatten()[:self.nplots].tolist()
