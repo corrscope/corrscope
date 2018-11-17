@@ -109,7 +109,15 @@ class Ovgen:
         self.cfg = cfg
         self.cfg_dir = cfg_dir
         self.has_played = False
-        self.output_cfgs = outputs
+
+        # TODO benchmark_mode/not_benchmarking == code duplication.
+        benchmark_mode = self.cfg.benchmark_mode
+        not_benchmarking = not benchmark_mode
+
+        if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
+            self.output_cfgs = outputs
+        else:
+            self.output_cfgs = []
 
         if len(self.cfg.channels) == 0:
             raise ValueError('Config.channels is empty')
