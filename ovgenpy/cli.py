@@ -168,6 +168,7 @@ def main(
             outputs.append(FFmpegOutputConfig(video_path))
 
         if outputs:
+            command = 'Ovgen(cfg, cfg_dir, outputs).play()'
             if profile:
                 import cProfile
 
@@ -182,7 +183,7 @@ def main(
                         break
 
                 # noinspection PyUnboundLocalVariable
-                cProfile.runctx('Ovgen(cfg, cfg_dir).play()', globals(), locals(), path)
+                cProfile.runctx(command, globals(), locals(), path)
 
             else:
-                Ovgen(cfg, cfg_dir, outputs).play()
+                exec(command)
