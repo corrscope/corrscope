@@ -168,6 +168,7 @@ def main(
             outputs.append(FFmpegOutputConfig(video_path))
 
         if outputs:
+            assert Ovgen  # to prevent PyCharm from deleting the import
             command = 'Ovgen(cfg, cfg_dir, outputs).play()'
             if profile:
                 import cProfile
