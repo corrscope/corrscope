@@ -19,7 +19,7 @@ NULL_CFG = FFmpegOutputConfig(None, '-f null')
 
 def test_render_output():
     """ Ensure rendering to output does not raise exceptions. """
-    renderer = MatplotlibRenderer(CFG.render, CFG.layout, nplots=1)
+    renderer = MatplotlibRenderer(CFG.render, CFG.layout, nplots=1, channel_cfgs=None)
     out: FFmpegOutput = NULL_CFG(CFG)
 
     renderer.render_frame([ALL_ZEROS])

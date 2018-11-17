@@ -8,7 +8,8 @@ from typing import Optional, List, Union, TYPE_CHECKING
 from ovgenpy import outputs as outputs_
 from ovgenpy.channel import Channel, ChannelConfig
 from ovgenpy.config import register_config, register_enum, Ignored
-from ovgenpy.renderer import MatplotlibRenderer, RendererConfig, LayoutConfig
+from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
+from ovgenpy.layout import LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from ovgenpy.util import pushd, coalesce
 from ovgenpy.utils import keyword_dataclasses as dc
@@ -136,8 +137,8 @@ class Ovgen:
                 yield
 
     def _load_renderer(self):
-        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan)
-        renderer.set_colors(self.cfg.channels)
+        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan,
+                                      self.cfg.channels)
         return renderer
 
     def play(self):
