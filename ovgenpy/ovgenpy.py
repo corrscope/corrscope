@@ -97,8 +97,8 @@ def default_config(**kwargs):
         amplification=1,
 
         width_ms=40,
-        # FIXME add trigger_subsampling and render_subsampling
-        subsampling=2,
+        trigger_subsampling=1,
+        render_subsampling=2,
         trigger=CorrelationTriggerConfig(
             edge_strength=2,
             responsiveness=0.5,
@@ -109,7 +109,7 @@ def default_config(**kwargs):
         channels=[],
 
         layout=LayoutConfig(ncols=2),
-        render=RendererConfig(800, 480),
+        render=RendererConfig(1280, 800),
     )
     return dc.replace(cfg, **kwargs)
 
