@@ -35,7 +35,7 @@ def test_channel_subsampling(
     Wave = mocker.patch.object(ovgenpy.channel, 'Wave')
     wave = Wave.return_value
 
-    def get_around(sample: int, region_nsamp: int, subsampling: int):
+    def get_around(sample: int, region_nsamp: int, stride: int):
         return np.zeros(region_nsamp)
 
     wave.get_around.side_effect = get_around

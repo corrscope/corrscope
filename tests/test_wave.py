@@ -41,12 +41,12 @@ def test_wave_subsampling():
     wave = Wave(None, 'tests/sine440.wav')
     # period = 48000 / 440 = 109.(09)*
 
-    wave.get_around(1000, region_nsamp=501, subsampling=4)
+    wave.get_around(1000, region_nsamp=501, stride=4)
     # len([:region_len:subsampling]) == ceil(region_len / subsampling)
     # If region_len % subsampling != 0, len() != region_len // subsampling.
 
-    subsampling = 4
-    region = 100    # diameter = region * subsampling
+    stride = 4
+    region = 100    # diameter = region * stride
     for i in [-1000, 50000]:
-        data = wave.get_around(i, region, subsampling)
+        data = wave.get_around(i, region, stride)
         assert (data == 0).all()

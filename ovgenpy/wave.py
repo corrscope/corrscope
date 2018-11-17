@@ -94,12 +94,12 @@ class Wave:
 
         return out
 
-    def get_around(self, sample: int, region_nsamp: int, subsampling: int):
+    def get_around(self, sample: int, region_nsamp: int, stride: int):
         """ Copies self.data[...] """
-        region_nsamp *= subsampling
+        region_nsamp *= stride
         end = sample + region_nsamp // 2
         begin = end - region_nsamp
-        return self._get(begin, end, subsampling)
+        return self._get(begin, end, stride)
 
     def get_s(self) -> float:
         """
