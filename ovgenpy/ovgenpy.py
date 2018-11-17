@@ -241,10 +241,10 @@ class Ovgen:
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
                     renderer.render_frame(datas)
+                    frame = renderer.get_frame()
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
                         # Output frame
-                        frame = renderer.get_frame()
                         for output in self.outputs:
                             output.write_frame(frame)
 
