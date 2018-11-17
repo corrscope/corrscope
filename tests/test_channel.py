@@ -77,7 +77,7 @@ def test_channel_subsampling(
     ## Ensure trigger uses channel.window_samp and trigger_stride.
     trigger = channel.trigger
     assert trigger._tsamp == ideal_tsamp
-    assert trigger._subsampling == channel.trigger_stride
+    assert trigger._stride == channel.trigger_stride
 
     ## Ensure ovgenpy calls render using channel.render_samp and render_stride.
     ovgen = Ovgen(cfg, '.', outputs=[])
