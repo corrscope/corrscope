@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 from itertools import chain
 from pathlib import Path
-from typing import Callable, Tuple, TypeVar, Iterator, Union
+from typing import Callable, Tuple, TypeVar, Iterator, Union, Optional
 
 import numpy as np
 
@@ -11,20 +11,21 @@ def ceildiv(n, d):
     return -(-n // d)
 
 
-def coalesce(*args):
+T = TypeVar('T')
+
+
+def coalesce(*args: Optional[T]) -> T:
     if len(args) == 0:
         raise TypeError('coalesce expected 1 argument, got 0')
     for arg in args:
         if arg is not None:
             return arg
-    return args[-1]
+    raise TypeError('coalesce() called with all None')
 
 
 def obj_name(obj) -> str:
     return type(obj).__name__
 
-
-T = TypeVar('T')
 
 # Adapted from https://github.com/numpy/numpy/issues/2269#issuecomment-14436725
 def find(a: 'np.ndarray[T]', predicate: 'Callable[[np.ndarray[T]], np.ndarray[bool]]',
