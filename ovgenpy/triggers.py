@@ -25,9 +25,9 @@ class ITriggerConfig:
     # Optional trigger for postprocessing
     post: 'ITriggerConfig' = None
 
-    def __call__(self, wave: 'Wave', tsamp: int, subsampling: int, fps: float) \
+    def __call__(self, wave: 'Wave', tsamp: int, stride: int, fps: float) \
             -> 'Trigger':
-        return self.cls(wave, cfg=self, tsamp=tsamp, subsampling=subsampling, fps=fps)
+        return self.cls(wave, cfg=self, tsamp=tsamp, stride=stride, fps=fps)
 
 
 def register_trigger(config_t: Type[ITriggerConfig]):
@@ -44,14 +44,14 @@ def register_trigger(config_t: Type[ITriggerConfig]):
 class Trigger(ABC):
     POST_PROCESSING_NSAMP = 256
 
-    def __init__(self, wave: 'Wave', cfg: ITriggerConfig, tsamp: int, subsampling: int,
+    def __init__(self, wave: 'Wave', cfg: ITriggerConfig, tsamp: int, stride: int,
                  fps: float):
         self.cfg = cfg
         self._wave = wave
 
         # TODO rename tsamp to buffer_nsamp
         self._tsamp = tsamp
-        self._subsampling = subsampling
+        self._stride = stride
         self._fps = fps
 
         frame_dur = 1 / fps
@@ -62,14 +62,14 @@ class Trigger(ABC):
 
         # TODO rename to post_trigger
         if cfg.post:
-            # Create a post-processing trigger, with narrow nsamp and no subsampling.
+            # Create a post-processing trigger, with narrow nsamp and stride=1.
             # This improves speed and precision.
             self.post = cfg.post(wave, self.POST_PROCESSING_NSAMP, 1, fps)
         else:
             self.post = None
 
     def time2tsamp(self, time: float):
-        return round(time * self._wave.smp_s / self._subsampling)
+        return round(time * self._wave.smp_s / self._stride)
 
     @abstractmethod
     def get_trigger(self, index: int, cache: 'PerFrameCache') -> int:
@@ -94,7 +94,7 @@ class PerFrameCache:
     """
 
     # NOTE: period is a *non-subsampled* period.
-    # The period of subsampled data must be multiplied by subsampling factor.
+    # The period of subsampled data must be multiplied by stride.
     period: Optional[int] = None
     mean: Optional[float] = None
 
@@ -195,14 +195,17 @@ class CorrelationTrigger(Trigger):
         N = self._buffer_nsamp
         halfN = N // 2
 
-        # To avoid cutting off data, use a narrow transition zone (invariant to
-        # subsampling).
+        # - Create a cosine taper of `width` <= 1 frame
+        # - Right-pad(value=1, len=1 frame)
+        # - Place in left half of N-sample buffer.
+
+        # To avoid cutting off data, use a narrow transition zone (invariant to stride).
+        # _real_samp_frame (unit=subsample) == stride * frame.
         transition_nsamp = round(self._real_samp_frame * self.cfg.lag_prevention)
         tsamp_frame = self._tsamp_frame
 
         # Left half of a Hann cosine taper
-        # Width = min(subsampling*frame * lag_prevention, 1 frame)
-
+        # Width (type=subsample) = min(stride*frame * lag_prevention, 1 frame)
         width = min(transition_nsamp, tsamp_frame)
         taper = windows.hann(width * 2)[:width]
 
@@ -225,14 +228,14 @@ class CorrelationTrigger(Trigger):
         N = self._buffer_nsamp
 
         # Get data
-        subsampling = self._subsampling
-        data = self._wave.get_around(index, N, subsampling)
+        stride = self._stride
+        data = self._wave.get_around(index, N, stride)
         cache.mean = np.mean(data)
         data -= cache.mean
 
         # Window data
         period = get_period(data)
-        cache.period = period * subsampling
+        cache.period = period * stride
 
         if self._is_window_invalid(period):
             diameter, falloff = [round(period * x) for x in self.cfg.trigger_falloff]
@@ -278,14 +281,14 @@ class CorrelationTrigger(Trigger):
         # argmax(corr) == mid + peak_offset == (data >> peak_offset)
         # peak_offset == argmax(corr) - mid
         peak_offset = np.argmax(corr) - mid   # type: int
-        trigger = index + (subsampling * peak_offset)
+        trigger = index + (stride * peak_offset)
 
         # Apply post trigger (before updating correlation buffer)
         if self.post:
             trigger = self.post.get_trigger(trigger, cache)
 
         # Update correlation buffer (distinct from visible area)
-        aligned = self._wave.get_around(trigger, self._buffer_nsamp, subsampling)
+        aligned = self._wave.get_around(trigger, self._buffer_nsamp, stride)
         self._update_buffer(aligned, cache)
 
         return trigger
@@ -326,7 +329,7 @@ class CorrelationTrigger(Trigger):
         data -= cache.mean
         normalize_buffer(data)
         window = windows.gaussian(N, std =
-            (cache.period / self._subsampling) * buffer_falloff)
+            (cache.period / self._stride) * buffer_falloff)
         data *= window
 
         # Old buffer
@@ -398,15 +401,15 @@ def lerp(x: np.ndarray, y: np.ndarray, a: float):
 #### Post-processing triggers
 
 class PostTrigger(Trigger, ABC):
-    """ A post-processing trigger should have subsampling=1,
+    """ A post-processing trigger should have stride=1,
      and no more post triggers. This is subject to change. """
     def __init__(self, *args, **kwargs):
         Trigger.__init__(self, *args, **kwargs)
 
-        if self._subsampling != 1:
+        if self._stride != 1:
             raise OvgenError(
-                f'{obj_name(self)} with subsampling != 1 is not allowed '
-                f'(supplied {self._subsampling})')
+                f'{obj_name(self)} with stride != 1 is not allowed '
+                f'(supplied {self._stride})')
 
         if self.post:
             raise OvgenError(
@@ -444,7 +447,7 @@ class LocalPostTrigger(PostTrigger):
         N = self._buffer_nsamp
 
         # Get data
-        data = self._wave.get_around(index, N, self._subsampling)
+        data = self._wave.get_around(index, N, self._stride)
         data -= cache.mean
         normalize_buffer(data)
         data *= self._data_window
@@ -485,7 +488,7 @@ class LocalPostTrigger(PostTrigger):
         mid = mid - left
 
         peak_offset = np.argmax(corr) - mid   # type: int
-        trigger = index + (self._subsampling * peak_offset)
+        trigger = index + (self._stride * peak_offset)
 
         return trigger
 
@@ -502,7 +505,7 @@ class ZeroCrossingTriggerConfig(ITriggerConfig):
 @register_trigger(ZeroCrossingTriggerConfig)
 class ZeroCrossingTrigger(PostTrigger):
     # ZeroCrossingTrigger is only used as a postprocessing trigger.
-    # subsampling is only passed 1, for improved precision.
+    # stride is only passed 1, for improved precision.
 
     def get_trigger(self, index: int, cache: 'PerFrameCache'):
         # 'cache' is unused.

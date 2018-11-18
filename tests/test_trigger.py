@@ -45,7 +45,7 @@ def test_trigger(cfg: CorrelationTriggerConfig):
     plot = False
     x0 = 24000
     x = x0 - 500
-    trigger: CorrelationTrigger = cfg(wave, 4000, subsampling=1, fps=FPS)
+    trigger: CorrelationTrigger = cfg(wave, 4000, stride=1, fps=FPS)
 
     if plot:
         BIG = 0.95
@@ -71,15 +71,15 @@ def test_trigger(cfg: CorrelationTriggerConfig):
         plt.show()
 
 
-def test_trigger_subsampling(cfg: CorrelationTriggerConfig):
+def test_trigger_stride(cfg: CorrelationTriggerConfig):
     wave = Wave(None, 'tests/sine440.wav')
     # period = 48000 / 440 = 109.(09)*
 
     iters = 5
     x0 = 24000
-    subsampling = 4
-    trigger = cfg(wave, tsamp=100, subsampling=subsampling, fps=FPS)
-    # real window_samp = window_samp*subsampling
+    stride = 4
+    trigger = cfg(wave, tsamp=100, stride=stride, fps=FPS)
+    # real window_samp = window_samp*stride
     # period = 109
 
     cache = PerFrameCache()
@@ -98,7 +98,7 @@ def test_trigger_subsampling(cfg: CorrelationTriggerConfig):
         # After truncation, corr[mid+1] is almost identical to corr[mid], for
         # reasons I don't understand (mid+1 > mid because dithering?).
         if not cfg.use_edge_trigger:
-            assert (offset - x0) % subsampling == 0, f'iteration {i}'
+            assert (offset - x0) % stride == 0, f'iteration {i}'
             assert abs(offset - x0) < 10, f'iteration {i}'
 
         # The edge trigger activates at x0+1=24001. Likely related: it triggers
@@ -107,41 +107,40 @@ def test_trigger_subsampling(cfg: CorrelationTriggerConfig):
 
         else:
             # If assertion fails, remove it.
-            assert (offset - x0) % subsampling != 0, f'iteration {i}'
+            assert (offset - x0) % stride != 0, f'iteration {i}'
             assert abs(offset - x0) <= 2, f'iteration {i}'
 
 
-def test_post_trigger_subsampling(post_cfg: CorrelationTriggerConfig):
+def test_post_trigger_stride(post_cfg: CorrelationTriggerConfig):
     cfg = post_cfg
 
     wave = Wave(None, 'tests/sine440.wav')
     iters = 5
     x0 = 24000
-    subsampling = 4
-    trigger = cfg(wave, tsamp=100, subsampling=subsampling, fps=FPS)
+    stride = 4
+    trigger = cfg(wave, tsamp=100, stride=stride, fps=FPS)
 
     cache = PerFrameCache()
     for i in range(1, iters):
         offset = trigger.get_trigger(x0, cache)
 
         if not cfg.post:
-            assert (offset - x0) % subsampling == 0, f'iteration {i}'
+            assert (offset - x0) % stride == 0, f'iteration {i}'
             assert abs(offset - x0) < 10, f'iteration {i}'
 
         else:
             # If assertion fails, remove it.
-            assert (offset - x0) % subsampling != 0, f'iteration {i}'
+            assert (offset - x0) % stride != 0, f'iteration {i}'
             assert abs(offset - x0) <= 2, f'iteration {i}'
 
 
-def test_trigger_subsampling_edges(cfg: CorrelationTriggerConfig):
+def test_trigger_stride_edges(cfg: CorrelationTriggerConfig):
     wave = Wave(None, 'tests/sine440.wav')
     # period = 48000 / 440 = 109.(09)*
 
-    iters = 5
-    subsampling = 4
-    trigger = cfg(wave, tsamp=100, subsampling=subsampling, fps=FPS)
-    # real window_samp = window_samp*subsampling
+    stride = 4
+    trigger = cfg(wave, tsamp=100, stride=stride, fps=FPS)
+    # real window_samp = window_samp*stride
     # period = 109
 
     trigger.get_trigger(0, PerFrameCache())
@@ -152,7 +151,7 @@ def test_trigger_subsampling_edges(cfg: CorrelationTriggerConfig):
 def test_trigger_should_recalc_window():
     cfg = CorrelationTriggerConfig(recalc_semitones=1.0)
     wave = Wave(None, 'tests/sine440.wav')
-    trigger: CorrelationTrigger = cfg(wave, tsamp=1000, subsampling=1, fps=FPS)
+    trigger: CorrelationTrigger = cfg(wave, tsamp=1000, stride=1, fps=FPS)
 
     for x in [0, 1, 1000]:
         assert trigger._is_window_invalid(x), x

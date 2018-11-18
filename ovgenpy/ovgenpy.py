@@ -13,7 +13,7 @@ from ovgenpy.layout import LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from ovgenpy.util import pushd, coalesce
 from ovgenpy.utils import keyword_dataclasses as dc
-from ovgenpy.utils.keyword_dataclasses import field
+from ovgenpy.utils.keyword_dataclasses import field, InitVar
 from ovgenpy.wave import Wave
 
 if TYPE_CHECKING:
@@ -39,7 +39,12 @@ class Config:
     end_time: float = None
 
     width_ms: int
-    subsampling: int = 1
+
+    # trigger_subsampling and render_subsampling override subsampling.
+    trigger_subsampling: int = None
+    render_subsampling: int = None
+    subsampling: InitVar[int] = 1
+
     trigger_width: int = 1
     render_width: int = 1
 
@@ -65,10 +70,11 @@ class Config:
     # endregion
 
     @property
-    def render_width_s(self) -> float:
+    def width_s(self) -> float:
         return self.width_ms / 1000
 
-    def __post_init__(self):
+    def __post_init__(self, subsampling):
+        # Cast benchmark_mode to enum.
         try:
             if not isinstance(self.benchmark_mode, BenchmarkMode):
                 self.benchmark_mode = BenchmarkMode[self.benchmark_mode]
@@ -76,6 +82,10 @@ class Config:
             raise ValueError(
                 f'invalid benchmark_mode mode {self.benchmark_mode} not in '
                 f'{[el.name for el in BenchmarkMode]}')
+
+        # Compute trigger_subsampling and render_subsampling.
+        self.trigger_subsampling = coalesce(self.trigger_subsampling, subsampling)
+        self.render_subsampling = coalesce(self.render_subsampling, subsampling)
 
 
 _FPS = 60  # f_s
@@ -87,7 +97,8 @@ def default_config(**kwargs):
         amplification=1,
 
         width_ms=40,
-        subsampling=2,
+        trigger_subsampling=1,
+        render_subsampling=2,
         trigger=CorrelationTriggerConfig(
             edge_strength=2,
             responsiveness=0.5,
@@ -98,7 +109,7 @@ def default_config(**kwargs):
         channels=[],
 
         layout=LayoutConfig(ncols=2),
-        render=RendererConfig(800, 480),
+        render=RendererConfig(1280, 800),
     )
     return dc.replace(cfg, **kwargs)
 
@@ -212,7 +223,7 @@ class Ovgen:
                     print(rounded)
                     prev = rounded
 
-                datas = []
+                render_datas = []
                 # Get data from each wave
                 for wave, channel in zip(self.waves, self.channels):
                     sample = round(wave.smp_s * time_seconds)
@@ -223,8 +234,8 @@ class Ovgen:
                     else:
                         trigger_sample = sample
 
-                    datas.append(wave.get_around(
-                        trigger_sample, channel.window_samp, channel.render_subsampling))
+                    render_datas.append(wave.get_around(
+                        trigger_sample, channel.render_samp, channel.render_stride))
 
                 # region Display buffers, for debugging purposes.
                 if extra_outputs.window:
@@ -240,7 +251,7 @@ class Ovgen:
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
-                    renderer.render_frame(datas)
+                    renderer.render_frame(render_datas)
                     frame = renderer.get_frame()
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
