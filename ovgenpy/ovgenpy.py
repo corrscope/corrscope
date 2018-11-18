@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+import sys
 import time
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Pipe
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
 from types import SimpleNamespace
-from typing import Optional, List, Union, TYPE_CHECKING, Iterator, TypeVar
+from typing import Optional, List, Union, TYPE_CHECKING, Iterator, Tuple
 
 from ovgenpy import outputs as outputs_
 from ovgenpy.channel import Channel, ChannelConfig
@@ -19,6 +20,7 @@ from ovgenpy.utils.keyword_dataclasses import field, InitVar
 if TYPE_CHECKING:
     from ovgenpy.wave import Wave
     from ovgenpy.triggers import CorrelationTrigger
+    from multiprocessing.connection import Connection
     import numpy as np
 
 
@@ -198,12 +200,15 @@ class Ovgen:
         benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
-        render_queue = Queue(maxsize=3)  # TODO render_worker input queue size?
+        parent, child = Pipe(duplex=True)
+        parent_send = connection_host(parent)
+
         render_thread = Process(
             name='render_thread',
             target=self.render_worker,
-            args=(render_queue, benchmark_mode, not_benchmarking)
+            args=(child, benchmark_mode, not_benchmarking)
         )
+        del child
         render_thread.start()
 
         prev = -1
@@ -246,12 +251,12 @@ class Ovgen:
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.SEND_TO_WORKER:
                     # Type should match QueueMessage.
-                    render_queue.put(render_datas)
+                    parent_send(render_datas)
                     # Processed by self.render_worker().
 
         # Terminate render thread.
         finally:
-            render_queue.put(None)
+            parent_send(None)
 
         if self.raise_on_teardown:
             raise self.raise_on_teardown
@@ -268,27 +273,39 @@ class Ovgen:
     raise_on_teardown: Exception = None
 
     #### Render/output thread
-    # message[chan] = trigger_sample (created by trigger)
-    QueueMessage = List['np.ndarray']
-
-    def render_worker(self, q: 'Queue[Optional[QueueMessage]]',
+    def render_worker(self, conn: 'Connection',
                       benchmark_mode, not_benchmarking):
+        """ Communicates with main process via `pipe`.
+        Accepts QueueMessage, sends Optional[exception info].
+
+        Accepts N QueueMessage followed by None.
+        Replies with N Optional[exception info].
+
+        The parent checks for replies N times (before sending N-1 QueueMessage + None)
+        """
+        import traceback
         # assert threading.current_thread() != threading.main_thread()
 
-        # FIXME terminate main thread on exceptions like BrokenPipeError
         renderer = self._load_renderer()
         with self._load_outputs():
             # foreach frame
-            for datas in iter_queue(q):
-                # Render frame
-                if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
-                    renderer.render_frame(datas)
-                    frame = renderer.get_frame()
+            for datas in iter_conn(conn):  # type: Message
+                try:
+                    # Render frame
+                    if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
+                        renderer.render_frame(datas)
+                        frame = renderer.get_frame()
 
-                    if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
-                        # Output frame
-                        for output in self.outputs:
-                            output.write_frame(frame)
+                        if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
+                            # Output frame
+                            for output in self.outputs:
+                                output.write_frame(frame)
+                except BaseException as e:
+                    tb = traceback.format_exc()
+                    conn.send((e, tb))
+                    raise
+                else:
+                    conn.send(None)
 
     @contextmanager
     def _load_outputs(self):
@@ -306,12 +323,36 @@ class Ovgen:
         return renderer
 
 
-T = TypeVar('T')
+# message[chan] = trigger_sample (created by trigger)
+Message = List['np.ndarray']
+ReplyMessage = Optional[Tuple[BaseException, str]]
 
-def iter_queue(q: 'Queue[Optional[T]]') -> Iterator[T]:
+
+# Parent
+def connection_host(conn: 'Connection'):
+    """ Checks for exceptions, then sends a message to the child process. """
+    not_first = False
+
+    def send(obj) -> None:
+        nonlocal not_first
+        if not_first:
+            received = conn.recv()  # type: ReplyMessage
+            if received:
+                e, traceback = received
+                print(traceback, file=sys.stderr)
+                raise e
+
+        conn.send(obj)
+        not_first = True
+
+    return send
+
+
+# Child
+def iter_conn(conn: 'Connection') -> Iterator[Message]:
     """ Yields elements of a threading queue, stops on None. """
     while True:
-        item = q.get()
+        item = conn.recv()
         if item is None:
             break
         yield item
