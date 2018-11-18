@@ -332,12 +332,18 @@ ReplyMessage = Optional[Tuple[BaseException, str]]
 def connection_host(conn: 'Connection'):
     """ Checks for exceptions, then sends a message to the child process. """
     not_first = False
+    # If child process is dead, do not `finally` send None.
+    dead = False
 
     def send(obj) -> None:
-        nonlocal not_first
+        nonlocal not_first, dead
+        if dead:
+            return
+
         if not_first:
             received = conn.recv()  # type: ReplyMessage
             if received:
+                dead = True
                 e, traceback = received
                 print(traceback, file=sys.stderr)
                 raise e
