@@ -30,41 +30,46 @@ class ChannelConfig:
 
 
 class Channel:
-    # Shared between trigger and renderer.
-    window_samp: int
+    # trigger_samp is unneeded, since __init__ (not Ovgenpy) constructs triggers.
+    render_samp: int
+    # TODO add a "get_around" method for rendering (also helps test_channel_subsampling)
+    # Currently Ovgenpy peeks at Chanel.render_samp and render_stride (bad).
 
-    # Product of ovgen_cfg.subsampling and trigger/render_width.
-    trigger_subsampling: int
-    render_subsampling: int
+    # Product of ovgen_cfg.trigger/render_subsampling and trigger/render_width.
+    trigger_stride: int
+    render_stride: int
 
     def __init__(self, cfg: ChannelConfig, ovgen_cfg: 'Config'):
         self.cfg = cfg
-        subsampling = ovgen_cfg.subsampling
 
         # Create a Wave object.
         wcfg = _WaveConfig(amplification=ovgen_cfg.amplification * cfg.ampl_ratio)
         self.wave = Wave(wcfg, abspath(cfg.wav_path))
 
-        # Compute subsampling (array stride).
+        # `subsampling` increases `stride` and decreases `nsamp`.
+        # `width` increases `stride` without changing `nsamp`.
+        tsub = ovgen_cfg.trigger_subsampling
         tw = coalesce(cfg.trigger_width, ovgen_cfg.trigger_width)
-        self.trigger_subsampling = subsampling * tw
 
+        rsub = ovgen_cfg.render_subsampling
         rw = coalesce(cfg.render_width, ovgen_cfg.render_width)
-        self.render_subsampling = subsampling * rw
 
-        # Compute window_samp and tsamp_frame.
-        nsamp = ovgen_cfg.render_width_s * self.wave.smp_s / subsampling
-        self.window_samp = round(nsamp)
+        # nsamp = orig / subsampling
+        # stride = subsampling * width
+        def calculate_nsamp(sub):
+            return round(ovgen_cfg.width_s * self.wave.smp_s / sub)
+        trigger_samp = calculate_nsamp(tsub)
+        self.render_samp = calculate_nsamp(rsub)
 
-        del subsampling
-        del nsamp
+        self.trigger_stride = tsub * tw
+        self.render_stride = rsub * rw
 
         # Create a Trigger object.
         tcfg = cfg.trigger or ovgen_cfg.trigger
         self.trigger = tcfg(
             wave=self.wave,
-            tsamp=self.window_samp,
-            subsampling=self.trigger_subsampling,
+            tsamp=trigger_samp,
+            stride=self.trigger_stride,
             fps=ovgen_cfg.fps
         )
 
