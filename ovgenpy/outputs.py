@@ -128,6 +128,7 @@ class PipeOutput(Output):
             # Calling self.close() is bad.
             # If exception occurred but ffplay continues running.
             # popen.wait() will prevent stack trace from showing up.
+            self._stream.close()
 
             exc = None
             for popen in self._pipeline:
