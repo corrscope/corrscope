@@ -8,19 +8,19 @@ Python program to render wave files into oscilloscope views, featuring improved 
 
 ## Installation
 
-### Binary bundles:
+### Binary bundles
 - Coming soon
 
-### Pipsi:
+### Pipsi
 ```shell
 curl https://raw.githubusercontent.com/mitsuhiko/pipsi/master/get-pipsi.py | python3
 pipsi install -e .
 # and pray that python3 points to 3.6
 ```
 
-TODO https://github.com/jimbo1qaz/ovgenpy/issues/74
+doesn't work yet, see https://github.com/jimbo1qaz/ovgenpy/issues/74
 
-### Conda:
+### Conda
 ```shell
 conda create -n ovgenpy python=3.6 pip numpy scipy matplotlib
 pip install -e .
@@ -34,15 +34,17 @@ FILES can be one or more .wav files (or wildcards), one folder, or one .yaml con
 
 -   -a, --audio FILE  Input path for master audio file
 
-Create YAML:
-- `...ovgenpy split*.wav -a/--audio master.wav -w` writes to `master.yaml`
+### Tutorial
 
-Edit the YAML file to change settings.
+1. Create YAML:
+    - `...ovgenpy split*.wav -a/--audio master.wav -w` writes to `master.yaml`
 
-Play (requires ffmpeg):
-- `...ovgenpy file.yaml -p/--play`
+1. Edit the YAML file to change settings.
 
-Render and encode MP4 video (requires ffmpeg)
+1. Play (requires ffmpeg):
+    - `...ovgenpy file.yaml -p/--play`
+
+1. Render and encode MP4 video (requires ffmpeg)
 - `...ovgenpy file.yaml -r/--render`
 
 GUI will be added soon™.
