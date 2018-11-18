@@ -35,7 +35,7 @@ class Channel:
     # TODO add a "get_around" method for rendering (also helps test_channel_subsampling)
     # Currently Ovgenpy peeks at Chanel.render_samp and render_stride (bad).
 
-    # Product of ovgen_cfg.subsampling and trigger/render_width.
+    # Product of ovgen_cfg.trigger/render_subsampling and trigger/render_width.
     trigger_stride: int
     render_stride: int
 
