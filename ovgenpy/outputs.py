@@ -129,17 +129,19 @@ class PipeOutput(Output):
             # If exception occurred but ffplay continues running.
             # popen.wait() will prevent stack trace from showing up.
 
-            e = None
+            exc = None
             for popen in self._pipeline:
                 popen.terminate()
                 # https://stackoverflow.com/a/49038779/2683842
                 try:
                     popen.wait(1)   # timeout=seconds
                 except subprocess.TimeoutExpired as e:
+                    # gee thanks Python, https://stackoverflow.com/questions/45292479/
+                    exc = e
                     popen.kill()
 
-            if e:
-                raise e
+            if exc:
+                raise exc
 
 
 # FFmpegOutput
