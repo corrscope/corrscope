@@ -1,11 +1,10 @@
 import warnings
 
 import numpy as np
-
 import pytest
+from delayed_assert import expect, assert_expectations
 
 from ovgenpy.wave import Wave
-
 
 prefix = 'tests/wav-formats/'
 wave_paths = [
@@ -59,10 +58,12 @@ def test_stereo_doesnt_overflow():
     samp = 100
     stride = 1
     data = wave.get_around(wave.nsamp // 2, samp, stride)
-    assert np.amax(data) > 0.99
-    assert np.amin(data) < -0.99
+    expect(np.amax(data) > 0.99)
+    expect(np.amin(data) < -0.99)
 
     # In the absence of overflow, sine waves have no large jumps.
     # In the presence of overflow, stereo sum will jump between INT_MAX and INT_MIN.
     # np.mean and rescaling converts to 0.499... and -0.5, which is nearly 1.
-    assert np.amax(np.abs(np.diff(data))) < 0.5
+    expect(np.amax(np.abs(np.diff(data))) < 0.5)
+
+    assert_expectations()
