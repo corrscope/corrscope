@@ -301,10 +301,11 @@ class Ovgen:
                             for output in self.outputs:
                                 output.write_frame(frame)
                 except BaseException as e:
-                    conn.send(True)
+                    tb = traceback.format_exc()
+                    conn.send((e, tb))
                     raise
                 else:
-                    conn.send(False)
+                    conn.send(None)
 
     @contextmanager
     def _load_outputs(self):
@@ -324,7 +325,7 @@ class Ovgen:
 
 # message[chan] = trigger_sample (created by trigger)
 Message = List['np.ndarray']
-ReplyMessage = bool  # Has exception occurred?
+ReplyMessage = Optional[Tuple[BaseException, str]]
 
 
 # Parent
@@ -335,9 +336,11 @@ def connection_host(conn: 'Connection'):
     def send(obj) -> None:
         nonlocal not_first
         if not_first:
-            is_child_exc = conn.recv()  # type: ReplyMessage
-            if is_child_exc:
-                exit(1)
+            received = conn.recv()  # type: ReplyMessage
+            if received:
+                e, traceback = received
+                print(traceback, file=sys.stderr)
+                raise e
 
         conn.send(obj)
         not_first = True
