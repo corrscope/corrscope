@@ -50,3 +50,19 @@ def test_wave_subsampling():
     for i in [-1000, 50000]:
         data = wave.get_around(i, region, stride)
         assert (data == 0).all()
+
+
+def test_stereo_doesnt_overflow():
+    """ Ensure loud stereo tracks do not overflow. """
+    wave = Wave(None, 'tests/stereo in-phase.wav')
+
+    samp = 100
+    stride = 1
+    data = wave.get_around(wave.nsamp // 2, samp, stride)
+    assert np.amax(data) > 0.99
+    assert np.amin(data) < -0.99
+
+    # In the absence of overflow, sine waves have no large jumps.
+    # In the presence of overflow, stereo sum will jump between INT_MAX and INT_MIN.
+    # np.mean and rescaling converts to 0.499... and -0.5, which is nearly 1.
+    assert np.amax(np.abs(np.diff(data))) < 0.5
