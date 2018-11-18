@@ -23,7 +23,9 @@ class Wave:
         # Flatten stereo to mono
         assert self.data.ndim in [1, 2]
         if self.data.ndim == 2:
-            self.data = np.mean(self.data, axis=1, dtype=dtype)
+            # np.mean() defaults to dtype=float64,
+            # which prevents overflow if dtype is an integer.
+            self.data = np.mean(self.data, axis=1).astype(dtype)
 
         self.nsamp = len(self.data)
 
