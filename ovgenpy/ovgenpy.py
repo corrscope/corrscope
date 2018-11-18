@@ -53,7 +53,7 @@ class Config:
     trigger: ITriggerConfig  # Can be overriden per Wave
 
     # Can override trigger_width, render_width, trigger
-    channels: List[ChannelConfig] = field(default_factory=list)
+    channels: List[ChannelConfig]
 
     layout: LayoutConfig
     render: RendererConfig
