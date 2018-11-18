@@ -21,11 +21,13 @@ if TYPE_CHECKING:
 
 
 def default_color():
-    colors = np.array([int(x, 16) for x in '1f 77 b4'.split()], dtype=float)
-    colors /= np.amax(colors)
-    colors **= 1/3
-
-    return tuple(colors.tolist())   # tolist() converts np.float64 to float
+    # import matplotlib.colors
+    # colors = np.array([int(x, 16) for x in '1f 77 b4'.split()], dtype=float)
+    # colors /= np.amax(colors)
+    # colors **= 1/3
+    #
+    # return matplotlib.colors.to_hex(colors, keep_alpha=False)
+    return '#8edeff'
 
 
 @register_config(always_dump='bg_color init_line_color line_width')
