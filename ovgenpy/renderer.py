@@ -3,6 +3,7 @@ from typing import Optional, List, TYPE_CHECKING, Any
 
 import matplotlib
 import numpy as np
+from ovgenpy.utils.keyword_dataclasses import dataclass
 
 from ovgenpy.config import register_config
 from ovgenpy.layout import RendererLayout, LayoutConfig
@@ -42,6 +43,11 @@ class RendererConfig:
     create_window: bool = False
 
 
+@dataclass
+class LineParam:
+    color: Any = None
+
+
 class Renderer(ABC):
     def __init__(self, cfg: RendererConfig, lcfg: 'LayoutConfig', nplots: int,
                  channel_cfgs: Optional[List['ChannelConfig']]):
@@ -55,9 +61,13 @@ class Renderer(ABC):
                 raise ValueError(
                     f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
                 )
-            self._line_colors = [cfg.line_color for cfg in channel_cfgs]
+            line_colors = [cfg.line_color for cfg in channel_cfgs]
         else:
-            self._line_colors = [None] * self.nplots
+            line_colors = [None] * self.nplots
+
+        self._line_params = [LineParam(
+            color=coalesce(color, cfg.init_line_color)
+        ) for color in line_colors]
 
     @abstractmethod
     def render_frame(self, datas: List[np.ndarray]) -> None: ...
@@ -152,7 +162,8 @@ class MatplotlibRenderer(Renderer):
             self._lines = []
             for idx, data in enumerate(datas):
                 # Setup colors
-                line_color = coalesce(self._line_colors[idx], self.cfg.init_line_color)
+                line_param = self._line_params[idx]
+                line_color = line_param.color
 
                 # Setup axes
                 ax = self._axes[idx]
