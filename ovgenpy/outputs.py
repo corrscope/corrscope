@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
 
 RGB_DEPTH = 3
+PIXEL_FORMAT = 'rgb24'
+
 FRAMES_TO_BUFFER = 2
 
 
@@ -87,7 +89,7 @@ def ffmpeg_input_video(cfg: 'Config') -> List[str]:
     width = cfg.render.width
     height = cfg.render.height
 
-    return [f'-f rawvideo -pixel_format rgb24 -video_size {width}x{height}',
+    return [f'-f rawvideo -pixel_format {PIXEL_FORMAT} -video_size {width}x{height}',
             f'-framerate {fps}',
             '-i -']
 
