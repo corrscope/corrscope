@@ -106,7 +106,13 @@ def main(
     wav_list: List[Path] = []
     for name in files:
         path = Path(name)
-        if path.is_dir():
+
+        # Windows likes to raise OSError when path contains *
+        try:
+            is_dir = path.is_dir()
+        except OSError:
+            is_dir = False
+        if is_dir:
             # Add a directory.
             if len(files) > 1:
                 # Warning is technically optional, since wav_prefix has been removed.
