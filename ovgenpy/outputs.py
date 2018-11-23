@@ -85,7 +85,7 @@ class _FFmpegProcess:
 
 
 def ffmpeg_input_video(cfg: 'Config') -> List[str]:
-    fps = cfg.fps
+    fps = cfg.render_fps
     width = cfg.render.width
     height = cfg.render.height
 

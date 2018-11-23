@@ -2,6 +2,7 @@
 import time
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
+from fractions import Fraction
 from types import SimpleNamespace
 from typing import Optional, List, Union, TYPE_CHECKING
 
@@ -31,10 +32,16 @@ class BenchmarkMode(IntEnum):
     OUTPUT = 3
 
 
-@register_config(always_dump='begin_time end_time subsampling')
+@register_config(always_dump='render_subfps begin_time end_time subsampling')
 class Config:
     master_audio: Optional[str]
+
     fps: int
+    render_subfps: int = 1
+    # FFmpeg accepts FPS as a fraction only.
+    render_fps = property(lambda self:
+                          Fraction(self.fps, self.render_subfps))
+
     begin_time: float = 0
     end_time: float = None
 
@@ -92,6 +99,7 @@ _FPS = 60  # f_s
 
 def default_config(**kwargs):
     cfg = Config(
+        render_subfps=2,
         master_audio='',
         fps=_FPS,
         amplification=1,
@@ -217,6 +225,7 @@ class Ovgen:
             # For each frame, render each wave
             for frame in range(begin_frame, end_frame):
                 time_seconds = frame / fps
+                should_render = (frame - begin_frame) % self.cfg.render_subfps == 0
 
                 rounded = int(time_seconds)
                 if PRINT_TIMESTAMP and rounded != prev:
@@ -233,9 +242,12 @@ class Ovgen:
                         trigger_sample = channel.trigger.get_trigger(sample, cache)
                     else:
                         trigger_sample = sample
+                    if should_render:
+                        render_datas.append(wave.get_around(
+                            trigger_sample, channel.render_samp, channel.render_stride))
 
-                    render_datas.append(wave.get_around(
-                        trigger_sample, channel.render_samp, channel.render_stride))
+                if not should_render:
+                    continue
 
                 # region Display buffers, for debugging purposes.
                 if extra_outputs.window:
