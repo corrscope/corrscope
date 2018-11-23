@@ -222,10 +222,17 @@ class Ovgen:
 
         with self._load_outputs():
             prev = -1
+
+            # When subsampling FPS, render frames from the future to alleviate lag.
+            # subfps=1, ahead=0.
+            # subfps=2, ahead=1.
+            render_subfps = self.cfg.render_subfps
+            ahead = render_subfps // 2
+
             # For each frame, render each wave
             for frame in range(begin_frame, end_frame):
                 time_seconds = frame / fps
-                should_render = (frame - begin_frame) % self.cfg.render_subfps == 0
+                should_render = (frame - begin_frame) % render_subfps == ahead
 
                 rounded = int(time_seconds)
                 if PRINT_TIMESTAMP and rounded != prev:
