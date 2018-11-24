@@ -120,7 +120,27 @@ def test_ovgen_terminate_works():
 
 # TODO integration test without audio
 
-# TODO integration test on ???
+
+def test_render_subfps_one():
+    """ Ensure video gets rendered when render_subfps=1.
+    This test fails if ceildiv is used to calculate `ahead`.
+    """
+    pass #TODO
+
+
+def test_render_subfps_non_integer():
+    """ Ensure we output non-integer subfps as fractions,
+    and that ffmpeg doesn't crash.
+    TODO does ffmpeg understand decimals??
+    """
+
+
+def test_render_subfps_ahead():
+    """ Ensure that we render slightly ahead in time when subfps>1,
+    to avoid frames lagging behind audio. """
+# TODO test render subfps
+# including integer and non-integer rations
+#
 
 
 class DummyException(Exception):
