@@ -35,15 +35,14 @@ class BenchmarkMode(IntEnum):
 @register_config(always_dump='render_subfps begin_time end_time subsampling')
 class Config:
     master_audio: Optional[str]
+    begin_time: float = 0
+    end_time: float = None
 
     fps: int
     render_subfps: int = 1
     # FFmpeg accepts FPS as a fraction only.
     render_fps = property(lambda self:
                           Fraction(self.fps, self.render_subfps))
-
-    begin_time: float = 0
-    end_time: float = None
 
     width_ms: int
 
