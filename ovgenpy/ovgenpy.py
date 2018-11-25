@@ -6,15 +6,15 @@ from fractions import Fraction
 from types import SimpleNamespace
 from typing import Optional, List, Union, TYPE_CHECKING
 
+import attr
+
 from ovgenpy import outputs as outputs_
 from ovgenpy.channel import Channel, ChannelConfig
-from ovgenpy.config import register_config, register_enum, Ignored
+from ovgenpy.config import kw_config, register_enum, Ignored
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.layout import LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from ovgenpy.util import pushd, coalesce
-from ovgenpy.utils import keyword_dataclasses as dc
-from ovgenpy.utils.keyword_dataclasses import field, InitVar
 from ovgenpy.wave import Wave
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ class BenchmarkMode(IntEnum):
     OUTPUT = 3
 
 
-@register_config(always_dump='render_subfps begin_time end_time subsampling')
+@kw_config(always_dump='render_subfps begin_time end_time subsampling')
 class Config:
     master_audio: Optional[str]
     begin_time: float = 0
@@ -49,7 +49,7 @@ class Config:
     # trigger_subsampling and render_subsampling override subsampling.
     trigger_subsampling: int = None
     render_subsampling: int = None
-    subsampling: InitVar[int] = 1
+    _subsampling: int = 1
 
     trigger_width: int = 1
     render_width: int = 1
@@ -67,7 +67,7 @@ class Config:
     player: outputs_.IOutputConfig = outputs_.FFplayOutputConfig()
     encoder: outputs_.IOutputConfig = outputs_.FFmpegOutputConfig(None)
 
-    show_internals: List[str] = field(default_factory=list)
+    show_internals: List[str] = attr.Factory(list)
     benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
 
     # region Legacy Fields
@@ -79,7 +79,7 @@ class Config:
     def width_s(self) -> float:
         return self.width_ms / 1000
 
-    def __post_init__(self, subsampling):
+    def __attrs_post_init__(self):
         # Cast benchmark_mode to enum.
         try:
             if not isinstance(self.benchmark_mode, BenchmarkMode):
@@ -90,6 +90,7 @@ class Config:
                 f'{[el.name for el in BenchmarkMode]}')
 
         # Compute trigger_subsampling and render_subsampling.
+        subsampling = self._subsampling
         self.trigger_subsampling = coalesce(self.trigger_subsampling, subsampling)
         self.render_subsampling = coalesce(self.render_subsampling, subsampling)
 
@@ -118,7 +119,7 @@ def default_config(**kwargs) -> Config:
         layout=LayoutConfig(ncols=2),
         render=RendererConfig(1280, 800),
     )
-    return dc.replace(cfg, **kwargs)
+    return attr.evolve(cfg, **kwargs)
 
 
 class Ovgen:
@@ -189,9 +190,9 @@ class Ovgen:
         extra_outputs = SimpleNamespace()
         if internals:
             from ovgenpy.outputs import FFplayOutputConfig
-            from ovgenpy.utils.keyword_dataclasses import replace
+            import attr
 
-            no_audio = replace(self.cfg, master_audio='')
+            no_audio = attr.evolve(self.cfg, master_audio='')
 
             ovgen = self
 
