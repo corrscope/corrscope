@@ -14,13 +14,13 @@ if TYPE_CHECKING:
     import pytest_mock
 
 CFG = default_config(render=RendererConfig(WIDTH, HEIGHT))
-NULL_CFG = FFmpegOutputConfig(None, '-f null')
+NULL_OUTPUT = FFmpegOutputConfig(None, '-f null')
 
 
 def test_render_output():
     """ Ensure rendering to output does not raise exceptions. """
     renderer = MatplotlibRenderer(CFG.render, CFG.layout, nplots=1, channel_cfgs=None)
-    out: FFmpegOutput = NULL_CFG(CFG)
+    out: FFmpegOutput = NULL_OUTPUT(CFG)
 
     renderer.render_frame([ALL_ZEROS])
     out.write_frame(renderer.get_frame())
@@ -29,7 +29,7 @@ def test_render_output():
 
 
 def test_output():
-    out: FFmpegOutput = NULL_CFG(CFG)
+    out: FFmpegOutput = NULL_OUTPUT(CFG)
 
     frame = bytes(WIDTH * HEIGHT * RGB_DEPTH)
     out.write_frame(frame)
@@ -74,11 +74,12 @@ def test_terminate_ffplay(Popen):
             popen.terminate.assert_called()
 
 
-def sine440_config(master_audio=True):
-    kwargs = dict(channels=[ChannelConfig('tests/sine440.wav')])
-    if master_audio:
-        kwargs.update(master_audio='tests/sine440.wav')
-    cfg = default_config(**kwargs)
+def sine440_config():
+    cfg = default_config(
+        channels=[ChannelConfig('tests/sine440.wav')],
+        master_audio='tests/sine440.wav',
+        end_time=0.5,  # Reduce test duration
+    )
     return cfg
 
 
@@ -108,8 +109,6 @@ def test_ovgen_terminate_works():
     `popen.terminate()` is called. """
 
     cfg = sine440_config()
-    cfg.end_time = 0.5  # Reduce test duration
-
     ovgen = Ovgen(cfg, '.', outputs=[FFplayOutputConfig()])
     ovgen.raise_on_teardown = DummyException
 
@@ -120,7 +119,16 @@ def test_ovgen_terminate_works():
 
 # TODO test to ensure ffplay is killed before it terminates
 
-# TODO integration test without audio
+def test_ovgen_output_without_audio():
+    """Ensure running ovgen with FFmpeg output, with master audio disabled,
+    does not crash.
+    """
+    cfg = sine440_config()
+    cfg.master_audio = None
+
+    ovgen = Ovgen(cfg, '.', outputs=[NULL_OUTPUT])
+    # Should not raise exception.
+    ovgen.play()
 
 
 def test_render_subfps_one():
