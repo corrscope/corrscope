@@ -34,10 +34,15 @@ class Output(ABC):
         frame_bytes = rcfg.height * rcfg.width * RGB_DEPTH
         self.bufsize = frame_bytes * FRAMES_TO_BUFFER
 
+    def __enter__(self):
+        return self
+
     @abstractmethod
     def write_frame(self, frame: bytes) -> None:
         """ Output a Numpy ndarray. """
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
 
 # Glue logic
 
