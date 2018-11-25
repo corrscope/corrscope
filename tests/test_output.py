@@ -135,7 +135,30 @@ def test_render_subfps_one():
     """ Ensure video gets rendered when render_subfps=1.
     This test fails if ceildiv is used to calculate `ahead`.
     """
-    pass #TODO
+    from ovgenpy.outputs import IOutputConfig, Output, register_output
+
+    # region DummyOutput
+    class DummyOutputConfig(IOutputConfig):
+        pass
+
+    @register_output(DummyOutputConfig)
+    class DummyOutput(Output):
+        frames_written = 0
+
+        @classmethod
+        def write_frame(cls, frame: bytes) -> None:
+            cls.frames_written += 1
+
+    assert DummyOutput
+    # endregion
+
+    # Create Ovgen with render_subfps=1. Ensure multiple frames are outputted.
+    cfg = sine440_config()
+    cfg.render_subfps = 1
+
+    ovgen = Ovgen(cfg, '.', outputs=[DummyOutputConfig()])
+    ovgen.play()
+    assert DummyOutput.frames_written >= 2
 
 
 def test_render_subfps_non_integer():
