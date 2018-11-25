@@ -1,3 +1,4 @@
+from fractions import Fraction
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -161,19 +162,36 @@ def test_render_subfps_one():
     assert DummyOutput.frames_written >= 2
 
 
-def test_render_subfps_non_integer():
+def test_render_subfps_non_integer(mocker: 'pytest_mock.MockFixture'):
     """ Ensure we output non-integer subfps as fractions,
     and that ffmpeg doesn't crash.
     TODO does ffmpeg understand decimals??
     """
 
+    cfg = sine440_config()
+    cfg.fps = 60
+    cfg.render_subfps = 7
 
-def test_render_subfps_ahead():
-    """ Ensure that we render slightly ahead in time when subfps>1,
-    to avoid frames lagging behind audio. """
-# TODO test render subfps
-# including integer and non-integer rations
-#
+    # By default, we output render_fps (ffmpeg -framerate) as a fraction.
+    assert isinstance(cfg.render_fps, Fraction)
+    assert cfg.render_fps != int(cfg.render_fps)
+    assert Fraction(1) == int(1)
+
+    ovgen = Ovgen(cfg, '.', outputs=[NULL_OUTPUT])
+    ovgen.play()
+
+    # But it seems FFmpeg actually allows decimal -framerate (although a bad idea).
+    # from ovgenpy.ovgenpy import Config
+    # render_fps = mocker.patch.object(Config, 'render_fps',
+    #                                  new_callable=mocker.PropertyMock)
+    # render_fps.return_value = 60 / 7
+    # assert isinstance(cfg.render_fps, float)
+    # ovgen = Ovgen(cfg, '.', outputs=[NULL_OUTPUT])
+    # ovgen.play()
+
+
+# Possibility: add a test to ensure that we render slightly ahead in time
+# when subfps>1, to avoid frames lagging behind audio.
 
 
 class DummyException(Exception):
