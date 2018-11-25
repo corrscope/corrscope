@@ -60,6 +60,7 @@ PROFILE_DUMP_NAME = 'cprofile'
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
+# fmt: off
 @click.command(context_settings=CONTEXT_SETTINGS)
 # Inputs
 @click.argument('files', nargs=-1)
@@ -78,6 +79,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--profile', is_flag=True, help=
         'Debug: Write CProfiler snapshot')
 @click.version_option(__version__)
+# fmt: on
 def main(
         files: Tuple[str],
         # cfg
