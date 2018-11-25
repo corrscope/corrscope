@@ -1,3 +1,4 @@
+from fractions import Fraction
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -14,13 +15,13 @@ if TYPE_CHECKING:
     import pytest_mock
 
 CFG = default_config(render=RendererConfig(WIDTH, HEIGHT))
-NULL_CFG = FFmpegOutputConfig(None, '-f null')
+NULL_OUTPUT = FFmpegOutputConfig(None, '-f null')
 
 
 def test_render_output():
     """ Ensure rendering to output does not raise exceptions. """
     renderer = MatplotlibRenderer(CFG.render, CFG.layout, nplots=1, channel_cfgs=None)
-    out: FFmpegOutput = NULL_CFG(CFG)
+    out: FFmpegOutput = NULL_OUTPUT(CFG)
 
     renderer.render_frame([ALL_ZEROS])
     out.write_frame(renderer.get_frame())
@@ -29,7 +30,7 @@ def test_render_output():
 
 
 def test_output():
-    out: FFmpegOutput = NULL_CFG(CFG)
+    out: FFmpegOutput = NULL_OUTPUT(CFG)
 
     frame = bytes(WIDTH * HEIGHT * RGB_DEPTH)
     out.write_frame(frame)
@@ -74,15 +75,21 @@ def test_terminate_ffplay(Popen):
             popen.terminate.assert_called()
 
 
+def sine440_config():
+    cfg = default_config(
+        channels=[ChannelConfig('tests/sine440.wav')],
+        master_audio='tests/sine440.wav',
+        end_time=0.5,  # Reduce test duration
+    )
+    return cfg
+
+
 @pytest.mark.usefixtures('Popen')
 def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
     """ Integration test: Ensure ovgenpy calls terminate() on ffmpeg and ffplay when
     Python exceptions occur. """
 
-    cfg = default_config(
-        channels=[ChannelConfig('tests/sine440.wav')],
-        master_audio='tests/sine440.wav',
-    )
+    cfg = sine440_config()
     ovgen = Ovgen(cfg, '.', outputs=[FFplayOutputConfig()])
 
     render_frame = mocker.patch.object(MatplotlibRenderer, 'render_frame')
@@ -102,13 +109,8 @@ def test_ovgen_terminate_works():
     """ Ensure that ffmpeg/ffplay terminate quickly after Python exceptions, when
     `popen.terminate()` is called. """
 
-    cfg = default_config(
-        channels=[ChannelConfig('tests/sine440.wav')],
-        master_audio='tests/sine440.wav',
-        outputs=[FFplayOutputConfig()],
-        end_time=0.5,   # Reduce test duration
-    )
-    ovgen = Ovgen(cfg, '.')  # TODO fix skipped ffplay test
+    cfg = sine440_config()
+    ovgen = Ovgen(cfg, '.', outputs=[FFplayOutputConfig()])
     ovgen.raise_on_teardown = DummyException
 
     with pytest.raises(DummyException):
@@ -118,9 +120,78 @@ def test_ovgen_terminate_works():
 
 # TODO test to ensure ffplay is killed before it terminates
 
-# TODO integration test without audio
+def test_ovgen_output_without_audio():
+    """Ensure running ovgen with FFmpeg output, with master audio disabled,
+    does not crash.
+    """
+    cfg = sine440_config()
+    cfg.master_audio = None
 
-# TODO integration test on ???
+    ovgen = Ovgen(cfg, '.', outputs=[NULL_OUTPUT])
+    # Should not raise exception.
+    ovgen.play()
+
+
+def test_render_subfps_one():
+    """ Ensure video gets rendered when render_subfps=1.
+    This test fails if ceildiv is used to calculate `ahead`.
+    """
+    from ovgenpy.outputs import IOutputConfig, Output, register_output
+
+    # region DummyOutput
+    class DummyOutputConfig(IOutputConfig):
+        pass
+
+    @register_output(DummyOutputConfig)
+    class DummyOutput(Output):
+        frames_written = 0
+
+        @classmethod
+        def write_frame(cls, frame: bytes) -> None:
+            cls.frames_written += 1
+
+    assert DummyOutput
+    # endregion
+
+    # Create Ovgen with render_subfps=1. Ensure multiple frames are outputted.
+    cfg = sine440_config()
+    cfg.render_subfps = 1
+
+    ovgen = Ovgen(cfg, '.', outputs=[DummyOutputConfig()])
+    ovgen.play()
+    assert DummyOutput.frames_written >= 2
+
+
+def test_render_subfps_non_integer(mocker: 'pytest_mock.MockFixture'):
+    """ Ensure we output non-integer subfps as fractions,
+    and that ffmpeg doesn't crash.
+    TODO does ffmpeg understand decimals??
+    """
+
+    cfg = sine440_config()
+    cfg.fps = 60
+    cfg.render_subfps = 7
+
+    # By default, we output render_fps (ffmpeg -framerate) as a fraction.
+    assert isinstance(cfg.render_fps, Fraction)
+    assert cfg.render_fps != int(cfg.render_fps)
+    assert Fraction(1) == int(1)
+
+    ovgen = Ovgen(cfg, '.', outputs=[NULL_OUTPUT])
+    ovgen.play()
+
+    # But it seems FFmpeg actually allows decimal -framerate (although a bad idea).
+    # from ovgenpy.ovgenpy import Config
+    # render_fps = mocker.patch.object(Config, 'render_fps',
+    #                                  new_callable=mocker.PropertyMock)
+    # render_fps.return_value = 60 / 7
+    # assert isinstance(cfg.render_fps, float)
+    # ovgen = Ovgen(cfg, '.', outputs=[NULL_OUTPUT])
+    # ovgen.play()
+
+
+# Possibility: add a test to ensure that we render slightly ahead in time
+# when subfps>1, to avoid frames lagging behind audio.
 
 
 class DummyException(Exception):
