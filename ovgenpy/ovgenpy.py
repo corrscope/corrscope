@@ -96,7 +96,7 @@ class Config:
 
 _FPS = 60  # f_s
 
-def default_config(**kwargs):
+def default_config(**kwargs) -> Config:
     cfg = Config(
         render_subfps=2,
         master_audio='',
