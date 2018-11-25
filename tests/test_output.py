@@ -74,15 +74,20 @@ def test_terminate_ffplay(Popen):
             popen.terminate.assert_called()
 
 
+def sine440_config(master_audio=True):
+    kwargs = dict(channels=[ChannelConfig('tests/sine440.wav')])
+    if master_audio:
+        kwargs.update(master_audio='tests/sine440.wav')
+    cfg = default_config(**kwargs)
+    return cfg
+
+
 @pytest.mark.usefixtures('Popen')
 def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
     """ Integration test: Ensure ovgenpy calls terminate() on ffmpeg and ffplay when
     Python exceptions occur. """
 
-    cfg = default_config(
-        channels=[ChannelConfig('tests/sine440.wav')],
-        master_audio='tests/sine440.wav',
-    )
+    cfg = sine440_config()
     ovgen = Ovgen(cfg, '.', outputs=[FFplayOutputConfig()])
 
     render_frame = mocker.patch.object(MatplotlibRenderer, 'render_frame')
@@ -102,13 +107,10 @@ def test_ovgen_terminate_works():
     """ Ensure that ffmpeg/ffplay terminate quickly after Python exceptions, when
     `popen.terminate()` is called. """
 
-    cfg = default_config(
-        channels=[ChannelConfig('tests/sine440.wav')],
-        master_audio='tests/sine440.wav',
-        outputs=[FFplayOutputConfig()],
-        end_time=0.5,   # Reduce test duration
-    )
-    ovgen = Ovgen(cfg, '.')  # TODO fix skipped ffplay test
+    cfg = sine440_config()
+    cfg.end_time = 0.5  # Reduce test duration
+
+    ovgen = Ovgen(cfg, '.', outputs=[FFplayOutputConfig()])
     ovgen.raise_on_teardown = DummyException
 
     with pytest.raises(DummyException):
