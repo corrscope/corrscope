@@ -1,15 +1,12 @@
-# noinspection PyUnresolvedReferences
-import sys
-
 import pytest
 from ruamel.yaml import yaml_object
 
-from ovgenpy.config import register_config, yaml, Alias, Ignored
+from ovgenpy.config import register_config, yaml, Alias, Ignored, kw_config
 
 # YAML Idiosyncrasies: https://docs.saltstack.com/en/develop/topics/troubleshooting/yaml_idiosyncrasies.html
 
 # Load/dump infrastructure testing
-from ovgenpy.utils.keyword_dataclasses import fields
+import attr
 
 
 def test_register_config():
@@ -18,12 +15,23 @@ def test_register_config():
         foo: int
         bar: int
 
-    s = yaml.dump(Foo(1, 2))
+    s = yaml.dump(Foo(foo=1, bar=2))
     assert s == '''\
 !Foo
 foo: 1
 bar: 2
 '''
+
+
+def test_kw_config():
+    @kw_config
+    class Foo:
+        foo: int = 1
+        bar: int
+
+    obj = Foo(bar=2)
+    assert obj.foo == 1
+    assert obj.bar == 2
 
 
 def test_yaml_object():
@@ -75,6 +83,51 @@ b: b
 '''
 
 
+def test_dump_default_factory():
+    """ Ensure default factories are not dumped, unless attribute present
+    in `always_dump`.
+
+    Based on `attrs.Factory`. """
+
+    @register_config
+    class Config:
+        # Equivalent to attr.ib(factory=str)
+        # See https://www.attrs.org/en/stable/types.html
+        a: str = attr.Factory(str)
+        b: str = attr.Factory(str)
+
+    s = yaml.dump(Config('alpha'))
+    assert s == '''\
+!Config
+a: alpha
+'''
+
+    @register_config(always_dump='a b')
+    class Config:
+        a: str = attr.Factory(str)
+        b: str = attr.Factory(str)
+        c: str = attr.Factory(str)
+
+    s = yaml.dump(Config())
+    assert s == '''\
+!Config
+a: ''
+b: ''
+'''
+
+    @register_config(always_dump='*')
+    class Config:
+        a: str = attr.Factory(str)
+        b: str = attr.Factory(str)
+
+    s = yaml.dump(Config())
+    assert s == '''\
+!Config
+a: ''
+b: ''
+'''
+
+
 # Dataclass load testing
 
 
@@ -82,13 +135,13 @@ def test_dump_load_aliases():
     """ Ensure dumping and loading `xx=Alias('x')` works.
     Ensure loading `{x=1, xx=1}` raises an error.
     Does not check constructor `Config(xx=1)`."""
-    @register_config
+    @register_config(kw_only=False)
     class Config:
         x: int
         xx = Alias('x')
 
     # Test dumping
-    assert len(fields(Config)) == 1
+    assert len(attr.fields(Config)) == 1
     cfg = Config(1)
     s = yaml.dump(cfg)
     assert s == '''\
@@ -123,7 +176,7 @@ def test_dump_load_ignored():
         xx = Ignored
 
     # Test dumping
-    assert len(fields(Config)) == 0
+    assert len(attr.fields(Config)) == 0
     cfg = Config()
     s = yaml.dump(cfg)
     assert s == '''\
@@ -162,13 +215,13 @@ def test_load_argument_validation():
 
 
 def test_load_post_init():
-    """ yaml.load() does not natively call __post_init__. So @register_config modifies
-    __setstate__ to call __post_init__. """
+    """ yaml.load() does not natively call __init__.
+    So @register_config modifies __setstate__ to call __attrs_post_init__. """
     @register_config
     class Foo:
         foo: int
 
-        def __post_init__(self):
+        def __attrs_post_init__(self):
             self.foo = 99
 
     s = '''\

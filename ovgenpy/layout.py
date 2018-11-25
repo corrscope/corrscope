@@ -12,7 +12,7 @@ class LayoutConfig:
     nrows: Optional[int] = None
     ncols: Optional[int] = None
 
-    def __post_init__(self):
+    def __attrs_post_init__(self):
         if not self.nrows:
             self.nrows = None
         if not self.ncols:

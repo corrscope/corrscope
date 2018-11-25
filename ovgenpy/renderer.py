@@ -3,7 +3,7 @@ from typing import Optional, List, TYPE_CHECKING, Any
 
 import matplotlib
 import numpy as np
-from ovgenpy.utils.keyword_dataclasses import dataclass
+import attr
 
 from ovgenpy.config import register_config
 from ovgenpy.layout import RendererLayout, LayoutConfig
@@ -43,7 +43,7 @@ class RendererConfig:
     create_window: bool = False
 
 
-@dataclass
+@attr.dataclass
 class LineParam:
     color: Any = None
 

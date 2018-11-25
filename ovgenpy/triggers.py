@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING, Type, Tuple, Optional, ClassVar
 import numpy as np
 from scipy import signal
 from scipy.signal import windows
+import attr
 
-from ovgenpy.config import register_config, OvgenError, Alias
+from ovgenpy.config import kw_config, OvgenError, Alias
 from ovgenpy.util import find, obj_name
-from ovgenpy.utils.keyword_dataclasses import dataclass
 from ovgenpy.utils.windows import midpad, leftpad
 from ovgenpy.wave import FLOAT
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 # Abstract classes
 
-@dataclass
+@attr.dataclass
 class ITriggerConfig:
     cls: ClassVar[Type['Trigger']]
 
@@ -82,7 +82,7 @@ class Trigger(ABC):
         ...
 
 
-@dataclass
+@attr.dataclass
 class PerFrameCache:
     """
     The estimated period of a wave region (Wave.get_around())
@@ -101,7 +101,7 @@ class PerFrameCache:
 
 # CorrelationTrigger
 
-@register_config(always_dump='''
+@kw_config(always_dump='''
     use_edge_trigger
     edge_strength
     responsiveness
@@ -129,7 +129,7 @@ class CorrelationTriggerConfig(ITriggerConfig):
     use_edge_trigger: bool = True
     # endregion
 
-    def __post_init__(self):
+    def __attrs_post_init__(self):
         self._validate_param('lag_prevention', 0, 1)
         self._validate_param('responsiveness', 0, 1)
         # TODO trigger_falloff >= 0
@@ -420,7 +420,7 @@ class PostTrigger(Trigger, ABC):
 
 # Local edge-finding trigger
 
-@register_config(always_dump='strength')
+@kw_config(always_dump='strength')
 class LocalPostTriggerConfig(ITriggerConfig):
     strength: float  # Coefficient
 
@@ -497,7 +497,7 @@ def seq_along(a: np.ndarray):
 
 # ZeroCrossingTrigger
 
-@register_config
+@kw_config
 class ZeroCrossingTriggerConfig(ITriggerConfig):
     pass
 
@@ -551,7 +551,7 @@ class ZeroCrossingTrigger(PostTrigger):
 
 # NullTrigger
 
-@register_config
+@kw_config
 class NullTriggerConfig(ITriggerConfig):
     pass
 

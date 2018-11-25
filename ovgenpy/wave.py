@@ -1,12 +1,12 @@
 from typing import Optional
 
 import numpy as np
-from ovgenpy.config import dataclass
+import attr
 from scipy.io import wavfile
 
 
 # Internal class, not exposed via YAML
-@dataclass
+@attr.dataclass
 class _WaveConfig:
     amplification: float = 1
 

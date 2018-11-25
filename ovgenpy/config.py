@@ -1,12 +1,17 @@
 from io import StringIO
 from typing import ClassVar, TYPE_CHECKING
 
-from ovgenpy.utils.keyword_dataclasses import dataclass, fields, Field, MISSING
-# from dataclasses import dataclass, fields
+import attr
 from ruamel.yaml import yaml_object, YAML, Representer
 
 if TYPE_CHECKING:
     from enum import Enum
+
+
+__all__ = ['yaml',
+           'register_config', 'kw_config', 'Alias', 'Ignored',
+           'register_enum', 'OvgenError']
+
 
 # Setup YAML loading (yaml object).
 
@@ -31,12 +36,8 @@ _yaml_loadable = yaml_object(yaml)
 
 # Setup configuration load/dump infrastructure.
 
-def register_config(cls=None, *, always_dump: str = ''):
-    """ Marks class as @dataclass, and enables YAML dumping (excludes default fields).
-
-    dataclasses.dataclass is compatible with yaml_object().
-    typing.NamedTuple is incompatible.
-    """
+def register_config(cls=None, *, kw_only=False, always_dump: str = ''):
+    """ Marks class as attrs, and enables YAML dumping (excludes default fields). """
 
     def decorator(cls: type):
         cls.__getstate__ = _ConfigMixin.__getstate__
@@ -45,7 +46,7 @@ def register_config(cls=None, *, always_dump: str = ''):
 
         # https://stackoverflow.com/a/51497219/2683842
         # YAML().register_class(cls) works... on versions more recent than 2018-07-12.
-        return _yaml_loadable(dataclass(cls))
+        return _yaml_loadable(attr.dataclass(cls, kw_only=kw_only))
 
     if cls is not None:
         return decorator(cls)
@@ -53,7 +54,11 @@ def register_config(cls=None, *, always_dump: str = ''):
         return decorator
 
 
-@dataclass()
+def kw_config(*args, **kwargs):
+    return register_config(*args, **kwargs, kw_only=True)
+
+
+@attr.dataclass()
 class _ConfigMixin:
     """
     Class is unused. __getstate__ and __setstate__ are assigned into other classes.
@@ -73,7 +78,7 @@ class _ConfigMixin:
         state = {}
         cls = type(self)
 
-        for field in fields(self):  # type: Field
+        for field in attr.fields(cls):
             name = field.name
             value = getattr(self, name)
 
@@ -83,8 +88,9 @@ class _ConfigMixin:
 
             if field.default == value:
                 continue
-            if field.default_factory is not MISSING \
-                    and field.default_factory() == value:
+            # noinspection PyTypeChecker,PyUnresolvedReferences
+            if isinstance(field.default, attr.Factory) \
+                    and field.default.factory() == value:
                 continue
 
             state[name] = value
@@ -117,7 +123,7 @@ class _ConfigMixin:
         self.__dict__ = obj.__dict__
 
 
-@dataclass
+@attr.dataclass
 class Alias:
     """
     @register_config
@@ -129,12 +135,6 @@ class Alias:
 
 
 Ignored = object()
-
-# Unused
-# def default(value):
-#     """Supplies a mutable default value for a dataclass field."""
-#     string = repr(value)
-#     return field(default_factory=lambda: eval(string))
 
 
 # Setup Enum load/dump infrastructure
