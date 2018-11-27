@@ -10,6 +10,9 @@ setup(
     author_email='',
     description='',
     tests_require=['pytest', 'pytest-pycharm', 'hypothesis', 'delayed-assert'],
-    install_requires=['numpy', 'scipy', 'click', 'matplotlib', 'ruamel.yaml',
-                      'attrs>=18.2.0']
+    install_requires=[
+        'numpy', 'scipy', 'click', 'ruamel.yaml',
+        'matplotlib',
+        'attrs>=18.2.0',
+    ]
 )
