@@ -62,12 +62,13 @@ def test_channel_subsampling(
     tsub = coalesce(tsub, subsampling)
     rsub = coalesce(rsub, subsampling)
 
-    def ideal_samp(sub):
+    def ideal_samp(width_ms, sub):
+        width_s = width_ms / 1000
         return pytest.approx(
-            round(cfg.width_s * channel.wave.smp_s / sub), abs=1)
+            round(width_s * channel.wave.smp_s / sub), abs=1)
 
-    ideal_tsamp = ideal_samp(tsub)
-    ideal_rsamp = ideal_samp(rsub)
+    ideal_tsamp = ideal_samp(cfg.trigger_ms, tsub)
+    ideal_rsamp = ideal_samp(cfg.render_ms, rsub)
     assert channel.render_samp == ideal_rsamp
     del subsampling
 
