@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List, TYPE_CHECKING, Any
+from typing import Optional, List, TYPE_CHECKING
 
 import matplotlib
 import numpy as np
@@ -36,8 +36,8 @@ class RendererConfig:
     width: int
     height: int
 
-    bg_color: Any = 'black'  # FIXME Optional[str]
-    init_line_color: Any = default_color()  # FIXME Optional[str]
+    bg_color: str = 'black'
+    init_line_color: str = default_color()
     line_width: Optional[float] = None
 
     create_window: bool = False
@@ -45,7 +45,7 @@ class RendererConfig:
 
 @attr.dataclass
 class LineParam:
-    color: Any = None
+    color: str
 
 
 class Renderer(ABC):
