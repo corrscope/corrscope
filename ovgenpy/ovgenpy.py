@@ -39,10 +39,6 @@ class Config:
     end_time: Optional[float] = None
 
     fps: int
-    render_subfps: int = 1
-    # FFmpeg accepts FPS as a fraction only.
-    render_fps = property(lambda self:
-                          Fraction(self.fps, self.render_subfps))
 
     width_ms: int
 
@@ -51,6 +47,11 @@ class Config:
     trigger_subsampling: int = None
     render_subsampling: int = None
     _subsampling: int = 1
+
+    render_subfps: int = 1
+    # FFmpeg accepts FPS as a fraction only.
+    render_fps = property(lambda self:
+                          Fraction(self.fps, self.render_subfps))
 
     trigger_width: int = 1
     render_width: int = 1
