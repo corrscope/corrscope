@@ -11,7 +11,7 @@ import attr
 
 from ovgenpy import outputs as outputs_
 from ovgenpy.channel import Channel, ChannelConfig
-from ovgenpy.config import kw_config, register_enum, Ignored, OvgenError
+from ovgenpy.config import kw_config, register_enum, Ignored, OvgenError, OvgenWarning
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.layout import LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
@@ -111,7 +111,8 @@ class Config:
         if self.render_width != 1:
             deprecated.append('render_width')
         if deprecated:
-            warnings.warn(f"Options {deprecated} are deprecated and will be removed")
+            warnings.warn(f"Options {deprecated} are deprecated and will be removed",
+                          OvgenWarning)
 
 
 _FPS = 60  # f_s

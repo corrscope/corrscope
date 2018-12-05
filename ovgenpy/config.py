@@ -9,8 +9,8 @@ if TYPE_CHECKING:
 
 
 __all__ = ['yaml',
-           'register_config', 'kw_config', 'Alias', 'Ignored',
-           'register_enum', 'OvgenError']
+           'register_config', 'kw_config', 'Alias', 'Ignored', 'register_enum',
+           'OvgenError', 'OvgenWarning']
 
 
 # Setup YAML loading (yaml object).
@@ -157,4 +157,9 @@ class OvgenError(ValueError):
     (Should be) caught by GUI and displayed to user. """
     pass
 
+
+class OvgenWarning(UserWarning):
+    """ Warning about deprecated end-user config (YAML/GUI).
+    (Should be) caught by GUI and displayed to user. """
+    pass
 
