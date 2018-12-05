@@ -26,11 +26,11 @@ class MyYAML(YAML):
             return stream.getvalue()
 
 
-# https://yaml.readthedocs.io/en/latest/dumpcls.html
-# >Only yaml = YAML(typ='unsafe') loads and dumps Python objects out-of-the-box. And
-# >since it loads any Python object, this can be unsafe.
-# I assume roundtrip is safe.
-yaml = MyYAML()
+# Default typ='roundtrip' creates 'ruamel.yaml.comments.CommentedMap' instead of dict.
+# Problem: not isinstance(CommentedMap, dict).
+# Solution: typ='safe' (is faster as well).
+# TODO write test for loading Channel.trigger = dict from YAML
+yaml = MyYAML(typ='safe')
 _yaml_loadable = yaml_object(yaml)
 
 
