@@ -7,7 +7,7 @@ from scipy import signal
 from scipy.signal import windows
 import attr
 
-from ovgenpy.config import kw_config, ValidationError, Alias
+from ovgenpy.config import kw_config, OvgenError, Alias
 from ovgenpy.util import find, obj_name
 from ovgenpy.utils.windows import midpad, leftpad
 from ovgenpy.wave import FLOAT
@@ -417,12 +417,12 @@ class PostTrigger(Trigger, ABC):
         Trigger.__init__(self, *args, **kwargs)
 
         if self._stride != 1:
-            raise ValidationError(
+            raise OvgenError(
                 f'{obj_name(self)} with stride != 1 is not allowed '
                 f'(supplied {self._stride})')
 
         if self.post:
-            raise ValidationError(
+            raise OvgenError(
                 f'Passing {obj_name(self)} a post_trigger is not allowed '
                 f'({obj_name(self.post)})'
             )

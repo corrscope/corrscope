@@ -11,7 +11,7 @@ import attr
 
 from ovgenpy import outputs as outputs_
 from ovgenpy.channel import Channel, ChannelConfig
-from ovgenpy.config import kw_config, register_enum, Ignored, ValidationError
+from ovgenpy.config import kw_config, register_enum, Ignored, OvgenError
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.layout import LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
@@ -87,7 +87,7 @@ class Config:
             if not isinstance(self.benchmark_mode, BenchmarkMode):
                 self.benchmark_mode = BenchmarkMode[self.benchmark_mode]
         except KeyError:
-            raise ValidationError(
+            raise OvgenError(
                 f'invalid benchmark_mode mode {self.benchmark_mode} not in '
                 f'{[el.name for el in BenchmarkMode]}')
 
@@ -102,7 +102,7 @@ class Config:
             self.trigger_ms = coalesce(self.trigger_ms, width_ms)
             self.render_ms = coalesce(self.render_ms, width_ms)
         except TypeError:
-            raise ValidationError(
+            raise OvgenError(
                 'Must supply either width_ms or both (trigger_ms and render_ms)')
 
         deprecated = []

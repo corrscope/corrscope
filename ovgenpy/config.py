@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 __all__ = ['yaml',
            'register_config', 'kw_config', 'Alias', 'Ignored',
-           'register_enum', 'ValidationError']
+           'register_enum', 'OvgenError']
 
 
 # Setup YAML loading (yaml object).
@@ -152,7 +152,7 @@ class _EnumMixin:
 
 # Miscellaneous
 
-class ValidationError(ValueError):
+class OvgenError(ValueError):
     """ Error caused by invalid end-user input (via YAML/GUI config).
     (Should be) caught by GUI and displayed to user. """
     pass
