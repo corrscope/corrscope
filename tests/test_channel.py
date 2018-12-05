@@ -14,7 +14,9 @@ from ovgenpy.triggers import NullTriggerConfig
 from ovgenpy.util import coalesce
 
 positive = hs.integers(min_value=1, max_value=100)
-maybe = hs.one_of(positive, hs.none())
+
+# In order to get good shrinking behaviour, try to put simpler strategies first.
+maybe = hs.one_of(hs.none(), positive)
 
 @given(subsampling=positive, tsub=maybe, rsub=maybe,
        trigger_width=positive, render_width=positive)
