@@ -1,5 +1,5 @@
 from os.path import abspath
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from ovgenpy.config import register_config, Alias
 from ovgenpy.util import coalesce
@@ -15,13 +15,13 @@ if TYPE_CHECKING:
 class ChannelConfig:
     wav_path: str
 
-    trigger: 'ITriggerConfig' = None    # TODO test channel-specific triggers
+    trigger: Optional['ITriggerConfig'] = None    # TODO test channel-specific triggers
     # Multiplies how wide the window is, in milliseconds.
-    trigger_width: int = None
-    render_width: int = None
+    trigger_width: Optional[int] = None
+    render_width: Optional[int] = None
 
     ampl_ratio: float = 1.0     # TODO use amplification = None instead?
-    line_color: Any = None
+    line_color: Any = None  # FIXME Optional[str]
 
     # region Legacy Fields
     trigger_width_ratio = Alias('trigger_width')

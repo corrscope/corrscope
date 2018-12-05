@@ -23,7 +23,7 @@ class ITriggerConfig:
     cls: ClassVar[Type['Trigger']]
 
     # Optional trigger for postprocessing
-    post: 'ITriggerConfig' = None
+    post: Optional['ITriggerConfig'] = None
 
     def __call__(self, wave: 'Wave', tsamp: int, stride: int, fps: float) \
             -> 'Trigger':
@@ -43,6 +43,7 @@ def register_trigger(config_t: Type[ITriggerConfig]):
 
 class Trigger(ABC):
     POST_PROCESSING_NSAMP = 256
+    post: Optional['Trigger']
 
     def __init__(self, wave: 'Wave', cfg: ITriggerConfig, tsamp: int, stride: int,
                  fps: float):
@@ -324,6 +325,8 @@ class CorrelationTrigger(Trigger):
 
         :param data: Wave data. WILL BE MODIFIED.
         """
+        assert cache.mean is not None
+        assert cache.period is not None
         buffer_falloff = self.cfg.buffer_falloff
         responsiveness = self.cfg.responsiveness
 
