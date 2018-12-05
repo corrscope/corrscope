@@ -100,7 +100,7 @@ _FPS = 60  # f_s
 
 def default_config(**kwargs) -> Config:
     cfg = Config(
-        render_subfps=2,
+        render_subfps=1,
         master_audio='',
         fps=_FPS,
         amplification=1,
