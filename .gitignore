@@ -164,3 +164,12 @@ fabric.properties
 *.ipynb
 .directory
 *.orig
+
+.idea/mypy.xml
+*.kdev4
+# Qt Creator
+build-*
+
+# Nuitka
+*.bin
+*.build/
