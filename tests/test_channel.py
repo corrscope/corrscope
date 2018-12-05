@@ -18,14 +18,24 @@ positive = hs.integers(min_value=1, max_value=100)
 # In order to get good shrinking behaviour, try to put simpler strategies first.
 maybe = hs.one_of(hs.none(), positive)
 
+@pytest.mark.filterwarnings("ignore::ovgenpy.config.OvgenWarning")
 @given(subsampling=positive, tsub=maybe, rsub=maybe,
-       trigger_width=positive, render_width=positive)
+       g_trigger_width=positive, g_render_width=positive,
+       c_trigger_width=maybe, c_render_width=maybe,
+       )
 def test_channel_subsampling(
+        # Global
         subsampling: int,
         tsub: Optional[int],
         rsub: Optional[int],
-        trigger_width: int,
-        render_width: int,
+
+        g_trigger_width: int,
+        g_render_width: int,
+
+        # Channel
+        c_trigger_width: Optional[int],
+        c_render_width: Optional[int],
+
         mocker: MockFixture
 ):
     """ Ensure trigger/render_samp and trigger/render subsampling
@@ -46,14 +56,18 @@ def test_channel_subsampling(
 
     ccfg = ChannelConfig(
         'tests/sine440.wav',
-        trigger_width=trigger_width,
-        render_width=render_width,
+        trigger_width=c_trigger_width,
+        render_width=c_render_width,
     )
     cfg = default_config(
         channels=[ccfg],
         subsampling=subsampling,
         trigger_subsampling=tsub,
         render_subsampling=rsub,
+
+        trigger_width=g_trigger_width,
+        render_width=g_render_width,
+
         trigger=NullTriggerConfig(),
         benchmark_mode=BenchmarkMode.OUTPUT
     )
@@ -74,8 +88,8 @@ def test_channel_subsampling(
     assert channel.render_samp == ideal_rsamp
     del subsampling
 
-    assert channel.trigger_stride == tsub * trigger_width
-    assert channel.render_stride == rsub * render_width
+    assert channel.trigger_stride == tsub * coalesce(c_trigger_width, g_trigger_width)
+    assert channel.render_stride == rsub * coalesce(c_render_width, g_render_width)
 
     ## Ensure trigger uses channel.window_samp and trigger_stride.
     trigger = channel.trigger
