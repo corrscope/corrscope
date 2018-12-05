@@ -1,5 +1,5 @@
 from os.path import abspath
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 from ovgenpy.config import register_config, Alias
 from ovgenpy.util import coalesce
@@ -21,7 +21,7 @@ class ChannelConfig:
     render_width: Optional[int] = None
 
     ampl_ratio: float = 1.0     # TODO use amplification = None instead?
-    line_color: Any = None  # FIXME Optional[str]
+    line_color: Optional[str] = None
 
     # region Legacy Fields
     trigger_width_ratio = Alias('trigger_width')
