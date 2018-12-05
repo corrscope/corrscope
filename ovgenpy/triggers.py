@@ -163,30 +163,22 @@ class CorrelationTrigger(Trigger):
         Trigger.__init__(self, *args, **kwargs)
         self._buffer_nsamp = self._tsamp
 
-        # Create correlation buffer (containing a series of old data)
+        # (const) Multiplied by each frame of input audio.
+        # Zeroes out all data older than 1 frame old.
+        self._data_taper = self._calc_data_taper()
+
+        # (mutable) Correlated with data (for triggering).
+        # Updated with tightly windowed old data at various pitches.
         self._buffer = np.zeros(self._buffer_nsamp, dtype=FLOAT)    # type: np.ndarray[FLOAT]
 
-        # Precompute edge trigger step
+        # (const) Added to self._buffer. Nonzero if edge triggering is nonzero.
+        # Left half is -edge_strength, right half is +edge_strength.
+        # ASCII art: --._|‾'--
         self._windowed_step = self._calc_step()
-
-        # Input data taper (zeroes out all data older than 1 frame old)
-        self._data_taper = self._calc_data_taper()  # Rejected idea: right cosine taper
 
         # Will be overwritten on the first frame.
         self._prev_period = None
         self._prev_window = None
-
-    def _calc_step(self):
-        """ Step function used for approximate edge triggering. """
-        edge_strength = self.cfg.edge_strength
-        N = self._buffer_nsamp
-        halfN = N // 2
-
-        step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
-        step[:halfN] = -edge_strength / 2
-        step[halfN:] = edge_strength / 2
-        step *= windows.gaussian(N, std=halfN / 3)
-        return step
 
     def _calc_data_taper(self):
         """ Input data window. Zeroes out all data older than 1 frame old.
@@ -209,21 +201,36 @@ class CorrelationTrigger(Trigger):
         width = min(transition_nsamp, tsamp_frame)
         taper = windows.hann(width * 2)[:width]
 
-        # Right-pad taper to 1 frame long
+        # Right-pad=1 taper to 1 frame long [t-1f, t]
         if width < tsamp_frame:
             taper = np.pad(taper, (0, tsamp_frame - width), 'constant',
                            constant_values=1)
         assert len(taper) == tsamp_frame
 
-        # Reshape taper to left `halfN` of data_window (right-aligned).
+        # Left-pad=0 taper to left `halfN` of data_taper [t-halfN, t]
         taper = leftpad(taper, halfN)
 
         # Generate left half-taper to prevent correlating with 1-frame-old data.
-        data_window = np.ones(N)
-        data_window[:halfN] = np.minimum(data_window[:halfN], taper)
+        # Right-pad=1 taper to [t-halfN, t-halfN+N]
+        data_taper = np.ones(N)  # TODO why not extract a right-pad function?
+        data_taper[:halfN] = np.minimum(data_taper[:halfN], taper)
 
-        return data_window
+        return data_taper
 
+    def _calc_step(self):
+        """ Step function used for approximate edge triggering. """
+        edge_strength = self.cfg.edge_strength
+        N = self._buffer_nsamp
+        halfN = N // 2
+
+        step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
+        step[:halfN] = -edge_strength / 2
+        step[halfN:] = edge_strength / 2
+        step *= windows.gaussian(N, std=halfN / 3)
+        return step
+    # end setup
+
+    # begin per-frame
     def get_trigger(self, index: int, cache: 'PerFrameCache') -> int:
         N = self._buffer_nsamp
 
