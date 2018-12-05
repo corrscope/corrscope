@@ -1,6 +1,6 @@
 from itertools import count
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Union
 
 import click
 
@@ -36,7 +36,7 @@ YAML_NAME = YAML_EXTS[0]
 VIDEO_NAME = '.mp4'
 
 
-def get_path(audio_file: Optional[str], ext: str) -> Path:
+def get_path(audio_file: Union[None, str, Path], ext: str) -> Path:
     # Write file to current working dir, not audio dir.
     if audio_file:
         name = Path(audio_file).name
@@ -99,9 +99,9 @@ def main(
     show_gui = not any([write, play, render])
 
     # Create cfg: Config object.
-    cfg: Config = None
-    cfg_path: Path = None
-    cfg_dir: str = None  # Changing to Path will take a lot of refactoring.
+    cfg: Optional[Config] = None
+    cfg_path: Optional[Path] = None
+    cfg_dir: Optional[str] = None  # Changing to Path will take a lot of refactoring.
 
     wav_list: List[Path] = []
     for name in files:
@@ -143,8 +143,7 @@ def main(
             wav_list += matches
 
     if not cfg:
-        wav_list = [str(wav_path) for wav_path in wav_list]
-        channels = [ChannelConfig(wav_path) for wav_path in wav_list]
+        channels = [ChannelConfig(str(wav_path)) for wav_path in wav_list]
 
         cfg = default_config(
             master_audio=audio,
@@ -190,7 +189,7 @@ def main(
                         break
 
                 # noinspection PyUnboundLocalVariable
-                cProfile.runctx(command, globals(), locals(), path)
+                cProfile.runctx(command, globals(), locals(), str(path))
 
             else:
                 exec(command)

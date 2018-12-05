@@ -36,7 +36,7 @@ class BenchmarkMode(IntEnum):
 class Config:
     master_audio: Optional[str]
     begin_time: float = 0
-    end_time: float = None
+    end_time: Optional[float] = None
 
     fps: int
     render_subfps: int = 1
@@ -47,6 +47,7 @@ class Config:
     width_ms: int
 
     # trigger_subsampling and render_subsampling override subsampling.
+    # Always non-None after __attrs_post_init__()
     trigger_subsampling: int = None
     render_subsampling: int = None
     _subsampling: int = 1
@@ -287,4 +288,4 @@ class Ovgen:
             render_fps = (end_frame - begin_frame) / dtime
             print(f'FPS = {render_fps}')
 
-    raise_on_teardown: Exception = None
+    raise_on_teardown: Optional[Exception] = None

@@ -36,8 +36,8 @@ class RendererConfig:
     width: int
     height: int
 
-    bg_color: Any = 'black'
-    init_line_color: Any = default_color()
+    bg_color: Any = 'black'  # FIXME Optional[str]
+    init_line_color: Any = default_color()  # FIXME Optional[str]
     line_width: Optional[float] = None
 
     create_window: bool = False
@@ -103,9 +103,9 @@ class MatplotlibRenderer(Renderer):
         Renderer.__init__(self, *args, **kwargs)
 
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
-        self._fig: 'Figure' = None
-        self._axes: List['Axes'] = None        # set by set_layout()
-        self._lines: List['Line2D'] = None     # set by render_frame() first call
+        self._fig: 'Figure'
+        self._axes: List['Axes']                      # set by set_layout()
+        self._lines: Optional[List['Line2D']] = None  # set by render_frame() first call
 
         self._set_layout()   # mutates self
 
@@ -120,8 +120,8 @@ class MatplotlibRenderer(Renderer):
 
         # Create Axes
         # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplots.html
-        if self._fig:
-            raise Exception("I don't currently expect to call set_layout() twice")
+        if hasattr(self, '_fig'):
+            raise Exception("I don't currently expect to call _set_layout() twice")
             # plt.close(self.fig)
 
         axes2d: np.ndarray['Axes']

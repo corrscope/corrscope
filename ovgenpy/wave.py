@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import attr
@@ -53,7 +53,7 @@ class Wave:
         else:
             raise ValueError(f'unexpected wavfile dtype {dtype}')
 
-    def __getitem__(self, index: int) -> 'np.ndarray[FLOAT]':
+    def __getitem__(self, index: Union[int, slice]) -> 'np.ndarray[FLOAT]':
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         data = self.data[index].astype(FLOAT)
         data -= self.center

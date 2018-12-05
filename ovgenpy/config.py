@@ -1,5 +1,5 @@
 from io import StringIO
-from typing import ClassVar, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING, Type
 
 import attr
 from ruamel.yaml import yaml_object, YAML, Representer
@@ -39,7 +39,7 @@ _yaml_loadable = yaml_object(yaml)
 def register_config(cls=None, *, kw_only=False, always_dump: str = ''):
     """ Marks class as attrs, and enables YAML dumping (excludes default fields). """
 
-    def decorator(cls: type):
+    def decorator(cls: Type):
         cls.__getstate__ = _ConfigMixin.__getstate__
         cls.__setstate__ = _ConfigMixin.__setstate__
         cls.always_dump = always_dump
@@ -139,7 +139,7 @@ Ignored = object()
 
 # Setup Enum load/dump infrastructure
 
-def register_enum(cls: type):
+def register_enum(cls: Type):
     cls.to_yaml = _EnumMixin.to_yaml
     return _yaml_loadable(cls)
 
