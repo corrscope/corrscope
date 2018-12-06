@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 class ChannelConfig:
     wav_path: str
 
+    # Supplying a dict inherits attributes from global trigger.
     trigger: Union[ITriggerConfig, dict, None] = None    # TODO test channel-specific triggers
     # Multiplies how wide the window is, in milliseconds.
     trigger_width: Optional[int] = None
