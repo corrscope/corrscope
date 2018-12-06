@@ -34,6 +34,7 @@ class BenchmarkMode(IntEnum):
 
 @kw_config(always_dump='render_subfps begin_time end_time subsampling')
 class Config:
+    """ Default values indicate optional attributes. """
     master_audio: Optional[str]
     begin_time: float = 0
     end_time: Optional[float] = None
@@ -100,6 +101,7 @@ class Config:
 _FPS = 60  # f_s
 
 def default_config(**kwargs) -> Config:
+    """ Default values do NOT indicate optional attributes. """
     cfg = Config(
         render_subfps=1,
         master_audio='',
