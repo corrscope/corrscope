@@ -101,7 +101,7 @@ class Config:
 _FPS = 60  # f_s
 
 def default_config(**kwargs) -> Config:
-    """ Default values do NOT indicate optional attributes. """
+    """ Default template values do NOT indicate optional attributes. """
     cfg = Config(
         render_subfps=1,
         master_audio='',
@@ -121,7 +121,7 @@ def default_config(**kwargs) -> Config:
         channels=[],
 
         layout=LayoutConfig(ncols=2),
-        render=RendererConfig(1280, 800),
+        render=RendererConfig(1280, 720),
     )
     return attr.evolve(cfg, **kwargs)
 
