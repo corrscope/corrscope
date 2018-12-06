@@ -27,10 +27,8 @@ class MyYAML(YAML):
 
 
 # Default typ='roundtrip' creates 'ruamel.yaml.comments.CommentedMap' instead of dict.
-# Problem: not isinstance(CommentedMap, dict).
-# Solution: typ='safe' (is faster as well).
-# TODO write test for loading Channel.trigger = dict from YAML
-yaml = MyYAML(typ='safe')
+# Is isinstance(CommentedMap, dict)? IDK
+yaml = MyYAML()
 _yaml_loadable = yaml_object(yaml)
 
 

@@ -2,6 +2,7 @@ from os.path import abspath
 from typing import TYPE_CHECKING, Optional, Union
 
 import attr
+from ruamel.yaml.comments import CommentedMap
 
 from ovgenpy.config import register_config, Alias, OvgenError
 from ovgenpy.triggers import ITriggerConfig
@@ -68,7 +69,7 @@ class Channel:
         # Create a Trigger object.
         if isinstance(cfg.trigger, ITriggerConfig):
             tcfg = cfg.trigger
-        elif isinstance(cfg.trigger, dict):
+        elif isinstance(cfg.trigger, (CommentedMap, dict)):  # CommentedMap may/not be subclass of dict.
             tcfg = attr.evolve(ovgen_cfg.trigger, **cfg.trigger)
         elif cfg.trigger is None:
             tcfg = ovgen_cfg.trigger
