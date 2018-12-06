@@ -1,3 +1,4 @@
+import attr
 import matplotlib.pyplot as plt
 import pytest
 from matplotlib.axes import Axes
@@ -11,13 +12,21 @@ from ovgenpy.wave import Wave
 triggers.SHOW_TRIGGER = False
 
 
+def cfg_template(**kwargs) -> CorrelationTriggerConfig:
+    """ Not identical to default_config() template. """
+    cfg = CorrelationTriggerConfig(
+        edge_strength=2,
+        responsiveness=1,
+        buffer_falloff=0.5,
+        use_edge_trigger=False,
+    )
+    return attr.evolve(cfg, **kwargs)
+
+
 @pytest.fixture(scope='session', params=[False, True])
 def cfg(request):
     use_edge_trigger = request.param
-    return CorrelationTriggerConfig(
-        use_edge_trigger=use_edge_trigger,
-        responsiveness=1,
-    )
+    return cfg_template(use_edge_trigger=use_edge_trigger)
 
 
 @pytest.fixture(scope='session', params=[
@@ -27,11 +36,7 @@ def cfg(request):
 ])
 def post_cfg(request):
     post = request.param
-    return CorrelationTriggerConfig(
-        use_edge_trigger=False,
-        responsiveness=1,
-        post=post
-    )
+    return cfg_template(post=post)
 
 
 # I regret adding the nsamp_frame parameter. It makes unit tests hard.
@@ -149,7 +154,7 @@ def test_trigger_stride_edges(cfg: CorrelationTriggerConfig):
 
 
 def test_trigger_should_recalc_window():
-    cfg = CorrelationTriggerConfig(recalc_semitones=1.0)
+    cfg = cfg_template(recalc_semitones=1.0)
     wave = Wave(None, 'tests/sine440.wav')
     trigger: CorrelationTrigger = cfg(wave, tsamp=1000, stride=1, fps=FPS)
 
