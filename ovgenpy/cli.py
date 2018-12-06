@@ -50,7 +50,9 @@ def get_path(audio_file: Union[None, str, Path], ext: str) -> Path:
 PROFILE_DUMP_NAME = 'cprofile'
 
 
-@click.command()
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+@click.command(context_settings=CONTEXT_SETTINGS)
 # Inputs
 @click.argument('files', nargs=-1)
 # Override default .yaml settings (only if YAML file not supplied)

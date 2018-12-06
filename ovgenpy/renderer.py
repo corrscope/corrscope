@@ -31,14 +31,14 @@ def default_color():
     return '#8edeff'
 
 
-@register_config(always_dump='bg_color init_line_color line_width')
+@register_config(always_dump='line_width bg_color init_line_color')
 class RendererConfig:
     width: int
     height: int
+    line_width: Optional[float] = None
 
     bg_color: str = 'black'
     init_line_color: str = default_color()
-    line_width: Optional[float] = None
 
     create_window: bool = False
 
