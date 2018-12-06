@@ -34,15 +34,12 @@ class BenchmarkMode(IntEnum):
 
 @kw_config(always_dump='render_subfps begin_time end_time subsampling')
 class Config:
+    """ Default values indicate optional attributes. """
     master_audio: Optional[str]
     begin_time: float = 0
     end_time: Optional[float] = None
 
     fps: int
-    render_subfps: int = 1
-    # FFmpeg accepts FPS as a fraction only.
-    render_fps = property(lambda self:
-                          Fraction(self.fps, self.render_subfps))
 
     width_ms: int
 
@@ -51,6 +48,11 @@ class Config:
     trigger_subsampling: int = None
     render_subsampling: int = None
     _subsampling: int = 1
+
+    render_subfps: int = 1
+    # FFmpeg accepts FPS as a fraction only.
+    render_fps = property(lambda self:
+                          Fraction(self.fps, self.render_subfps))
 
     trigger_width: int = 1
     render_width: int = 1
@@ -99,8 +101,9 @@ class Config:
 _FPS = 60  # f_s
 
 def default_config(**kwargs) -> Config:
+    """ Default template values do NOT indicate optional attributes. """
     cfg = Config(
-        render_subfps=2,
+        render_subfps=1,
         master_audio='',
         fps=_FPS,
         amplification=1,
@@ -118,7 +121,7 @@ def default_config(**kwargs) -> Config:
         channels=[],
 
         layout=LayoutConfig(ncols=2),
-        render=RendererConfig(1280, 800),
+        render=RendererConfig(1280, 720),
     )
     return attr.evolve(cfg, **kwargs)
 
