@@ -27,6 +27,7 @@ def call_main(argv):
 
 @pytest.fixture
 def yaml_sink(mocker: 'pytest_mock.MockFixture') -> Callable:
+    """ Mocks yaml.dump() and returns call args. Does not test dumping to string. """
     def _yaml_sink(command):
         dump = mocker.patch.object(yaml, 'dump')
 
