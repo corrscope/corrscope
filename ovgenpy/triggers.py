@@ -102,12 +102,7 @@ class PerFrameCache:
 
 # CorrelationTrigger
 
-@kw_config(always_dump='''
-    use_edge_trigger
-    edge_strength
-    responsiveness
-    buffer_falloff
-''')
+@kw_config
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
     edge_strength: float
