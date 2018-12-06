@@ -7,7 +7,7 @@ from scipy import signal
 from scipy.signal import windows
 import attr
 
-from ovgenpy.config import kw_config, OvgenError, Alias
+from ovgenpy.config import kw_config, OvgenError, Alias, OvgenWarning
 from ovgenpy.util import find, obj_name
 from ovgenpy.utils.windows import midpad, leftpad
 from ovgenpy.wave import FLOAT
@@ -102,15 +102,10 @@ class PerFrameCache:
 
 # CorrelationTrigger
 
-@kw_config(always_dump='''
-    use_edge_trigger
-    edge_strength
-    responsiveness
-    buffer_falloff
-''')
+@kw_config
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
-    edge_strength: float = 10.0
+    edge_strength: float
     trigger_diameter: float = 0.5
 
     trigger_falloff: Tuple[float, float] = (4.0, 1.0)
@@ -118,16 +113,13 @@ class CorrelationTriggerConfig(ITriggerConfig):
     lag_prevention: float = 0.25
 
     # _update_buffer
-    responsiveness: float = 0.1
-    buffer_falloff: float = 0.5  # Gaussian std = wave_period * buffer_falloff
+    responsiveness: float
+    buffer_falloff: float  # Gaussian std = wave_period * buffer_falloff
 
     # region Legacy Aliases
     trigger_strength = Alias('edge_strength')
     falloff_width = Alias('buffer_falloff')
-
-    # Problem: InitVar with default values are (wrongly) accessible on object instances.
-    # use_edge_trigger is False but self.use_edge_trigger is True, wtf?
-    use_edge_trigger: bool = True
+    use_edge_trigger: bool
     # endregion
 
     def __attrs_post_init__(self):
@@ -140,7 +132,8 @@ class CorrelationTriggerConfig(ITriggerConfig):
             if self.post:
                 warnings.warn(
                     "Ignoring old `CorrelationTriggerConfig.use_edge_trigger` flag, "
-                    "overriden by newer `post` flag."
+                    "overriden by newer `post` flag.",
+                    OvgenWarning
                 )
             else:
                 self.post = ZeroCrossingTriggerConfig()

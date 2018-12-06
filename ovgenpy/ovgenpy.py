@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
+import warnings
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
 from fractions import Fraction
@@ -10,7 +11,7 @@ import attr
 
 from ovgenpy import outputs as outputs_
 from ovgenpy.channel import Channel, ChannelConfig
-from ovgenpy.config import kw_config, register_enum, Ignored
+from ovgenpy.config import kw_config, register_enum, Ignored, OvgenError, OvgenWarning
 from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
 from ovgenpy.layout import LayoutConfig
 from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
@@ -34,17 +35,16 @@ class BenchmarkMode(IntEnum):
 
 @kw_config(always_dump='render_subfps begin_time end_time subsampling')
 class Config:
+    """ Default values indicate optional attributes. """
     master_audio: Optional[str]
     begin_time: float = 0
     end_time: Optional[float] = None
 
     fps: int
-    render_subfps: int = 1
-    # FFmpeg accepts FPS as a fraction only.
-    render_fps = property(lambda self:
-                          Fraction(self.fps, self.render_subfps))
 
-    width_ms: int
+    trigger_ms: Optional[int] = None
+    render_ms: Optional[int] = None
+    _width_ms: Optional[int] = None
 
     # trigger_subsampling and render_subsampling override subsampling.
     # Always non-None after __attrs_post_init__()
@@ -52,6 +52,13 @@ class Config:
     render_subsampling: int = None
     _subsampling: int = 1
 
+    render_subfps: int = 1
+    # FFmpeg accepts FPS as a fraction only.
+    render_fps = property(lambda self:
+                          Fraction(self.fps, self.render_subfps))
+
+    # TODO: Remove cfg._width (breaks compat)
+    # ISSUE: baking into trigger_ms will stack with channel-specific ms
     trigger_width: int = 1
     render_width: int = 1
 
@@ -76,17 +83,13 @@ class Config:
     wav_prefix = Ignored
     # endregion
 
-    @property
-    def width_s(self) -> float:
-        return self.width_ms / 1000
-
     def __attrs_post_init__(self):
         # Cast benchmark_mode to enum.
         try:
             if not isinstance(self.benchmark_mode, BenchmarkMode):
                 self.benchmark_mode = BenchmarkMode[self.benchmark_mode]
         except KeyError:
-            raise ValueError(
+            raise OvgenError(
                 f'invalid benchmark_mode mode {self.benchmark_mode} not in '
                 f'{[el.name for el in BenchmarkMode]}')
 
@@ -94,23 +97,44 @@ class Config:
         subsampling = self._subsampling
         self.trigger_subsampling = coalesce(self.trigger_subsampling, subsampling)
         self.render_subsampling = coalesce(self.render_subsampling, subsampling)
+        
+        # Compute trigger_ms and render_ms.
+        width_ms = self._width_ms
+        try:
+            self.trigger_ms = coalesce(self.trigger_ms, width_ms)
+            self.render_ms = coalesce(self.render_ms, width_ms)
+        except TypeError:
+            raise OvgenError(
+                'Must supply either width_ms or both (trigger_ms and render_ms)')
+
+        deprecated = []
+        if self.trigger_width != 1:
+            deprecated.append('trigger_width')
+        if self.render_width != 1:
+            deprecated.append('render_width')
+        if deprecated:
+            warnings.warn(f"Options {deprecated} are deprecated and will be removed",
+                          OvgenWarning)
 
 
 _FPS = 60  # f_s
 
 def default_config(**kwargs) -> Config:
+    """ Default template values do NOT indicate optional attributes. """
     cfg = Config(
-        render_subfps=2,
+        render_subfps=1,
         master_audio='',
         fps=_FPS,
         amplification=1,
 
-        width_ms=40,
+        trigger_ms=40,
+        render_ms=40,
         trigger_subsampling=1,
         render_subsampling=2,
         trigger=CorrelationTriggerConfig(
             edge_strength=2,
             responsiveness=0.5,
+            buffer_falloff=0.5,
             use_edge_trigger=False,
             # Removed due to speed hit.
             # post=LocalPostTriggerConfig(strength=0.1),
@@ -118,7 +142,7 @@ def default_config(**kwargs) -> Config:
         channels=[],
 
         layout=LayoutConfig(ncols=2),
-        render=RendererConfig(1280, 800),
+        render=RendererConfig(1280, 720),
     )
     return attr.evolve(cfg, **kwargs)
 

@@ -5,7 +5,7 @@ from typing import Optional, List, Tuple, Union
 import click
 
 from ovgenpy.channel import ChannelConfig
-from ovgenpy.config import OvgenError, yaml
+from ovgenpy.config import yaml
 from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from ovgenpy.ovgenpy import default_config, Config, Ovgen
 
@@ -157,10 +157,10 @@ def main(
         cfg_dir = '.'
 
     if show_gui:
-        raise OvgenError('GUI not implemented')
+        raise click.UsageError('GUI not implemented')
     else:
         if not files:
-            raise click.ClickException('Must specify files or folders to play')
+            raise click.UsageError('Must specify files or folders to play')
         if write:
             write_path = get_path(audio, YAML_NAME)
             yaml.dump(cfg, write_path)

@@ -59,10 +59,12 @@ class Channel:
 
         # nsamp = orig / subsampling
         # stride = subsampling * width
-        def calculate_nsamp(sub):
-            return round(ovgen_cfg.width_s * self.wave.smp_s / sub)
-        trigger_samp = calculate_nsamp(tsub)
-        self.render_samp = calculate_nsamp(rsub)
+        def calculate_nsamp(width_ms, sub):
+            width_s = width_ms / 1000
+            return round(width_s * self.wave.smp_s / sub)
+
+        trigger_samp = calculate_nsamp(ovgen_cfg.trigger_ms, tsub)
+        self.render_samp = calculate_nsamp(ovgen_cfg.render_ms, rsub)
 
         self.trigger_stride = tsub * tw
         self.render_stride = rsub * rw
