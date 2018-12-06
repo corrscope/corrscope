@@ -124,7 +124,8 @@ def default_config(**kwargs) -> Config:
         fps=_FPS,
         amplification=1,
 
-        width_ms=40,
+        trigger_ms=40,
+        render_ms=40,
         trigger_subsampling=1,
         render_subsampling=2,
         trigger=CorrelationTriggerConfig(
