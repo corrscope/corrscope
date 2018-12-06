@@ -32,7 +32,6 @@ Maybe = Optional[int]
     width_ms=maybe, trigger_ms=maybe, render_ms=maybe,
     subsampling=positive, tsub=maybe, rsub=maybe,
     g_trigger_width=positive, g_render_width=positive,
-
 )
 def test_config_channel_width_stride(
     # Channel
