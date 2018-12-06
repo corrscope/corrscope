@@ -55,7 +55,7 @@ class Config:
     render_subsampling: int = None
     _subsampling: int = 1
 
-    # FIXME keep cfg._width for compat?
+    # TODO: Remove cfg._width (breaks compat)
     # ISSUE: baking into trigger_ms will stack with channel-specific ms
     trigger_width: int = 1
     render_width: int = 1

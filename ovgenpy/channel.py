@@ -49,7 +49,6 @@ class Channel:
         # `subsampling` increases `stride` and decreases `nsamp`.
         # `width` increases `stride` without changing `nsamp`.
         tsub = ovgen_cfg.trigger_subsampling
-        # FIXME remove ovgen_cfg._width, replace with 1
         tw = coalesce(cfg.trigger_width, ovgen_cfg.trigger_width)
 
         rsub = ovgen_cfg.render_subsampling
