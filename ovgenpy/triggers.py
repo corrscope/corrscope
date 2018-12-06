@@ -7,7 +7,7 @@ from scipy import signal
 from scipy.signal import windows
 import attr
 
-from ovgenpy.config import kw_config, OvgenError, Alias
+from ovgenpy.config import kw_config, OvgenError, Alias, OvgenWarning
 from ovgenpy.util import find, obj_name
 from ovgenpy.utils.windows import midpad, leftpad
 from ovgenpy.wave import FLOAT
@@ -140,7 +140,8 @@ class CorrelationTriggerConfig(ITriggerConfig):
             if self.post:
                 warnings.warn(
                     "Ignoring old `CorrelationTriggerConfig.use_edge_trigger` flag, "
-                    "overriden by newer `post` flag."
+                    "overriden by newer `post` flag.",
+                    OvgenWarning
                 )
             else:
                 self.post = ZeroCrossingTriggerConfig()

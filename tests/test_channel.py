@@ -9,25 +9,48 @@ from pytest_mock import MockFixture
 import ovgenpy.channel
 import ovgenpy.ovgenpy
 from ovgenpy.channel import ChannelConfig, Channel
+from ovgenpy.config import OvgenError
 from ovgenpy.ovgenpy import default_config, Ovgen, BenchmarkMode
 from ovgenpy.triggers import NullTriggerConfig
 from ovgenpy.util import coalesce
 
-positive = hs.integers(min_value=1, max_value=100)
-maybe = hs.one_of(positive, hs.none())
 
-@given(subsampling=positive, tsub=maybe, rsub=maybe,
-       trigger_width=positive, render_width=positive)
-def test_channel_subsampling(
-        subsampling: int,
-        tsub: Optional[int],
-        rsub: Optional[int],
-        trigger_width: int,
-        render_width: int,
-        mocker: MockFixture
+positive = hs.integers(min_value=1, max_value=100)
+Positive = int
+
+# In order to get good shrinking behaviour, try to put simpler strategies first.
+maybe = hs.one_of(hs.none(), positive)
+Maybe = Optional[int]
+
+
+@pytest.mark.filterwarnings("ignore::ovgenpy.config.OvgenWarning")
+@given(
+    # Channel
+    c_trigger_width=maybe, c_render_width=maybe,
+
+    # Global
+    width_ms=maybe, trigger_ms=maybe, render_ms=maybe,
+    subsampling=positive, tsub=maybe, rsub=maybe,
+    g_trigger_width=positive, g_render_width=positive,
+)
+def test_config_channel_width_stride(
+    # Channel
+    c_trigger_width: Maybe, c_render_width: Maybe,
+
+    # Global
+    width_ms: Maybe, trigger_ms: Maybe, render_ms: Maybe,
+    subsampling: Positive, tsub: Maybe, rsub: Maybe,
+    g_trigger_width: Positive, g_render_width: Positive,
+
+    mocker: MockFixture,
 ):
-    """ Ensure trigger/render_samp and trigger/render subsampling
-    are computed correctly. """
+    """ (Tautologically) verify:
+    -     cfg.t/r_ms (given width_ms)
+    - channel.  r_samp (given cfg)
+    - channel.t/r_stride (given cfg.sub/width and cfg.width)
+    - trigger._tsamp, _stride
+    - renderer's method calls(samp, stride)
+    """
 
     # region setup test variables
     ovgenpy.ovgenpy.PRINT_TIMESTAMP = False    # Cleanup Hypothesis testing logs
@@ -44,35 +67,56 @@ def test_channel_subsampling(
 
     ccfg = ChannelConfig(
         'tests/sine440.wav',
-        trigger_width=trigger_width,
-        render_width=render_width,
+        trigger_width=c_trigger_width,
+        render_width=c_render_width,
     )
-    cfg = default_config(
-        channels=[ccfg],
-        subsampling=subsampling,
-        trigger_subsampling=tsub,
-        render_subsampling=rsub,
-        trigger=NullTriggerConfig(),
-        benchmark_mode=BenchmarkMode.OUTPUT
-    )
-    channel = Channel(ccfg, cfg)
+    def get_cfg():
+        return default_config(
+            width_ms=width_ms,
+            trigger_ms=trigger_ms,
+            render_ms=render_ms,
+
+            subsampling=subsampling,
+            trigger_subsampling=tsub,
+            render_subsampling=rsub,
+
+            trigger_width=g_trigger_width,
+            render_width=g_render_width,
+
+            channels=[ccfg],
+            trigger=NullTriggerConfig(),
+            benchmark_mode=BenchmarkMode.OUTPUT
+        )
     # endregion
+
+    if not (width_ms or (trigger_ms and render_ms)):
+        with pytest.raises(OvgenError):
+            _cfg = get_cfg()
+        return
+
+    cfg = get_cfg()
+    channel = Channel(ccfg, cfg)
+
+    # Ensure cfg.width_ms etc. are correct
+    assert cfg.trigger_ms == coalesce(trigger_ms, width_ms)
+    assert cfg.render_ms == coalesce(render_ms, width_ms)
 
     # Ensure channel.window_samp, trigger_subsampling, render_subsampling are correct.
     tsub = coalesce(tsub, subsampling)
     rsub = coalesce(rsub, subsampling)
 
-    def ideal_samp(sub):
+    def ideal_samp(width_ms, sub):
+        width_s = width_ms / 1000
         return pytest.approx(
-            round(cfg.width_s * channel.wave.smp_s / sub), abs=1)
+            round(width_s * channel.wave.smp_s / sub), rel=1e-6)
 
-    ideal_tsamp = ideal_samp(tsub)
-    ideal_rsamp = ideal_samp(rsub)
+    ideal_tsamp = ideal_samp(cfg.trigger_ms, tsub)
+    ideal_rsamp = ideal_samp(cfg.render_ms, rsub)
     assert channel.render_samp == ideal_rsamp
     del subsampling
 
-    assert channel.trigger_stride == tsub * trigger_width
-    assert channel.render_stride == rsub * render_width
+    assert channel.trigger_stride == tsub * coalesce(c_trigger_width, g_trigger_width)
+    assert channel.render_stride == rsub * coalesce(c_render_width, g_render_width)
 
     ## Ensure trigger uses channel.window_samp and trigger_stride.
     trigger = channel.trigger
