@@ -1,13 +1,15 @@
 from os.path import abspath
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
-from ovgenpy.config import register_config, Alias
+import attr
+from ruamel.yaml.comments import CommentedMap
+
+from ovgenpy.config import register_config, Alias, OvgenError
+from ovgenpy.triggers import ITriggerConfig
 from ovgenpy.util import coalesce
 from ovgenpy.wave import _WaveConfig, Wave
 
-
 if TYPE_CHECKING:
-    from ovgenpy.triggers import ITriggerConfig
     from ovgenpy.ovgenpy import Config
 
 
@@ -15,7 +17,8 @@ if TYPE_CHECKING:
 class ChannelConfig:
     wav_path: str
 
-    trigger: Optional['ITriggerConfig'] = None    # TODO test channel-specific triggers
+    # Supplying a dict inherits attributes from global trigger.
+    trigger: Union[ITriggerConfig, dict, None] = None    # TODO test channel-specific triggers
     # Multiplies how wide the window is, in milliseconds.
     trigger_width: Optional[int] = None
     render_width: Optional[int] = None
@@ -67,7 +70,17 @@ class Channel:
         self.render_stride = rsub * rw
 
         # Create a Trigger object.
-        tcfg = cfg.trigger or ovgen_cfg.trigger
+        if isinstance(cfg.trigger, ITriggerConfig):
+            tcfg = cfg.trigger
+        elif isinstance(cfg.trigger, (CommentedMap, dict)):  # CommentedMap may/not be subclass of dict.
+            tcfg = attr.evolve(ovgen_cfg.trigger, **cfg.trigger)
+        elif cfg.trigger is None:
+            tcfg = ovgen_cfg.trigger
+        else:
+            raise OvgenError(
+                f'invalid per-channel trigger {cfg.trigger}, type={type(cfg.trigger)}, '
+                f'must be (*)TriggerConfig, dict, or None')
+
         self.trigger = tcfg(
             wave=self.wave,
             tsamp=trigger_samp,
