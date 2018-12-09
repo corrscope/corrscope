@@ -22,7 +22,7 @@ doesn't work yet, see https://github.com/jimbo1qaz/ovgenpy/issues/74
 
 ### Conda
 ```shell
-conda create -n ovgenpy python=3.6 pip numpy scipy matplotlib
+conda create -n ovgenpy python=3.6 pip numpy scipy matplotlib pyqt=5
 pip install -e .
 ```
 
