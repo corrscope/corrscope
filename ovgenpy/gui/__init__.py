@@ -208,7 +208,7 @@ class ChannelModel(qc.QAbstractTableModel):
                 except IndexError:
                     return nope
             else:
-                return str(section)
+                return str(section + 1)
         return nope
 
     # rows
