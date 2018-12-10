@@ -248,7 +248,7 @@ class ChannelModel(qc.QAbstractTableModel):
 
             data = self.col_data[col]
             key = data.key
-            if value:
+            if value and not value.isspace():
                 try:
                     value = data.cls(value)
                 except ValueError as e:
