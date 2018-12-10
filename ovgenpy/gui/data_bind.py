@@ -29,7 +29,7 @@ class PresentationModel:
     combo_text: Dict[str, List[str]]
 
     def __init__(self, cfg: Attrs):
-        self._cfg = cfg
+        self.cfg = cfg
         self.update_widget: Dict[str, WidgetUpdater] = {}
 
     def __getitem__(self, item):
@@ -37,15 +37,15 @@ class PresentationModel:
             # Custom properties
             return getattr(self, item)
         except AttributeError:
-            return rgetattr(self._cfg, item)
+            return rgetattr(self.cfg, item)
 
     def __setitem__(self, key, value):
         perr(f'{key} = {value}')
         # Custom properties
         if hasattr(self, key):
             setattr(self, key, value)
-        elif rhasattr(self._cfg, key):
-            rsetattr(self._cfg, key, value)
+        elif rhasattr(self.cfg, key):
+            rsetattr(self.cfg, key, value)
         else:
             raise AttributeError(f'cannot set attribute {key} on {obj_name(self)}()')
 

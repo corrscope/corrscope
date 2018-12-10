@@ -93,7 +93,7 @@ class MainWindow(qw.QMainWindow):
 
 def nrow_ncol_property(altered: str, unaltered: str) -> property:
     def get(self: 'ConfigModel'):
-        val = getattr(self._cfg.layout, altered)
+        val = getattr(self.cfg.layout, altered)
         if val is None:
             return 0
         else:
@@ -102,11 +102,11 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
     def set(self: 'ConfigModel', val: int):
         perr(altered)
         if val > 0:
-            setattr(self._cfg.layout, altered, val)
-            setattr(self._cfg.layout, unaltered, None)
+            setattr(self.cfg.layout, altered, val)
+            setattr(self.cfg.layout, unaltered, None)
             self.update_widget['layout__' + unaltered]()
         elif val == 0:
-            setattr(self._cfg.layout, altered, None)
+            setattr(self.cfg.layout, altered, None)
         else:
             raise OvgenError(f"invalid input: {altered} < 0, should never happen")
 
@@ -114,7 +114,7 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
 
 
 class ConfigModel(PresentationModel):
-    _cfg: Config
+    cfg: Config
     combo_symbols = {}
     combo_text = {}
 
@@ -128,7 +128,7 @@ class ConfigModel(PresentationModel):
 
     @property
     def render_video_size(self) -> str:
-        render = self._cfg.render
+        render = self.cfg.render
         w, h = render.width, render.height
         return f'{w}x{h}'
 
@@ -143,7 +143,7 @@ class ConfigModel(PresentationModel):
         else:
             raise error
 
-        render = self._cfg.render
+        render = self.cfg.render
         width, height = width_height
         try:
             render.width = int(width)
