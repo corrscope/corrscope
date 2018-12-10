@@ -45,14 +45,18 @@ class MainWindow(qw.QMainWindow):
 
     def __init__(self, cfg: Config, cfg_dir: str):
         super().__init__()
+
+        # Load UI.
         uic.loadUi(res('mainwindow.ui'), self)   # sets windowTitle
         self.setWindowTitle(APP_NAME)
 
+        # Bind UI buttons, etc.
+        self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
+
+        # Bind config to UI.
         self.cfg_dir = cfg_dir
         self.load_cfg(cfg)
 
-        self.master_audio_browse: qw.QPushButton
-        self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
         self.show()
         # Complex changes are done in the presentation model's setters.
 
@@ -60,18 +64,7 @@ class MainWindow(qw.QMainWindow):
         # Standard Item Model.item[r,c] == QStandardItem (it IS the data)
         # Explanation: https://doc.qt.io/qt-5/modelview.html#3-3-predefined-models
 
-    model: 'ConfigModel'
-    channel_model: 'ChannelModel'
-
-    def load_cfg(self, cfg: Config):
-        # TODO unbind current model's slots if exists
-        # or maybe disconnect ALL connections??
-        self.model = ConfigModel(cfg)
-        map_gui(self, self.model)
-
-        self.channel_model = ChannelModel(cfg.channels)
-        self.channel_widget: qw.QTableView
-        self.channel_widget.setModel(self.channel_model)
+    master_audio_browse: qw.QPushButton
 
     def on_master_audio_browse(self):
         # TODO add default file-open dir, initialized to yaml path and remembers prev
@@ -84,6 +77,19 @@ class MainWindow(qw.QMainWindow):
             self.model[master_audio] = name
             self.model.update_widget[master_audio]()
 
+    # Config models
+    model: 'ConfigModel'
+    channel_model: 'ChannelModel'
+
+    def load_cfg(self, cfg: Config):
+        # TODO unbind current model's slots if exists
+        # or maybe disconnect ALL connections??
+        self.model = ConfigModel(cfg)
+        map_gui(self, self.model)
+
+        self.channel_model = ChannelModel(cfg.channels)
+        self.channel_widget: qw.QTableView
+        self.channel_widget.setModel(self.channel_model)
 
 def nrow_ncol_property(altered: str, unaltered: str) -> property:
     def get(self: 'ConfigModel'):
