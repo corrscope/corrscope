@@ -157,7 +157,10 @@ class Column:
     default: Any
 
     def _display_name(self) -> str:
-        return self.key.replace('_', ' ').title()
+        return (self.key
+                .replace('__', '\n')
+                .replace('_', ' ')
+                .title())
     display_name: str = attr.Factory(_display_name, takes_self=True)
 
 
