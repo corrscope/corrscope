@@ -52,6 +52,7 @@ class MainWindow(qw.QMainWindow):
 
         # Bind UI buttons, etc.
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
+        self.actionExit.triggered.connect(qw.QApplication.quit)
 
         # Bind config to UI.
         self.cfg_dir = cfg_dir
@@ -65,6 +66,9 @@ class MainWindow(qw.QMainWindow):
         # Explanation: https://doc.qt.io/qt-5/modelview.html#3-3-predefined-models
 
     master_audio_browse: qw.QPushButton
+    # Loading mainwindow.ui changes menuBar from a getter to an attribute.
+    menuBar: qw.QMenuBar
+    actionExit: qw.QAction
 
     def on_master_audio_browse(self):
         # TODO add default file-open dir, initialized to yaml path and remembers prev
