@@ -11,7 +11,7 @@ from PyQt5.QtCore import QModelIndex, Qt
 from ovgenpy.channel import ChannelConfig
 from ovgenpy.config import OvgenError
 from ovgenpy.gui.data_bind import PresentationModel, map_gui, rgetattr, behead
-from ovgenpy.ovgenpy import Config, default_config
+from ovgenpy.ovgenpy import Config
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
 from ovgenpy.util import perr, obj_name
 
@@ -58,7 +58,6 @@ class MainWindow(qw.QMainWindow):
         # Abstract Item Model.data[idx] == QVariant (impl in subclass, wraps data)
         # Standard Item Model.item[r,c] == QStandardItem (it IS the data)
         # Explanation: https://doc.qt.io/qt-5/modelview.html#3-3-predefined-models
-        # items.setData(items.index(0,0), item)
 
     model: 'ConfigModel'
     channel_model: 'ChannelModel'
@@ -145,39 +144,27 @@ class ConfigModel(PresentationModel):
     # TODO mutate _cfg and convert all colors to #rrggbb on access
 
 
-class ChannelWidget(qw.QWidget):
-    """ Widget bound to a single ChannelModel. """
-
-    def __init__(self, cfg: ChannelConfig):
-        super().__init__()
-        uic.loadUi(res('channel_widget.ui'), self)
-
-        self.model = ChannelModel(cfg)
-        map_gui(self, self.model)
-
-        # FIXME uncomment?
-        # self.show()
-
-
 T = TypeVar('T')
 
 
-# def coalesce_property(key: str, default: T) -> property:
-#     def get(self: 'ChannelModel') -> T:
-#         val: Optional[T] = getattr(self._cfg, key)
-#         if val is None:
-#             return default
-#         return val
-#
-#     def set(self: 'ChannelModel', val: T):
-#         if val == default:
-#             val = None
-#         setattr(self._cfg, key, val)
-#
-#     return property(get, set)
+nope = qc.QVariant()
+
+
+@attr.dataclass
+class Column:
+    key: str
+    default: Any    # FIXME unused
+    cls: Type = None
+
+    def __attrs_post_init__(self):
+        if self.cls is None:
+            self.cls = type(self.default)
+
+    # Idea: Add translatable display_name
 
 
 class ChannelModel(qc.QAbstractTableModel):
+    """ Design based off http://doc.qt.io/qt-5/model-view-programming.html#a-read-only-example-model """
 
     def __init__(self, channels: List[ChannelConfig]):
         """ Mutates `channels` for convenience. """
@@ -199,21 +186,28 @@ class ChannelModel(qc.QAbstractTableModel):
             self.triggers.append(trigger_dict)
 
     # columns
-    col_keys = ['wav_path', 'trigger_width', 'render_width', 'line_color',
-                'trigger__']
+    col_data = [
+        Column('wav_path', ''),
+        Column('trigger_width', None, int),
+        Column('render_width', None, int),
+        Column('line_color', None, str),
+        # Column('trigger__)'
+    ]
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
-        return len(self.col_keys)
+        return len(self.col_data)
 
     def headerData(self, section: int, orientation: Qt.Orientation,
                    role=Qt.DisplayRole):
-        nope = qc.QVariant()
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            col = section
-            try:
-                return self.col_keys[col]
-            except IndexError:
-                return nope
+        if role == Qt.DisplayRole:
+            if orientation == Qt.Horizontal:
+                col = section
+                try:
+                    return self.col_data[col].key
+                except IndexError:
+                    return nope
+            else:
+                return str(section)
         return nope
 
     # rows
@@ -223,12 +217,12 @@ class ChannelModel(qc.QAbstractTableModel):
     # data
     TRIGGER = 'trigger__'
 
-    def data(self, index: QModelIndex, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole:
-            col = index.column()
-            row = index.row()
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> qc.QVariant:
+        col = index.column()
+        row = index.row()
 
-            key = self.col_keys[col]
+        if role == Qt.DisplayRole and index.isValid() and row < self.rowCount():
+            key = self.col_data[col].key
             if key.startswith(self.TRIGGER):
                 key = behead(key, self.TRIGGER)
                 return self.triggers[row].get(key, '')
@@ -236,39 +230,37 @@ class ChannelModel(qc.QAbstractTableModel):
             else:
                 return getattr(self.channels[row], key)
 
-            # try:
-            #     return getattr(self, 'cfg__' + key)
-            # except AttributeError:
-            #     pass
-            # if key.startswith('trigger__') and cfg.trigger is None:
-            #     return rgetattr(cfg, key, '')
-            # else:
-            #     return rgetattr(cfg, key)
+        return nope
 
-            # DEFAULT = object()
-            # if val is DEFAULT:
-            #     # Trigger attributes can be missing, all others must be present.
-            #     assert key.startswith('trigger__')
-            #     return ''
-            # else:
-            #     return val
-        return super().data(index, role)
+    def setData(self, index: QModelIndex, value: str, role=Qt.EditRole) -> bool:
+        col = index.column()
+        row = index.row()
 
-    def setData(self, index: QModelIndex, value, role=Qt.EditRole) -> bool:
-        if role == Qt.EditRole:
-            # FIXME what type is value? str or not?
-            perr(repr(role))
+        if index.isValid() and role == Qt.EditRole:
+            # type(value) == str
+
+            data = self.col_data[col]
+            key = data.key
+            if value != '':
+                try:
+                    value = data.cls(value)
+                except ValueError as e:
+                    # raise OvgenError(e)
+                    return False
+            else:
+                value = data.default
+
+            if key.startswith(self.TRIGGER):
+                key = behead(key, self.TRIGGER)
+                self.triggers[row][key] = value
+
+            else:
+                setattr(self.channels[row], key, value)
+
             return True
-        return super().setData(index, value, role)
+        return False
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
-        return super().flags(index)
-
-    # _cfg: ChannelConfig
-    # combo_symbols = {}
-    # combo_text = {}
-    #
-    # trigger_width = coalesce_property('trigger_width', 1)
-    # render_width = coalesce_property('render_width', 1)
-    # line_color = coalesce_property('line_color', '')  # TODO
-
+    def flags(self, index: QModelIndex):
+        if not index.isValid():
+            return Qt.ItemIsEnabled
+        return qc.QAbstractItemModel.flags(self, index) | Qt.ItemIsEditable
