@@ -189,6 +189,10 @@ class ChannelModel(qc.QAbstractTableModel):
         Column('trigger_width', int, None, 'Trigger Width ×'),
         Column('render_width', int, None, 'Render Width ×'),
         Column('line_color', str, None, 'Line Color'),
+        # TODO move from table view to sidebar QDataWidgetMapper?
+        Column('trigger__edge_strength', float, None),
+        Column('trigger__responsiveness', float, None),
+        Column('trigger__buffer_falloff', float, None),
     ]
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
