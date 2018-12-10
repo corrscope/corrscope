@@ -61,11 +61,6 @@ class MainWindow(qw.QMainWindow):
         self.load_cfg(cfg)
 
         self.show()
-        # Complex changes are done in the presentation model's setters.
-
-        # Abstract Item Model.data[idx] == QVariant (impl in subclass, wraps data)
-        # Standard Item Model.item[r,c] == QStandardItem (it IS the data)
-        # Explanation: https://doc.qt.io/qt-5/modelview.html#3-3-predefined-models
 
     master_audio_browse: qw.QPushButton
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
@@ -103,6 +98,7 @@ class MainWindow(qw.QMainWindow):
         self.channel_model = ChannelModel(cfg.channels)
         self.channel_widget: qw.QTableView
         self.channel_widget.setModel(self.channel_model)
+
 
 def nrow_ncol_property(altered: str, unaltered: str) -> property:
     def get(self: 'ConfigModel'):
