@@ -154,9 +154,14 @@ nope = qc.QVariant()
 class Column:
     key: str
     default: Any    # FIXME unused
-    cls: Type = attr.Factory(lambda self: type(self.default), takes_self=True)
 
-    # Idea: Add translatable display_name
+    def _cls(self) -> Type:
+        return type(self.default)
+    cls: Type = attr.Factory(_cls, takes_self=True)
+
+    def _display_name(self) -> str:
+        return self.key.replace('_', ' ').title()
+    display_name: str = attr.Factory(_display_name, takes_self=True)
 
 
 class ChannelModel(qc.QAbstractTableModel):
@@ -183,10 +188,10 @@ class ChannelModel(qc.QAbstractTableModel):
 
     # columns
     col_data = [
-        Column('wav_path', ''),
-        Column('trigger_width', None, int),
-        Column('render_width', None, int),
-        Column('line_color', None, str),
+        Column('wav_path', '', str, 'WAV Path'),
+        Column('trigger_width', None, int, 'Trigger Width ×'),
+        Column('render_width', None, int, 'Render Width ×'),
+        Column('line_color', None, str, 'Line Color'),
         # Column('trigger__)'
     ]
 
@@ -199,7 +204,7 @@ class ChannelModel(qc.QAbstractTableModel):
             if orientation == Qt.Horizontal:
                 col = section
                 try:
-                    return self.col_data[col].key
+                    return self.col_data[col].display_name
                 except IndexError:
                     return nope
             else:
