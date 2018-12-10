@@ -154,11 +154,7 @@ nope = qc.QVariant()
 class Column:
     key: str
     default: Any    # FIXME unused
-    cls: Type = None
-
-    def __attrs_post_init__(self):
-        if self.cls is None:
-            self.cls = type(self.default)
+    cls: Type = attr.Factory(lambda self: type(self.default), takes_self=True)
 
     # Idea: Add translatable display_name
 
