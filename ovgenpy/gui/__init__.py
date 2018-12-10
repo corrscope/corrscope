@@ -3,6 +3,7 @@ from typing import *
 from pathlib import Path
 
 import attr
+import matplotlib.colors
 from PyQt5 import uic
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
@@ -111,6 +112,14 @@ class ConfigModel(PresentationModel):
     combo_symbols = {}
     combo_text = {}
 
+    def __init__(self, cfg: Config):
+        """ Mutates colors for convenience. """
+        super().__init__(cfg)
+
+        for key in ['bg_color', 'init_line_color']:
+            color = getattr(cfg.render, key)
+            setattr(cfg.render, key, color2hex(color))
+
     @property
     def render_video_size(self) -> str:
         render = self._cfg.render
@@ -168,10 +177,12 @@ class ChannelModel(qc.QAbstractTableModel):
     """ Design based off http://doc.qt.io/qt-5/model-view-programming.html#a-read-only-example-model """
 
     def __init__(self, channels: List[ChannelConfig]):
-        """ Mutates `channels` for convenience. """
+        """ Mutates `channels` and `line_color` for convenience. """
         super().__init__()
         self.channels = channels
         self.triggers: List[dict] = []
+
+        line_color = 'line_color'
 
         for cfg in self.channels:
             t = cfg.trigger
@@ -185,6 +196,8 @@ class ChannelModel(qc.QAbstractTableModel):
 
             cfg.trigger = trigger_dict
             self.triggers.append(trigger_dict)
+            if line_color in trigger_dict:
+                trigger_dict[line_color] = color2hex(trigger_dict[line_color])
 
     # columns
     col_data = [
@@ -274,3 +287,7 @@ class ChannelModel(qc.QAbstractTableModel):
         if not index.isValid():
             return Qt.ItemIsEnabled
         return qc.QAbstractItemModel.flags(self, index) | Qt.ItemIsEditable
+
+
+def color2hex(color):
+    return matplotlib.colors.to_hex(color, keep_alpha=False)
