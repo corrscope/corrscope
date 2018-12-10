@@ -222,14 +222,20 @@ class ChannelModel(qc.QAbstractTableModel):
         col = index.column()
         row = index.row()
 
-        if role == Qt.DisplayRole and index.isValid() and row < self.rowCount():
-            key = self.col_data[col].key
+        if role in [Qt.DisplayRole, Qt.EditRole] and index.isValid() and row < self.rowCount():
+            data = self.col_data[col]
+            key = data.key
             if key.startswith(self.TRIGGER):
                 key = behead(key, self.TRIGGER)
-                return self.triggers[row].get(key, '')
+                value = self.triggers[row].get(key, '')
 
             else:
-                return getattr(self.channels[row], key)
+                value = getattr(self.channels[row], key)
+
+            if value == data.default:
+                return ''
+            else:
+                return str(value)
 
         return nope
 
@@ -242,7 +248,7 @@ class ChannelModel(qc.QAbstractTableModel):
 
             data = self.col_data[col]
             key = data.key
-            if value != '':
+            if value:
                 try:
                     value = data.cls(value)
                 except ValueError as e:
