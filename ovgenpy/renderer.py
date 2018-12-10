@@ -35,9 +35,9 @@ def default_color():
 class RendererConfig:
     width: int
     height: int
-    line_width: Optional[float] = None
+    line_width: Optional[float] = 1.5
 
-    bg_color: str = 'black'
+    bg_color: str = '#000000'
     init_line_color: str = default_color()
 
     create_window: bool = False
