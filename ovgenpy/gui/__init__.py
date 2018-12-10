@@ -153,11 +153,8 @@ nope = qc.QVariant()
 @attr.dataclass
 class Column:
     key: str
-    default: Any    # FIXME unused
-
-    def _cls(self) -> Type:
-        return type(self.default)
-    cls: Type = attr.Factory(_cls, takes_self=True)
+    cls: Type
+    default: Any
 
     def _display_name(self) -> str:
         return self.key.replace('_', ' ').title()
@@ -188,11 +185,10 @@ class ChannelModel(qc.QAbstractTableModel):
 
     # columns
     col_data = [
-        Column('wav_path', '', str, 'WAV Path'),
-        Column('trigger_width', None, int, 'Trigger Width ×'),
-        Column('render_width', None, int, 'Render Width ×'),
-        Column('line_color', None, str, 'Line Color'),
-        # Column('trigger__)'
+        Column('wav_path', str, '', 'WAV Path'),
+        Column('trigger_width', int, None, 'Trigger Width ×'),
+        Column('render_width', int, None, 'Render Width ×'),
+        Column('line_color', str, None, 'Line Color'),
     ]
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
