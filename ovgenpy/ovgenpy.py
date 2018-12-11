@@ -296,12 +296,19 @@ class Ovgen:
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
                     renderer.render_frame(render_datas)
-                    frame = renderer.get_frame()
+                    frame_data = renderer.get_frame()
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
                         # Output frame
+                        aborted = False
                         for output in self.outputs:
-                            output.write_frame(frame)
+                            if output.write_frame(frame_data) is outputs_.Stop:
+                                aborted = True
+                                break
+                        if aborted:
+                            # Outputting frame happens after most computation finished.
+                            end_frame = frame + 1
+                            break
 
             if self.raise_on_teardown:
                 raise self.raise_on_teardown
