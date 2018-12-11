@@ -215,7 +215,7 @@ class FFplayOutput(PipeOutput):
     def __init__(self, ovgen_cfg: 'Config', cfg: FFplayOutputConfig):
         super().__init__(ovgen_cfg, cfg)
 
-        ffmpeg = _FFmpegProcess([FFMPEG], ovgen_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG, '-nostats'], ovgen_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append('-f nut')
 
