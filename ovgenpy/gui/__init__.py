@@ -123,13 +123,8 @@ class MainWindow(qw.QMainWindow):
     def play_thread(self, arg: Arguments, error_msg: str):
         with self.ovgen_thread as t:
             if t is not None:
-                # FIXME does it work? i was not thinking clearly when i wrote this
                 self.ovgen_thread.unlock()
-                qw.QMessageBox.critical(
-                    self,
-                    'Error',
-                    error_msg,
-                )
+                qw.QMessageBox.critical(self, 'Error', error_msg)
                 return
 
             cfg = copy_config(self.model.cfg)
@@ -168,7 +163,6 @@ class OvgenThread(qc.QThread):
 
 class OvgenProgressDialog(qw.QProgressDialog):
     def __init__(self, parent: Optional[qw.QWidget]):
-        # flags =
         super().__init__(parent)
 
         # If set to 0, the dialog is always shown as soon as any progress is set.

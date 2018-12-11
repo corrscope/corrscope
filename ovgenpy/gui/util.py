@@ -24,6 +24,7 @@ class Locked(Generic[T]):
         return self.__obj
 
     def unlock(self):
+        # FIXME does it work? i was not thinking clearly when i wrote this
         if not self.skip_exit:
             self.skip_exit = True
             self.lock.unlock()
