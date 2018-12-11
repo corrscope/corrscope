@@ -7,7 +7,7 @@ import click
 from ovgenpy.channel import ChannelConfig
 from ovgenpy.config import yaml
 from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
-from ovgenpy.ovgenpy import default_config, Config, Ovgen
+from ovgenpy.ovgenpy import default_config, Ovgen, Config, Arguments
 
 
 Folder = click.Path(exists=True, file_okay=False)
@@ -178,7 +178,8 @@ def main(
 
         if outputs:
             assert Ovgen  # to prevent PyCharm from deleting the import
-            command = 'Ovgen(cfg, cfg_dir, outputs).play()'
+            arg = Arguments(cfg_dir=cfg_dir, outputs=outputs)
+            command = 'Ovgen(cfg, arg).play()'
             if profile:
                 import cProfile
 

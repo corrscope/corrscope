@@ -5,7 +5,7 @@ from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
 from fractions import Fraction
 from types import SimpleNamespace
-from typing import Optional, List, Union, TYPE_CHECKING
+from typing import Optional, List, Union, TYPE_CHECKING, Callable
 
 import attr
 
@@ -97,7 +97,7 @@ class Config:
         subsampling = self._subsampling
         self.trigger_subsampling = coalesce(self.trigger_subsampling, subsampling)
         self.render_subsampling = coalesce(self.render_subsampling, subsampling)
-        
+
         # Compute trigger_ms and render_ms.
         width_ms = self._width_ms
         try:
@@ -147,19 +147,33 @@ def default_config(**kwargs) -> Config:
     return attr.evolve(cfg, **kwargs)
 
 
+BeginFunc = Callable[[float, float], None]
+ProgressFunc = Callable[[int], None]
+IsAborted = Callable[[], bool]
+
+@attr.dataclass
+class Arguments:
+    cfg_dir: str
+    outputs: List[outputs_.IOutputConfig]
+
+    on_begin: BeginFunc = lambda begin_time, end_time: None
+    progress: ProgressFunc = print
+    is_aborted: IsAborted = lambda: False
+    on_end: Callable[[], None] = lambda: None
+
 class Ovgen:
-    def __init__(self, cfg: Config, cfg_dir: str,
-                 outputs: List[outputs_.IOutputConfig]):
+    def __init__(self, cfg: Config, arg: Arguments):
         self.cfg = cfg
-        self.cfg_dir = cfg_dir
+        self.arg = arg
         self.has_played = False
 
+        # TODO test progress and is_aborted
         # TODO benchmark_mode/not_benchmarking == code duplication.
         benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
         if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
-            self.output_cfgs = outputs
+            self.output_cfgs = arg.outputs
         else:
             self.output_cfgs = []
 
@@ -172,7 +186,7 @@ class Ovgen:
     nchan: int
 
     def _load_channels(self):
-        with pushd(self.cfg_dir):
+        with pushd(self.arg.cfg_dir):
             self.channels = [Channel(ccfg, self.cfg) for ccfg in self.cfg.channels]
             self.waves = [channel.wave for channel in self.channels]
             self.triggers = [channel.trigger for channel in self.channels]
@@ -180,7 +194,7 @@ class Ovgen:
 
     @contextmanager
     def _load_outputs(self):
-        with pushd(self.cfg_dir):
+        with pushd(self.arg.cfg_dir):
             with ExitStack() as stack:
                 self.outputs = [
                     stack.enter_context(output_cfg(self.cfg))
@@ -204,8 +218,11 @@ class Ovgen:
 
         begin_frame = round(fps * self.cfg.begin_time)
 
-        end_frame = fps * coalesce(self.cfg.end_time, self.waves[0].get_s())
+        end_time = coalesce(self.cfg.end_time, self.waves[0].get_s())
+        end_frame = fps * end_time
         end_frame = int(end_frame) + 1
+
+        self.arg.on_begin(self.cfg.begin_time, end_time)
 
         renderer = self._load_renderer()
 
@@ -256,12 +273,19 @@ class Ovgen:
 
             # For each frame, render each wave
             for frame in range(begin_frame, end_frame):
+                if self.arg.is_aborted():
+                    # Used for FPS calculation
+                    end_frame = frame
+
+                    # FIXME: does not kill ffmpeg/ffplay output
+                    break
+
                 time_seconds = frame / fps
                 should_render = (frame - begin_frame) % render_subfps == ahead
 
                 rounded = int(time_seconds)
                 if PRINT_TIMESTAMP and rounded != prev:
-                    print(rounded)
+                    self.arg.progress(rounded)
                     prev = rounded
 
                 render_datas = []
@@ -313,6 +337,7 @@ class Ovgen:
             if self.raise_on_teardown:
                 raise self.raise_on_teardown
 
+        self.arg.on_end()
         if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
             dtime = time.perf_counter() - begin
