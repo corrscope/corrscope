@@ -1,5 +1,6 @@
-from io import StringIO
-from typing import ClassVar, TYPE_CHECKING, Type
+import pickle
+from io import StringIO, BytesIO
+from typing import ClassVar, TYPE_CHECKING, Type, TypeVar
 
 import attr
 from ruamel.yaml import yaml_object, YAML, Representer
@@ -8,7 +9,7 @@ if TYPE_CHECKING:
     from enum import Enum
 
 
-__all__ = ['yaml',
+__all__ = ['yaml', 'copy_config',
            'register_config', 'kw_config', 'Alias', 'Ignored', 'register_enum',
            'OvgenError', 'OvgenWarning']
 
@@ -30,6 +31,35 @@ class MyYAML(YAML):
 # Is isinstance(CommentedMap, dict)? IDK
 yaml = MyYAML()
 _yaml_loadable = yaml_object(yaml)
+
+
+"""
+Speed of copying objects:
+
+number = 100
+print(timeit.timeit(lambda: f(cfg), number=number))
+
+- pickle_copy 0.0566s
+- deepcopy    0.0967s
+- yaml_copy   0.4875s
+
+pickle_copy is fastest.
+"""
+
+T = TypeVar('T')
+
+# Unused
+# def yaml_copy(obj: T) -> T:
+#     with StringIO() as stream:
+#         yaml.dump(obj, stream)
+#         return yaml.load(stream)
+
+# AKA pickle_copy
+def copy_config(obj: T) -> T:
+    with BytesIO() as stream:
+        pickle.dump(obj, stream)
+        stream.seek(0)
+        return pickle.load(stream)
 
 
 # Setup configuration load/dump infrastructure.
@@ -77,10 +107,15 @@ class _ConfigMixin:
         cls = type(self)
 
         for field in attr.fields(cls):
-            name = field.name
-            value = getattr(self, name)
+            # Remove leading underscore from attribute name,
+            # since attrs __init__ removes leading underscore.
 
-            if dump_all or name in always_dump:
+            key = field.name
+            value = getattr(self, key)
+
+            name = key[1:] if key[0] == '_' else key
+
+            if dump_all or key in always_dump:
                 state[name] = value
                 continue
 
@@ -160,5 +195,3 @@ class OvgenWarning(UserWarning):
     """ Warning about deprecated end-user config (YAML/GUI).
     (Should be) caught by GUI and displayed to user. """
     pass
-
-ValidationError = OvgenError
