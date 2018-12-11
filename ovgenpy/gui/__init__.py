@@ -85,6 +85,8 @@ class MainWindow(qw.QMainWindow):
     def on_action_play(self):
         with self.ovgen_thread as t:
             if t is not None:
+                # FIXME does it work? i was not thinking clearly when i wrote this
+                self.ovgen_thread.unlock()
                 qw.QMessageBox.critical(
                     self,
                     'Error',
