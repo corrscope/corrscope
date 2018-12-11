@@ -10,12 +10,12 @@ from PyQt5.QtCore import QModelIndex, Qt
 
 from ovgenpy.channel import ChannelConfig
 from ovgenpy.config import OvgenError, copy_config
-from ovgenpy.gui.data_bind import PresentationModel, map_gui, rgetattr, behead
+from ovgenpy.gui.data_bind import PresentationModel, map_gui, behead, rgetattr, rsetattr
 from ovgenpy.gui.util import color2hex, Locked
 from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
-from ovgenpy.ovgenpy import Config, Ovgen
+from ovgenpy.ovgenpy import Ovgen, Config, Arguments
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
-from ovgenpy.util import perr, obj_name
+from ovgenpy.util import perr, obj_name, coalesce
 
 APP_NAME = 'ovgenpy'
 APP_DIR = Path(__file__).parent
@@ -85,21 +85,42 @@ class MainWindow(qw.QMainWindow):
             self.model.update_widget[master_audio]()
 
     def on_action_play(self):
-        outputs = [FFplayOutputConfig()]
+        """ Launch ovgen and ffplay. """
+
+        # FIXME remove dialog from play
+        dlg = OvgenProgressDialog(self)
+        arg = self._get_args([FFplayOutputConfig()], dlg)
         error_msg = 'Cannot play, another play/render is active'
-        self.play_thread(outputs, error_msg)
+        self.play_thread(arg, error_msg)
 
     def on_action_render(self):
+        """ Get file name. Then show a progress dialog while rendering to file. """
         name, file_type = qw.QFileDialog.getSaveFileName(
             self, "Render to Video", filter="MP4 files (*.mp4);;All files (*)"
         )
         if name != '':
-            outputs = [FFmpegOutputConfig(name)]
-            self.play_thread(
-                outputs, 'Cannot render to file, another play/render is active'
+            dlg = OvgenProgressDialog(self)
+            arg = self._get_args([FFmpegOutputConfig(name)], dlg)
+            error_msg = 'Cannot render to file, another play/render is active'
+            self.play_thread(arg, error_msg)
+
+    def _get_args(self, outputs: List[IOutputConfig],
+                  dlg: Optional['OvgenProgressDialog'] = None):
+        arg = Arguments(
+            cfg_dir=self.cfg_dir,
+            outputs=outputs,
+        )
+        if dlg:
+            arg = attr.evolve(arg,
+                on_begin=dlg.on_begin,
+                progress=dlg.setValue,
+                is_aborted=dlg.wasCanceled,
+                on_end=dlg.reset,
             )
 
-    def play_thread(self, outputs: List[IOutputConfig], error_msg: str):
+        return arg
+
+    def play_thread(self, arg: Arguments, error_msg: str):
         with self.ovgen_thread as t:
             if t is not None:
                 # FIXME does it work? i was not thinking clearly when i wrote this
@@ -112,10 +133,8 @@ class MainWindow(qw.QMainWindow):
                 return
 
             cfg = copy_config(self.model.cfg)
-            cfg_dir = self.cfg_dir
 
-            t = self.ovgen_thread.set(
-                OvgenThread(self, cfg, cfg_dir, outputs))
+            t = self.ovgen_thread.set(OvgenThread(self, cfg, arg))
             # Assigns self.ovgen_thread.set(None) when finished.
             t.start()
 
@@ -135,18 +154,29 @@ class MainWindow(qw.QMainWindow):
 
 
 class OvgenThread(qc.QThread):
-
-    def __init__(self, parent: MainWindow,
-                 cfg: Config, cfg_dir: str, outputs: List[IOutputConfig]):
+    def __init__(self, parent: MainWindow, cfg: Config, arg: Arguments):
         qc.QThread.__init__(self)
 
         def run() -> None:
-            Ovgen(cfg, cfg_dir, outputs).play()
+            Ovgen(cfg, arg).play()
         self.run = run
 
         def finished():
             parent.ovgen_thread.set(None)
         self.finished.connect(finished)
+
+
+class OvgenProgressDialog(qw.QProgressDialog):
+    def __init__(self, parent: Optional[qw.QWidget]):
+        # flags =
+        super().__init__(parent)
+
+        # If set to 0, the dialog is always shown as soon as any progress is set.
+        self.setMinimumDuration(0)
+        self.setAutoClose(False)
+
+    def on_begin(self, begin_time, end_time):
+        self.setRange(int(round(begin_time)), int(round(end_time)))
 
 
 def nrow_ncol_property(altered: str, unaltered: str) -> property:
