@@ -171,6 +171,19 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
     return property(get, set)
 
 
+def default_property(path: str, default):
+    def getter(self: 'ConfigModel'):
+        val = rgetattr(self.cfg, path)
+        if val is None:
+            return default
+        else:
+            return val
+
+    def setter(self: 'ConfigModel', val: int):
+        rsetattr(self.cfg, path, val)
+
+    return property(getter, setter)
+
 class ConfigModel(PresentationModel):
     cfg: Config
     combo_symbols = {}
@@ -213,6 +226,8 @@ class ConfigModel(PresentationModel):
     layout__ncols = nrow_ncol_property('ncols', unaltered='nrows')
     combo_symbols['layout__orientation'] = ['h', 'v']
     combo_text['layout__orientation'] = ['Horizontal', 'Vertical']
+
+    render__line_width = default_property('render__line_width', 1.5)
 
     # TODO mutate _cfg and convert all colors to #rrggbb on access
 
