@@ -10,9 +10,10 @@ import PyQt5.QtWidgets as qw
 from PyQt5.QtCore import QModelIndex, Qt
 
 from ovgenpy.channel import ChannelConfig
-from ovgenpy.config import OvgenError
+from ovgenpy.config import OvgenError, copy_config
 from ovgenpy.gui.data_bind import PresentationModel, map_gui, rgetattr, behead
-from ovgenpy.ovgenpy import Config
+from ovgenpy.outputs import FFplayOutputConfig
+from ovgenpy.ovgenpy import Config, Ovgen
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
 from ovgenpy.util import perr, obj_name
 
@@ -53,6 +54,7 @@ class MainWindow(qw.QMainWindow):
         # Bind UI buttons, etc.
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
         self.actionExit.triggered.connect(qw.QApplication.quit)
+        self.actionPlay.triggered.connect(self.on_action_play)
 
         # Bind config to UI.
         self.cfg_dir = cfg_dir
@@ -69,6 +71,7 @@ class MainWindow(qw.QMainWindow):
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
     menuBar: qw.QMenuBar
     actionExit: qw.QAction
+    actionPlay: qw.QAction
 
     def on_master_audio_browse(self):
         # TODO add default file-open dir, initialized to yaml path and remembers prev
@@ -80,6 +83,12 @@ class MainWindow(qw.QMainWindow):
             master_audio = 'master_audio'
             self.model[master_audio] = name
             self.model.update_widget[master_audio]()
+
+    def on_action_play(self):
+        cfg = copy_config(self.model.cfg)
+        cfg_dir = self.cfg_dir
+        outputs = [FFplayOutputConfig()]
+        Ovgen(cfg, cfg_dir, outputs).play()
 
     # Config models
     model: 'ConfigModel'
