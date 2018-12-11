@@ -24,6 +24,13 @@ class IOutputConfig:
         return self.cls(ovgen_cfg, cfg=self)
 
 
+class _Stop:
+    pass
+
+
+Stop = _Stop()
+
+
 class Output(ABC):
     def __init__(self, ovgen_cfg: 'Config', cfg: IOutputConfig):
         self.ovgen_cfg = ovgen_cfg
@@ -38,7 +45,7 @@ class Output(ABC):
         return self
 
     @abstractmethod
-    def write_frame(self, frame: bytes) -> None:
+    def write_frame(self, frame: bytes) -> Optional[_Stop]:
         """ Output a Numpy ndarray. """
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -117,11 +124,21 @@ class PipeOutput(Output):
     def __enter__(self):
         return self
 
-    def write_frame(self, frame: bytes) -> None:
-        self._stream.write(frame)
+    def write_frame(self, frame: bytes) -> Optional[_Stop]:
+        try:
+            self._stream.write(frame)
+            return None
+        except BrokenPipeError:
+            return Stop
 
-    def close(self) -> int:
-        self._stream.close()
+    def close(self, wait=True) -> int:
+        try:
+            self._stream.close()
+        except BrokenPipeError:
+            pass
+
+        if not wait:
+            return 0
 
         retval = 0
         for popen in self._pipeline:
@@ -135,7 +152,7 @@ class PipeOutput(Output):
             # Calling self.close() is bad.
             # If exception occurred but ffplay continues running.
             # popen.wait() will prevent stack trace from showing up.
-            self._stream.close()
+            self.close(wait=False)
 
             exc = None
             for popen in self._pipeline:
