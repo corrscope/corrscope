@@ -11,8 +11,8 @@ from PyQt5.QtCore import QModelIndex, Qt
 from ovgenpy.channel import ChannelConfig
 from ovgenpy.config import OvgenError, copy_config
 from ovgenpy.gui.data_bind import PresentationModel, map_gui, rgetattr, behead
-from ovgenpy.gui.util import color2hex
-from ovgenpy.outputs import FFplayOutputConfig
+from ovgenpy.gui.util import color2hex, Locked
+from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig
 from ovgenpy.ovgenpy import Config, Ovgen
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
 from ovgenpy.util import perr, obj_name
@@ -56,6 +56,9 @@ class MainWindow(qw.QMainWindow):
         self.actionExit.triggered.connect(qw.QApplication.quit)
         self.actionPlay.triggered.connect(self.on_action_play)
 
+        # Initialize ovgen-thread attribute.
+        self.ovgen_thread: Locked[Optional[OvgenThread]] = Locked(None)
+
         # Bind config to UI.
         self.cfg_dir = cfg_dir
         self.load_cfg(cfg)
@@ -80,10 +83,23 @@ class MainWindow(qw.QMainWindow):
             self.model.update_widget[master_audio]()
 
     def on_action_play(self):
-        cfg = copy_config(self.model.cfg)
-        cfg_dir = self.cfg_dir
-        outputs = [FFplayOutputConfig()]
-        Ovgen(cfg, cfg_dir, outputs).play()
+        with self.ovgen_thread as t:
+            if t is not None:
+                qw.QMessageBox.critical(
+                    self,
+                    'Error',
+                    'Cannot play, another play/render is active',
+                )
+                return
+
+            cfg = copy_config(self.model.cfg)
+            cfg_dir = self.cfg_dir
+            outputs = [FFplayOutputConfig()]
+
+            t = self.ovgen_thread.set(
+                OvgenThread(self, cfg, cfg_dir, outputs))
+            # Assigns self.ovgen_thread.set(None) when finished.
+            t.start()
 
     # Config models
     model: 'ConfigModel'
@@ -98,6 +114,21 @@ class MainWindow(qw.QMainWindow):
         self.channel_model = ChannelModel(cfg.channels)
         self.channel_widget: qw.QTableView
         self.channel_widget.setModel(self.channel_model)
+
+
+class OvgenThread(qc.QThread):
+
+    def __init__(self, parent: MainWindow,
+                 cfg: Config, cfg_dir: str, outputs: List[IOutputConfig]):
+        qc.QThread.__init__(self)
+
+        def run() -> None:
+            Ovgen(cfg, cfg_dir, outputs).play()
+        self.run = run
+
+        def finished():
+            parent.ovgen_thread.set(None)
+        self.finished.connect(finished)
 
 
 def nrow_ncol_property(altered: str, unaltered: str) -> property:
