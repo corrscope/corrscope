@@ -141,36 +141,42 @@ class DirectBinding:
 
 
 def direct_bind(widget: QWidget, model: PresentationModel, path: str, bind: DirectBinding):
-    def update_widget():
-        """ Update the widget without triggering signals.
+    try:
+        def update_widget():
+            """ Update the widget without triggering signals.
 
-        When the presentation model updates dependent widget 1,
-        the model (not widget 1) is responsible for updating other
-        dependent widgets.
-        """
-        # FIXME add option to send signals
-        with qc.QSignalBlocker(widget):
-            bind.set_widget(model[path])
+            When the presentation model updates dependent widget 1,
+            the model (not widget 1) is responsible for updating other
+            dependent widgets.
+            """
+            # FIXME add option to send signals
+            with qc.QSignalBlocker(widget):
+                bind.set_widget(model[path])
 
-    update_widget()
+        update_widget()
 
-    # Allow widget to be updated by other events.
-    model.update_widget[path] = update_widget
+        # Allow widget to be updated by other events.
+        model.update_widget[path] = update_widget
 
-    # Allow model to be changed by widget.
-    if bind.widget_changed is not None:
-        @pyqtSlot(bind.value_type)
-        def set_model(value):
-            assert isinstance(value, bind.value_type)
-            model[path] = value
+        # Allow model to be changed by widget.
+        if bind.widget_changed is not None:
+            @pyqtSlot(bind.value_type)
+            def set_model(value):
+                assert isinstance(value, bind.value_type)
+                model[path] = value
 
-        bind.widget_changed.connect(set_model)
+            bind.widget_changed.connect(set_model)
 
-    # QSpinBox.valueChanged may or may not be called with (str).
-    # http://pyqt.sourceforge.net/Docs/PyQt5/signals_slots.html#connecting-slots-by-name
-    # mentions connectSlotsByName(),
-    # but we're using QSpinBox().valueChanged.connect() and my assert never fails.
-    # Either way, @pyqtSlot(value_type) will ward off incorrect calls.
+        # QSpinBox.valueChanged may or may not be called with (str).
+        # http://pyqt.sourceforge.net/Docs/PyQt5/signals_slots.html#connecting-slots-by-name
+        # mentions connectSlotsByName(),
+        # but we're using QSpinBox().valueChanged.connect() and my assert never fails.
+        # Either way, @pyqtSlot(value_type) will ward off incorrect calls.
+
+    except Exception:
+        perr(widget)
+        perr(path)
+        raise
 
 
 def try_behead(string: str, header: str) -> Optional[str]:
