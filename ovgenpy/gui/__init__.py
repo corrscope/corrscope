@@ -167,10 +167,16 @@ class OvgenProgressDialog(qw.QProgressDialog):
 
         # If set to 0, the dialog is always shown as soon as any progress is set.
         self.setMinimumDuration(0)
-        self.setAutoClose(False)
+
+        # Don't reset when rendering is approximately finished.
+        self.setAutoReset(False)
+
+        # Close after ovgen finishes.
+        self.setAutoClose(True)
 
     def on_begin(self, begin_time, end_time):
         self.setRange(int(round(begin_time)), int(round(end_time)))
+        # self.setValue is called by Ovgen, on the first frame.
 
 
 def nrow_ncol_property(altered: str, unaltered: str) -> property:
