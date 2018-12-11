@@ -3,7 +3,6 @@ from typing import *
 from pathlib import Path
 
 import attr
-import matplotlib.colors
 from PyQt5 import uic
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
@@ -12,6 +11,7 @@ from PyQt5.QtCore import QModelIndex, Qt
 from ovgenpy.channel import ChannelConfig
 from ovgenpy.config import OvgenError, copy_config
 from ovgenpy.gui.data_bind import PresentationModel, map_gui, rgetattr, behead
+from ovgenpy.gui.util import color2hex
 from ovgenpy.outputs import FFplayOutputConfig
 from ovgenpy.ovgenpy import Config, Ovgen
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
@@ -302,7 +302,3 @@ class ChannelModel(qc.QAbstractTableModel):
         if not index.isValid():
             return Qt.ItemIsEnabled
         return qc.QAbstractItemModel.flags(self, index) | Qt.ItemIsEditable
-
-
-def color2hex(color):
-    return matplotlib.colors.to_hex(color, keep_alpha=False)
