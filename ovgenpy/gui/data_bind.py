@@ -149,7 +149,7 @@ def direct_bind(widget: QWidget, model: PresentationModel, path: str, bind: Dire
             the model (not widget 1) is responsible for updating other
             dependent widgets.
             """
-            # FIXME add option to send signals
+            # TODO add option to send signals
             with qc.QSignalBlocker(widget):
                 bind.set_widget(model[path])
 
