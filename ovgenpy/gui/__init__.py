@@ -86,10 +86,7 @@ class MainWindow(qw.QMainWindow):
 
     def on_action_play(self):
         """ Launch ovgen and ffplay. """
-
-        # FIXME remove dialog from play
-        dlg = OvgenProgressDialog(self)
-        arg = self._get_args([FFplayOutputConfig()], dlg)
+        arg = self._get_args([FFplayOutputConfig()])
         error_msg = 'Cannot play, another play/render is active'
         self.play_thread(arg, error_msg)
 
