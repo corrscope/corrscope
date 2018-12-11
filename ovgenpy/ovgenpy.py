@@ -277,7 +277,8 @@ class Ovgen:
                     # Used for FPS calculation
                     end_frame = frame
 
-                    # FIXME: does not kill ffmpeg/ffplay output
+                    for output in self.outputs:
+                        output.terminate()
                     break
 
                 time_seconds = frame / fps

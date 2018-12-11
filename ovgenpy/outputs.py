@@ -51,6 +51,9 @@ class Output(ABC):
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
+    def terminate(self):
+        pass
+
 # Glue logic
 
 def register_output(config_t: Type[IOutputConfig]):
@@ -149,24 +152,27 @@ class PipeOutput(Output):
         if exc_type is None:
             self.close()
         else:
-            # Calling self.close() is bad.
-            # If exception occurred but ffplay continues running.
-            # popen.wait() will prevent stack trace from showing up.
-            self.close(wait=False)
+            self.terminate()
 
-            exc = None
-            for popen in self._pipeline:
-                popen.terminate()
-                # https://stackoverflow.com/a/49038779/2683842
-                try:
-                    popen.wait(1)   # timeout=seconds
-                except subprocess.TimeoutExpired as e:
-                    # gee thanks Python, https://stackoverflow.com/questions/45292479/
-                    exc = e
-                    popen.kill()
+    def terminate(self):
+        # Calling self.close() is bad.
+        # If exception occurred but ffplay continues running,
+        # popen.wait() will prevent stack trace from showing up.
+        self.close(wait=False)
 
-            if exc:
-                raise exc
+        exc = None
+        for popen in self._pipeline:
+            popen.terminate()
+            # https://stackoverflow.com/a/49038779/2683842
+            try:
+                popen.wait(1)  # timeout=seconds
+            except subprocess.TimeoutExpired as e:
+                # gee thanks Python, https://stackoverflow.com/questions/45292479/
+                exc = e
+                popen.kill()
+
+        if exc:
+            raise exc
 
 
 # FFmpegOutput
@@ -228,15 +234,3 @@ class FFplayOutput(PipeOutput):
         # assert p2.stdin is None   # True unless Popen is being mocked (test_output).
 
         self.open(p1, p2)
-
-
-# ImageOutput
-
-@register_config
-class ImageOutputConfig(IOutputConfig):
-    path_prefix: str
-
-
-@register_output(ImageOutputConfig)
-class ImageOutput(Output):
-    pass
