@@ -12,7 +12,7 @@ from ovgenpy.channel import ChannelConfig
 from ovgenpy.config import OvgenError, copy_config
 from ovgenpy.gui.data_bind import PresentationModel, map_gui, rgetattr, behead
 from ovgenpy.gui.util import color2hex, Locked
-from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig
+from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from ovgenpy.ovgenpy import Config, Ovgen
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
 from ovgenpy.util import perr, obj_name
@@ -55,6 +55,7 @@ class MainWindow(qw.QMainWindow):
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
         self.actionExit.triggered.connect(qw.QApplication.quit)
         self.actionPlay.triggered.connect(self.on_action_play)
+        self.actionRender.triggered.connect(self.on_action_render)
 
         # Initialize ovgen-thread attribute.
         self.ovgen_thread: Locked[Optional[OvgenThread]] = Locked(None)
@@ -70,6 +71,7 @@ class MainWindow(qw.QMainWindow):
     menuBar: qw.QMenuBar
     actionExit: qw.QAction
     actionPlay: qw.QAction
+    actionRender: qw.QAction
 
     def on_master_audio_browse(self):
         # TODO add default file-open dir, initialized to yaml path and remembers prev
@@ -83,6 +85,21 @@ class MainWindow(qw.QMainWindow):
             self.model.update_widget[master_audio]()
 
     def on_action_play(self):
+        outputs = [FFplayOutputConfig()]
+        error_msg = 'Cannot play, another play/render is active'
+        self.play_thread(outputs, error_msg)
+
+    def on_action_render(self):
+        name, file_type = qw.QFileDialog.getSaveFileName(
+            self, "Render to Video", filter="MP4 files (*.mp4);;All files (*)"
+        )
+        if name != '':
+            outputs = [FFmpegOutputConfig(name)]
+            self.play_thread(
+                outputs, 'Cannot render to file, another play/render is active'
+            )
+
+    def play_thread(self, outputs: List[IOutputConfig], error_msg: str):
         with self.ovgen_thread as t:
             if t is not None:
                 # FIXME does it work? i was not thinking clearly when i wrote this
@@ -90,13 +107,12 @@ class MainWindow(qw.QMainWindow):
                 qw.QMessageBox.critical(
                     self,
                     'Error',
-                    'Cannot play, another play/render is active',
+                    error_msg,
                 )
                 return
 
             cfg = copy_config(self.model.cfg)
             cfg_dir = self.cfg_dir
-            outputs = [FFplayOutputConfig()]
 
             t = self.ovgen_thread.set(
                 OvgenThread(self, cfg, cfg_dir, outputs))
