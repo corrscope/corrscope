@@ -1,6 +1,9 @@
+from pathlib import Path
 from typing import *
-from PyQt5.QtCore import QMutex
+
 import matplotlib.colors
+from PyQt5.QtCore import QMutex
+from PyQt5.QtWidgets import QWidget, QFileDialog
 
 
 def color2hex(color):
@@ -39,3 +42,22 @@ class Locked(Generic[T]):
         with self:
             self.obj = value
         return value
+
+
+def get_save_with_ext(
+        parent: QWidget, caption: str, dir_or_file: str,
+        filters: List[str], default_suffix: str
+) -> Optional[Path]:
+    """ On KDE, getSaveFileName does not append extension. This is a workaround. """
+    name, sel_filter = QFileDialog.getSaveFileName(
+        parent, caption, dir_or_file, ';;'.join(filters)
+    )
+
+    if name == '':
+        return None
+
+    path = Path(name)
+    if sel_filter == filters[0] and path.suffix == '':
+        path = path.with_suffix(default_suffix)
+    return path
+

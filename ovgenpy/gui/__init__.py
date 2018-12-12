@@ -13,7 +13,7 @@ from ovgenpy import cli
 from ovgenpy.channel import ChannelConfig
 from ovgenpy.config import OvgenError, copy_config, yaml
 from ovgenpy.gui.data_bind import PresentationModel, map_gui, behead, rgetattr, rsetattr
-from ovgenpy.gui.util import color2hex, Locked
+from ovgenpy.gui.util import color2hex, Locked, get_save_with_ext
 from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from ovgenpy.ovgenpy import Ovgen, Config, Arguments
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
@@ -103,15 +103,10 @@ class MainWindow(qw.QMainWindow):
         cfg_path_default = os.path.join(self.cfg_dir, self.file_stem) + cli.YAML_NAME
 
         filters = ["YAML files (*.yaml)", "All files (*)"]
-        name, file_type = qw.QFileDialog.getSaveFileName(
-            self, "Save As", cfg_path_default, ';;'.join(filters)
+        path = get_save_with_ext(
+            self, "Save As", cfg_path_default, filters, cli.YAML_NAME
         )
-        if name != '':
-            path = Path(name)
-            # FIXME automatic extension bad? Only if "YAML files (*.yaml)"
-            if file_type == filters[0] and path.suffix == '':
-                path = path.with_suffix(cli.YAML_NAME)
-
+        if path:
             self._cfg_path = path
             self.load_title()
             self.on_action_save()
@@ -138,10 +133,11 @@ class MainWindow(qw.QMainWindow):
                 return
 
             video_path = os.path.join(self.cfg_dir, self.file_stem) + cli.VIDEO_NAME
-            name, file_type = qw.QFileDialog.getSaveFileName(
-                self, "Render to Video", video_path, "MP4 files (*.mp4);;All files (*)"
-            )
-            if name != '':
+            filters = ["MP4 files (*.mp4)", "All files (*)"]
+            path = get_save_with_ext(self, "Render to Video", video_path, filters,
+                                     cli.VIDEO_NAME)
+            if path:
+                name = str(path)
                 # FIXME what if missing mp4?
                 dlg = OvgenProgressDialog(self, 'Rendering video')
 
