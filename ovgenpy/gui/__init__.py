@@ -118,9 +118,9 @@ class MainWindow(qw.QMainWindow):
 
     def on_action_play(self):
         """ Launch ovgen and ffplay. """
-        arg = self._get_args([FFplayOutputConfig()])
+        outputs = [FFplayOutputConfig()]
         error_msg = 'Cannot play, another play/render is active'
-        self.play_thread(arg, None, error_msg)
+        self.play_thread(outputs, None, error_msg)
 
     def on_action_render(self):
         """ Get file name. Then show a progress dialog while rendering to file. """
@@ -132,24 +132,19 @@ class MainWindow(qw.QMainWindow):
         if name != '':
             # FIXME what if missing mp4?
             dlg = OvgenProgressDialog(self, 'Rendering video')
-            arg = self._get_args([FFmpegOutputConfig(name)])
+            outputs = [FFmpegOutputConfig(name)]
             error_msg = 'Cannot render to file, another play/render is active'
-            self.play_thread(arg, dlg, error_msg)
+            self.play_thread(outputs, dlg, error_msg)
 
-    def _get_args(self, outputs: List[IOutputConfig]):
-        arg = Arguments(
-            cfg_dir=self.cfg_dir,
-            outputs=outputs,
-        )
-        return arg
-
-    def play_thread(self, arg: Arguments, dlg: Optional['OvgenProgressDialog'], error_msg: str):
+    def play_thread(self, outputs: List[IOutputConfig],
+                    dlg: Optional['OvgenProgressDialog'], error_msg: str):
+        arg = self._get_args(outputs)
         if dlg:
             arg = attr.evolve(arg,
                 on_begin=dlg.on_begin,
                 progress=dlg.setValue,
                 is_aborted=dlg.wasCanceled,
-                on_end=dlg.reset,
+                on_end=dlg.reset,   # TODO dlg.close
             )
         with self.ovgen_thread as t:
             if t is not None:
@@ -164,6 +159,13 @@ class MainWindow(qw.QMainWindow):
             t = self.ovgen_thread.obj = OvgenThread(self, cfg, arg)
             # Assigns self.ovgen_thread.set(None) when finished.
             t.start()
+
+    def _get_args(self, outputs: List[IOutputConfig]):
+        arg = Arguments(
+            cfg_dir=self.cfg_dir,
+            outputs=outputs,
+        )
+        return arg
 
     # Config models
     model: 'ConfigModel'
