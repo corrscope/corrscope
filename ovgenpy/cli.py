@@ -36,12 +36,18 @@ YAML_NAME = YAML_EXTS[0]
 VIDEO_NAME = '.mp4'
 
 
-def get_path(audio_file: Union[None, str, Path], ext: str) -> Path:
+DEFAULT_NAME = 'ovgenpy'
+def get_name(audio_file: Union[None, str, Path]) -> str:
     # Write file to current working dir, not audio dir.
     if audio_file:
-        name = Path(audio_file).name
+        name = Path(audio_file).stem
     else:
-        name = 'ovgenpy'
+        name = DEFAULT_NAME
+    return name
+
+
+def get_path(audio_file: Union[None, str, Path], ext: str) -> Path:
+    name = get_name(audio_file)
 
     # Add extension
     return Path(name).with_suffix(ext)
@@ -159,7 +165,8 @@ def main(
 
     if show_gui:
         from ovgenpy import gui
-        gui.gui_main(cfg, cfg_dir)
+        gui.gui_main(cfg, cfg_path)
+
     else:
         if not files:
             raise click.UsageError('Must specify files or folders to play')

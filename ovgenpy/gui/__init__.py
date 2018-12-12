@@ -1,13 +1,15 @@
+import os
 import sys
-from typing import *
 from pathlib import Path
+from typing import *
 
-import attr
-from PyQt5 import uic
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
+import attr
+from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
 
+from ovgenpy import cli
 from ovgenpy.channel import ChannelConfig
 from ovgenpy.config import OvgenError, copy_config
 from ovgenpy.gui.data_bind import PresentationModel, map_gui, behead, rgetattr, rsetattr
@@ -15,7 +17,7 @@ from ovgenpy.gui.util import color2hex, Locked
 from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from ovgenpy.ovgenpy import Ovgen, Config, Arguments
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
-from ovgenpy.util import perr, obj_name, coalesce
+from ovgenpy.util import perr, obj_name
 
 APP_NAME = 'ovgenpy'
 APP_DIR = Path(__file__).parent
@@ -24,11 +26,11 @@ def res(file: str) -> str:
     return str(APP_DIR / file)
 
 
-def gui_main(cfg: Config, cfg_dir: str):
+def gui_main(cfg: Config, cfg_path: Optional[Path]):
     app = qw.QApplication(sys.argv)
     app.setAttribute(qc.Qt.AA_EnableHighDpiScaling)
 
-    window = MainWindow(cfg, cfg_dir)
+    window = MainWindow(cfg, cfg_path)
     sys.exit(app.exec_())
 
 
@@ -44,7 +46,7 @@ class MainWindow(qw.QMainWindow):
     load_cfg
     """
 
-    def __init__(self, cfg: Config, cfg_dir: str):
+    def __init__(self, cfg: Config, cfg_path: Optional[Path]):
         super().__init__()
 
         # Load UI.
@@ -61,10 +63,26 @@ class MainWindow(qw.QMainWindow):
         self.ovgen_thread: Locked[Optional[OvgenThread]] = Locked(None)
 
         # Bind config to UI.
-        self.cfg_dir = cfg_dir
+        self._cfg_path = cfg_path
         self.load_cfg(cfg)
 
         self.show()
+
+    @property
+    def cfg_dir(self) -> str:
+        maybe_path = self._cfg_path or self.cfg.master_audio
+        if maybe_path:
+            return str(Path(maybe_path).resolve().parent)
+
+        return '.'
+
+    @property
+    def title(self) -> str:
+        return cli.get_name(self._cfg_path or self.cfg.master_audio)
+
+    @property
+    def cfg(self):
+        return self.model.cfg
 
     master_audio_browse: qw.QPushButton
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
@@ -92,8 +110,10 @@ class MainWindow(qw.QMainWindow):
 
     def on_action_render(self):
         """ Get file name. Then show a progress dialog while rendering to file. """
+        video_path = os.path.join(self.cfg_dir, self.title) + cli.VIDEO_NAME
+
         name, file_type = qw.QFileDialog.getSaveFileName(
-            self, "Render to Video", filter="MP4 files (*.mp4);;All files (*)"
+            self, "Render to Video", video_path, "MP4 files (*.mp4);;All files (*)"
         )
         if name != '':
             dlg = OvgenProgressDialog(self)
