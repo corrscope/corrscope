@@ -157,7 +157,7 @@ class MainWindow(qw.QMainWindow):
 
             cfg = copy_config(self.model.cfg)
 
-            t = self.ovgen_thread.set(OvgenThread(self, cfg, arg))
+            t = self.ovgen_thread.obj = OvgenThread(self, cfg, arg)
             # Assigns self.ovgen_thread.set(None) when finished.
             t.start()
 
