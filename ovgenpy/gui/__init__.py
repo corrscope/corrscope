@@ -51,7 +51,6 @@ class MainWindow(qw.QMainWindow):
 
         # Load UI.
         uic.loadUi(res('mainwindow.ui'), self)   # sets windowTitle
-        self.setWindowTitle(APP_NAME)
 
         # Bind UI buttons, etc.
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
@@ -66,7 +65,11 @@ class MainWindow(qw.QMainWindow):
         self._cfg_path = cfg_path
         self.load_cfg(cfg)
 
+        self.load_title()
         self.show()
+
+    def load_title(self):
+        self.setWindowTitle(f'{self.title} - {APP_NAME}')
 
     @property
     def cfg_dir(self) -> str:
@@ -76,8 +79,16 @@ class MainWindow(qw.QMainWindow):
 
         return '.'
 
+    UNTITLED = 'Untitled'
+
     @property
     def title(self) -> str:
+        if self._cfg_path:
+            return self._cfg_path.name
+        return self.UNTITLED
+
+    @property
+    def file_stem(self) -> str:
         return cli.get_name(self._cfg_path or self.cfg.master_audio)
 
     @property
@@ -110,7 +121,7 @@ class MainWindow(qw.QMainWindow):
 
     def on_action_render(self):
         """ Get file name. Then show a progress dialog while rendering to file. """
-        video_path = os.path.join(self.cfg_dir, self.title) + cli.VIDEO_NAME
+        video_path = os.path.join(self.cfg_dir, self.file_stem) + cli.VIDEO_NAME
 
         name, file_type = qw.QFileDialog.getSaveFileName(
             self, "Render to Video", video_path, "MP4 files (*.mp4);;All files (*)"
