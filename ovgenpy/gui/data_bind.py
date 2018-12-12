@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QWidget
 
 from ovgenpy.util import obj_name, perr
 
-__all__ = ['PresentationModel', 'map_gui']
+__all__ = ['PresentationModel', 'map_gui', 'behead', 'rgetattr', 'rsetattr']
 
 
 WidgetUpdater = Callable[[], None]
