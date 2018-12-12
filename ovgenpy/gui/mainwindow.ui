@@ -396,7 +396,7 @@ width: 0px;
   </action>
   <action name="actionSave">
    <property name="text">
-    <string>&amp;Save?</string>
+    <string>&amp;Save</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
