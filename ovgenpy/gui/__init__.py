@@ -11,7 +11,7 @@ from PyQt5.QtCore import QModelIndex, Qt
 
 from ovgenpy import cli
 from ovgenpy.channel import ChannelConfig
-from ovgenpy.config import OvgenError, copy_config
+from ovgenpy.config import OvgenError, copy_config, yaml
 from ovgenpy.gui.data_bind import PresentationModel, map_gui, behead, rgetattr, rsetattr
 from ovgenpy.gui.util import color2hex, Locked
 from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
@@ -52,9 +52,10 @@ class MainWindow(qw.QMainWindow):
         # Load UI.
         uic.loadUi(res('mainwindow.ui'), self)   # sets windowTitle
 
-        # Bind UI buttons, etc.
+        # Bind UI buttons, etc. Functions block main thread, avoiding race conditions.
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
         self.actionExit.triggered.connect(qw.QApplication.quit)
+        self.actionSave.triggered.connect(self.on_action_save)
         self.actionPlay.triggered.connect(self.on_action_play)
         self.actionRender.triggered.connect(self.on_action_render)
 
@@ -68,37 +69,15 @@ class MainWindow(qw.QMainWindow):
         self.load_title()
         self.show()
 
-    def load_title(self):
-        self.setWindowTitle(f'{self.title} - {APP_NAME}')
-
     @property
-    def cfg_dir(self) -> str:
-        maybe_path = self._cfg_path or self.cfg.master_audio
-        if maybe_path:
-            return str(Path(maybe_path).resolve().parent)
-
-        return '.'
-
-    UNTITLED = 'Untitled'
-
-    @property
-    def title(self) -> str:
-        if self._cfg_path:
-            return self._cfg_path.name
-        return self.UNTITLED
-
-    @property
-    def file_stem(self) -> str:
-        return cli.get_name(self._cfg_path or self.cfg.master_audio)
-
-    @property
-    def cfg(self):
-        return self.model.cfg
+    def ever_saved(self):
+        return self._cfg_path is not None
 
     master_audio_browse: qw.QPushButton
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
     menuBar: qw.QMenuBar
     actionExit: qw.QAction
+    actionSave: qw.QAction
     actionPlay: qw.QAction
     actionRender: qw.QAction
 
@@ -112,6 +91,11 @@ class MainWindow(qw.QMainWindow):
             master_audio = 'master_audio'
             self.model[master_audio] = name
             self.model.update_widget[master_audio]()
+
+    def on_action_save(self):
+        if self._cfg_path is None:
+            raise NotImplementedError
+        yaml.dump(self.cfg, self._cfg_path)
 
     def on_action_play(self):
         """ Launch ovgen and ffplay. """
@@ -174,6 +158,34 @@ class MainWindow(qw.QMainWindow):
         self.channel_model = ChannelModel(cfg.channels)
         self.channel_widget: qw.QTableView
         self.channel_widget.setModel(self.channel_model)
+
+    # File paths
+    def load_title(self):
+        self.setWindowTitle(f'{self.title} - {APP_NAME}')
+
+    @property
+    def cfg_dir(self) -> str:
+        maybe_path = self._cfg_path or self.cfg.master_audio
+        if maybe_path:
+            return str(Path(maybe_path).resolve().parent)
+
+        return '.'
+
+    UNTITLED = 'Untitled'
+
+    @property
+    def title(self) -> str:
+        if self._cfg_path:
+            return self._cfg_path.name
+        return self.UNTITLED
+
+    @property
+    def file_stem(self) -> str:
+        return cli.get_name(self._cfg_path or self.cfg.master_audio)
+
+    @property
+    def cfg(self):
+        return self.model.cfg
 
 
 class OvgenThread(qc.QThread):
