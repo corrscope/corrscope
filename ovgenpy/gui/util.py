@@ -15,13 +15,13 @@ class Locked(Generic[T]):
 
     def __init__(self, obj: T):
         super().__init__()
-        self.__obj = obj
+        self.obj = obj
         self.lock = QMutex(QMutex.Recursive)
         self.skip_exit = False
 
     def __enter__(self) -> T:
         self.lock.lock()
-        return self.__obj
+        return self.obj
 
     def unlock(self):
         # FIXME does it work? i was not thinking clearly when i wrote this
@@ -37,5 +37,5 @@ class Locked(Generic[T]):
 
     def set(self, value: T) -> T:
         with self:
-            self.__obj = value
+            self.obj = value
         return value
