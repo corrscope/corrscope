@@ -120,7 +120,7 @@ class MainWindow(qw.QMainWindow):
         """ Launch ovgen and ffplay. """
         arg = self._get_args([FFplayOutputConfig()])
         error_msg = 'Cannot play, another play/render is active'
-        self.play_thread(arg, error_msg)
+        self.play_thread(arg, None, error_msg)
 
     def on_action_render(self):
         """ Get file name. Then show a progress dialog while rendering to file. """
@@ -132,16 +132,18 @@ class MainWindow(qw.QMainWindow):
         if name != '':
             # FIXME what if missing mp4?
             dlg = OvgenProgressDialog(self, 'Rendering video')
-            arg = self._get_args([FFmpegOutputConfig(name)], dlg)
+            arg = self._get_args([FFmpegOutputConfig(name)])
             error_msg = 'Cannot render to file, another play/render is active'
-            self.play_thread(arg, error_msg)
+            self.play_thread(arg, dlg, error_msg)
 
-    def _get_args(self, outputs: List[IOutputConfig],
-                  dlg: Optional['OvgenProgressDialog'] = None):
+    def _get_args(self, outputs: List[IOutputConfig]):
         arg = Arguments(
             cfg_dir=self.cfg_dir,
             outputs=outputs,
         )
+        return arg
+
+    def play_thread(self, arg: Arguments, dlg: Optional['OvgenProgressDialog'], error_msg: str):
         if dlg:
             arg = attr.evolve(arg,
                 on_begin=dlg.on_begin,
@@ -149,13 +151,11 @@ class MainWindow(qw.QMainWindow):
                 is_aborted=dlg.wasCanceled,
                 on_end=dlg.reset,
             )
-
-        return arg
-
-    def play_thread(self, arg: Arguments, error_msg: str):
         with self.ovgen_thread as t:
             if t is not None:
                 self.ovgen_thread.unlock()
+                if dlg:
+                    dlg.close()
                 qw.QMessageBox.critical(self, 'Error', error_msg)
                 return
 
