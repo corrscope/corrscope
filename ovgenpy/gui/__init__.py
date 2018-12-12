@@ -77,7 +77,7 @@ class MainWindow(qw.QMainWindow):
         # TODO add default file-open dir, initialized to yaml path and remembers prev
         # useless if people don't reopen old projects
         name, file_type = qw.QFileDialog.getOpenFileName(
-            self, "Open master audio file", filter="WAV files (*.wav)"
+            self, "Open master audio file", self.cfg_dir, "WAV files (*.wav)"
         )
         if name != '':
             master_audio = 'master_audio'
