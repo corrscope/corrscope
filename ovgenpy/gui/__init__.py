@@ -56,6 +56,7 @@ class MainWindow(qw.QMainWindow):
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
         self.actionExit.triggered.connect(qw.QApplication.quit)
         self.actionSave.triggered.connect(self.on_action_save)
+        self.actionSaveAs.triggered.connect(self.on_action_save_as)
         self.actionPlay.triggered.connect(self.on_action_play)
         self.actionRender.triggered.connect(self.on_action_render)
 
@@ -78,6 +79,7 @@ class MainWindow(qw.QMainWindow):
     menuBar: qw.QMenuBar
     actionExit: qw.QAction
     actionSave: qw.QAction
+    actionSaveAs: qw.QAction
     actionPlay: qw.QAction
     actionRender: qw.QAction
 
@@ -94,8 +96,25 @@ class MainWindow(qw.QMainWindow):
 
     def on_action_save(self):
         if self._cfg_path is None:
-            raise NotImplementedError
+            return self.on_action_save_as()
         yaml.dump(self.cfg, self._cfg_path)
+
+    def on_action_save_as(self):
+        cfg_path_default = os.path.join(self.cfg_dir, self.file_stem) + cli.YAML_NAME
+
+        filters = ["YAML files (*.yaml)", "All files (*)"]
+        name, file_type = qw.QFileDialog.getSaveFileName(
+            self, "Save As", cfg_path_default, ';;'.join(filters)
+        )
+        if name != '':
+            path = Path(name)
+            # FIXME automatic extension bad? Only if "YAML files (*.yaml)"
+            if file_type == filters[0] and path.suffix == '':
+                path = path.with_suffix(cli.YAML_NAME)
+
+            self._cfg_path = path
+            self.load_title()
+            self.on_action_save()
 
     def on_action_play(self):
         """ Launch ovgen and ffplay. """
@@ -111,6 +130,7 @@ class MainWindow(qw.QMainWindow):
             self, "Render to Video", video_path, "MP4 files (*.mp4);;All files (*)"
         )
         if name != '':
+            # FIXME what if missing mp4?
             dlg = OvgenProgressDialog(self)
             arg = self._get_args([FFmpegOutputConfig(name)], dlg)
             error_msg = 'Cannot render to file, another play/render is active'

@@ -412,7 +412,7 @@ width: 0px;
   </action>
   <action name="actionSaveAs">
    <property name="text">
-    <string>Save &amp;As?</string>
+    <string>Save &amp;As</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
