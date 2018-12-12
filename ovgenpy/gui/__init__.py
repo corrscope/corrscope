@@ -131,7 +131,7 @@ class MainWindow(qw.QMainWindow):
         )
         if name != '':
             # FIXME what if missing mp4?
-            dlg = OvgenProgressDialog(self)
+            dlg = OvgenProgressDialog(self, 'Rendering video')
             arg = self._get_args([FFmpegOutputConfig(name)], dlg)
             error_msg = 'Cannot render to file, another play/render is active'
             self.play_thread(arg, error_msg)
@@ -222,8 +222,11 @@ class OvgenThread(qc.QThread):
 
 
 class OvgenProgressDialog(qw.QProgressDialog):
-    def __init__(self, parent: Optional[qw.QWidget]):
+    def __init__(self, parent: Optional[qw.QWidget], title: str):
         super().__init__(parent)
+        self.setMinimumWidth(300)
+        self.setWindowTitle(title)
+        self.setLabelText('Progress:')
 
         # If set to 0, the dialog is always shown as soon as any progress is set.
         self.setMinimumDuration(0)
