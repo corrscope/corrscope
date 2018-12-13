@@ -17,7 +17,7 @@ from ovgenpy.gui.util import color2hex, Locked, get_save_with_ext
 from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from ovgenpy.ovgenpy import Ovgen, Config, Arguments, default_config
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
-from ovgenpy.util import perr, obj_name
+from ovgenpy.util import obj_name
 
 APP_NAME = 'ovgenpy'
 APP_DIR = Path(__file__).parent
@@ -277,7 +277,6 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
             return val
 
     def set(self: 'ConfigModel', val: int):
-        perr(altered)
         if val > 0:
             setattr(self.cfg.layout, altered, val)
             setattr(self.cfg.layout, unaltered, None)
