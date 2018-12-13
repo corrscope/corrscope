@@ -41,7 +41,7 @@ class PresentationModel:
 
     def __setitem__(self, key, value):
         # Custom properties
-        if hasattr(self, key):
+        if hasattr(type(self), key):
             setattr(self, key, value)
         elif rhasattr(self.cfg, key):
             rsetattr(self.cfg, key, value)
