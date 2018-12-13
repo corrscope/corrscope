@@ -141,7 +141,7 @@ class CorrelationTriggerConfig(ITriggerConfig):
     def _validate_param(self, key: str, begin, end):
         value = getattr(self, key)
         if not begin <= value <= end:
-            raise ValueError(
+            raise OvgenError(
                 f'Invalid {key}={value} (should be within [{begin}, {end}])')
 
 
@@ -457,7 +457,7 @@ class LocalPostTrigger(PostTrigger):
 
         # Window data
         if cache.period is None:
-            raise ValueError(
+            raise OvgenError(
                 "Missing 'cache.period', try stacking CorrelationTrigger "
                 "before LocalPostTrigger")
 

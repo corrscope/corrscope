@@ -144,7 +144,7 @@ class _ConfigMixin:
             if isinstance(class_var, Alias):
                 target = class_var.key
                 if target in state:
-                    raise TypeError(
+                    raise OvgenError(
                         f'{type(self).__name__} received both Alias {key} and '
                         f'equivalent {target}'
                     )
