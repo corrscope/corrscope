@@ -40,7 +40,6 @@ class PresentationModel:
             return rgetattr(self.cfg, item)
 
     def __setitem__(self, key, value):
-        perr(f'{key} = {value}')
         # Custom properties
         if hasattr(self, key):
             setattr(self, key, value)
