@@ -1,5 +1,6 @@
 import functools
-from typing import Optional, List, Callable, Dict, Any
+import operator
+from typing import Optional, List, Callable, Dict, Any, ClassVar
 
 import attr
 from PyQt5 import QtWidgets as qw, QtCore as qc
@@ -62,137 +63,125 @@ def map_gui(view: QWidget, model: PresentationModel):
     Binding:
     - .ui <widget name="cfg__layout__nrows">
     - view.cfg__layout__nrows
-    - model['layout__nrows']
+    - pmodel['layout__nrows']
 
     Only <widget>s starting with 'cfg__' will be bound.
     """
 
-    widgets: List[QWidget] = view.findChildren(QWidget)  # dear pyqt, add generic mypy return types
+    widgets = view.findChildren(QWidget)  # dear pyqt, add generic mypy return types
     for widget in widgets:
         widget_name = widget.objectName()
         path = try_behead(widget_name, BIND_PREFIX)
         if path is not None:
-            bind_widget(widget, model, path)
-
-
-@functools.singledispatch
-def bind_widget(widget: QWidget, model: PresentationModel, path: str):
-    perr(widget, path)
-    return
-
-
-class BoundLineEdit(qw.QLineEdit):
-    pass
-
-@bind_widget.register(BoundLineEdit)
-def _(widget, model: PresentationModel, path: str):
-    direct_bind(widget, model, path, DirectBinding(
-        set_widget=widget.setText,
-        widget_changed=widget.textChanged,
-        value_type=str,
-    ))
-
-
-class BoundSpinBox(qw.QSpinBox):
-    pass
-
-@bind_widget.register(BoundSpinBox)
-def _(widget, model: PresentationModel, path: str):
-    direct_bind(widget, model, path, DirectBinding(
-        set_widget=widget.setValue,
-        widget_changed=widget.valueChanged,
-        value_type=int,
-    ))
-
-
-class BoundDoubleSpinBox(qw.QDoubleSpinBox):
-    pass
-
-@bind_widget.register(BoundDoubleSpinBox)
-def _(widget, model: PresentationModel, path: str):
-    direct_bind(widget, model, path, DirectBinding(
-        set_widget=widget.setValue,
-        widget_changed=widget.valueChanged,
-        value_type=float,
-    ))
-
-
-class BoundComboBox(qw.QComboBox):
-    pass
-
-@bind_widget.register(BoundComboBox)
-def _(widget, model: PresentationModel, path: str):
-    combo_symbols = model.combo_symbols[path]
-    combo_text = model.combo_text[path]
-    symbol2idx = {}
-    for i, symbol in enumerate(combo_symbols):
-        symbol2idx[symbol] = i
-        widget.addItem(combo_text[i])
-
-    # combobox.index = model.attr
-    def set_widget(symbol: str):
-        combo_index = symbol2idx[symbol]
-        widget.setCurrentIndex(combo_index)
-
-    # model.attr = combobox.index
-    def set_model(combo_index: int):
-        assert isinstance(combo_index, int)
-        model[path] = combo_symbols[combo_index]
-    widget.currentIndexChanged.connect(set_model)
-
-    direct_bind(widget, model, path, DirectBinding(
-        set_widget=set_widget,
-        widget_changed=None,
-        value_type=None,
-    ))
+            assert isinstance(widget, BoundWidget)
+            widget.bind_widget(model, path)
 
 
 Signal = Any
 
-@attr.dataclass
-class DirectBinding:
-    set_widget: Callable
-    widget_changed: Optional[Signal]
-    value_type: Optional[type]
+class BoundWidget:
+    pmodel: PresentationModel
+    path: str
+
+    def bind_widget(self, model: PresentationModel, path: str) -> None:
+        try:
+            self.pmodel = model
+            self.path = path
+            self.cfg2gui()
+
+            # Allow widget to be updated by other events.
+            model.update_widget[path] = self.cfg2gui
+
+            # Allow pmodel to be changed by widget.
+            self.gui_changed.connect(self.set_model)
+
+        except Exception:
+            perr(self)
+            perr(path)
+            raise
+
+    def cfg2gui(self):
+        """ Update the widget without triggering signals.
+
+        When the presentation pmodel updates dependent widget 1,
+        the pmodel (not widget 1) is responsible for updating other
+        dependent widgets.
+        TODO add option to send signals
+        """
+        with qc.QSignalBlocker(self):
+            self.set_gui(self.pmodel[self.path])
+
+    def set_gui(self, value): pass
+
+    gui_changed: ClassVar[Signal]
+
+    def set_model(self, value): pass
 
 
-def direct_bind(widget: QWidget, model: PresentationModel, path: str, bind: DirectBinding):
-    try:
-        def update_widget():
-            """ Update the widget without triggering signals.
+def model_setter(value_type: type) -> Callable:
+    @pyqtSlot(value_type)
+    def set_model(self: BoundWidget, value):
+        assert isinstance(value, value_type)
+        self.pmodel[self.path] = value
+    return set_model
 
-            When the presentation model updates dependent widget 1,
-            the model (not widget 1) is responsible for updating other
-            dependent widgets.
-            """
-            # TODO add option to send signals
-            with qc.QSignalBlocker(widget):
-                bind.set_widget(model[path])
 
-        update_widget()
+def alias(name: str):
+    return property(operator.attrgetter(name))
 
-        # Allow widget to be updated by other events.
-        model.update_widget[path] = update_widget
 
-        # Allow model to be changed by widget.
-        if bind.widget_changed is not None:
-            @pyqtSlot(bind.value_type)
-            def set_model(value):
-                assert isinstance(value, bind.value_type)
-                model[path] = value
+class BoundLineEdit(qw.QLineEdit, BoundWidget):
+    # PyQt complains when we assign unbound methods (`set_gui = qw.QLineEdit.setText`),
+    # but not if we call them indirectly.
+    set_gui = alias('setText')
+    gui_changed = alias('textChanged')
+    set_model = model_setter(str)
 
-            bind.widget_changed.connect(set_model)
 
-        # QSpinBox.valueChanged may or may not be called with (str).
-        # http://pyqt.sourceforge.net/Docs/PyQt5/signals_slots.html#connecting-slots-by-name
-        # mentions connectSlotsByName(),
-        # but we're using QSpinBox().valueChanged.connect() and my assert never fails.
-        # Either way, @pyqtSlot(value_type) will ward off incorrect calls.
+class BoundSpinBox(qw.QSpinBox, BoundWidget):
+    set_gui = alias('setValue')
+    gui_changed = alias('valueChanged')
+    set_model = model_setter(int)
 
-    except Exception:
-        perr(widget)
-        perr(path)
-        raise
+
+class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
+    set_gui = alias('setValue')
+    gui_changed = alias('valueChanged')
+    set_model = model_setter(float)
+
+
+class BoundComboBox(qw.QComboBox, BoundWidget):
+    combo_symbols: List[str]
+    symbol2idx: Dict[str, int]
+
+    # noinspection PyAttributeOutsideInit
+    def bind_widget(self, model: PresentationModel, path: str) -> None:
+        # Effectively enum values.
+        self.combo_symbols = model.combo_symbols[path]
+
+        # symbol2idx[str] = int
+        self.symbol2idx = {}
+
+        # Pretty-printed text
+        combo_text = model.combo_text[path]
+        for i, symbol in enumerate(self.combo_symbols):
+            self.symbol2idx[symbol] = i
+            self.addItem(combo_text[i])
+
+        BoundWidget.bind_widget(self, model, path)
+
+    # combobox.index = pmodel.attr
+    def set_gui(self, symbol: str):
+        combo_index = self.symbol2idx[symbol]
+        self.setCurrentIndex(combo_index)
+
+    gui_changed = alias('currentIndexChanged')
+
+    # pmodel.attr = combobox.index
+    @pyqtSlot(int)
+    def set_model(self, combo_index: int):
+        assert isinstance(combo_index, int)
+        self.pmodel[self.path] = self.combo_symbols[combo_index]
 
 
 def try_behead(string: str, header: str) -> Optional[str]:
