@@ -303,9 +303,16 @@ def default_property(path: str, default):
     return property(getter, setter)
 
 
-def adapter_property(path: str, adapter: Callable[[Any], Any]):
+def color2hex_property(path: str):
     def getter(self: 'ConfigModel'):
-        return adapter(rgetattr(self.cfg, path))
+        color_attr = rgetattr(self.cfg, path)
+        try:
+            return color2hex(color_attr)
+        except ValueError:
+            raise OvgenError(f'invalid config color {color_attr}')
+        except Exception as e:
+            raise OvgenError(
+                f'doubly invalid config color {color_attr}, raises {e} (report bug!)')
 
     def setter(self: 'ConfigModel', val: int):
         rsetattr(self.cfg, path, val)
@@ -318,8 +325,8 @@ class ConfigModel(PresentationModel):
     combo_symbols = {}
     combo_text = {}
 
-    render__bg_color = adapter_property('render__bg_color', color2hex)
-    render__init_line_color = adapter_property('render__init_line_color', color2hex)
+    render__bg_color = color2hex_property('render__bg_color')
+    render__init_line_color = color2hex_property('render__init_line_color')
 
     @property
     def render_video_size(self) -> str:
