@@ -404,7 +404,7 @@ width: 0px;
   </action>
   <action name="actionNew">
    <property name="text">
-    <string>&amp;New?</string>
+    <string>&amp;New</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>

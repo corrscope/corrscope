@@ -49,6 +49,11 @@ class PresentationModel:
         else:
             raise AttributeError(f'cannot set attribute {key} on {obj_name(self)}()')
 
+    def set_cfg(self, cfg: Attrs):
+        self.cfg = cfg
+        for updater in self.update_widget.values():
+            updater()
+
 
 BIND_PREFIX = 'cfg__'
 
