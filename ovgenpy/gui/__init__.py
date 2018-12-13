@@ -55,6 +55,7 @@ class MainWindow(qw.QMainWindow):
         # Bind UI buttons, etc. Functions block main thread, avoiding race conditions.
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
         self.actionNew.triggered.connect(self.on_action_new)
+        self.actionOpen.triggered.connect(self.on_action_open)
         self.actionSave.triggered.connect(self.on_action_save)
         self.actionSaveAs.triggered.connect(self.on_action_save_as)
         self.actionPlay.triggered.connect(self.on_action_play)
@@ -78,6 +79,15 @@ class MainWindow(qw.QMainWindow):
     def on_action_new(self):
         cfg = default_config()
         self.load_cfg(cfg, None)
+
+    def on_action_open(self):
+        name, file_type = qw.QFileDialog.getOpenFileName(
+            self, "Open config", self.cfg_dir, "YAML files (*.yaml)"
+        )
+        if name != '':
+            cfg_path = Path(name)
+            cfg = yaml.load(cfg_path)
+            self.load_cfg(cfg, cfg_path)
 
     def load_cfg(self, cfg: Config, cfg_path: Optional[Path]):
         self._cfg_path = cfg_path
@@ -106,6 +116,7 @@ class MainWindow(qw.QMainWindow):
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
     menuBar: qw.QMenuBar
     actionNew: qw.QAction
+    actionOpen: qw.QAction
     actionSave: qw.QAction
     actionSaveAs: qw.QAction
     actionPlay: qw.QAction
