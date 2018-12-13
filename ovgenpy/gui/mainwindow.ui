@@ -37,7 +37,7 @@
         </sizepolicy>
        </property>
        <property name="styleSheet">
-        <string notr="true">QLineEdit {
+        <string notr="true">BoundLineEdit {
 width: 0px;
 }</string>
        </property>
@@ -56,7 +56,7 @@ width: 0px;
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QSpinBox" name="cfg__fps">
+            <widget class="BoundSpinBox" name="cfg__fps">
              <property name="minimum">
               <number>1</number>
              </property>
@@ -76,7 +76,7 @@ width: 0px;
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QDoubleSpinBox" name="cfg__amplification">
+            <widget class="BoundDoubleSpinBox" name="cfg__amplification">
              <property name="singleStep">
               <double>0.100000000000000</double>
              </property>
@@ -99,7 +99,7 @@ width: 0px;
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QSpinBox" name="cfg__trigger_ms">
+            <widget class="BoundSpinBox" name="cfg__trigger_ms">
              <property name="minimum">
               <number>5</number>
              </property>
@@ -116,7 +116,7 @@ width: 0px;
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QSpinBox" name="cfg__render_ms">
+            <widget class="BoundSpinBox" name="cfg__render_ms">
              <property name="minimum">
               <number>5</number>
              </property>
@@ -133,7 +133,7 @@ width: 0px;
             </widget>
            </item>
            <item row="2" column="1">
-            <widget class="QSpinBox" name="cfg__trigger_subsampling">
+            <widget class="BoundSpinBox" name="cfg__trigger_subsampling">
              <property name="minimum">
               <number>1</number>
              </property>
@@ -147,7 +147,7 @@ width: 0px;
             </widget>
            </item>
            <item row="3" column="1">
-            <widget class="QSpinBox" name="cfg__render_subsampling">
+            <widget class="BoundSpinBox" name="cfg__render_subsampling">
              <property name="minimum">
               <number>1</number>
              </property>
@@ -170,7 +170,7 @@ width: 0px;
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QLineEdit" name="cfg__render__bg_color">
+            <widget class="BoundLineEdit" name="cfg__render__bg_color">
              <property name="text">
               <string>bg</string>
              </property>
@@ -184,7 +184,7 @@ width: 0px;
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QLineEdit" name="cfg__render__init_line_color">
+            <widget class="BoundLineEdit" name="cfg__render__init_line_color">
              <property name="text">
               <string>fg</string>
              </property>
@@ -198,7 +198,7 @@ width: 0px;
             </widget>
            </item>
            <item row="2" column="1">
-            <widget class="QDoubleSpinBox" name="cfg__render__line_width">
+            <widget class="BoundDoubleSpinBox" name="cfg__render__line_width">
              <property name="minimum">
               <double>0.500000000000000</double>
              </property>
@@ -224,7 +224,7 @@ width: 0px;
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QComboBox" name="cfg__layout__orientation"/>
+            <widget class="BoundComboBox" name="cfg__layout__orientation"/>
            </item>
            <item row="1" column="0">
             <widget class="QLabel" name="layout__ncolsL">
@@ -236,7 +236,7 @@ width: 0px;
            <item row="1" column="1">
             <layout class="QHBoxLayout" name="layoutDims">
              <item>
-              <widget class="QSpinBox" name="cfg__layout__ncols">
+              <widget class="BoundSpinBox" name="cfg__layout__ncols">
                <property name="specialValueText">
                 <string notr="true"> </string>
                </property>
@@ -250,7 +250,7 @@ width: 0px;
               </widget>
              </item>
              <item>
-              <widget class="QSpinBox" name="cfg__layout__nrows">
+              <widget class="BoundSpinBox" name="cfg__layout__nrows">
                <property name="specialValueText">
                 <string notr="true"> </string>
                </property>
@@ -266,7 +266,7 @@ width: 0px;
             </widget>
            </item>
            <item row="2" column="1">
-            <widget class="QLineEdit" name="cfg__render_video_size">
+            <widget class="BoundLineEdit" name="cfg__render_video_size">
              <property name="text">
               <string>vs</string>
              </property>
@@ -288,7 +288,7 @@ width: 0px;
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
-          <widget class="QLineEdit" name="cfg__master_audio">
+          <widget class="BoundLineEdit" name="cfg__master_audio">
            <property name="text">
             <string>/</string>
            </property>
@@ -444,6 +444,28 @@ width: 0px;
   </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>BoundLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>ovgenpy/gui/data_bind.h</header>
+  </customwidget>
+  <customwidget>
+   <class>BoundSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>ovgenpy/gui/data_bind.h</header>
+  </customwidget>
+  <customwidget>
+   <class>BoundDoubleSpinBox</class>
+   <extends>QDoubleSpinBox</extends>
+   <header>ovgenpy/gui/data_bind.h</header>
+  </customwidget>
+  <customwidget>
+   <class>BoundComboBox</class>
+   <extends>QComboBox</extends>
+   <header>ovgenpy/gui/data_bind.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

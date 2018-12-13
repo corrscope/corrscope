@@ -81,7 +81,10 @@ def bind_widget(widget: QWidget, model: PresentationModel, path: str):
     return
 
 
-@bind_widget.register(qw.QLineEdit)
+class BoundLineEdit(qw.QLineEdit):
+    pass
+
+@bind_widget.register(BoundLineEdit)
 def _(widget, model: PresentationModel, path: str):
     direct_bind(widget, model, path, DirectBinding(
         set_widget=widget.setText,
@@ -90,7 +93,10 @@ def _(widget, model: PresentationModel, path: str):
     ))
 
 
-@bind_widget.register(qw.QSpinBox)
+class BoundSpinBox(qw.QSpinBox):
+    pass
+
+@bind_widget.register(BoundSpinBox)
 def _(widget, model: PresentationModel, path: str):
     direct_bind(widget, model, path, DirectBinding(
         set_widget=widget.setValue,
@@ -99,7 +105,10 @@ def _(widget, model: PresentationModel, path: str):
     ))
 
 
-@bind_widget.register(qw.QDoubleSpinBox)
+class BoundDoubleSpinBox(qw.QDoubleSpinBox):
+    pass
+
+@bind_widget.register(BoundDoubleSpinBox)
 def _(widget, model: PresentationModel, path: str):
     direct_bind(widget, model, path, DirectBinding(
         set_widget=widget.setValue,
@@ -108,7 +117,10 @@ def _(widget, model: PresentationModel, path: str):
     ))
 
 
-@bind_widget.register(qw.QComboBox)
+class BoundComboBox(qw.QComboBox):
+    pass
+
+@bind_widget.register(BoundComboBox)
 def _(widget, model: PresentationModel, path: str):
     combo_symbols = model.combo_symbols[path]
     combo_text = model.combo_text[path]
