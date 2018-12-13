@@ -2,7 +2,7 @@ from typing import Optional, TypeVar, Callable, List
 
 import numpy as np
 
-from ovgenpy.config import register_config
+from ovgenpy.config import register_config, OvgenError
 from ovgenpy.util import ceildiv
 
 
@@ -19,7 +19,7 @@ class LayoutConfig:
             self.ncols = None
 
         if self.nrows and self.ncols:
-            raise ValueError('cannot manually assign both nrows and ncols')
+            raise OvgenError('cannot manually assign both nrows and ncols')
 
         if not self.nrows and not self.ncols:
             self.ncols = 1
@@ -41,7 +41,7 @@ class RendererLayout:
 
         self.orientation = cfg.orientation
         if self.orientation not in self.VALID_ORIENTATIONS:
-            raise ValueError(f'Invalid orientation {self.orientation} not in '
+            raise OvgenError(f'Invalid orientation {self.orientation} not in '
                              f'{self.VALID_ORIENTATIONS}')
 
     def _calc_layout(self):
@@ -54,12 +54,13 @@ class RendererLayout:
         if cfg.nrows:
             nrows = cfg.nrows
             if nrows is None:
-                raise ValueError('invalid cfg: rows_first is True and nrows is None')
+                raise ValueError('impossible cfg: nrows is None and true')
             ncols = ceildiv(self.nplots, nrows)
         else:
             ncols = cfg.ncols
             if ncols is None:
-                raise ValueError('invalid cfg: rows_first is False and ncols is None')
+                raise ValueError('invalid LayoutConfig: nrows,ncols is None '
+                                 '(__attrs_post_init__ not called?)')
             nrows = ceildiv(self.nplots, ncols)
 
         return nrows, ncols

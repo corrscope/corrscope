@@ -178,7 +178,7 @@ class Ovgen:
             self.output_cfgs = []
 
         if len(self.cfg.channels) == 0:
-            raise ValueError('Config.channels is empty')
+            raise OvgenError('Config.channels is empty')
 
     waves: List[Wave]
     channels: List[Channel]
