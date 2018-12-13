@@ -1,7 +1,7 @@
 import pytest
 from ruamel.yaml import yaml_object
 
-from ovgenpy.config import register_config, yaml, Alias, Ignored, kw_config
+from ovgenpy.config import register_config, yaml, Alias, Ignored, kw_config, OvgenError
 
 # YAML Idiosyncrasies: https://docs.saltstack.com/en/develop/topics/troubleshooting/yaml_idiosyncrasies.html
 
@@ -163,7 +163,7 @@ xx: 1
     x: 1
     xx: 1
     '''
-    with pytest.raises(TypeError):
+    with pytest.raises(OvgenError):
         yaml.load(s)
 
 
