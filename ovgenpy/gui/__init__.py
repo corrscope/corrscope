@@ -303,18 +303,24 @@ def default_property(path: str, default):
 
     return property(getter, setter)
 
+
+def adapter_property(path: str, adapter: Callable[[Any], Any]):
+    def getter(self: 'ConfigModel'):
+        return adapter(rgetattr(self.cfg, path))
+
+    def setter(self: 'ConfigModel', val: int):
+        rsetattr(self.cfg, path, val)
+
+    return property(getter, setter)
+
+
 class ConfigModel(PresentationModel):
     cfg: Config
     combo_symbols = {}
     combo_text = {}
 
-    def __init__(self, cfg: Config):
-        """ Mutates colors for convenience. """
-        super().__init__(cfg)
-
-        for key in ['bg_color', 'init_line_color']:
-            color = getattr(cfg.render, key)
-            setattr(cfg.render, key, color2hex(color))
+    render__bg_color = adapter_property('render__bg_color', color2hex)
+    render__init_line_color = adapter_property('render__init_line_color', color2hex)
 
     @property
     def render_video_size(self) -> str:
