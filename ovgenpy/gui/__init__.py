@@ -477,8 +477,7 @@ class ChannelModel(qc.QAbstractTableModel):
             if value and not value.isspace():
                 try:
                     value = data.cls(value)
-                except ValueError as e:
-                    # raise OvgenError(e)
+                except ValueError:
                     return False
             else:
                 value = data.default
