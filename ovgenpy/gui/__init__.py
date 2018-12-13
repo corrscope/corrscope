@@ -15,7 +15,7 @@ from ovgenpy.config import OvgenError, copy_config, yaml
 from ovgenpy.gui.data_bind import PresentationModel, map_gui, behead, rgetattr, rsetattr
 from ovgenpy.gui.util import color2hex, Locked, get_save_with_ext
 from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
-from ovgenpy.ovgenpy import Ovgen, Config, Arguments
+from ovgenpy.ovgenpy import Ovgen, Config, Arguments, default_config
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
 from ovgenpy.util import perr, obj_name
 
@@ -54,34 +54,63 @@ class MainWindow(qw.QMainWindow):
 
         # Bind UI buttons, etc. Functions block main thread, avoiding race conditions.
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
-        self.actionExit.triggered.connect(qw.QApplication.quit)
+        self.actionNew.triggered.connect(self.on_action_new)
         self.actionSave.triggered.connect(self.on_action_save)
         self.actionSaveAs.triggered.connect(self.on_action_save_as)
         self.actionPlay.triggered.connect(self.on_action_play)
         self.actionRender.triggered.connect(self.on_action_render)
+        self.actionExit.triggered.connect(qw.QApplication.quit)
 
         # Initialize ovgen-thread attribute.
         self.ovgen_thread: Locked[Optional[OvgenThread]] = Locked(None)
 
         # Bind config to UI.
-        self._cfg_path = cfg_path
-        self.load_cfg(cfg)
+        self.load_cfg(cfg, cfg_path)
 
-        self.load_title()
         self.show()
 
-    @property
-    def ever_saved(self):
-        return self._cfg_path is not None
+    # Config models
+    _cfg_path: Optional[Path]
+    model: Optional['ConfigModel'] = None
+    channel_model: 'ChannelModel'
+    channel_widget: qw.QTableView
 
+    def on_action_new(self):
+        cfg = default_config()
+        self.load_cfg(cfg, None)
+
+    def load_cfg(self, cfg: Config, cfg_path: Optional[Path]):
+        self._cfg_path = cfg_path
+        if self.model is None:
+            self.model = ConfigModel(cfg)
+            map_gui(self, self.model)
+        else:
+            self.model.set_cfg(cfg)
+
+        self.channel_model = ChannelModel(cfg.channels)
+        # Calling setModel again disconnects previous model.
+        self.channel_widget.setModel(self.channel_model)
+
+        self.load_title()
+
+    def load_title(self):
+        self.setWindowTitle(f'{self.title} - {APP_NAME}')
+
+    # Unused
+    # @property
+    # def ever_saved(self):
+    #     return self._cfg_path is not None
+
+    # GUI actions, etc.
     master_audio_browse: qw.QPushButton
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
     menuBar: qw.QMenuBar
-    actionExit: qw.QAction
+    actionNew: qw.QAction
     actionSave: qw.QAction
     actionSaveAs: qw.QAction
     actionPlay: qw.QAction
     actionRender: qw.QAction
+    actionExit: qw.QAction
 
     def on_master_audio_browse(self):
         # TODO add default file-open dir, initialized to yaml path and remembers prev
@@ -168,24 +197,7 @@ class MainWindow(qw.QMainWindow):
         )
         return arg
 
-    # Config models
-    model: 'ConfigModel'
-    channel_model: 'ChannelModel'
-
-    def load_cfg(self, cfg: Config):
-        # TODO unbind current model's slots if exists
-        # or maybe disconnect ALL connections??
-        self.model = ConfigModel(cfg)
-        map_gui(self, self.model)
-
-        self.channel_model = ChannelModel(cfg.channels)
-        self.channel_widget: qw.QTableView
-        self.channel_widget.setModel(self.channel_model)
-
     # File paths
-    def load_title(self):
-        self.setWindowTitle(f'{self.title} - {APP_NAME}')
-
     @property
     def cfg_dir(self) -> str:
         maybe_path = self._cfg_path or self.cfg.master_audio
