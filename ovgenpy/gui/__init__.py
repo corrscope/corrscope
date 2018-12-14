@@ -297,7 +297,7 @@ def default_property(path: str, default):
         else:
             return val
 
-    def setter(self: 'ConfigModel', val: int):
+    def setter(self: 'ConfigModel', val):
         rsetattr(self.cfg, path, val)
 
     return property(getter, setter)
@@ -306,16 +306,11 @@ def default_property(path: str, default):
 def color2hex_property(path: str):
     def getter(self: 'ConfigModel'):
         color_attr = rgetattr(self.cfg, path)
-        try:
-            return color2hex(color_attr)
-        except ValueError:
-            raise OvgenError(f'invalid config color {color_attr}')
-        except Exception as e:
-            raise OvgenError(
-                f'doubly invalid config color {color_attr}, raises {e} (report bug!)')
+        return color2hex(color_attr)
 
-    def setter(self: 'ConfigModel', val: int):
-        rsetattr(self.cfg, path, val)
+    def setter(self: 'ConfigModel', val: str):
+        color = color2hex(val)
+        rsetattr(self.cfg, path, color)
 
     return property(getter, setter)
 

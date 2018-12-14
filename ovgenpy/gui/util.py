@@ -5,9 +5,18 @@ import matplotlib.colors
 from PyQt5.QtCore import QMutex
 from PyQt5.QtWidgets import QWidget, QFileDialog
 
+from ovgenpy.config import OvgenError
+
 
 def color2hex(color):
-    return matplotlib.colors.to_hex(color, keep_alpha=False)
+    try:
+        return matplotlib.colors.to_hex(color, keep_alpha=False)
+    except ValueError:
+        raise OvgenError(f'invalid color {color}')
+    except Exception as e:
+        raise OvgenError(
+            f'doubly invalid color {color}, raises {e} (report bug!)')
+
 
 
 T = TypeVar('T')
