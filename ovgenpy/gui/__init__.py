@@ -9,6 +9,7 @@ import attr
 from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QShortcut
 
 from ovgenpy import cli
 from ovgenpy.channel import ChannelConfig
@@ -56,8 +57,8 @@ class MainWindow(qw.QMainWindow):
         # Bind UI buttons, etc. Functions block main thread, avoiding race conditions.
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
 
-        self.channelUp.add_shortcut('ctrl+shift+up')
-        self.channelDown.add_shortcut('ctrl+shift+down')
+        self.channelUp.add_shortcut(self.channelsGroup, 'ctrl+shift+up')
+        self.channelDown.add_shortcut(self.channelsGroup, 'ctrl+shift+down')
 
         # Bind actions.
         self.actionNew.triggered.connect(self.on_action_new)
@@ -81,6 +82,7 @@ class MainWindow(qw.QMainWindow):
     model: Optional['ConfigModel'] = None
     channel_model: 'ChannelModel'
     channel_widget: qw.QTableView
+    channelsGroup: qw.QGroupBox
 
     def on_action_new(self):
         cfg = default_config()
@@ -245,10 +247,16 @@ class MainWindow(qw.QMainWindow):
 
 
 class ShortcutButton(qw.QPushButton):
-    def add_shortcut(self, shortcut: str) -> None:
+    scoped_shortcut: QShortcut
+
+    def add_shortcut(self, scope: qw.QWidget, shortcut: str) -> None:
         """ Adds shortcut and tooltip. """
         keys = QKeySequence(shortcut, QKeySequence.PortableText)
-        self.setShortcut(keys)
+
+        self.scoped_shortcut = qw.QShortcut(keys, scope)
+        self.scoped_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self.scoped_shortcut.activated.connect(self.click)
+
         self.setToolTip(keys.toString(QKeySequence.NativeText))
 
 
