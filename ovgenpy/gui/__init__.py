@@ -8,6 +8,7 @@ import PyQt5.QtWidgets as qw
 import attr
 from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
+from PyQt5.QtGui import QKeySequence
 
 from ovgenpy import cli
 from ovgenpy.channel import ChannelConfig
@@ -54,6 +55,11 @@ class MainWindow(qw.QMainWindow):
 
         # Bind UI buttons, etc. Functions block main thread, avoiding race conditions.
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
+
+        self.channelUp.add_shortcut('ctrl+shift+up')
+        self.channelDown.add_shortcut('ctrl+shift+down')
+
+        # Bind actions.
         self.actionNew.triggered.connect(self.on_action_new)
         self.actionOpen.triggered.connect(self.on_action_open)
         self.actionSave.triggered.connect(self.on_action_save)
@@ -113,6 +119,10 @@ class MainWindow(qw.QMainWindow):
 
     # GUI actions, etc.
     master_audio_browse: qw.QPushButton
+    channelAdd: 'ShortcutButton'
+    channelDelete: 'ShortcutButton'
+    channelUp: 'ShortcutButton'
+    channelDown: 'ShortcutButton'
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
     menuBar: qw.QMenuBar
     actionNew: qw.QAction
@@ -232,6 +242,14 @@ class MainWindow(qw.QMainWindow):
     @property
     def cfg(self):
         return self.model.cfg
+
+
+class ShortcutButton(qw.QPushButton):
+    def add_shortcut(self, shortcut: str) -> None:
+        """ Adds shortcut and tooltip. """
+        keys = QKeySequence(shortcut, QKeySequence.PortableText)
+        self.setShortcut(keys)
+        self.setToolTip(keys.toString(QKeySequence.NativeText))
 
 
 class OvgenThread(qc.QThread):
@@ -379,7 +397,10 @@ class Column:
 
 
 class ChannelModel(qc.QAbstractTableModel):
-    """ Design based off http://doc.qt.io/qt-5/model-view-programming.html#a-read-only-example-model """
+    """ Design based off
+    https://doc.qt.io/qt-5/model-view-programming.html#a-read-only-example-model and
+    https://doc.qt.io/qt-5/model-view-programming.html#model-subclassing-reference
+    """
 
     def __init__(self, channels: List[ChannelConfig]):
         """ Mutates `channels` and `line_color` for convenience. """
@@ -487,7 +508,34 @@ class ChannelModel(qc.QAbstractTableModel):
             return True
         return False
 
+    """So if I understood it correctly you want to reorder the columns by moving the 
+    headers and then want to know how the view looks like. I believe ( 90% certain ) 
+    when you reorder the headers it does not trigger any change in the model! and 
+    then if you just start printing the data of the model you will only see the data 
+    in the order how it was initially before you swapper/reordered some column with 
+    the header. """
+
+    def insertRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
+        if not (count >= 1 and 0 <= row <= len(self.channels)):
+            return False
+
+        self.beginInsertRows(parent, row, row + count - 1)
+        self.channels.insert(row, [ChannelConfig('') for _ in range(count)])
+        self.endInsertRows()
+        return True
+
+    def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
+        nchan = len(self.channels)
+        if not (count >= 1 and 0 <= row < nchan and row + count <= nchan):
+            return False
+
+        self.beginRemoveRows(parent, row, row + count - 1)
+        del self.channels[row: row + count]
+        self.endInsertRows()
+        return True
+
     def flags(self, index: QModelIndex):
         if not index.isValid():
             return Qt.ItemIsEnabled
-        return qc.QAbstractItemModel.flags(self, index) | Qt.ItemIsEditable
+        return (qc.QAbstractItemModel.flags(self, index)
+                | Qt.ItemIsEditable | Qt.ItemNeverHasChildren)

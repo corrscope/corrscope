@@ -326,16 +326,30 @@ width: 0px;
             </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="channelDelete">
+            <widget class="ShortcutButton" name="channelDelete">
              <property name="text">
               <string>&amp;Add...</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="channelAdd">
+            <widget class="ShortcutButton" name="channelAdd">
              <property name="text">
               <string>&amp;Delete</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="ShortcutButton" name="channelUp">
+             <property name="text">
+              <string>Up</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="ShortcutButton" name="channelDown">
+             <property name="text">
+              <string>Down</string>
              </property>
             </widget>
            </item>
@@ -464,6 +478,11 @@ width: 0px;
    <class>BoundComboBox</class>
    <extends>QComboBox</extends>
    <header>ovgenpy/gui/data_bind.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ShortcutButton</class>
+   <extends>QPushButton</extends>
+   <header>ovgenpy/gui/__init__.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
