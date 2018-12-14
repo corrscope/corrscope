@@ -2,11 +2,13 @@ import functools
 import operator
 from typing import Optional, List, Callable, Dict, Any, ClassVar
 
-import attr
 from PyQt5 import QtWidgets as qw, QtCore as qc
 from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtWidgets import QWidget
 
+from ovgenpy.config import OvgenError
+from ovgenpy.triggers import lerp
 from ovgenpy.util import obj_name, perr
 
 __all__ = ['PresentationModel', 'map_gui', 'behead', 'rgetattr', 'rsetattr']
@@ -79,12 +81,18 @@ def map_gui(view: QWidget, model: PresentationModel):
 
 Signal = Any
 
-class BoundWidget:
+class BoundWidget(QWidget):
+    default_palette: QPalette
+    error_palette: QPalette
+
     pmodel: PresentationModel
     path: str
 
     def bind_widget(self, model: PresentationModel, path: str) -> None:
         try:
+            self.default_palette = self.palette()
+            self.error_palette = self.calc_error_palette()
+            
             self.pmodel = model
             self.path = path
             self.cfg2gui()
@@ -99,6 +107,17 @@ class BoundWidget:
             perr(self)
             perr(path)
             raise
+    
+    def calc_error_palette(self) -> QPalette:
+        """ Palette with red background, used for widgets with invalid input. """
+        error_palette = QPalette(self.palette())
+
+        bg = error_palette.color(QPalette.Base)
+        red = QColor(qc.Qt.red)
+
+        red_bg = blend_colors(bg, red, 0.5)
+        error_palette.setColor(QPalette.Base, red_bg)
+        return error_palette
 
     def cfg2gui(self):
         """ Update the widget without triggering signals.
@@ -118,11 +137,32 @@ class BoundWidget:
     def set_model(self, value): pass
 
 
+def blend_colors(color1: QColor, color2: QColor, ratio: float, gamma=2):
+    """ Blends two colors in linear color space.
+    Produces better results on both light and dark themes,
+    than integer blending (which is too dark).
+    """
+    rgb1 = color1.getRgbF()[:3]  # r,g,b, remove alpha
+    rgb2 = color2.getRgbF()[:3]
+    rgb_blend = []
+
+    for ch1, ch2 in zip(rgb1, rgb2):
+        blend = lerp(ch1 ** gamma, ch2 ** gamma, ratio) ** (1/gamma)
+        rgb_blend.append(blend)
+
+    return QColor.fromRgbF(*rgb_blend, 1.0)
+
+
 def model_setter(value_type: type) -> Callable:
     @pyqtSlot(value_type)
     def set_model(self: BoundWidget, value):
         assert isinstance(value, value_type)
-        self.pmodel[self.path] = value
+        try:
+            self.pmodel[self.path] = value
+        except OvgenError:
+            self.setPalette(self.error_palette)
+        else:
+            self.setPalette(self.default_palette)
     return set_model
 
 
