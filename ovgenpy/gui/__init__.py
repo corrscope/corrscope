@@ -32,6 +32,7 @@ def res(file: str) -> str:
 
 
 def gui_main(cfg: Config, cfg_path: Optional[Path]):
+    # TODO read config within MainWindow, and show popup if loading fails.
     app = qw.QApplication(sys.argv)
     app.setAttribute(qc.Qt.AA_EnableHighDpiScaling)
 
@@ -102,8 +103,15 @@ class MainWindow(qw.QMainWindow):
         )
         if name != '':
             cfg_path = Path(name)
-            cfg = yaml.load(cfg_path)
-            self.load_cfg(cfg, cfg_path)
+            try:
+                # Raises YAML structural exceptions
+                cfg = yaml.load(cfg_path)
+                # Raises color getter exceptions
+                # ISSUE: catching an exception will leave UI in undefined state?
+                self.load_cfg(cfg, cfg_path)
+            except Exception as e:
+                qw.QMessageBox.critical(self, 'Error loading file', str(e))
+                return
 
     def load_cfg(self, cfg: Config, cfg_path: Optional[Path]):
         self._cfg_path = cfg_path
