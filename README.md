@@ -3,7 +3,7 @@ Python program to render wave files into oscilloscope views, featuring improved 
 
 ## Dependencies
 
-- Python 3.6 (3.5 and 3.7 will not work)
+- Python 3.6 or above (3.5bfd36c1e2aae36b4f80844953f4aa568a8530355 will not work)
 - FFmpeg
 
 ## Installation
