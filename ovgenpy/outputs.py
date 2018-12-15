@@ -137,7 +137,7 @@ class PipeOutput(Output):
     def close(self, wait=True) -> int:
         try:
             self._stream.close()
-        except BrokenPipeError:
+        except (BrokenPipeError, OSError):  # BrokenPipeError is a OSError
             pass
 
         if not wait:
