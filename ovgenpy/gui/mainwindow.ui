@@ -356,7 +356,7 @@ width: 0px;
           </layout>
          </item>
          <item>
-          <widget class="QTableView" name="channel_widget"/>
+          <widget class="ChannelTableView" name="channel_widget"/>
          </item>
         </layout>
        </widget>
@@ -482,6 +482,11 @@ width: 0px;
   <customwidget>
    <class>ShortcutButton</class>
    <extends>QPushButton</extends>
+   <header>ovgenpy/gui/__init__.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ChannelTableView</class>
+   <extends>QTableView</extends>
    <header>ovgenpy/gui/__init__.h</header>
   </customwidget>
  </customwidgets>

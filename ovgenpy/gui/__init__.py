@@ -2,10 +2,12 @@ import os
 import sys
 from pathlib import Path
 from typing import *
+from typing import List, Any
 
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
 import attr
+import more_itertools
 from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QKeySequence
@@ -60,6 +62,9 @@ class MainWindow(qw.QMainWindow):
         self.channelUp.add_shortcut(self.channelsGroup, 'ctrl+shift+up')
         self.channelDown.add_shortcut(self.channelsGroup, 'ctrl+shift+down')
 
+        self.channelUp.clicked.connect(self.channel_widget.on_channel_up)
+        self.channelDown.clicked.connect(self.channel_widget.on_channel_down)
+
         # Bind actions.
         self.actionNew.triggered.connect(self.on_action_new)
         self.actionOpen.triggered.connect(self.on_action_open)
@@ -81,7 +86,7 @@ class MainWindow(qw.QMainWindow):
     _cfg_path: Optional[Path]
     model: Optional['ConfigModel'] = None
     channel_model: 'ChannelModel'
-    channel_widget: qw.QTableView
+    channel_widget: 'ChannelTableView'
     channelsGroup: qw.QGroupBox
 
     def on_action_new(self):
@@ -384,10 +389,53 @@ class ConfigModel(PresentationModel):
     # TODO mutate _cfg and convert all colors to #rrggbb on access
 
 
+class ChannelTableView(qw.QTableView):
+    def on_channel_up(self):
+        self.move_selection(-1)
+
+    def on_channel_down(self):
+        self.move_selection(1)
+
+    def move_selection(self, delta: int):
+        model: 'ChannelModel' = self.model()
+        rows = self.selected_rows()
+        row_ranges = find_ranges(rows)
+
+        # If we hit the end, cancel all other moves.
+        # If moving up, move top first.
+        if delta > 0:
+            # If moving down, move bottom first.
+            row_ranges = reversed(list(row_ranges))
+
+        parent = qc.QModelIndex()
+        for first_row, nrow in row_ranges:
+            if delta > 0:
+                dest_row = first_row + nrow + delta
+            else:
+                dest_row = first_row + delta
+
+            if not model.moveRows(parent, first_row, nrow, parent, dest_row):
+                break
+
+    def selected_rows(self) -> List[int]:
+        sel: qc.QItemSelectionModel = self.selectionModel()
+        inds: List[qc.QModelIndex] = sel.selectedIndexes()
+        rows: List[int] = sorted({ind.row() for ind in inds})
+        return rows
+
+
 T = TypeVar('T')
 
 
-nope = qc.QVariant()
+def find_ranges(iterable: Iterable[T]) -> Iterable[Tuple[T, int]]:
+    """Extracts consecutive runs from a list of items.
+
+    :param iterable: List of items.
+    :return: Iterable of (first elem, length).
+    """
+    for group in more_itertools.consecutive_groups(iterable):
+        group = list(group)
+        yield group[0], len(group)
 
 
 @attr.dataclass
@@ -543,8 +591,42 @@ class ChannelModel(qc.QAbstractTableModel):
         self.endInsertRows()
         return True
 
+    def moveRows(self,
+                 _sourceParent: QModelIndex, src_row: int, count: int,
+                 _destinationParent: QModelIndex, dest_row: int):
+        nchan = len(self.channels)
+        if not (count >= 1
+                and 0 <= src_row <= nchan and src_row + count <= nchan
+                and 0 <= dest_row <= nchan):
+            return False
+
+        # If source and destination overlap, beginMoveRows returns False.
+        if not self.beginMoveRows(
+                _sourceParent, src_row, src_row + count - 1,
+                _destinationParent, dest_row):
+            return False
+
+        # We know source and destination do not overlap.
+        src = slice(src_row, src_row + count)
+        dest = slice(dest_row, dest_row)
+
+        if dest_row > src_row:
+            # Move down: Insert dest, then remove src
+            self.channels[dest] = self.channels[src]
+            del self.channels[src]
+        else:
+            # Move up: Remove src, then insert dest.
+            rows = self.channels[src]
+            del self.channels[src]
+            self.channels[dest] = rows
+        self.endMoveRows()
+        return True
+
     def flags(self, index: QModelIndex):
         if not index.isValid():
             return Qt.ItemIsEnabled
         return (qc.QAbstractItemModel.flags(self, index)
                 | Qt.ItemIsEditable | Qt.ItemNeverHasChildren)
+
+
+nope = qc.QVariant()
