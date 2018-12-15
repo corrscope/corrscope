@@ -577,7 +577,11 @@ class ChannelModel(qc.QAbstractTableModel):
 
             if key.startswith(self.TRIGGER):
                 key = behead(key, self.TRIGGER)
-                self.triggers(row)[key] = value
+                trigger = self.triggers(row)
+                if value == data.default:
+                    del trigger[key]
+                else:
+                    trigger[key] = value
 
             else:
                 setattr(self.channels[row], key, value)
