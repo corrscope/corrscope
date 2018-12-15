@@ -9,7 +9,7 @@ import PyQt5.QtWidgets as qw
 import attr
 from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
-from PyQt5.QtGui import QKeySequence
+from PyQt5.QtGui import QKeySequence, QFont
 from PyQt5.QtWidgets import QShortcut
 
 from ovgenpy import cli
@@ -33,9 +33,19 @@ def res(file: str) -> str:
 
 def gui_main(cfg: Config, cfg_path: Optional[Path]):
     # TODO read config within MainWindow, and show popup if loading fails.
-    app = qw.QApplication(sys.argv)
-    app.setAttribute(qc.Qt.AA_EnableHighDpiScaling)
+    # qw.QApplication.setStyle('fusion')
+    QApp = qw.QApplication
+    QApp.setAttribute(qc.Qt.AA_EnableHighDpiScaling)
 
+    # Qt on Windows will finally switch default font to lfMessageFont=Segoe UI
+    # (Vista, 2006)... in 2020 (Qt 6.0).
+    if qc.QSysInfo.kernelType() == 'winnt':
+        # This will be wrong for non-English languages, but it's better than default?
+        font = QFont("Segoe UI", 9)
+        font.setStyleHint(QFont.SansSerif)
+        QApp.setFont(font)
+
+    app = qw.QApplication(sys.argv)
     window = MainWindow(cfg, cfg_path)
     sys.exit(app.exec_())
 
