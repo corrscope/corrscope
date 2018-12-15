@@ -22,6 +22,8 @@ from ovgenpy.ovgenpy import Ovgen, Config, Arguments, default_config
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
 from ovgenpy.util import obj_name
 
+FILTER_WAV_FILES = "WAV files (*.wav)"
+
 APP_NAME = 'ovgenpy'
 APP_DIR = Path(__file__).parent
 
@@ -63,6 +65,8 @@ class MainWindow(qw.QMainWindow):
 
         self.channelUp.clicked.connect(self.channel_widget.on_channel_up)
         self.channelDown.clicked.connect(self.channel_widget.on_channel_down)
+        self.channelAdd.clicked.connect(self.on_channel_add)
+        # self.channelDelete.clicked.connect(self.on_channel_delete)
 
         # Bind actions.
         self.actionNew.triggered.connect(self.on_action_new)
@@ -143,12 +147,19 @@ class MainWindow(qw.QMainWindow):
         # TODO add default file-open dir, initialized to yaml path and remembers prev
         # useless if people don't reopen old projects
         name, file_type = qw.QFileDialog.getOpenFileName(
-            self, "Open master audio file", self.cfg_dir, "WAV files (*.wav)"
+            self, "Open master audio file", self.cfg_dir, FILTER_WAV_FILES
         )
         if name != '':
             master_audio = 'master_audio'
             self.model[master_audio] = name
             self.model.update_widget[master_audio]()
+
+    def on_channel_add(self):
+        wavs, file_type = qw.QFileDialog.getOpenFileNames(
+            self, "Add audio channels", self.cfg_dir, FILTER_WAV_FILES
+        )
+        if wavs:
+            self.channel_widget.append_channels(wavs)
 
     def on_action_save(self):
         if self._cfg_path is None:
@@ -389,6 +400,19 @@ class ConfigModel(PresentationModel):
 
 
 class ChannelTableView(qw.QTableView):
+    def append_channels(self, wavs: List[str]):
+        model: ChannelModel = self.model()
+
+        begin_row = model.rowCount()
+        count_rows = len(wavs)
+
+        col = model.idx_of_key['wav_path']
+
+        model.insertRows(begin_row, count_rows)
+        for row, wav_path in enumerate(wavs, begin_row):
+            index = model.index(row, col)
+            model.setData(index, wav_path)
+
     def on_channel_up(self):
         self.move_selection(-1)
 
@@ -482,6 +506,14 @@ class ChannelModel(qc.QAbstractTableModel):
         Column('trigger__buffer_falloff', float, None),
     ]
 
+    @staticmethod
+    def _idx_of_key(col_data=col_data):
+        return {
+            col.key: idx
+            for idx, col in enumerate(col_data)
+        }
+    idx_of_key = _idx_of_key.__func__()
+
     def columnCount(self, parent: QModelIndex = ...) -> int:
         return len(self.col_data)
 
@@ -561,7 +593,7 @@ class ChannelModel(qc.QAbstractTableModel):
     in the order how it was initially before you swapper/reordered some column with 
     the header. """
 
-    def insertRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
+    def insertRows(self, row: int, count: int, parent=QModelIndex()) -> bool:
         if not (count >= 1 and 0 <= row <= len(self.channels)):
             return False
 
@@ -570,7 +602,7 @@ class ChannelModel(qc.QAbstractTableModel):
         self.endInsertRows()
         return True
 
-    def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
+    def removeRows(self, row: int, count: int, parent=QModelIndex()) -> bool:
         nchan = len(self.channels)
         # row <= nchan for consistency.
         if not (count >= 1 and 0 <= row <= nchan and row + count <= nchan):
