@@ -354,7 +354,7 @@
           </layout>
          </item>
          <item>
-          <widget class="ChannelTableView" name="channel_widget"/>
+          <widget class="ChannelTableView" name="channel_view"/>
          </item>
         </layout>
        </widget>
