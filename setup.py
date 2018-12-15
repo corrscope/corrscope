@@ -11,7 +11,7 @@ setup(
     description='',
     tests_require=['pytest>=3.2.0', 'pytest-pycharm', 'hypothesis', 'delayed-assert'],
     install_requires=[
-        'numpy', 'scipy', 'click', 'ruamel.yaml',
+        'numpy', 'scipy', 'click', 'ruamel.yaml', 'more_itertools',
         'matplotlib',
         'attrs>=18.2.0',
         'PyQt5',
