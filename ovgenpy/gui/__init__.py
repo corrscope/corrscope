@@ -462,7 +462,6 @@ class ChannelModel(qc.QAbstractTableModel):
         """ Mutates `channels` and `line_color` for convenience. """
         super().__init__()
         self.channels = channels
-        self.triggers: List[dict] = []
 
         line_color = 'line_color'
 
@@ -476,10 +475,15 @@ class ChannelModel(qc.QAbstractTableModel):
             else:
                 trigger_dict = dict(t or {})
 
-            cfg.trigger = trigger_dict
-            self.triggers.append(trigger_dict)
             if line_color in trigger_dict:
                 trigger_dict[line_color] = color2hex(trigger_dict[line_color])
+
+            cfg.trigger = trigger_dict
+
+    def triggers(self, row: int) -> dict:
+        trigger = self.channels[row].trigger
+        assert isinstance(trigger, dict)
+        return trigger
 
     # columns
     col_data = [
@@ -525,7 +529,7 @@ class ChannelModel(qc.QAbstractTableModel):
             key = data.key
             if key.startswith(self.TRIGGER):
                 key = behead(key, self.TRIGGER)
-                value = self.triggers[row].get(key, '')
+                value = self.triggers(row).get(key, '')
 
             else:
                 value = getattr(self.channels[row], key)
@@ -556,7 +560,7 @@ class ChannelModel(qc.QAbstractTableModel):
 
             if key.startswith(self.TRIGGER):
                 key = behead(key, self.TRIGGER)
-                self.triggers[row][key] = value
+                self.triggers(row)[key] = value
 
             else:
                 setattr(self.channels[row], key, value)
