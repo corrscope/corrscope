@@ -39,11 +39,6 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
-       <property name="styleSheet">
-        <string notr="true">BoundLineEdit {
-width: 0px;
-}</string>
-       </property>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
          <widget class="QGroupBox" name="optionGlobal">
