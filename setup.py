@@ -11,8 +11,8 @@ setup(
     description='',
     tests_require=['pytest>=3.2.0', 'pytest-pycharm', 'hypothesis', 'delayed-assert'],
     install_requires=[
-        # ruamel.yaml 0.15.55 implements slice assignment in loaded list (CommentedSeq).
-        'numpy', 'scipy', 'click', 'ruamel.yaml>=0.15.55', 'more_itertools',
+        'ruamel.yaml>=0.15.70',  # See test_config.py to pick a suitable minimum version
+        'numpy', 'scipy', 'click', 'more_itertools',
         'matplotlib',
         'attrs>=18.2.0',
         'PyQt5',
