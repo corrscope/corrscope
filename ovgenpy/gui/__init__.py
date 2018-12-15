@@ -528,13 +528,14 @@ class ChannelModel(qc.QAbstractTableModel):
             return False
 
         self.beginInsertRows(parent, row, row + count - 1)
-        self.channels.insert(row, [ChannelConfig('') for _ in range(count)])
+        self.channels[row:row] = [ChannelConfig('') for _ in range(count)]
         self.endInsertRows()
         return True
 
     def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
         nchan = len(self.channels)
-        if not (count >= 1 and 0 <= row < nchan and row + count <= nchan):
+        # row <= nchan for consistency.
+        if not (count >= 1 and 0 <= row <= nchan and row + count <= nchan):
             return False
 
         self.beginRemoveRows(parent, row, row + count - 1)
