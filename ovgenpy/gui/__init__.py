@@ -550,7 +550,7 @@ class ChannelModel(qc.QAbstractTableModel):
             else:
                 setattr(self.channels[row], key, value)
 
-            self.dataChanged(index, index, [role])
+            self.dataChanged.emit(index, index, [role])
             return True
         return False
 
