@@ -74,8 +74,8 @@ class MainWindow(qw.QMainWindow):
         self.channelUp.add_shortcut(self.channelsGroup, 'ctrl+shift+up')
         self.channelDown.add_shortcut(self.channelsGroup, 'ctrl+shift+down')
 
-        self.channelUp.clicked.connect(self.channel_widget.on_channel_up)
-        self.channelDown.clicked.connect(self.channel_widget.on_channel_down)
+        self.channelUp.clicked.connect(self.channel_view.on_channel_up)
+        self.channelDown.clicked.connect(self.channel_view.on_channel_down)
         self.channelAdd.clicked.connect(self.on_channel_add)
         self.channelDelete.clicked.connect(self.on_channel_delete)
 
@@ -100,7 +100,7 @@ class MainWindow(qw.QMainWindow):
     _cfg_path: Optional[Path]
     model: Optional['ConfigModel'] = None
     channel_model: 'ChannelModel'
-    channel_widget: 'ChannelTableView'
+    channel_view: 'ChannelTableView'
     channelsGroup: qw.QGroupBox
 
     def on_action_new(self):
@@ -133,7 +133,7 @@ class MainWindow(qw.QMainWindow):
 
         self.channel_model = ChannelModel(cfg.channels)
         # Calling setModel again disconnects previous model.
-        self.channel_widget.setModel(self.channel_model)
+        self.channel_view.setModel(self.channel_model)
 
         self.load_title()
 
@@ -177,10 +177,10 @@ class MainWindow(qw.QMainWindow):
             self, "Add audio channels", self.cfg_dir, FILTER_WAV_FILES
         )
         if wavs:
-            self.channel_widget.append_channels(wavs)
+            self.channel_view.append_channels(wavs)
 
     def on_channel_delete(self):
-        self.channel_widget.delete_selected()
+        self.channel_view.delete_selected()
 
     def on_action_save(self):
         if self._cfg_path is None:
