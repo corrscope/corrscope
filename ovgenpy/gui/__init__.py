@@ -66,7 +66,7 @@ class MainWindow(qw.QMainWindow):
         self.channelUp.clicked.connect(self.channel_widget.on_channel_up)
         self.channelDown.clicked.connect(self.channel_widget.on_channel_down)
         self.channelAdd.clicked.connect(self.on_channel_add)
-        # self.channelDelete.clicked.connect(self.on_channel_delete)
+        self.channelDelete.clicked.connect(self.on_channel_delete)
 
         # Bind actions.
         self.actionNew.triggered.connect(self.on_action_new)
@@ -160,6 +160,9 @@ class MainWindow(qw.QMainWindow):
         )
         if wavs:
             self.channel_widget.append_channels(wavs)
+
+    def on_channel_delete(self):
+        self.channel_widget.delete_selected()
 
     def on_action_save(self):
         if self._cfg_path is None:
@@ -413,6 +416,14 @@ class ChannelTableView(qw.QTableView):
             index = model.index(row, col)
             model.setData(index, wav_path)
 
+    def delete_selected(self):
+        model: 'ChannelModel' = self.model()
+        rows = self.selected_rows()
+        row_ranges = find_ranges(rows)
+
+        for first_row, nrow in reversed(list(row_ranges)):
+            model.removeRows(first_row, nrow)
+
     def on_channel_up(self):
         self.move_selection(-1)
 
@@ -616,7 +627,7 @@ class ChannelModel(qc.QAbstractTableModel):
 
         self.beginRemoveRows(parent, row, row + count - 1)
         del self.channels[row: row + count]
-        self.endInsertRows()
+        self.endRemoveRows()
         return True
 
     def moveRows(self,
