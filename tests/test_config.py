@@ -229,3 +229,68 @@ def test_load_post_init():
 foo: 0
 '''
     assert yaml.load(s) == Foo(99)
+
+
+# ruamel.yaml has a unstable and shape-shifting API.
+# Test which version numbers have properties we want.
+
+def test_dump_dataclass_order():
+    @register_config(always_dump='*')
+    class Config:
+        a: int = 1
+        b: int = 1
+        c: int = 1
+        d: int = 1
+        e: int = 1
+        z: int = 1
+        y: int = 1
+        x: int = 1
+        w: int = 1
+        v: int = 1
+
+    assert yaml.dump(Config()) == '''\
+!Config
+a: 1
+b: 1
+c: 1
+d: 1
+e: 1
+z: 1
+y: 1
+x: 1
+w: 1
+v: 1
+'''
+
+
+def test_load_dump_dict_order():
+    s = '''\
+a: 1
+b: 1
+c: 1
+d: 1
+e: 1
+z: 1
+y: 1
+x: 1
+w: 1
+v: 1
+'''
+    dic = yaml.load(s)
+    assert yaml.dump(dic) == s, yaml.dump(dic)
+
+
+def test_load_list_dict_type():
+    """Fails on ruamel.yaml<0.15.70 (CommentedMap/CommentedSeq)."""
+    dic = yaml.load('{}')
+    assert isinstance(dic, dict)
+
+    lis = yaml.load('[]')
+    assert isinstance(lis, list)
+
+
+def test_list_slice_assign():
+    """Crashes on ruamel.yaml<0.15.55 (CommentedSeq)."""
+    lis = yaml.load('[]')
+    lis[0:0] = list(range(5))
+    lis[2:5] = []
