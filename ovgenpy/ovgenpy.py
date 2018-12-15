@@ -338,7 +338,6 @@ class Ovgen:
             if self.raise_on_teardown:
                 raise self.raise_on_teardown
 
-        self.arg.on_end()
         if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
             dtime = time.perf_counter() - begin

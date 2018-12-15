@@ -227,9 +227,16 @@ class MainWindow(qw.QMainWindow):
             )
 
         cfg = copy_config(self.model.cfg)
-        t = self.ovgen_thread.obj = OvgenThread(self, cfg, arg)
-        # Assigns self.ovgen_thread.set(None) when finished.
+        t = self.ovgen_thread.obj = OvgenThread(cfg, arg)
+        t.error.connect(self.on_play_thread_error)
+        t.finished.connect(self.on_play_thread_finished)
         t.start()
+
+    def on_play_thread_error(self, exc: BaseException):
+        qw.QMessageBox.critical(self, 'Error rendering oscilloscope', str(exc))
+
+    def on_play_thread_finished(self):
+        self.ovgen_thread.set(None)
 
     def _get_args(self, outputs: List[IOutputConfig]):
         arg = Arguments(
@@ -279,16 +286,23 @@ class ShortcutButton(qw.QPushButton):
 
 
 class OvgenThread(qc.QThread):
-    def __init__(self, parent: MainWindow, cfg: Config, arg: Arguments):
+    def __init__(self, cfg: Config, arg: Arguments):
         qc.QThread.__init__(self)
+        self.cfg = cfg
+        self.arg = arg
 
-        def run() -> None:
+    def run(self) -> None:
+        cfg = self.cfg
+        arg = self.arg
+        try:
             Ovgen(cfg, arg).play()
-        self.run = run
+        except Exception as e:
+            arg.on_end()
+            self.error.emit(e)
+        else:
+            arg.on_end()
 
-        def finished():
-            parent.ovgen_thread.set(None)
-        self.finished.connect(finished)
+    error = qc.pyqtSignal(Exception)
 
 
 class OvgenProgressDialog(qw.QProgressDialog):
