@@ -1,7 +1,9 @@
 from pathlib import Path
 from typing import *
+from typing import Iterable, Tuple
 
 import matplotlib.colors
+import more_itertools
 from PyQt5.QtCore import QMutex
 from PyQt5.QtWidgets import QWidget, QFileDialog
 
@@ -16,7 +18,6 @@ def color2hex(color):
     except Exception as e:
         raise OvgenError(
             f'doubly invalid color {color}, raises {e} (report bug!)')
-
 
 
 T = TypeVar('T')
@@ -70,3 +71,13 @@ def get_save_with_ext(
         path = path.with_suffix(default_suffix)
     return path
 
+
+def find_ranges(iterable: Iterable[T]) -> Iterable[Tuple[T, int]]:
+    """Extracts consecutive runs from a list of items.
+
+    :param iterable: List of items.
+    :return: Iterable of (first elem, length).
+    """
+    for group in more_itertools.consecutive_groups(iterable):
+        group = list(group)
+        yield group[0], len(group)

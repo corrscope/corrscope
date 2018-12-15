@@ -7,7 +7,6 @@ from typing import List, Any
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
 import attr
-import more_itertools
 from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QKeySequence
@@ -17,7 +16,7 @@ from ovgenpy import cli
 from ovgenpy.channel import ChannelConfig
 from ovgenpy.config import OvgenError, copy_config, yaml
 from ovgenpy.gui.data_bind import PresentationModel, map_gui, behead, rgetattr, rsetattr
-from ovgenpy.gui.util import color2hex, Locked, get_save_with_ext
+from ovgenpy.gui.util import color2hex, Locked, get_save_with_ext, find_ranges
 from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from ovgenpy.ovgenpy import Ovgen, Config, Arguments, default_config
 from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
@@ -422,20 +421,6 @@ class ChannelTableView(qw.QTableView):
         inds: List[qc.QModelIndex] = sel.selectedIndexes()
         rows: List[int] = sorted({ind.row() for ind in inds})
         return rows
-
-
-T = TypeVar('T')
-
-
-def find_ranges(iterable: Iterable[T]) -> Iterable[Tuple[T, int]]:
-    """Extracts consecutive runs from a list of items.
-
-    :param iterable: List of items.
-    :return: Iterable of (first elem, length).
-    """
-    for group in more_itertools.consecutive_groups(iterable):
-        group = list(group)
-        yield group[0], len(group)
 
 
 @attr.dataclass
