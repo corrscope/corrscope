@@ -553,8 +553,10 @@ class ChannelModel(qc.QAbstractTableModel):
 
             if value == data.default:
                 return ''
-            else:
-                return str(value)
+            if key == 'wav_path' and role == Qt.DisplayRole:
+                if Path(value).parent != Path():
+                    return '...' + Path(value).name
+            return str(value)
 
         return nope
 
