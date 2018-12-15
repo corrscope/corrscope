@@ -326,14 +326,14 @@ width: 0px;
             </spacer>
            </item>
            <item>
-            <widget class="ShortcutButton" name="channelDelete">
+            <widget class="ShortcutButton" name="channelAdd">
              <property name="text">
               <string>&amp;Add...</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="ShortcutButton" name="channelAdd">
+            <widget class="ShortcutButton" name="channelDelete">
              <property name="text">
               <string>&amp;Delete</string>
              </property>
