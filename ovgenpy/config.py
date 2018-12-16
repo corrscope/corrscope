@@ -107,15 +107,16 @@ class _ConfigMixin:
         cls = type(self)
 
         for field in attr.fields(cls):
-            # Remove leading underscore from attribute name,
-            # since attrs __init__ removes leading underscore.
+            # Skip deprecated fields with leading underscores.
+            # They have already been baked into other config fields.
 
-            key = field.name
-            value = getattr(self, key)
+            name = field.name
+            if name[0] == '_':
+                continue
 
-            name = key[1:] if key[0] == '_' else key
+            value = getattr(self, name)
 
-            if dump_all or key in always_dump:
+            if dump_all or name in always_dump:
                 state[name] = value
                 continue
 
