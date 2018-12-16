@@ -57,8 +57,6 @@ class PresentationModel:
             updater()
 
 
-BIND_PREFIX = 'cfg__'
-
 # TODO add tests for recursive operations
 def map_gui(view: QWidget, model: PresentationModel):
     """
@@ -70,13 +68,10 @@ def map_gui(view: QWidget, model: PresentationModel):
     Only <widget>s starting with 'cfg__' will be bound.
     """
 
-    widgets = view.findChildren(QWidget)  # dear pyqt, add generic mypy return types
+    widgets: List[BoundWidget] = view.findChildren(BoundWidget)  # dear pyqt, add generic mypy return types
     for widget in widgets:
-        widget_name = widget.objectName()
-        path = try_behead(widget_name, BIND_PREFIX)
-        if path is not None:
-            assert isinstance(widget, BoundWidget)
-            widget.bind_widget(model, path)
+        path = widget.objectName()
+        widget.bind_widget(model, path)
 
 
 Signal = Any
@@ -92,7 +87,7 @@ class BoundWidget(QWidget):
         try:
             self.default_palette = self.palette()
             self.error_palette = self.calc_error_palette()
-            
+
             self.pmodel = model
             self.path = path
             self.cfg2gui()
@@ -107,7 +102,7 @@ class BoundWidget(QWidget):
             perr(self)
             perr(path)
             raise
-    
+
     def calc_error_palette(self) -> QPalette:
         """ Palette with red background, used for widgets with invalid input. """
         error_palette = QPalette(self.palette())
@@ -224,6 +219,7 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
         self.pmodel[self.path] = self.combo_symbols[combo_index]
 
 
+# Unused
 def try_behead(string: str, header: str) -> Optional[str]:
     if not string.startswith(header):
         return None
