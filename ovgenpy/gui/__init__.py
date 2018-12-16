@@ -624,7 +624,8 @@ class ChannelModel(qc.QAbstractTableModel):
                 key = behead(key, self.TRIGGER)
                 trigger = self.triggers(row)
                 if value == data.default:
-                    del trigger[key]
+                    # Delete key if (key: value) present
+                    trigger.pop(key, None)
                 else:
                     trigger[key] = value
 
