@@ -16,288 +16,303 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,1">
     <item>
-     <widget class="QTabWidget" name="tabWidget">
-      <property name="currentIndex">
-       <number>0</number>
+     <widget class="QWidget" name="optionsColumn" native="true">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
       </property>
-      <widget class="QWidget" name="tabGeneral">
-       <attribute name="title">
-        <string>&amp;General</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QGroupBox" name="optionGlobal">
+         <property name="title">
+          <string>Global</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="fpsL">
+            <property name="text">
+             <string>FPS</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="BoundSpinBox" name="fps">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>999</number>
+            </property>
+            <property name="singleStep">
+             <number>10</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="trigger_msL">
+            <property name="text">
+             <string>Trigger Width (ms)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="BoundSpinBox" name="trigger_ms">
+            <property name="minimum">
+             <number>5</number>
+            </property>
+            <property name="singleStep">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="render_msL">
+            <property name="text">
+             <string>Render Width (ms)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="BoundSpinBox" name="render_ms">
+            <property name="minimum">
+             <number>5</number>
+            </property>
+            <property name="singleStep">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="amplificationL">
+            <property name="text">
+             <string>Amplification</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="BoundDoubleSpinBox" name="amplification">
+            <property name="singleStep">
+             <double>0.100000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="optionAppear">
+         <property name="title">
+          <string>Appearance</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout_4">
+          <item row="0" column="0">
+           <widget class="QLabel" name="render__bg_colorL">
+            <property name="text">
+             <string>Background</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="BoundLineEdit" name="render__bg_color">
+            <property name="text">
+             <string>bg</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="render__init_line_colorL">
+            <property name="text">
+             <string>Line Color</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="BoundLineEdit" name="render__init_line_color">
+            <property name="text">
+             <string>fg</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="render__line_widthL">
+            <property name="text">
+             <string>Line Width</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="BoundDoubleSpinBox" name="render__line_width">
+            <property name="minimum">
+             <double>0.500000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.500000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="optionLayout">
+         <property name="title">
+          <string>Layout</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout_2">
+          <item row="0" column="0">
+           <widget class="QLabel" name="layout__orientationL">
+            <property name="text">
+             <string>Orientation</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="BoundComboBox" name="layout__orientation"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="layout__ncolsL">
+            <property name="text">
+             <string>Columns</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <layout class="QHBoxLayout" name="layoutDims">
+            <item>
+             <widget class="BoundSpinBox" name="layout__ncols">
+              <property name="specialValueText">
+               <string notr="true"> </string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="layout__nrowsL">
+              <property name="text">
+               <string>Rows</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="BoundSpinBox" name="layout__nrows">
+              <property name="specialValueText">
+               <string notr="true"> </string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="render_video_sizeL">
+            <property name="text">
+             <string>Video Size</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="BoundLineEdit" name="render_video_size">
+            <property name="text">
+             <string>vs</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="optionChannel">
+         <property name="title">
+          <string>Performance</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout_3">
+          <item row="0" column="0">
+           <widget class="QLabel" name="render_subfpsL">
+            <property name="text">
+             <string>Render FPS Divisor</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="BoundSpinBox" name="render_subfps">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="trigger_subsamplingL">
+            <property name="text">
+             <string>Trigger Subsampling</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="BoundSpinBox" name="trigger_subsampling">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="render_subsamplingL">
+            <property name="text">
+             <string>Render Subsampling</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="BoundSpinBox" name="render_subsampling">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="audioColumn">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
         <item>
-         <widget class="QGroupBox" name="optionGlobal">
+         <widget class="QGroupBox" name="audioGroup">
           <property name="title">
-           <string>Global</string>
+           <string>Master Audio</string>
           </property>
-          <layout class="QFormLayout" name="formLayout">
-           <item row="0" column="0">
-            <widget class="QLabel" name="fpsL">
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <item>
+            <widget class="BoundLineEdit" name="master_audio">
              <property name="text">
-              <string>FPS</string>
+              <string>/</string>
              </property>
             </widget>
            </item>
-           <item row="0" column="1">
-            <widget class="BoundSpinBox" name="fps">
-             <property name="minimum">
-              <number>1</number>
-             </property>
-             <property name="maximum">
-              <number>999</number>
-             </property>
-             <property name="singleStep">
-              <number>10</number>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="trigger_msL">
+           <item>
+            <widget class="QPushButton" name="master_audio_browse">
              <property name="text">
-              <string>Trigger Width (ms)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="BoundSpinBox" name="trigger_ms">
-             <property name="minimum">
-              <number>5</number>
-             </property>
-             <property name="singleStep">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="render_msL">
-             <property name="text">
-              <string>Render Width (ms)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="BoundSpinBox" name="render_ms">
-             <property name="minimum">
-              <number>5</number>
-             </property>
-             <property name="singleStep">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="amplificationL">
-             <property name="text">
-              <string>Amplification</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="BoundDoubleSpinBox" name="amplification">
-             <property name="singleStep">
-              <double>0.100000000000000</double>
+              <string>&amp;Browse...</string>
              </property>
             </widget>
            </item>
           </layout>
          </widget>
         </item>
-        <item>
-         <widget class="QGroupBox" name="optionAppear">
-          <property name="title">
-           <string>Appearance</string>
-          </property>
-          <layout class="QFormLayout" name="formLayout_4">
-           <item row="0" column="0">
-            <widget class="QLabel" name="render__bg_colorL">
-             <property name="text">
-              <string>Background</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="BoundLineEdit" name="render__bg_color">
-             <property name="text">
-              <string>bg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="render__init_line_colorL">
-             <property name="text">
-              <string>Line Color</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="BoundLineEdit" name="render__init_line_color">
-             <property name="text">
-              <string>fg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="render__line_widthL">
-             <property name="text">
-              <string>Line Width</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="BoundDoubleSpinBox" name="render__line_width">
-             <property name="minimum">
-              <double>0.500000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.500000000000000</double>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="optionLayout">
-          <property name="title">
-           <string>Layout</string>
-          </property>
-          <layout class="QFormLayout" name="formLayout_2">
-           <item row="0" column="0">
-            <widget class="QLabel" name="layout__orientationL">
-             <property name="text">
-              <string>Orientation</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="BoundComboBox" name="layout__orientation"/>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="layout__ncolsL">
-             <property name="text">
-              <string>Columns</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <layout class="QHBoxLayout" name="layoutDims">
-             <item>
-              <widget class="BoundSpinBox" name="layout__ncols">
-               <property name="specialValueText">
-                <string notr="true"> </string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="layout__nrowsL">
-               <property name="text">
-                <string>Rows</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="BoundSpinBox" name="layout__nrows">
-               <property name="specialValueText">
-                <string notr="true"> </string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="render_video_sizeL">
-             <property name="text">
-              <string>Video Size</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="BoundLineEdit" name="render_video_size">
-             <property name="text">
-              <string>vs</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="optionChannel">
-          <property name="title">
-           <string>Performance</string>
-          </property>
-          <layout class="QFormLayout" name="formLayout_3">
-           <item row="0" column="0">
-            <widget class="QLabel" name="render_subfpsL">
-             <property name="text">
-              <string>Render FPS Divisor</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="BoundSpinBox" name="render_subfps">
-             <property name="minimum">
-              <number>1</number>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="trigger_subsamplingL">
-             <property name="text">
-              <string>Trigger Subsampling</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="BoundSpinBox" name="trigger_subsampling">
-             <property name="minimum">
-              <number>1</number>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="render_subsamplingL">
-             <property name="text">
-              <string>Render Subsampling</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="BoundSpinBox" name="render_subsampling">
-             <property name="minimum">
-              <number>1</number>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <spacer name="verticalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="tabTrigger">
-       <attribute name="title">
-        <string>&amp;Trigger</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
          <widget class="QGroupBox" name="optionAudio">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="title">
            <string>Trigger</string>
           </property>
-          <layout class="QFormLayout" name="formLayout_5">
+          <layout class="QGridLayout" name="gridLayout">
            <item row="0" column="0">
             <widget class="QLabel" name="trigger__edge_strengthL">
              <property name="text">
@@ -306,16 +321,23 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="BoundDoubleSpinBox" name="trigger__edge_strength">
-             <property name="minimum">
-              <double>-99.000000000000000</double>
+            <widget class="QLabel" name="trigger__responsivenessL">
+             <property name="text">
+              <string>Responsiveness</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="trigger__buffer_falloffL">
+             <property name="text">
+              <string>Buffer Falloff</string>
              </property>
             </widget>
            </item>
            <item row="1" column="0">
-            <widget class="QLabel" name="trigger__responsivenessL">
-             <property name="text">
-              <string>Responsiveness</string>
+            <widget class="BoundDoubleSpinBox" name="trigger__edge_strength">
+             <property name="minimum">
+              <double>-99.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -329,14 +351,7 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="trigger__buffer_falloffL">
-             <property name="text">
-              <string>Buffer Falloff</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
+           <item row="1" column="2">
             <widget class="BoundDoubleSpinBox" name="trigger__buffer_falloff">
              <property name="singleStep">
               <double>0.500000000000000</double>
@@ -346,47 +361,7 @@
           </layout>
          </widget>
         </item>
-        <item>
-         <spacer name="verticalSpacer">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
        </layout>
-      </widget>
-     </widget>
-    </item>
-    <item>
-     <layout class="QVBoxLayout" name="audioColumn">
-      <item>
-       <widget class="QGroupBox" name="audioGroup">
-        <property name="title">
-         <string>Master Audio</string>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
-         <item>
-          <widget class="BoundLineEdit" name="master_audio">
-           <property name="text">
-            <string>/</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="master_audio_browse">
-           <property name="text">
-            <string>&amp;Browse...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
       </item>
       <item>
        <widget class="QGroupBox" name="channelsGroup">
