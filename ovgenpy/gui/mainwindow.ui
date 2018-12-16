@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1080</width>
-    <height>640</height>
+    <height>0</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,30 +16,15 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,1">
     <item>
-     <widget class="QScrollArea" name="optionsScroll">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>0</number>
       </property>
-      <property name="focusPolicy">
-       <enum>Qt::NoFocus</enum>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOn</enum>
-      </property>
-      <property name="widgetResizable">
-       <bool>true</bool>
-      </property>
-      <widget class="QWidget" name="optionsColumn">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout">
+      <widget class="QWidget" name="tabGeneral">
+       <attribute name="title">
+        <string>&amp;General</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <widget class="QGroupBox" name="optionGlobal">
           <property name="title">
@@ -118,6 +103,60 @@
          </widget>
         </item>
         <item>
+         <widget class="QGroupBox" name="optionAppear">
+          <property name="title">
+           <string>Appearance</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout_4">
+           <item row="0" column="0">
+            <widget class="QLabel" name="render__bg_colorL">
+             <property name="text">
+              <string>Background</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="BoundLineEdit" name="render__bg_color">
+             <property name="text">
+              <string>bg</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="render__init_line_colorL">
+             <property name="text">
+              <string>Line Color</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="BoundLineEdit" name="render__init_line_color">
+             <property name="text">
+              <string>fg</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="render__line_widthL">
+             <property name="text">
+              <string>Line Width</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="BoundDoubleSpinBox" name="render__line_width">
+             <property name="minimum">
+              <double>0.500000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.500000000000000</double>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
          <widget class="QGroupBox" name="optionLayout">
           <property name="title">
            <string>Layout</string>
@@ -183,59 +222,70 @@
          </widget>
         </item>
         <item>
-         <widget class="QGroupBox" name="optionAppear">
+         <widget class="QGroupBox" name="optionChannel">
           <property name="title">
-           <string>Appearance</string>
+           <string>Performance</string>
           </property>
-          <layout class="QFormLayout" name="formLayout_4">
+          <layout class="QFormLayout" name="formLayout_3">
            <item row="0" column="0">
-            <widget class="QLabel" name="render__bg_colorL">
+            <widget class="QLabel" name="render_subfpsL">
              <property name="text">
-              <string>Background</string>
+              <string>Render FPS Divisor</string>
              </property>
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="BoundLineEdit" name="render__bg_color">
-             <property name="text">
-              <string>bg</string>
+            <widget class="BoundSpinBox" name="render_subfps">
+             <property name="minimum">
+              <number>1</number>
              </property>
             </widget>
            </item>
            <item row="1" column="0">
-            <widget class="QLabel" name="render__init_line_colorL">
+            <widget class="QLabel" name="trigger_subsamplingL">
              <property name="text">
-              <string>Line Color</string>
+              <string>Trigger Subsampling</string>
              </property>
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="BoundLineEdit" name="render__init_line_color">
-             <property name="text">
-              <string>fg</string>
+            <widget class="BoundSpinBox" name="trigger_subsampling">
+             <property name="minimum">
+              <number>1</number>
              </property>
             </widget>
            </item>
            <item row="2" column="0">
-            <widget class="QLabel" name="render__line_widthL">
+            <widget class="QLabel" name="render_subsamplingL">
              <property name="text">
-              <string>Line Width</string>
+              <string>Render Subsampling</string>
              </property>
             </widget>
            </item>
            <item row="2" column="1">
-            <widget class="BoundDoubleSpinBox" name="render__line_width">
+            <widget class="BoundSpinBox" name="render_subsampling">
              <property name="minimum">
-              <double>0.500000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.500000000000000</double>
+              <number>1</number>
              </property>
             </widget>
            </item>
           </layout>
          </widget>
         </item>
+        <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tabTrigger">
+       <attribute name="title">
+        <string>&amp;Trigger</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
          <widget class="QGroupBox" name="optionAudio">
           <property name="title">
@@ -291,55 +341,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QGroupBox" name="optionChannel">
-          <property name="title">
-           <string>Performance</string>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
           </property>
-          <layout class="QFormLayout" name="formLayout_3">
-           <item row="0" column="0">
-            <widget class="QLabel" name="render_subfpsL">
-             <property name="text">
-              <string>Render FPS Divisor</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="BoundSpinBox" name="render_subfps">
-             <property name="minimum">
-              <number>1</number>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="trigger_subsamplingL">
-             <property name="text">
-              <string>Trigger Subsampling</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="BoundSpinBox" name="trigger_subsampling">
-             <property name="minimum">
-              <number>1</number>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="render_subsamplingL">
-             <property name="text">
-              <string>Render Subsampling</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="BoundSpinBox" name="render_subsampling">
-             <property name="minimum">
-              <number>1</number>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
+         </spacer>
         </item>
        </layout>
       </widget>
