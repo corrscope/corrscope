@@ -124,27 +124,41 @@
           </property>
           <layout class="QFormLayout" name="formLayout_3">
            <item row="0" column="0">
-            <widget class="QLabel" name="trigger_subsamplingL">
+            <widget class="QLabel" name="render_subfpsL">
              <property name="text">
-              <string>Trigger Subsampling</string>
+              <string>Render FPS Divisor</string>
              </property>
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="BoundSpinBox" name="trigger_subsampling">
+            <widget class="BoundSpinBox" name="render_subfps">
              <property name="minimum">
               <number>1</number>
              </property>
             </widget>
            </item>
            <item row="1" column="0">
+            <widget class="QLabel" name="trigger_subsamplingL">
+             <property name="text">
+              <string>Trigger Subsampling</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="BoundSpinBox" name="trigger_subsampling">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
             <widget class="QLabel" name="render_subsamplingL">
              <property name="text">
               <string>Render Subsampling</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
+           <item row="2" column="1">
             <widget class="BoundSpinBox" name="render_subsampling">
              <property name="minimum">
               <number>1</number>
