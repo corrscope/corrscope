@@ -99,6 +99,20 @@
              </property>
             </widget>
            </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="begin_timeL">
+             <property name="text">
+              <string>Begin Time (s)</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="BoundDoubleSpinBox" name="begin_time">
+             <property name="maximum">
+              <double>9999.000000000000000</double>
+             </property>
+            </widget>
+           </item>
           </layout>
          </widget>
         </item>
