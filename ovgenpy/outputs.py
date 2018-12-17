@@ -1,4 +1,5 @@
 # https://ffmpeg.org/ffplay.html
+import numpy as np
 import shlex
 import subprocess
 from abc import ABC, abstractmethod
@@ -11,6 +12,7 @@ if TYPE_CHECKING:
     from ovgenpy.ovgenpy import Config
 
 
+ByteBuffer = Union[bytes, np.ndarray]
 RGB_DEPTH = 3
 PIXEL_FORMAT = 'rgb24'
 
@@ -45,7 +47,7 @@ class Output(ABC):
         return self
 
     @abstractmethod
-    def write_frame(self, frame: bytes) -> Optional[_Stop]:
+    def write_frame(self, frame: ByteBuffer) -> Optional[_Stop]:
         """ Output a Numpy ndarray. """
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -127,7 +129,7 @@ class PipeOutput(Output):
     def __enter__(self):
         return self
 
-    def write_frame(self, frame: bytes) -> Optional[_Stop]:
+    def write_frame(self, frame: ByteBuffer) -> Optional[_Stop]:
         try:
             self._stream.write(frame)
             return None

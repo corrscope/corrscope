@@ -7,7 +7,7 @@ import attr
 
 from ovgenpy.config import register_config
 from ovgenpy.layout import RendererLayout, LayoutConfig
-from ovgenpy.outputs import RGB_DEPTH
+from ovgenpy.outputs import RGB_DEPTH, ByteBuffer
 from ovgenpy.util import coalesce
 
 matplotlib.use('agg')
@@ -48,6 +48,7 @@ class LineParam:
     color: str
 
 
+# TODO rename to Plotter
 class Renderer(ABC):
     def __init__(self, cfg: RendererConfig, lcfg: 'LayoutConfig', nplots: int,
                  channel_cfgs: Optional[List['ChannelConfig']]):
@@ -73,7 +74,7 @@ class Renderer(ABC):
     def render_frame(self, datas: List[np.ndarray]) -> None: ...
 
     @abstractmethod
-    def get_frame(self) -> bytes: ...
+    def get_frame(self) -> ByteBuffer: ...
 
 
 class MatplotlibRenderer(Renderer):
@@ -183,7 +184,7 @@ class MatplotlibRenderer(Renderer):
         self._fig.canvas.draw()
         self._fig.canvas.flush_events()
 
-    def get_frame(self) -> bytes:
+    def get_frame(self) -> ByteBuffer:
         """ Returns ndarray of shape w,h,3. """
         canvas = self._fig.canvas
 
