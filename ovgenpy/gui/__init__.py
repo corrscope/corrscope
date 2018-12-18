@@ -9,7 +9,7 @@ import PyQt5.QtWidgets as qw
 import attr
 from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
-from PyQt5.QtGui import QKeySequence, QFont
+from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
 from PyQt5.QtWidgets import QShortcut
 
 from ovgenpy import cli
@@ -86,7 +86,7 @@ class MainWindow(qw.QMainWindow):
         self.actionSaveAs.triggered.connect(self.on_action_save_as)
         self.actionPlay.triggered.connect(self.on_action_play)
         self.actionRender.triggered.connect(self.on_action_render)
-        self.actionExit.triggered.connect(qw.QApplication.quit)
+        self.actionExit.triggered.connect(qw.QApplication.closeAllWindows)
 
         # Initialize ovgen-thread attribute.
         self.ovgen_thread: Locked[Optional[OvgenThread]] = Locked(None)
@@ -98,16 +98,31 @@ class MainWindow(qw.QMainWindow):
 
     # Config models
     _cfg_path: Optional[Path]
+
+    # Whether document is dirty, changed, has unsaved changes
+    any_unsaved: bool
+
     model: Optional['ConfigModel'] = None
     channel_model: 'ChannelModel'
     channel_view: 'ChannelTableView'
     channelsGroup: qw.QGroupBox
 
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Called on closing window."""
+        if self.prompt_save():
+            event.accept()
+        else:
+            event.ignore()
+
     def on_action_new(self):
+        if not self.prompt_save():
+            return
         cfg = default_config()
         self.load_cfg(cfg, None)
 
     def on_action_open(self):
+        if not self.prompt_save():
+            return
         name, file_type = qw.QFileDialog.getOpenFileName(
             self, "Open config", self.cfg_dir, "YAML files (*.yaml)"
         )
@@ -123,10 +138,41 @@ class MainWindow(qw.QMainWindow):
                 qw.QMessageBox.critical(self, 'Error loading file', str(e))
                 return
 
+    def prompt_save(self) -> bool:
+        """
+        Called when user is closing document
+        (when opening a new document or closing the app).
+
+        :return: False if user cancels close-document action.
+        """
+        if not self.any_unsaved:
+            return True
+
+        # should_close = qw.QMessageBox.question(self, "Close Confirmation", "Exit?",
+        #                       QMessageBox::Yes | QMessageBox::No)
+        Msg = qw.QMessageBox
+
+        save_message = f"Save changes to {self.title_cache}?"
+        should_close = Msg.question(
+            self, "Save Changes?", save_message,
+            Msg.Save | Msg.Discard | Msg.Cancel
+        )
+
+        if should_close == Msg.Cancel:
+            return False
+        elif should_close == Msg.Discard:
+            return True
+        else:
+            return self.on_action_save()
+
     def load_cfg(self, cfg: Config, cfg_path: Optional[Path]):
         self._cfg_path = cfg_path
+        self.any_unsaved = False
+        self.load_title()
+
         if self.model is None:
             self.model = ConfigModel(cfg)
+            # Calls self.on_gui_edited() whenever GUI widgets change.
             map_gui(self, self.model)
         else:
             self.model.set_cfg(cfg)
@@ -134,16 +180,24 @@ class MainWindow(qw.QMainWindow):
         self.channel_model = ChannelModel(cfg.channels)
         # Calling setModel again disconnects previous model.
         self.channel_view.setModel(self.channel_model)
+        self.channel_model.dataChanged.connect(self.on_gui_edited)
 
-        self.load_title()
+    def on_gui_edited(self):
+        self.any_unsaved = True
+        self.update_unsaved_title()
+
+    title_cache: str
 
     def load_title(self):
-        self.setWindowTitle(f'{self.title} - {APP_NAME}')
+        self.title_cache = self.title
+        self.update_unsaved_title()
 
-    # Unused
-    # @property
-    # def ever_saved(self):
-    #     return self._cfg_path is not None
+    def update_unsaved_title(self):
+        if self.any_unsaved:
+            undo_str = '*'
+        else:
+            undo_str = ''
+        self.setWindowTitle(f'{self.title_cache}{undo_str} - {APP_NAME}')
 
     # GUI actions, etc.
     master_audio_browse: qw.QPushButton
@@ -182,12 +236,22 @@ class MainWindow(qw.QMainWindow):
     def on_channel_delete(self):
         self.channel_view.delete_selected()
 
-    def on_action_save(self):
+    def on_action_save(self) -> bool:
+        """
+        :return: False if user cancels save action.
+        """
         if self._cfg_path is None:
             return self.on_action_save_as()
-        yaml.dump(self.cfg, self._cfg_path)
 
-    def on_action_save_as(self):
+        yaml.dump(self.cfg, self._cfg_path)
+        self.any_unsaved = False
+        self.update_unsaved_title()
+        return True
+
+    def on_action_save_as(self) -> bool:
+        """
+        :return: False if user cancels save action.
+        """
         cfg_path_default = os.path.join(self.cfg_dir, self.file_stem) + cli.YAML_NAME
 
         filters = ["YAML files (*.yaml)", "All files (*)"]
@@ -198,6 +262,9 @@ class MainWindow(qw.QMainWindow):
             self._cfg_path = path
             self.load_title()
             self.on_action_save()
+            return True
+        else:
+            return False
 
     def on_action_play(self):
         """ Launch ovgen and ffplay. """

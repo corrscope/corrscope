@@ -1,6 +1,6 @@
 import functools
 import operator
-from typing import Optional, List, Callable, Dict, Any, ClassVar
+from typing import Optional, List, Callable, Dict, Any, ClassVar, TYPE_CHECKING
 
 from PyQt5 import QtWidgets as qw, QtCore as qc
 from PyQt5.QtCore import pyqtSlot
@@ -10,6 +10,9 @@ from PyQt5.QtWidgets import QWidget
 from ovgenpy.config import OvgenError
 from ovgenpy.triggers import lerp
 from ovgenpy.util import obj_name, perr
+
+if TYPE_CHECKING:
+    from ovgenpy.gui import MainWindow
 
 __all__ = ['PresentationModel', 'map_gui', 'behead', 'rgetattr', 'rsetattr']
 
@@ -58,7 +61,7 @@ class PresentationModel:
 
 
 # TODO add tests for recursive operations
-def map_gui(view: QWidget, model: PresentationModel):
+def map_gui(view: 'MainWindow', model: PresentationModel):
     """
     Binding:
     - .ui <widget name="cfg__layout__nrows">
@@ -72,6 +75,7 @@ def map_gui(view: QWidget, model: PresentationModel):
     for widget in widgets:
         path = widget.objectName()
         widget.bind_widget(model, path)
+        widget.gui_changed.connect(view.on_gui_edited)
 
 
 Signal = Any
