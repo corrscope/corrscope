@@ -100,7 +100,16 @@ class MainWindow(qw.QMainWindow):
     _cfg_path: Optional[Path]
 
     # Whether document is dirty, changed, has unsaved changes
-    any_unsaved: bool
+    _any_unsaved: bool
+
+    @property
+    def any_unsaved(self) -> bool:
+        return self._any_unsaved
+
+    @any_unsaved.setter
+    def any_unsaved(self, value: bool):
+        self._any_unsaved = value
+        self._update_unsaved_title()
 
     model: Optional['ConfigModel'] = None
     channel_model: 'ChannelModel'
@@ -167,7 +176,7 @@ class MainWindow(qw.QMainWindow):
 
     def load_cfg(self, cfg: Config, cfg_path: Optional[Path]):
         self._cfg_path = cfg_path
-        self.any_unsaved = False
+        self._any_unsaved = False
         self.load_title()
 
         if self.model is None:
@@ -184,15 +193,14 @@ class MainWindow(qw.QMainWindow):
 
     def on_gui_edited(self):
         self.any_unsaved = True
-        self.update_unsaved_title()
 
     title_cache: str
 
     def load_title(self):
         self.title_cache = self.title
-        self.update_unsaved_title()
+        self._update_unsaved_title()
 
-    def update_unsaved_title(self):
+    def _update_unsaved_title(self):
         if self.any_unsaved:
             undo_str = '*'
         else:
@@ -245,7 +253,7 @@ class MainWindow(qw.QMainWindow):
 
         yaml.dump(self.cfg, self._cfg_path)
         self.any_unsaved = False
-        self.update_unsaved_title()
+        self._update_unsaved_title()
         return True
 
     def on_action_save_as(self) -> bool:
@@ -305,11 +313,11 @@ class MainWindow(qw.QMainWindow):
         arg = self._get_args(outputs)
         if dlg:
             arg = attr.evolve(arg,
-                on_begin=dlg.on_begin,
-                progress=dlg.setValue,
-                is_aborted=dlg.wasCanceled,
-                on_end=dlg.reset,   # TODO dlg.close
-            )
+                              on_begin=dlg.on_begin,
+                              progress=dlg.setValue,
+                              is_aborted=dlg.wasCanceled,
+                              on_end=dlg.reset,   # TODO dlg.close
+                              )
 
         cfg = copy_config(self.model.cfg)
         t = self.ovgen_thread.obj = OvgenThread(cfg, arg)
