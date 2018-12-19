@@ -157,8 +157,6 @@ class MainWindow(qw.QMainWindow):
         if not self.any_unsaved:
             return True
 
-        # should_close = qw.QMessageBox.question(self, "Close Confirmation", "Exit?",
-        #                       QMessageBox::Yes | QMessageBox::No)
         Msg = qw.QMessageBox
 
         save_message = f"Save changes to {self.title_cache}?"
@@ -505,8 +503,6 @@ class ConfigModel(PresentationModel):
     combo_text['layout__orientation'] = ['Horizontal', 'Vertical']
 
     render__line_width = default_property('render__line_width', 1.5)
-
-    # TODO mutate _cfg and convert all colors to #rrggbb on access
 
 
 class ChannelTableView(qw.QTableView):
