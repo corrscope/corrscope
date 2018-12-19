@@ -10,7 +10,7 @@ import ovgenpy.channel
 import ovgenpy.ovgenpy
 from ovgenpy.channel import ChannelConfig, Channel
 from ovgenpy.config import OvgenError
-from ovgenpy.ovgenpy import default_config, Ovgen, BenchmarkMode
+from ovgenpy.ovgenpy import default_config, Ovgen, BenchmarkMode, Arguments
 from ovgenpy.triggers import NullTriggerConfig
 from ovgenpy.util import coalesce
 
@@ -124,7 +124,7 @@ def test_config_channel_width_stride(
     assert trigger._stride == channel.trigger_stride
 
     ## Ensure ovgenpy calls render using channel.render_samp and render_stride.
-    ovgen = Ovgen(cfg, '.', outputs=[])
+    ovgen = Ovgen(cfg, Arguments(cfg_dir='.', outputs=[]))
     renderer = mocker.patch.object(Ovgen, '_load_renderer').return_value
     ovgen.play()
 

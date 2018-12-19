@@ -7,7 +7,7 @@ import click
 from ovgenpy.channel import ChannelConfig
 from ovgenpy.config import yaml
 from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
-from ovgenpy.ovgenpy import default_config, Config, Ovgen
+from ovgenpy.ovgenpy import default_config, Ovgen, Config, Arguments
 
 
 Folder = click.Path(exists=True, file_okay=False)
@@ -36,12 +36,18 @@ YAML_NAME = YAML_EXTS[0]
 VIDEO_NAME = '.mp4'
 
 
-def get_path(audio_file: Union[None, str, Path], ext: str) -> Path:
+DEFAULT_NAME = 'ovgenpy'
+def get_name(audio_file: Union[None, str, Path]) -> str:
     # Write file to current working dir, not audio dir.
     if audio_file:
-        name = Path(audio_file).name
+        name = Path(audio_file).stem
     else:
-        name = 'ovgenpy'
+        name = DEFAULT_NAME
+    return name
+
+
+def get_path(audio_file: Union[None, str, Path], ext: str) -> Path:
+    name = get_name(audio_file)
 
     # Add extension
     return Path(name).with_suffix(ext)
@@ -103,7 +109,7 @@ def main(
     # Create cfg: Config object.
     cfg: Optional[Config] = None
     cfg_path: Optional[Path] = None
-    cfg_dir: Optional[str] = None  # Changing to Path will take a lot of refactoring.
+    cfg_dir: Optional[str] = None
 
     wav_list: List[Path] = []
     for name in files:
@@ -145,6 +151,7 @@ def main(
             wav_list += matches
 
     if not cfg:
+        # cfg and cfg_dir are always initialized together.
         channels = [ChannelConfig(str(wav_path)) for wav_path in wav_list]
 
         cfg = default_config(
@@ -157,7 +164,9 @@ def main(
         cfg_dir = '.'
 
     if show_gui:
-        raise click.UsageError('GUI not implemented')
+        from ovgenpy import gui
+        gui.gui_main(cfg, cfg_path)
+
     else:
         if not files:
             raise click.UsageError('Must specify files or folders to play')
@@ -176,7 +185,9 @@ def main(
 
         if outputs:
             assert Ovgen  # to prevent PyCharm from deleting the import
-            command = 'Ovgen(cfg, cfg_dir, outputs).play()'
+            arg = Arguments(cfg_dir=cfg_dir, outputs=outputs)
+            # TODO make it a lambda
+            command = 'Ovgen(cfg, arg).play()'
             if profile:
                 import cProfile
 

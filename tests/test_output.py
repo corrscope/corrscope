@@ -7,7 +7,7 @@ import pytest
 from ovgenpy.channel import ChannelConfig
 from ovgenpy.outputs import RGB_DEPTH, \
     FFmpegOutput, FFmpegOutputConfig, FFplayOutput, FFplayOutputConfig
-from ovgenpy.ovgenpy import default_config, Ovgen
+from ovgenpy.ovgenpy import default_config, Ovgen, Arguments
 from ovgenpy.renderer import RendererConfig, MatplotlibRenderer
 from tests.test_renderer import WIDTH, HEIGHT, ALL_ZEROS
 
@@ -90,7 +90,7 @@ def test_ovgen_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
     Python exceptions occur. """
 
     cfg = sine440_config()
-    ovgen = Ovgen(cfg, '.', outputs=[FFplayOutputConfig()])
+    ovgen = Ovgen(cfg, Arguments('.', [FFplayOutputConfig()]))
 
     render_frame = mocker.patch.object(MatplotlibRenderer, 'render_frame')
     render_frame.side_effect = DummyException()
@@ -110,7 +110,7 @@ def test_ovgen_terminate_works():
     `popen.terminate()` is called. """
 
     cfg = sine440_config()
-    ovgen = Ovgen(cfg, '.', outputs=[FFplayOutputConfig()])
+    ovgen = Ovgen(cfg, Arguments('.', [FFplayOutputConfig()]))
     ovgen.raise_on_teardown = DummyException
 
     with pytest.raises(DummyException):
@@ -127,7 +127,7 @@ def test_ovgen_output_without_audio():
     cfg = sine440_config()
     cfg.master_audio = None
 
-    ovgen = Ovgen(cfg, '.', outputs=[NULL_OUTPUT])
+    ovgen = Ovgen(cfg, Arguments('.', [NULL_OUTPUT]))
     # Should not raise exception.
     ovgen.play()
 
@@ -157,7 +157,7 @@ def test_render_subfps_one():
     cfg = sine440_config()
     cfg.render_subfps = 1
 
-    ovgen = Ovgen(cfg, '.', outputs=[DummyOutputConfig()])
+    ovgen = Ovgen(cfg, Arguments('.', [DummyOutputConfig()]))
     ovgen.play()
     assert DummyOutput.frames_written >= 2
 
@@ -177,7 +177,7 @@ def test_render_subfps_non_integer(mocker: 'pytest_mock.MockFixture'):
     assert cfg.render_fps != int(cfg.render_fps)
     assert Fraction(1) == int(1)
 
-    ovgen = Ovgen(cfg, '.', outputs=[NULL_OUTPUT])
+    ovgen = Ovgen(cfg, Arguments('.', [NULL_OUTPUT]))
     ovgen.play()
 
     # But it seems FFmpeg actually allows decimal -framerate (although a bad idea).

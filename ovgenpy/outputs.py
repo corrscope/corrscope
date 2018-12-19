@@ -1,4 +1,5 @@
 # https://ffmpeg.org/ffplay.html
+import numpy as np
 import shlex
 import subprocess
 from abc import ABC, abstractmethod
@@ -11,6 +12,7 @@ if TYPE_CHECKING:
     from ovgenpy.ovgenpy import Config
 
 
+ByteBuffer = Union[bytes, np.ndarray]
 RGB_DEPTH = 3
 PIXEL_FORMAT = 'rgb24'
 
@@ -22,6 +24,13 @@ class IOutputConfig:
 
     def __call__(self, ovgen_cfg: 'Config'):
         return self.cls(ovgen_cfg, cfg=self)
+
+
+class _Stop:
+    pass
+
+
+Stop = _Stop()
 
 
 class Output(ABC):
@@ -38,10 +47,13 @@ class Output(ABC):
         return self
 
     @abstractmethod
-    def write_frame(self, frame: bytes) -> None:
+    def write_frame(self, frame: ByteBuffer) -> Optional[_Stop]:
         """ Output a Numpy ndarray. """
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    def terminate(self):
         pass
 
 # Glue logic
@@ -117,11 +129,21 @@ class PipeOutput(Output):
     def __enter__(self):
         return self
 
-    def write_frame(self, frame: bytes) -> None:
-        self._stream.write(frame)
+    def write_frame(self, frame: ByteBuffer) -> Optional[_Stop]:
+        try:
+            self._stream.write(frame)
+            return None
+        except BrokenPipeError:
+            return Stop
 
-    def close(self) -> int:
-        self._stream.close()
+    def close(self, wait=True) -> int:
+        try:
+            self._stream.close()
+        except (BrokenPipeError, OSError):  # BrokenPipeError is a OSError
+            pass
+
+        if not wait:
+            return 0
 
         retval = 0
         for popen in self._pipeline:
@@ -132,24 +154,27 @@ class PipeOutput(Output):
         if exc_type is None:
             self.close()
         else:
-            # Calling self.close() is bad.
-            # If exception occurred but ffplay continues running.
-            # popen.wait() will prevent stack trace from showing up.
-            self._stream.close()
+            self.terminate()
 
-            exc = None
-            for popen in self._pipeline:
-                popen.terminate()
-                # https://stackoverflow.com/a/49038779/2683842
-                try:
-                    popen.wait(1)   # timeout=seconds
-                except subprocess.TimeoutExpired as e:
-                    # gee thanks Python, https://stackoverflow.com/questions/45292479/
-                    exc = e
-                    popen.kill()
+    def terminate(self):
+        # Calling self.close() is bad.
+        # If exception occurred but ffplay continues running,
+        # popen.wait() will prevent stack trace from showing up.
+        self.close(wait=False)
 
-            if exc:
-                raise exc
+        exc = None
+        for popen in self._pipeline:
+            popen.terminate()
+            # https://stackoverflow.com/a/49038779/2683842
+            try:
+                popen.wait(1)  # timeout=seconds
+            except subprocess.TimeoutExpired as e:
+                # gee thanks Python, https://stackoverflow.com/questions/45292479/
+                exc = e
+                popen.kill()
+
+        if exc:
+            raise exc
 
 
 # FFmpegOutput
@@ -198,7 +223,7 @@ class FFplayOutput(PipeOutput):
     def __init__(self, ovgen_cfg: 'Config', cfg: FFplayOutputConfig):
         super().__init__(ovgen_cfg, cfg)
 
-        ffmpeg = _FFmpegProcess([FFMPEG], ovgen_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG, '-nostats'], ovgen_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append('-f nut')
 
@@ -211,15 +236,3 @@ class FFplayOutput(PipeOutput):
         # assert p2.stdin is None   # True unless Popen is being mocked (test_output).
 
         self.open(p1, p2)
-
-
-# ImageOutput
-
-@register_config
-class ImageOutputConfig(IOutputConfig):
-    path_prefix: str
-
-
-@register_output(ImageOutputConfig)
-class ImageOutput(Output):
-    pass
