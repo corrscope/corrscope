@@ -44,6 +44,9 @@ print(timeit.timeit(lambda: f(cfg), number=number))
 - yaml_copy   0.4875s
 
 pickle_copy is fastest.
+
+According to https://stackoverflow.com/questions/1410615/ ,
+pickle is faster, but less general (works fine for @register_config objects).
 """
 
 T = TypeVar('T')

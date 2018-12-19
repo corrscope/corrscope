@@ -64,11 +64,11 @@ class PresentationModel:
 def map_gui(view: 'MainWindow', model: PresentationModel):
     """
     Binding:
-    - .ui <widget name="cfg__layout__nrows">
-    - view.cfg__layout__nrows
+    - .ui <widget name="layout__nrows">
+    - view.layout__nrows
     - pmodel['layout__nrows']
 
-    Only <widget>s starting with 'cfg__' will be bound.
+    Only <widget>s subclassing BoundWidget will be bound.
     """
 
     widgets: List[BoundWidget] = view.findChildren(BoundWidget)  # dear pyqt, add generic mypy return types
