@@ -12,7 +12,7 @@ from ovgenpy import cli
 from ovgenpy.cli import YAML_NAME
 from ovgenpy.config import yaml
 from ovgenpy.outputs import FFmpegOutputConfig
-from ovgenpy.ovgenpy import Config, Ovgen
+from ovgenpy.ovgenpy import Config, Ovgen, Arguments
 from ovgenpy.util import pushd
 
 if TYPE_CHECKING:
@@ -132,7 +132,7 @@ def test_load_yaml_another_dir(yaml_sink, mocker, Popen):
     # Issue: this test does not use cli.main() to compute output path.
     # Possible solution: Call cli.main() via Click runner.
     output = FFmpegOutputConfig(cli.get_path(cfg.master_audio, cli.VIDEO_NAME))
-    ovgen = Ovgen(cfg, subdir, [output])
+    ovgen = Ovgen(cfg, Arguments(subdir, [output]))
     ovgen.play()
 
     # Compute absolute paths

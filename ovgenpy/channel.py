@@ -18,7 +18,7 @@ class ChannelConfig:
     wav_path: str
 
     # Supplying a dict inherits attributes from global trigger.
-    trigger: Union[ITriggerConfig, dict, None] = None    # TODO test channel-specific triggers
+    trigger: Union[ITriggerConfig, dict, None] = attr.Factory(dict)    # TODO test channel-specific triggers
     # Multiplies how wide the window is, in milliseconds.
     trigger_width: Optional[int] = None
     render_width: Optional[int] = None

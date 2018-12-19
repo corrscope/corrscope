@@ -1,4 +1,5 @@
 import os
+import sys
 from contextlib import contextmanager
 from itertools import chain
 from pathlib import Path
@@ -96,3 +97,6 @@ def pushd(new_dir: Union[Path, str]):
     finally:
         os.chdir(previous_dir)
 
+
+def perr(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
