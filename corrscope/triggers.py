@@ -7,14 +7,14 @@ from scipy import signal
 from scipy.signal import windows
 import attr
 
-from ovgenpy.config import kw_config, OvgenError, Alias, OvgenWarning
-from ovgenpy.util import find, obj_name
-from ovgenpy.utils.windows import midpad, leftpad
-from ovgenpy.wave import FLOAT
+from corrscope.config import kw_config, CorrError, Alias, CorrWarning
+from corrscope.util import find, obj_name
+from corrscope.utils.windows import midpad, leftpad
+from corrscope.wave import FLOAT
 
 
 if TYPE_CHECKING:
-    from ovgenpy.wave import Wave
+    from corrscope.wave import Wave
 
 # Abstract classes
 
@@ -133,7 +133,7 @@ class CorrelationTriggerConfig(ITriggerConfig):
                 warnings.warn(
                     "Ignoring old `CorrelationTriggerConfig.use_edge_trigger` flag, "
                     "overriden by newer `post` flag.",
-                    OvgenWarning
+                    CorrWarning
                 )
             else:
                 self.post = ZeroCrossingTriggerConfig()
@@ -141,7 +141,7 @@ class CorrelationTriggerConfig(ITriggerConfig):
     def _validate_param(self, key: str, begin, end):
         value = getattr(self, key)
         if not begin <= value <= end:
-            raise OvgenError(
+            raise CorrError(
                 f'Invalid {key}={value} (should be within [{begin}, {end}])')
 
 
@@ -176,7 +176,7 @@ class CorrelationTrigger(Trigger):
 
     def _calc_data_taper(self):
         """ Input data window. Zeroes out all data older than 1 frame old.
-        See https://github.com/nyanpasu64/ovgenpy/wiki/Correlation-Trigger
+        See https://github.com/nyanpasu64/corrscope/wiki/Correlation-Trigger
         """
         N = self._buffer_nsamp
         halfN = N // 2
@@ -410,12 +410,12 @@ class PostTrigger(Trigger, ABC):
         Trigger.__init__(self, *args, **kwargs)
 
         if self._stride != 1:
-            raise OvgenError(
+            raise CorrError(
                 f'{obj_name(self)} with stride != 1 is not allowed '
                 f'(supplied {self._stride})')
 
         if self.post:
-            raise OvgenError(
+            raise CorrError(
                 f'Passing {obj_name(self)} a post_trigger is not allowed '
                 f'({obj_name(self.post)})'
             )
@@ -457,7 +457,7 @@ class LocalPostTrigger(PostTrigger):
 
         # Window data
         if cache.period is None:
-            raise OvgenError(
+            raise CorrError(
                 "Missing 'cache.period', try stacking CorrelationTrigger "
                 "before LocalPostTrigger")
 

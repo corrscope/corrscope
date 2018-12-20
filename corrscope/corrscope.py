@@ -9,17 +9,17 @@ from typing import Optional, List, Union, TYPE_CHECKING, Callable
 
 import attr
 
-from ovgenpy import outputs as outputs_
-from ovgenpy.channel import Channel, ChannelConfig
-from ovgenpy.config import kw_config, register_enum, Ignored, OvgenError, OvgenWarning
-from ovgenpy.renderer import MatplotlibRenderer, RendererConfig
-from ovgenpy.layout import LayoutConfig
-from ovgenpy.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
-from ovgenpy.util import pushd, coalesce
-from ovgenpy.wave import Wave
+from corrscope import outputs as outputs_
+from corrscope.channel import Channel, ChannelConfig
+from corrscope.config import kw_config, register_enum, Ignored, CorrError, CorrWarning
+from corrscope.renderer import MatplotlibRenderer, RendererConfig
+from corrscope.layout import LayoutConfig
+from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
+from corrscope.util import pushd, coalesce
+from corrscope.wave import Wave
 
 if TYPE_CHECKING:
-    from ovgenpy.triggers import CorrelationTrigger
+    from corrscope.triggers import CorrelationTrigger
 
 
 PRINT_TIMESTAMP = True
@@ -89,7 +89,7 @@ class Config:
             if not isinstance(self.benchmark_mode, BenchmarkMode):
                 self.benchmark_mode = BenchmarkMode[self.benchmark_mode]
         except KeyError:
-            raise OvgenError(
+            raise CorrError(
                 f'invalid benchmark_mode mode {self.benchmark_mode} not in '
                 f'{[el.name for el in BenchmarkMode]}')
 
@@ -104,7 +104,7 @@ class Config:
             self.trigger_ms = coalesce(self.trigger_ms, width_ms)
             self.render_ms = coalesce(self.render_ms, width_ms)
         except TypeError:
-            raise OvgenError(
+            raise CorrError(
                 'Must supply either width_ms or both (trigger_ms and render_ms)')
 
         deprecated = []
@@ -114,7 +114,7 @@ class Config:
             deprecated.append('render_width')
         if deprecated:
             warnings.warn(f"Options {deprecated} are deprecated and will be removed",
-                          OvgenWarning)
+                          CorrWarning)
 
 
 _FPS = 60  # f_s
@@ -161,7 +161,7 @@ class Arguments:
     is_aborted: IsAborted = lambda: False
     on_end: Callable[[], None] = lambda: None
 
-class Ovgen:
+class CorrScope:
     def __init__(self, cfg: Config, arg: Arguments):
         self.cfg = cfg
         self.arg = arg
@@ -178,7 +178,7 @@ class Ovgen:
             self.output_cfgs = []
 
         if len(self.cfg.channels) == 0:
-            raise OvgenError('Config.channels is empty')
+            raise CorrError('Config.channels is empty')
 
     waves: List[Wave]
     channels: List[Channel]
@@ -209,7 +209,7 @@ class Ovgen:
 
     def play(self):
         if self.has_played:
-            raise ValueError('Cannot call Ovgen.play() more than once')
+            raise ValueError('Cannot call CorrScope.play() more than once')
         self.has_played = True
 
         self._load_channels()
@@ -231,16 +231,16 @@ class Ovgen:
         internals = self.cfg.show_internals
         extra_outputs = SimpleNamespace()
         if internals:
-            from ovgenpy.outputs import FFplayOutputConfig
+            from corrscope.outputs import FFplayOutputConfig
             import attr
 
             no_audio = attr.evolve(self.cfg, master_audio='')
 
-            ovgen = self
+            corr = self
 
             class RenderOutput:
                 def __init__(self):
-                    self.renderer = ovgen._load_renderer()
+                    self.renderer = corr._load_renderer()
                     self.output = FFplayOutputConfig()(no_audio)
 
                 def render_frame(self, datas):

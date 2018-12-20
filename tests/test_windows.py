@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from numpy.testing import assert_equal
 
-from ovgenpy.utils.windows import leftpad, midpad
+from corrscope.utils.windows import leftpad, midpad
 
 
 def test_leftpad():

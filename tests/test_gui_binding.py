@@ -1,6 +1,6 @@
 import pytest
 
-from ovgenpy.gui.data_bind import rgetattr, rsetattr, rhasattr
+from corrscope.gui.data_bind import rgetattr, rsetattr, rhasattr
 
 
 def test_rgetattr():

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 __all__ = ['yaml', 'copy_config',
            'register_config', 'kw_config', 'Alias', 'Ignored', 'register_enum',
-           'OvgenError', 'OvgenWarning']
+           'CorrError', 'CorrWarning']
 
 
 # Setup YAML loading (yaml object).
@@ -148,7 +148,7 @@ class _ConfigMixin:
             if isinstance(class_var, Alias):
                 target = class_var.key
                 if target in state:
-                    raise OvgenError(
+                    raise CorrError(
                         f'{type(self).__name__} received both Alias {key} and '
                         f'equivalent {target}'
                     )
@@ -189,13 +189,13 @@ class _EnumMixin:
 
 # Miscellaneous
 
-class OvgenError(ValueError):
+class CorrError(ValueError):
     """ Error caused by invalid end-user input (via YAML/GUI config).
     (Should be) caught by GUI and displayed to user. """
     pass
 
 
-class OvgenWarning(UserWarning):
+class CorrWarning(UserWarning):
     """ Warning about deprecated end-user config (YAML/GUI).
     (Should be) caught by GUI and displayed to user. """
     pass

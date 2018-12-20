@@ -1,10 +1,10 @@
 from setuptools import setup
 
 setup(
-    name='ovgenpy',
+    name='corrscope',
     version='0',
-    packages=['ovgenpy'],
-    url='https://github.com/nyanpasu64/ovgenpy',
+    packages=['corrscope'],
+    url='https://github.com/nyanpasu64/corrscope',
     license='BSD-2-Clause',
     author='nyanpasu64',
     author_email='',

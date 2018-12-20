@@ -7,13 +7,13 @@ import click
 import pytest
 from click.testing import CliRunner
 
-import ovgenpy.channel
-from ovgenpy import cli
-from ovgenpy.cli import YAML_NAME
-from ovgenpy.config import yaml
-from ovgenpy.outputs import FFmpegOutputConfig
-from ovgenpy.ovgenpy import Config, Ovgen, Arguments
-from ovgenpy.util import pushd
+import corrscope.channel
+from corrscope import cli
+from corrscope.cli import YAML_NAME
+from corrscope.config import yaml
+from corrscope.outputs import FFmpegOutputConfig
+from corrscope.corrscope import Config, CorrScope, Arguments
+from corrscope.util import pushd
 
 if TYPE_CHECKING:
     import pytest_mock
@@ -23,7 +23,7 @@ def call_main(argv):
     return CliRunner().invoke(cli.main, argv, catch_exceptions=False, standalone_mode=False)
 
 
-# ovgenpy configuration sinks
+# corrscope configuration sinks
 
 @pytest.fixture
 def yaml_sink(mocker: 'pytest_mock.MockFixture') -> Callable:
@@ -45,13 +45,13 @@ def yaml_sink(mocker: 'pytest_mock.MockFixture') -> Callable:
 @pytest.fixture
 def player_sink(mocker) -> Callable:
     def _player_sink(command):
-        Ovgen = mocker.patch.object(cli, 'Ovgen')
+        CorrScope = mocker.patch.object(cli, 'CorrScope')
 
         argv = shlex.split(command) + ['-p']
         call_main(argv)
 
-        Ovgen.assert_called_once()
-        args, kwargs = Ovgen.call_args
+        CorrScope.assert_called_once()
+        args, kwargs = CorrScope.call_args
         cfg = args[0]
 
         assert isinstance(cfg, Config)
@@ -70,7 +70,7 @@ def any_sink(request, mocker):
     return sink(mocker)
 
 
-# ovgenpy configuration sources
+# corrscope configuration sources
 
 def test_no_files(any_sink):
     with pytest.raises(click.ClickException):
@@ -126,14 +126,14 @@ def test_load_yaml_another_dir(yaml_sink, mocker, Popen):
 
     cfg.begin_time = 100    # To skip all actual rendering
 
-    # Log execution of Ovgen().play()
-    Wave = mocker.spy(ovgenpy.channel, 'Wave')
+    # Log execution of CorrScope().play()
+    Wave = mocker.spy(corrscope.channel, 'Wave')
 
     # Issue: this test does not use cli.main() to compute output path.
     # Possible solution: Call cli.main() via Click runner.
     output = FFmpegOutputConfig(cli.get_path(cfg.master_audio, cli.VIDEO_NAME))
-    ovgen = Ovgen(cfg, Arguments(subdir, [output]))
-    ovgen.play()
+    corr = CorrScope(cfg, Arguments(subdir, [output]))
+    corr.play()
 
     # Compute absolute paths
     wav_abs = abspath(f'{subdir}/{wav}')

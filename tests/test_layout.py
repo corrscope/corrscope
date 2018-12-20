@@ -1,7 +1,7 @@
 import pytest
 
-from ovgenpy.layout import LayoutConfig, RendererLayout
-from ovgenpy.renderer import RendererConfig, MatplotlibRenderer
+from corrscope.layout import LayoutConfig, RendererLayout
+from corrscope.renderer import RendererConfig, MatplotlibRenderer
 from tests.test_renderer import WIDTH, HEIGHT
 
 

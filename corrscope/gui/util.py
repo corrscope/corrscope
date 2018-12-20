@@ -7,16 +7,16 @@ import more_itertools
 from PyQt5.QtCore import QMutex
 from PyQt5.QtWidgets import QWidget, QFileDialog
 
-from ovgenpy.config import OvgenError
+from corrscope.config import CorrError
 
 
 def color2hex(color):
     try:
         return matplotlib.colors.to_hex(color, keep_alpha=False)
     except ValueError:
-        raise OvgenError(f'invalid color {color}')
+        raise CorrError(f'invalid color {color}')
     except Exception as e:
-        raise OvgenError(
+        raise CorrError(
             f'doubly invalid color {color}, raises {e} (report bug!)')
 
 

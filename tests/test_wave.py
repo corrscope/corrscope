@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from delayed_assert import expect, assert_expectations
 
-from ovgenpy.wave import Wave
+from corrscope.wave import Wave
 
 prefix = 'tests/wav-formats/'
 wave_paths = [

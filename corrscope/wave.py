@@ -6,7 +6,7 @@ from scipy.io import wavfile
 
 
 # Internal class, not exposed via YAML
-from ovgenpy.config import OvgenError
+from corrscope.config import CorrError
 
 
 @attr.dataclass
@@ -54,7 +54,7 @@ class Wave:
             self.max_val = 1
 
         else:
-            raise OvgenError(f'unexpected wavfile dtype {dtype}')
+            raise CorrError(f'unexpected wavfile dtype {dtype}')
 
     def __getitem__(self, index: Union[int, slice]) -> 'np.ndarray[FLOAT]':
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
