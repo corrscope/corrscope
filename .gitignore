@@ -173,3 +173,6 @@ build-*
 # Nuitka
 *.bin
 *.build/
+
+# Poetry
+setup.py
