@@ -186,8 +186,7 @@ def main(
         if outputs:
             assert Ovgen  # to prevent PyCharm from deleting the import
             arg = Arguments(cfg_dir=cfg_dir, outputs=outputs)
-            # TODO make it a lambda
-            command = 'Ovgen(cfg, arg).play()'
+            command = lambda: Ovgen(cfg, arg).play()
             if profile:
                 import cProfile
 
@@ -202,7 +201,7 @@ def main(
                         break
 
                 # noinspection PyUnboundLocalVariable
-                cProfile.runctx(command, globals(), locals(), str(path))
+                cProfile.runctx('command()', globals(), locals(), str(path))
 
             else:
-                exec(command)
+                command()
