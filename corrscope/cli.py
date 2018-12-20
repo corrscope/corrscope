@@ -4,10 +4,10 @@ from typing import Optional, List, Tuple, Union
 
 import click
 
-from ovgenpy.channel import ChannelConfig
-from ovgenpy.config import yaml
-from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
-from ovgenpy.ovgenpy import default_config, Ovgen, Config, Arguments
+from corrscope.channel import ChannelConfig
+from corrscope.config import yaml
+from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
+from corrscope.corrscope import default_config, CorrScope, Config, Arguments
 
 
 Folder = click.Path(exists=True, file_okay=False)
@@ -36,7 +36,7 @@ YAML_NAME = YAML_EXTS[0]
 VIDEO_NAME = '.mp4'
 
 
-DEFAULT_NAME = 'ovgenpy'
+DEFAULT_NAME = 'corrscope'
 def get_name(audio_file: Union[None, str, Path]) -> str:
     # Write file to current working dir, not audio dir.
     if audio_file:
@@ -91,15 +91,15 @@ def main(
     .yaml config.
     """
     # GUI:
-    # ovgenpy
-    # ovgenpy file.yaml
-    # ovgenpy wildcard/wav/folder ... [--options]
+    # corrscope
+    # corrscope file.yaml
+    # corrscope wildcard/wav/folder ... [--options]
     #
     # CLI:
-    # ovgenpy wildcard/wav/folder ... [--options] --write-cfg file.yaml [--play]
-    # ovgenpy wildcard/wav/folder ... --play
-    # ovgenpy file.yaml --play
-    # ovgenpy file.yaml --write-yaml
+    # corrscope wildcard/wav/folder ... [--options] --write-cfg file.yaml [--play]
+    # corrscope wildcard/wav/folder ... --play
+    # corrscope file.yaml --play
+    # corrscope file.yaml --write-yaml
     #
     # - You can specify as many wildcards or wav files as you want.
     # - You can only supply one folder, with no files/wildcards.
@@ -164,7 +164,7 @@ def main(
         cfg_dir = '.'
 
     if show_gui:
-        from ovgenpy import gui
+        from corrscope import gui
         gui.gui_main(cfg, cfg_path)
 
     else:
@@ -184,9 +184,9 @@ def main(
             outputs.append(FFmpegOutputConfig(video_path))
 
         if outputs:
-            assert Ovgen  # to prevent PyCharm from deleting the import
+            assert CorrScope  # to prevent PyCharm from deleting the import
             arg = Arguments(cfg_dir=cfg_dir, outputs=outputs)
-            command = lambda: Ovgen(cfg, arg).play()
+            command = lambda: CorrScope(cfg, arg).play()
             if profile:
                 import cProfile
 

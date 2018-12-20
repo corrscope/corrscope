@@ -6,13 +6,13 @@ from hypothesis import given
 import hypothesis.strategies as hs
 from pytest_mock import MockFixture
 
-import ovgenpy.channel
-import ovgenpy.ovgenpy
-from ovgenpy.channel import ChannelConfig, Channel
-from ovgenpy.config import OvgenError
-from ovgenpy.ovgenpy import default_config, Ovgen, BenchmarkMode, Arguments
-from ovgenpy.triggers import NullTriggerConfig
-from ovgenpy.util import coalesce
+import corrscope.channel
+import corrscope.corrscope
+from corrscope.channel import ChannelConfig, Channel
+from corrscope.config import CorrError
+from corrscope.corrscope import default_config, CorrScope, BenchmarkMode, Arguments
+from corrscope.triggers import NullTriggerConfig
+from corrscope.util import coalesce
 
 
 positive = hs.integers(min_value=1, max_value=100)
@@ -23,7 +23,7 @@ maybe = hs.one_of(hs.none(), positive)
 Maybe = Optional[int]
 
 
-@pytest.mark.filterwarnings("ignore::ovgenpy.config.OvgenWarning")
+@pytest.mark.filterwarnings("ignore::corrscope.config.CorrWarning")
 @given(
     # Channel
     c_trigger_width=maybe, c_render_width=maybe,
@@ -53,9 +53,9 @@ def test_config_channel_width_stride(
     """
 
     # region setup test variables
-    ovgenpy.ovgenpy.PRINT_TIMESTAMP = False    # Cleanup Hypothesis testing logs
+    corrscope.corrscope.PRINT_TIMESTAMP = False    # Cleanup Hypothesis testing logs
 
-    Wave = mocker.patch.object(ovgenpy.channel, 'Wave')
+    Wave = mocker.patch.object(corrscope.channel, 'Wave')
     wave = Wave.return_value
 
     def get_around(sample: int, region_nsamp: int, stride: int):
@@ -90,7 +90,7 @@ def test_config_channel_width_stride(
     # endregion
 
     if not (width_ms or (trigger_ms and render_ms)):
-        with pytest.raises(OvgenError):
+        with pytest.raises(CorrError):
             _cfg = get_cfg()
         return
 
@@ -123,10 +123,10 @@ def test_config_channel_width_stride(
     assert trigger._tsamp == ideal_tsamp
     assert trigger._stride == channel.trigger_stride
 
-    ## Ensure ovgenpy calls render using channel.render_samp and render_stride.
-    ovgen = Ovgen(cfg, Arguments(cfg_dir='.', outputs=[]))
-    renderer = mocker.patch.object(Ovgen, '_load_renderer').return_value
-    ovgen.play()
+    ## Ensure corrscope calls render using channel.render_samp and render_stride.
+    corr = CorrScope(cfg, Arguments(cfg_dir='.', outputs=[]))
+    renderer = mocker.patch.object(CorrScope, '_load_renderer').return_value
+    corr.play()
 
     # Only render (not NullTrigger) calls wave.get_around().
     (_sample, _region_nsamp, _subsampling), kwargs = wave.get_around.call_args

@@ -2,8 +2,8 @@ from typing import Optional, TypeVar, Callable, List
 
 import numpy as np
 
-from ovgenpy.config import register_config, OvgenError
-from ovgenpy.util import ceildiv
+from corrscope.config import register_config, CorrError
+from corrscope.util import ceildiv
 
 
 @register_config(always_dump='orientation')
@@ -19,7 +19,7 @@ class LayoutConfig:
             self.ncols = None
 
         if self.nrows and self.ncols:
-            raise OvgenError('cannot manually assign both nrows and ncols')
+            raise CorrError('cannot manually assign both nrows and ncols')
 
         if not self.nrows and not self.ncols:
             self.ncols = 1
@@ -41,7 +41,7 @@ class RendererLayout:
 
         self.orientation = cfg.orientation
         if self.orientation not in self.VALID_ORIENTATIONS:
-            raise OvgenError(f'Invalid orientation {self.orientation} not in '
+            raise CorrError(f'Invalid orientation {self.orientation} not in '
                              f'{self.VALID_ORIENTATIONS}')
 
     def _calc_layout(self):

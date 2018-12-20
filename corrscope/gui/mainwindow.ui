@@ -550,32 +550,32 @@
   <customwidget>
    <class>BoundLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>ovgenpy/gui/data_bind.h</header>
+   <header>corrscope/gui/data_bind.h</header>
   </customwidget>
   <customwidget>
    <class>BoundSpinBox</class>
    <extends>QSpinBox</extends>
-   <header>ovgenpy/gui/data_bind.h</header>
+   <header>corrscope/gui/data_bind.h</header>
   </customwidget>
   <customwidget>
    <class>BoundDoubleSpinBox</class>
    <extends>QDoubleSpinBox</extends>
-   <header>ovgenpy/gui/data_bind.h</header>
+   <header>corrscope/gui/data_bind.h</header>
   </customwidget>
   <customwidget>
    <class>BoundComboBox</class>
    <extends>QComboBox</extends>
-   <header>ovgenpy/gui/data_bind.h</header>
+   <header>corrscope/gui/data_bind.h</header>
   </customwidget>
   <customwidget>
    <class>ShortcutButton</class>
    <extends>QPushButton</extends>
-   <header>ovgenpy/gui/__init__.h</header>
+   <header>corrscope/gui/__init__.h</header>
   </customwidget>
   <customwidget>
    <class>ChannelTableView</class>
    <extends>QTableView</extends>
-   <header>ovgenpy/gui/__init__.h</header>
+   <header>corrscope/gui/__init__.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

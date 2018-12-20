@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 from matplotlib.colors import to_rgb
 
-from ovgenpy.channel import ChannelConfig
-from ovgenpy.outputs import RGB_DEPTH
-from ovgenpy.renderer import RendererConfig, MatplotlibRenderer
-from ovgenpy.layout import LayoutConfig
+from corrscope.channel import ChannelConfig
+from corrscope.outputs import RGB_DEPTH
+from corrscope.renderer import RendererConfig, MatplotlibRenderer
+from corrscope.layout import LayoutConfig
 
 WIDTH = 640
 HEIGHT = 360

@@ -12,19 +12,19 @@ from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
 from PyQt5.QtWidgets import QShortcut
 
-from ovgenpy import cli
-from ovgenpy.channel import ChannelConfig
-from ovgenpy.config import OvgenError, copy_config, yaml
-from ovgenpy.gui.data_bind import PresentationModel, map_gui, behead, rgetattr, rsetattr
-from ovgenpy.gui.util import color2hex, Locked, get_save_with_ext, find_ranges
-from ovgenpy.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
-from ovgenpy.ovgenpy import Ovgen, Config, Arguments, default_config
-from ovgenpy.triggers import CorrelationTriggerConfig, ITriggerConfig
-from ovgenpy.util import obj_name
+from corrscope import cli
+from corrscope.channel import ChannelConfig
+from corrscope.config import CorrError, copy_config, yaml
+from corrscope.gui.data_bind import PresentationModel, map_gui, behead, rgetattr, rsetattr
+from corrscope.gui.util import color2hex, Locked, get_save_with_ext, find_ranges
+from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
+from corrscope.corrscope import CorrScope, Config, Arguments, default_config
+from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
+from corrscope.util import obj_name
 
 FILTER_WAV_FILES = "WAV files (*.wav)"
 
-APP_NAME = 'ovgenpy'
+APP_NAME = 'corrscope'
 APP_DIR = Path(__file__).parent
 
 def res(file: str) -> str:
@@ -88,8 +88,8 @@ class MainWindow(qw.QMainWindow):
         self.actionRender.triggered.connect(self.on_action_render)
         self.actionExit.triggered.connect(qw.QApplication.closeAllWindows)
 
-        # Initialize ovgen-thread attribute.
-        self.ovgen_thread: Locked[Optional[OvgenThread]] = Locked(None)
+        # Initialize CorrScope-thread attribute.
+        self.corr_thread: Locked[Optional[CorrThread]] = Locked(None)
 
         # Bind config to UI.
         self.load_cfg(cfg, cfg_path)
@@ -273,11 +273,11 @@ class MainWindow(qw.QMainWindow):
             return False
 
     def on_action_play(self):
-        """ Launch ovgen and ffplay. """
+        """ Launch CorrScope and ffplay. """
         error_msg = 'Cannot play, another play/render is active'
-        with self.ovgen_thread as t:
+        with self.corr_thread as t:
             if t is not None:
-                self.ovgen_thread.unlock()
+                self.corr_thread.unlock()
                 qw.QMessageBox.critical(self, 'Error', error_msg)
                 return
 
@@ -287,9 +287,9 @@ class MainWindow(qw.QMainWindow):
     def on_action_render(self):
         """ Get file name. Then show a progress dialog while rendering to file. """
         error_msg = 'Cannot render to file, another play/render is active'
-        with self.ovgen_thread as t:
+        with self.corr_thread as t:
             if t is not None:
-                self.ovgen_thread.unlock()
+                self.corr_thread.unlock()
                 qw.QMessageBox.critical(self, 'Error', error_msg)
                 return
 
@@ -300,14 +300,14 @@ class MainWindow(qw.QMainWindow):
             if path:
                 name = str(path)
                 # FIXME what if missing mp4?
-                dlg = OvgenProgressDialog(self, 'Rendering video')
+                dlg = CorrProgressDialog(self, 'Rendering video')
 
                 outputs = [FFmpegOutputConfig(name)]
                 self.play_thread(outputs, dlg)
 
     def play_thread(self, outputs: List[IOutputConfig],
-                    dlg: Optional['OvgenProgressDialog']):
-        """ self.ovgen_thread MUST be locked. """
+                    dlg: Optional['CorrProgressDialog']):
+        """ self.corr_thread MUST be locked. """
         arg = self._get_args(outputs)
         if dlg:
             arg = attr.evolve(arg,
@@ -318,7 +318,7 @@ class MainWindow(qw.QMainWindow):
                               )
 
         cfg = copy_config(self.model.cfg)
-        t = self.ovgen_thread.obj = OvgenThread(cfg, arg)
+        t = self.corr_thread.obj = CorrThread(cfg, arg)
         t.error.connect(self.on_play_thread_error)
         t.finished.connect(self.on_play_thread_finished)
         t.start()
@@ -327,7 +327,7 @@ class MainWindow(qw.QMainWindow):
         qw.QMessageBox.critical(self, 'Error rendering oscilloscope', str(exc))
 
     def on_play_thread_finished(self):
-        self.ovgen_thread.set(None)
+        self.corr_thread.set(None)
 
     def _get_args(self, outputs: List[IOutputConfig]):
         arg = Arguments(
@@ -376,7 +376,7 @@ class ShortcutButton(qw.QPushButton):
         self.setToolTip(keys.toString(QKeySequence.NativeText))
 
 
-class OvgenThread(qc.QThread):
+class CorrThread(qc.QThread):
     def __init__(self, cfg: Config, arg: Arguments):
         qc.QThread.__init__(self)
         self.cfg = cfg
@@ -386,7 +386,7 @@ class OvgenThread(qc.QThread):
         cfg = self.cfg
         arg = self.arg
         try:
-            Ovgen(cfg, arg).play()
+            CorrScope(cfg, arg).play()
         except Exception as e:
             arg.on_end()
             self.error.emit(e)
@@ -396,7 +396,7 @@ class OvgenThread(qc.QThread):
     error = qc.pyqtSignal(Exception)
 
 
-class OvgenProgressDialog(qw.QProgressDialog):
+class CorrProgressDialog(qw.QProgressDialog):
     def __init__(self, parent: Optional[qw.QWidget], title: str):
         super().__init__(parent)
         self.setMinimumWidth(300)
@@ -409,12 +409,12 @@ class OvgenProgressDialog(qw.QProgressDialog):
         # Don't reset when rendering is approximately finished.
         self.setAutoReset(False)
 
-        # Close after ovgen finishes.
+        # Close after CorrScope finishes.
         self.setAutoClose(True)
 
     def on_begin(self, begin_time, end_time):
         self.setRange(int(round(begin_time)), int(round(end_time)))
-        # self.setValue is called by Ovgen, on the first frame.
+        # self.setValue is called by CorrScope, on the first frame.
 
 
 def nrow_ncol_property(altered: str, unaltered: str) -> property:
@@ -433,7 +433,7 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
         elif val == 0:
             setattr(self.cfg.layout, altered, None)
         else:
-            raise OvgenError(f"invalid input: {altered} < 0, should never happen")
+            raise CorrError(f"invalid input: {altered} < 0, should never happen")
 
     return property(get, set)
 
@@ -480,7 +480,7 @@ class ConfigModel(PresentationModel):
 
     @render_video_size.setter
     def render_video_size(self, value: str):
-        error = OvgenError(f"invalid video size {value}, must be WxH")
+        error = CorrError(f"invalid video size {value}, must be WxH")
 
         for sep in 'x*,':
             width_height = value.split(sep)
@@ -592,7 +592,7 @@ class ChannelModel(qc.QAbstractTableModel):
             t = cfg.trigger
             if isinstance(t, ITriggerConfig):
                 if not isinstance(t, CorrelationTriggerConfig):
-                    raise OvgenError(
+                    raise CorrError(
                         f'Loading per-channel {obj_name(t)} not supported')
                 trigger_dict = attr.asdict(t)
             else:

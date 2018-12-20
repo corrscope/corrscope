@@ -6,10 +6,10 @@ from abc import ABC, abstractmethod
 from os.path import abspath
 from typing import TYPE_CHECKING, Type, List, Union, Optional
 
-from ovgenpy.config import register_config
+from corrscope.config import register_config
 
 if TYPE_CHECKING:
-    from ovgenpy.ovgenpy import Config
+    from corrscope.corrscope import Config
 
 
 ByteBuffer = Union[bytes, np.ndarray]
@@ -22,8 +22,8 @@ FRAMES_TO_BUFFER = 2
 class IOutputConfig:
     cls: 'Type[Output]'
 
-    def __call__(self, ovgen_cfg: 'Config'):
-        return self.cls(ovgen_cfg, cfg=self)
+    def __call__(self, corr_cfg: 'Config'):
+        return self.cls(corr_cfg, cfg=self)
 
 
 class _Stop:
@@ -34,11 +34,11 @@ Stop = _Stop()
 
 
 class Output(ABC):
-    def __init__(self, ovgen_cfg: 'Config', cfg: IOutputConfig):
-        self.ovgen_cfg = ovgen_cfg
+    def __init__(self, corr_cfg: 'Config', cfg: IOutputConfig):
+        self.corr_cfg = corr_cfg
         self.cfg = cfg
 
-        rcfg = ovgen_cfg.render
+        rcfg = corr_cfg.render
 
         frame_bytes = rcfg.height * rcfg.width * RGB_DEPTH
         self.bufsize = frame_bytes * FRAMES_TO_BUFFER
@@ -69,26 +69,26 @@ def register_output(config_t: Type[IOutputConfig]):
 # FFmpeg command line generation
 
 class _FFmpegProcess:
-    def __init__(self, templates: List[str], ovgen_cfg: 'Config'):
+    def __init__(self, templates: List[str], corr_cfg: 'Config'):
         self.templates = templates
-        self.ovgen_cfg = ovgen_cfg
+        self.corr_cfg = corr_cfg
 
-        self.templates += ffmpeg_input_video(ovgen_cfg)  # video
-        if ovgen_cfg.master_audio:
+        self.templates += ffmpeg_input_video(corr_cfg)  # video
+        if corr_cfg.master_audio:
             # Load master audio and trim to timestamps.
 
-            self.templates.append(f'-ss {ovgen_cfg.begin_time}')
+            self.templates.append(f'-ss {corr_cfg.begin_time}')
 
-            audio_path = shlex.quote(abspath(ovgen_cfg.master_audio))
+            audio_path = shlex.quote(abspath(corr_cfg.master_audio))
             self.templates += ffmpeg_input_audio(audio_path)    # audio
 
-            if ovgen_cfg.end_time is not None:
-                dur = ovgen_cfg.end_time - ovgen_cfg.begin_time
+            if corr_cfg.end_time is not None:
+                dur = corr_cfg.end_time - corr_cfg.begin_time
                 self.templates.append(f'-to {dur}')
 
     def add_output(self, cfg: 'Union[FFmpegOutputConfig, FFplayOutputConfig]') -> None:
         self.templates.append(cfg.video_template)  # video
-        if self.ovgen_cfg.master_audio:
+        if self.corr_cfg.master_audio:
             self.templates.append(cfg.audio_template)  # audio
 
     def popen(self, extra_args, bufsize, **kwargs) -> subprocess.Popen:
@@ -193,10 +193,10 @@ FFMPEG = 'ffmpeg'
 
 @register_output(FFmpegOutputConfig)
 class FFmpegOutput(PipeOutput):
-    def __init__(self, ovgen_cfg: 'Config', cfg: FFmpegOutputConfig):
-        super().__init__(ovgen_cfg, cfg)
+    def __init__(self, corr_cfg: 'Config', cfg: FFmpegOutputConfig):
+        super().__init__(corr_cfg, cfg)
 
-        ffmpeg = _FFmpegProcess([FFMPEG, '-y'], ovgen_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG, '-y'], corr_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append(cfg.args)
 
@@ -220,10 +220,10 @@ FFPLAY = 'ffplay'
 
 @register_output(FFplayOutputConfig)
 class FFplayOutput(PipeOutput):
-    def __init__(self, ovgen_cfg: 'Config', cfg: FFplayOutputConfig):
-        super().__init__(ovgen_cfg, cfg)
+    def __init__(self, corr_cfg: 'Config', cfg: FFplayOutputConfig):
+        super().__init__(corr_cfg, cfg)
 
-        ffmpeg = _FFmpegProcess([FFMPEG, '-nostats'], ovgen_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG, '-nostats'], corr_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append('-f nut')
 

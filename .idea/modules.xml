@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/ovgenpy.iml" filepath="$PROJECT_DIR$/.idea/ovgenpy.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/corrscope.iml" filepath="$PROJECT_DIR$/.idea/corrscope.iml" />
     </modules>
   </component>
 </project>

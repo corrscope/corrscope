@@ -4,10 +4,10 @@ import pytest
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from ovgenpy import triggers
-from ovgenpy.triggers import CorrelationTriggerConfig, CorrelationTrigger, \
+from corrscope import triggers
+from corrscope.triggers import CorrelationTriggerConfig, CorrelationTrigger, \
     PerFrameCache, ZeroCrossingTriggerConfig, LocalPostTriggerConfig
-from ovgenpy.wave import Wave
+from corrscope.wave import Wave
 
 triggers.SHOW_TRIGGER = False
 
@@ -179,7 +179,7 @@ def test_trigger_should_recalc_window():
 # Test the ability to load legacy TriggerConfig
 
 def test_load_trigger_config():
-    from ovgenpy.config import yaml
+    from corrscope.config import yaml
 
     # Ensure no exceptions
     yaml.load('''\

@@ -7,12 +7,12 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtWidgets import QWidget
 
-from ovgenpy.config import OvgenError
-from ovgenpy.triggers import lerp
-from ovgenpy.util import obj_name, perr
+from corrscope.config import CorrError
+from corrscope.triggers import lerp
+from corrscope.util import obj_name, perr
 
 if TYPE_CHECKING:
-    from ovgenpy.gui import MainWindow
+    from corrscope.gui import MainWindow
 
 __all__ = ['PresentationModel', 'map_gui', 'behead', 'rgetattr', 'rsetattr']
 
@@ -158,7 +158,7 @@ def model_setter(value_type: type) -> Callable:
         assert isinstance(value, value_type)
         try:
             self.pmodel[self.path] = value
-        except OvgenError:
+        except CorrError:
             self.setPalette(self.error_palette)
         else:
             self.setPalette(self.default_palette)

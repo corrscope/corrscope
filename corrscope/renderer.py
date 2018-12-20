@@ -5,10 +5,10 @@ import matplotlib
 import numpy as np
 import attr
 
-from ovgenpy.config import register_config
-from ovgenpy.layout import RendererLayout, LayoutConfig
-from ovgenpy.outputs import RGB_DEPTH, ByteBuffer
-from ovgenpy.util import coalesce
+from corrscope.config import register_config
+from corrscope.layout import RendererLayout, LayoutConfig
+from corrscope.outputs import RGB_DEPTH, ByteBuffer
+from corrscope.util import coalesce
 
 matplotlib.use('agg')
 from matplotlib import pyplot as plt
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
     from matplotlib.lines import Line2D
-    from ovgenpy.channel import ChannelConfig
+    from corrscope.channel import ChannelConfig
 
 
 def default_color():

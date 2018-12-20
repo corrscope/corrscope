@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING, Optional, Union
 import attr
 from ruamel.yaml.comments import CommentedMap
 
-from ovgenpy.config import register_config, Alias, OvgenError
-from ovgenpy.triggers import ITriggerConfig
-from ovgenpy.util import coalesce
-from ovgenpy.wave import _WaveConfig, Wave
+from corrscope.config import register_config, Alias, CorrError
+from corrscope.triggers import ITriggerConfig
+from corrscope.util import coalesce
+from corrscope.wave import _WaveConfig, Wave
 
 if TYPE_CHECKING:
-    from ovgenpy.ovgenpy import Config
+    from corrscope.corrscope import Config
 
 
 @register_config
@@ -33,29 +33,29 @@ class ChannelConfig:
 
 
 class Channel:
-    # trigger_samp is unneeded, since __init__ (not Ovgenpy) constructs triggers.
+    # trigger_samp is unneeded, since __init__ (not CorrScope) constructs triggers.
     render_samp: int
     # TODO add a "get_around" method for rendering (also helps test_channel_subsampling)
-    # Currently Ovgenpy peeks at Chanel.render_samp and render_stride (bad).
+    # Currently CorrScope peeks at Channel.render_samp and render_stride (bad).
 
-    # Product of ovgen_cfg.trigger/render_subsampling and trigger/render_width.
+    # Product of corr_cfg.trigger/render_subsampling and trigger/render_width.
     trigger_stride: int
     render_stride: int
 
-    def __init__(self, cfg: ChannelConfig, ovgen_cfg: 'Config'):
+    def __init__(self, cfg: ChannelConfig, corr_cfg: 'Config'):
         self.cfg = cfg
 
         # Create a Wave object.
-        wcfg = _WaveConfig(amplification=ovgen_cfg.amplification * cfg.ampl_ratio)
+        wcfg = _WaveConfig(amplification=corr_cfg.amplification * cfg.ampl_ratio)
         self.wave = Wave(wcfg, abspath(cfg.wav_path))
 
         # `subsampling` increases `stride` and decreases `nsamp`.
         # `width` increases `stride` without changing `nsamp`.
-        tsub = ovgen_cfg.trigger_subsampling
-        tw = coalesce(cfg.trigger_width, ovgen_cfg.trigger_width)
+        tsub = corr_cfg.trigger_subsampling
+        tw = coalesce(cfg.trigger_width, corr_cfg.trigger_width)
 
-        rsub = ovgen_cfg.render_subsampling
-        rw = coalesce(cfg.render_width, ovgen_cfg.render_width)
+        rsub = corr_cfg.render_subsampling
+        rw = coalesce(cfg.render_width, corr_cfg.render_width)
 
         # nsamp = orig / subsampling
         # stride = subsampling * width
@@ -63,8 +63,8 @@ class Channel:
             width_s = width_ms / 1000
             return round(width_s * self.wave.smp_s / sub)
 
-        trigger_samp = calculate_nsamp(ovgen_cfg.trigger_ms, tsub)
-        self.render_samp = calculate_nsamp(ovgen_cfg.render_ms, rsub)
+        trigger_samp = calculate_nsamp(corr_cfg.trigger_ms, tsub)
+        self.render_samp = calculate_nsamp(corr_cfg.render_ms, rsub)
 
         self.trigger_stride = tsub * tw
         self.render_stride = rsub * rw
@@ -73,11 +73,11 @@ class Channel:
         if isinstance(cfg.trigger, ITriggerConfig):
             tcfg = cfg.trigger
         elif isinstance(cfg.trigger, (CommentedMap, dict)):  # CommentedMap may/not be subclass of dict.
-            tcfg = attr.evolve(ovgen_cfg.trigger, **cfg.trigger)
+            tcfg = attr.evolve(corr_cfg.trigger, **cfg.trigger)
         elif cfg.trigger is None:
-            tcfg = ovgen_cfg.trigger
+            tcfg = corr_cfg.trigger
         else:
-            raise OvgenError(
+            raise CorrError(
                 f'invalid per-channel trigger {cfg.trigger}, type={type(cfg.trigger)}, '
                 f'must be (*)TriggerConfig, dict, or None')
 
@@ -85,6 +85,6 @@ class Channel:
             wave=self.wave,
             tsamp=trigger_samp,
             stride=self.trigger_stride,
-            fps=ovgen_cfg.fps
+            fps=corr_cfg.fps
         )
 
