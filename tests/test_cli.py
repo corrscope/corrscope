@@ -25,65 +25,54 @@ def call_main(argv):
 
 # corrscope configuration sinks
 
-@pytest.fixture
-def yaml_sink(mocker: 'pytest_mock.MockFixture') -> Callable:
+def yaml_sink(mocker: 'pytest_mock.MockFixture', command: str):
     """ Mocks yaml.dump() and returns call args. Does not test dumping to string. """
-    def _yaml_sink(command):
-        dump = mocker.patch.object(yaml, 'dump')
+    dump = mocker.patch.object(yaml, 'dump')
 
-        argv = shlex.split(command) + ['-w']
-        call_main(argv)
+    argv = shlex.split(command) + ['-w']
+    call_main(argv)
 
-        dump.assert_called_once()
-        (cfg, stream), kwargs = dump.call_args
+    dump.assert_called_once()
+    (cfg, stream), kwargs = dump.call_args
 
-        assert isinstance(cfg, Config)
-        return cfg, stream
-    return _yaml_sink
+    assert isinstance(cfg, Config)
+    return (cfg, stream)
 
 
-@pytest.fixture
-def player_sink(mocker) -> Callable:
-    def _player_sink(command):
-        CorrScope = mocker.patch.object(cli, 'CorrScope')
+def player_sink(mocker: 'pytest_mock.MockFixture', command: str):
+    CorrScope = mocker.patch.object(cli, 'CorrScope')
 
-        argv = shlex.split(command) + ['-p']
-        call_main(argv)
+    argv = shlex.split(command) + ['-p']
+    call_main(argv)
 
-        CorrScope.assert_called_once()
-        args, kwargs = CorrScope.call_args
-        cfg = args[0]
+    CorrScope.assert_called_once()
+    args, kwargs = CorrScope.call_args
+    cfg = args[0]
 
-        assert isinstance(cfg, Config)
-        return cfg,
-    return _player_sink
-
-
-def test_sink_fixture(yaml_sink, player_sink):
-    """ Ensure we can use yaml_sink and player_sink as a fixture directly """
-    pass
+    assert isinstance(cfg, Config)
+    return (cfg,)
 
 
 @pytest.fixture(params=[yaml_sink, player_sink])
-def any_sink(request, mocker):
+def any_sink(request) -> Callable[['pytest_mock.MockFixture', str], tuple]:
     sink = request.param
-    return sink(mocker)
+    return sink
 
 
 # corrscope configuration sources
 
-def test_no_files(any_sink):
+def test_no_files(any_sink, mocker):
     with pytest.raises(click.ClickException):
-        any_sink('')
+        any_sink(mocker, '')
 
 
 @pytest.mark.parametrize('wav_dir', '. tests'.split())
-def test_file_dirs(any_sink, wav_dir):
+def test_file_dirs(any_sink, mocker, wav_dir):
     """ Ensure loading files from `dir` places `dir/*.wav` in config. """
     wavs = Path(wav_dir).glob('*.wav')
     wavs = sorted(str(x) for x in wavs)
 
-    cfg = any_sink(wav_dir)[0]
+    cfg = any_sink(mocker, wav_dir)[0]
     assert isinstance(cfg, Config)
 
     assert [chan.wav_path for chan in cfg.channels] == wavs
@@ -93,14 +82,14 @@ def q(path: Path) -> str:
     return shlex.quote(str(path))
 
 
-def test_write_dir(yaml_sink):
+def test_write_dir(mocker):
     """ Loading `--audio another/dir` should write YAML to current dir.
     Writing YAML to audio dir: causes relative paths (relative to pwd) to break. """
 
     audio_path = Path('tests/sine440.wav')
     arg_str = f'tests -a {q(audio_path)}'
 
-    cfg, outpath = yaml_sink(arg_str)   # type: Config, Path
+    cfg, outpath = yaml_sink(mocker, arg_str)   # type: Config, Path
     assert isinstance(outpath, Path)
 
     # Ensure YAML config written to current dir.
@@ -113,7 +102,7 @@ def test_write_dir(yaml_sink):
 
 
 @pytest.mark.usefixtures('Popen')
-def test_load_yaml_another_dir(yaml_sink, mocker, Popen):
+def test_load_yaml_another_dir(mocker, Popen):
     """ YAML file located in `another/dir` should resolve `master_audio`, `channels[].
     wav_path`, and video `path` from `another/dir`. """
 
@@ -122,7 +111,7 @@ def test_load_yaml_another_dir(yaml_sink, mocker, Popen):
     mp4 = 'sine440.mp4'
     with pushd(subdir):
         arg_str = f'{wav} -a {wav}'
-        cfg, outpath = yaml_sink(arg_str)   # type: Config, Path
+        cfg, outpath = yaml_sink(mocker, arg_str)   # type: Config, Path
 
     cfg.begin_time = 100    # To skip all actual rendering
 
