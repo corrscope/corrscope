@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Type, Tuple, Optional, ClassVar
 
 import numpy as np
-from scipy import signal
+import corrscope.utils.scipy_signal as signal
 import corrscope.utils.scipy_windows as windows
 import attr
 
@@ -360,7 +360,7 @@ def get_period(data: np.ndarray) -> int:
     Use autocorrelation to estimate the period of a signal.
     Loosely inspired by https://github.com/endolith/waveform_analysis
     """
-    corr = signal.correlate(data, data, mode='full', method='fft')
+    corr = signal.correlate(data, data)
     corr = corr[len(corr) // 2:]
 
     # Remove the zero-correlation peak
