@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Type, Tuple, Optional, ClassVar
 
 import numpy as np
 from scipy import signal
-from scipy.signal import windows
+import corrscope.utils.scipy_windows as windows
 import attr
 
 from corrscope.config import kw_config, CorrError, Alias, CorrWarning
