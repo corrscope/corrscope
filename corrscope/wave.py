@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 import numpy as np
 import attr
-from scipy.io import wavfile
+import corrscope.utils.scipy_wavfile as wavfile
 
 
 # Internal class, not exposed via YAML
