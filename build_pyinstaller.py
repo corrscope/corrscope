@@ -1,4 +1,3 @@
-import os
 import subprocess
 import sys
 
@@ -8,3 +7,4 @@ import sys
 args = 'pyinstaller corrscope.spec -y'.split() + sys.argv[1:]
 
 subprocess.run(args)
+subprocess.run('dist/corrscope/corrscope'.split())
