@@ -1,3 +1,4 @@
+import shutil
 from fractions import Fraction
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -13,6 +14,11 @@ from tests.test_renderer import WIDTH, HEIGHT, ALL_ZEROS
 
 if TYPE_CHECKING:
     import pytest_mock
+
+
+if not shutil.which('ffmpeg'):
+    pytestmark = pytest.mark.skip('Missing ffmpeg, skipping output tests')
+
 
 CFG = default_config(render=RendererConfig(WIDTH, HEIGHT))
 NULL_OUTPUT = FFmpegOutputConfig(None, '-f null')
