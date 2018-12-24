@@ -29,8 +29,11 @@ cache:
     # \virtualenvs\xyz-py3.x\
 
 install:
+  # needed? to fix `appveyor` command
+  - 'set PATH=C:\Program Files\AppVeyor\BuildAgent\;%PATH%'
+
   - 'curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | %py%'
-  - 'refreshenv'
+  - 'set PATH=%USERPROFILE%\.poetry\bin;%PATH%'
 
   # Prevents: "The current Python version (2.7.15) is not supported by the project (^3.6)"
   - 'set PATH=%pydir%;%pydir%\bin;%pydir%\Scripts;%PATH%'
@@ -43,7 +46,7 @@ test_script:
   - 'poetry run pytest --tb=short'
 
 after_test:
-  - 'if not %pydir%==C:\Python36 exit %e%'
+  - 'if not "%pydir%"=="C:\Python36" appveyor exit'
   # Running pyinstaller is much faster on x64 I think,
   # but the resulting files are 64-bit only.
   - 'poetry build'
