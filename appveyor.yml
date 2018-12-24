@@ -24,6 +24,7 @@ environment:
 
 cache:
 - '%LOCALAPPDATA%\pypoetry\Cache -> .appveyor\clear-caches'
+- '%USERPROFILE%\.poetry -> .appveyor\clear-caches'
     # \cache\repositories\pypi\
     # \virtualenvs\xyz-py3.x\
 
