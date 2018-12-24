@@ -10,6 +10,7 @@ branches:
     - master
 
 image: Visual Studio 2017
+shallow_clone: true
 environment:
   matrix:
     # For Python versions available on Appveyor, see
