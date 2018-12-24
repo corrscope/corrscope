@@ -43,6 +43,8 @@ test_script:
 
 after_test:
   - 'if not %pydir%==C:\Python36 exit %e%'
+  # Running pyinstaller is much faster on x64 I think,
+  # but the resulting files are 64-bit only.
   - 'poetry build'
   - 'poetry run pyinstaller corrscope.spec -y'
 
