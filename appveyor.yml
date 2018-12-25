@@ -8,6 +8,7 @@ branches:
   # whitelist
   only:
     - master
+    - fake-master
 
 image: Visual Studio 2017
 shallow_clone: true
@@ -55,3 +56,16 @@ after_test:
 artifacts:
   - path: 'dist\*'
   - path: 'dist\corrscope'
+
+deploy:
+  # https://www.appveyor.com/docs/deployment/github/#configuring-in-appveyoryml
+  - release: $(APPVEYOR_REPO_TAG_NAME)
+    description: 'Automatically generated release, TODO edit description'
+    provider: Github
+    auth_token:
+      secure: HsBQ0tcUmRAvCSRUEJihMQDVi79N3mYQugip02tzcnku413ZCq0Iew8XBc4k/P/h
+    artifact: /.*/
+    draft: true
+    prerelease: false
+    on:
+      APPVEYOR_REPO_TAG: true
