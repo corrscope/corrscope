@@ -213,7 +213,12 @@ class CorrelationTrigger(Trigger):
 
     def _calc_step(self):
         """ Step function used for approximate edge triggering. """
-        edge_strength = self.cfg.edge_strength
+
+        # Increasing buffer_falloff (width of history buffer)
+        # causes buffer to affect triggering, more than the step function.
+        # So we multiply edge_strength (step function height) by buffer_falloff.
+
+        edge_strength = self.cfg.edge_strength * self.cfg.buffer_falloff
         N = self._buffer_nsamp
         halfN = N // 2
 
