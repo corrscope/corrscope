@@ -18,6 +18,8 @@ FLOAT = np.single
 
 
 class Wave:
+    __slots__ = 'cfg smp_s data nsamp dtype is_stereo stereo_nchan center max_val'.split()
+
     def __init__(self, cfg: Optional[_WaveConfig], wave_path: str):
         self.cfg = cfg or _WaveConfig()
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)  # type: int, np.ndarray
