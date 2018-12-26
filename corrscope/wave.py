@@ -29,6 +29,10 @@ class Wave:
         # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
         assert self.data.ndim in [1, 2]
         self.is_stereo = (self.data.ndim == 2)
+        if self.is_stereo:
+            self.stereo_nchan = self.data.shape[1]
+        else:
+            self.stereo_nchan = 1
 
         # Calculate scaling factor.
         def is_type(parent: type) -> bool:
@@ -61,7 +65,8 @@ class Wave:
         # Flatten stereo to mono.
         # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
         if self.is_stereo:
-            data = np.mean(data, axis=-1, dtype=FLOAT)
+            data = data[..., 0] + data[..., 1]
+            data /= 2
 
         data -= self.center
         data *= self.cfg.amplification / self.max_val
