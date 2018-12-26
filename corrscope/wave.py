@@ -1,11 +1,12 @@
 from typing import Optional, Union
 
 import numpy as np
+import warnings
 import attr
 import corrscope.utils.scipy_wavfile as wavfile
 
 
-from corrscope.config import CorrError
+from corrscope.config import CorrError, CorrWarning
 
 
 @attr.dataclass
@@ -31,6 +32,12 @@ class Wave:
         self.is_stereo = (self.data.ndim == 2)
         if self.is_stereo:
             self.stereo_nchan = self.data.shape[1]
+            if self.stereo_nchan != 2:
+                warnings.warn(
+                    f"File {wave_path} has {self.stereo_nchan} channels, "
+                    f"only first 2 will be used",
+                    CorrWarning
+                )
         else:
             self.stereo_nchan = 1
 
