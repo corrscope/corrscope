@@ -5,12 +5,12 @@ import attr
 import corrscope.utils.scipy_wavfile as wavfile
 
 
-# Internal class, not exposed via YAML
 from corrscope.config import CorrError
 
 
 @attr.dataclass
 class _WaveConfig:
+    """Internal class, not exposed via YAML"""
     amplification: float = 1
 
 
