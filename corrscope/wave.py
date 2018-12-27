@@ -67,11 +67,13 @@ class Wave:
 
     def __getitem__(self, index: Union[int, slice]) -> 'np.ndarray[FLOAT]':
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
-        data = self.data[index].astype(FLOAT)
+        # subok=False converts data from memmap (slow) to ndarray (faster).
+        data = self.data[index].astype(FLOAT, subok=False, copy=True)
 
         # Flatten stereo to mono.
         # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
         if self.is_stereo:
+            # data.strides = (4,), so data == contiguous float32
             data = data[..., 0] + data[..., 1]
             data /= 2
 
