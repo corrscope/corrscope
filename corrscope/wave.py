@@ -1,11 +1,12 @@
 from typing import Optional, Union
 
 import numpy as np
+import warnings
 import attr
 import corrscope.utils.scipy_wavfile as wavfile
 
 
-from corrscope.config import CorrError
+from corrscope.config import CorrError, CorrWarning
 
 
 @attr.dataclass
@@ -18,19 +19,27 @@ FLOAT = np.single
 
 
 class Wave:
+    __slots__ = 'cfg smp_s data nsamp dtype is_stereo stereo_nchan center max_val'.split()
+
     def __init__(self, cfg: Optional[_WaveConfig], wave_path: str):
         self.cfg = cfg or _WaveConfig()
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)  # type: int, np.ndarray
+        self.nsamp = len(self.data)
         dtype = self.data.dtype
 
-        # Flatten stereo to mono
+        # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
         assert self.data.ndim in [1, 2]
-        if self.data.ndim == 2:
-            # np.mean() defaults to dtype=float64,
-            # which prevents overflow if dtype is an integer.
-            self.data = np.mean(self.data, axis=1).astype(dtype)
+        self.is_stereo = (self.data.ndim == 2)
 
-        self.nsamp = len(self.data)
+        # stereo_nchan is a temporary local variable.
+        if self.is_stereo:
+            stereo_nchan = self.data.shape[1]
+            if stereo_nchan != 2:
+                warnings.warn(
+                    f"File {wave_path} has {stereo_nchan} channels, "
+                    f"only first 2 will be used",
+                    CorrWarning
+                )
 
         # Calculate scaling factor.
         def is_type(parent: type) -> bool:
@@ -58,7 +67,16 @@ class Wave:
 
     def __getitem__(self, index: Union[int, slice]) -> 'np.ndarray[FLOAT]':
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
-        data = self.data[index].astype(FLOAT)
+        # subok=False converts data from memmap (slow) to ndarray (faster).
+        data = self.data[index].astype(FLOAT, subok=False, copy=True)
+
+        # Flatten stereo to mono.
+        # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
+        if self.is_stereo:
+            # data.strides = (4,), so data == contiguous float32
+            data = data[..., 0] + data[..., 1]
+            data /= 2
+
         data -= self.center
         data *= self.cfg.amplification / self.max_val
         return data
