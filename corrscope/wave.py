@@ -30,16 +30,16 @@ class Wave:
         # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
         assert self.data.ndim in [1, 2]
         self.is_stereo = (self.data.ndim == 2)
+
+        # stereo_nchan is a temporary local variable.
         if self.is_stereo:
-            self.stereo_nchan = self.data.shape[1]
-            if self.stereo_nchan != 2:
+            stereo_nchan = self.data.shape[1]
+            if stereo_nchan != 2:
                 warnings.warn(
-                    f"File {wave_path} has {self.stereo_nchan} channels, "
+                    f"File {wave_path} has {stereo_nchan} channels, "
                     f"only first 2 will be used",
                     CorrWarning
                 )
-        else:
-            self.stereo_nchan = 1
 
         # Calculate scaling factor.
         def is_type(parent: type) -> bool:
