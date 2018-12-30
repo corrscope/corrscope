@@ -5,19 +5,24 @@ Python program to render wave files into oscilloscope views, featuring improved 
 
 ## Dependencies
 
-- Python 3.6 or above (3.5 will not work)
 - FFmpeg
 
 ## Installation
 
-### Binary Builds (Windows-only)
+- Releases (recommended): https://github.com/jimbo1qaz/corrscope/releases
+- Dev Builds: https://ci.appveyor.com/project/jimbo1qaz/ovgenpy/history
+    - Download Windows binary releases (zip files), then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
+    - Download cross-platform Python packages (whl), then install Python 3.6+ and run `pip install *.whl`.
 
-Download Windows binary releases (zip files) at https://github.com/jimbo1qaz/corrscope/releases. Then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
+## Running from Source Code (cross-platform)
 
-### Poetry (only runs in current directory)
+Install Python 3.6 or above (3.5 will not work), and Poetry.
 
 ```shell
-cd path/to/source
+# Install Poetry (only do this once)
+curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
+# Install corrscope
+cd path/to/corrscope
 poetry install
 poetry run corr (args)
 ```
