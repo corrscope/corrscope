@@ -23,7 +23,7 @@ Install Python 3.6 or above (3.5 will not work), and Poetry.
 curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
 # Install corrscope
 cd path/to/corrscope
-poetry install
+poetry install --develop corrscope
 poetry run corr (args)
 ```
 
