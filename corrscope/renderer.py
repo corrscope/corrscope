@@ -1,15 +1,29 @@
+import sys
 from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING
+from unittest.mock import MagicMock
 
+import attr
 import matplotlib
 import numpy as np
-import attr
 
 from corrscope.config import register_config
 from corrscope.layout import RendererLayout, LayoutConfig
 from corrscope.outputs import RGB_DEPTH, ByteBuffer
 from corrscope.util import coalesce
 
+"""
+matplotlib.textpath imports matplotlib.font_manager.
+
+On first import, matplotlib.font_manager spends nearly 10 seconds
+building a font cache.
+
+When compiling with PyInstaller, the font cache is cleared
+every time the app is restarted, leading to startup lag EVERY time.
+
+corrscope does not use fonts yet, so stub out the font manager.
+"""
+sys.modules['matplotlib.font_manager'] = MagicMock()
 matplotlib.use('agg')
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
