@@ -12,7 +12,8 @@ from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
 from PyQt5.QtWidgets import QShortcut
 
-from corrscope import cli
+from corrscope import __version__   # variable
+from corrscope import cli           # module wtf?
 from corrscope.channel import ChannelConfig
 from corrscope.config import CorrError, copy_config, yaml
 from corrscope.gui.data_bind import PresentationModel, map_gui, behead, rgetattr, rsetattr
@@ -24,7 +25,7 @@ from corrscope.util import obj_name
 
 FILTER_WAV_FILES = "WAV files (*.wav)"
 
-APP_NAME = 'corrscope'
+APP_NAME = f'corrscope {__version__}'
 APP_DIR = Path(__file__).parent
 
 def res(file: str) -> str:
