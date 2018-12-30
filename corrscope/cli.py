@@ -4,6 +4,7 @@ from typing import Optional, List, Tuple, Union
 
 import click
 
+from corrscope import __version__
 from corrscope.channel import ChannelConfig
 from corrscope.config import yaml
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
@@ -75,6 +76,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 # Debugging
 @click.option('--profile', is_flag=True, help=
         'Debug: Write CProfiler snapshot')
+@click.version_option(__version__)
 def main(
         files: Tuple[str],
         # cfg
