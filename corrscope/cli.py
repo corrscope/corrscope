@@ -1,6 +1,7 @@
+import datetime
 from itertools import count
 from pathlib import Path
-from typing import Optional, List, Tuple, Union
+from typing import Optional, List, Tuple, Union, Iterator
 
 import click
 
@@ -175,7 +176,7 @@ def main(
             import cProfile
 
             # Pycharm can't load CProfile files with dots in the name.
-            profile_dump_name = get_profile_dump_name('gui-')
+            profile_dump_name = get_profile_dump_name('gui')
             cProfile.runctx('command()', globals(), locals(), profile_dump_name)
         else:
             command()
@@ -204,7 +205,7 @@ def main(
 
                 # Pycharm can't load CProfile files with dots in the name.
                 first_song_name = Path(files[0]).name.split('.')[0]
-                profile_dump_name = get_profile_dump_name(first_song_name + '-')
+                profile_dump_name = get_profile_dump_name(first_song_name)
                 cProfile.runctx('command()', globals(), locals(), profile_dump_name)
             else:
                 command()
@@ -212,10 +213,22 @@ def main(
 
 def get_profile_dump_name(prefix: str) -> str:
     # FIXME naming sucks
-    profile_dump_name = f'{prefix}{PROFILE_DUMP_NAME}'
+
+    now = datetime.datetime.now()
+    now = now.strftime('%Y-%m-%d_T%H-%M-%S')
+
+    profile_dump_name = f'{prefix}-{PROFILE_DUMP_NAME}-{now}'
 
     # Write stats to unused filename
-    for i in count():
-        path = Path(profile_dump_name + str(i))
-        if not path.exists():
-            return str(path)
+    for path in add_numeric_suffixes(profile_dump_name):
+        if not Path(path).exists():
+            return path
+
+
+def add_numeric_suffixes(s: str) -> Iterator[str]:
+    """ f('foo')
+    yields 'foo', 'foo2', 'foo3'...
+    """
+    yield s
+    for i in count(2):
+        yield s + str(i)
