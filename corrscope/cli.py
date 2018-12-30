@@ -167,9 +167,8 @@ def main(
         cfg_dir = '.'
 
     if show_gui:
-        from corrscope import gui
-
         def command():
+            from corrscope import gui
             return gui.gui_main(cfg, cfg_path)
 
         if profile:
