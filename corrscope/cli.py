@@ -167,7 +167,18 @@ def main(
 
     if show_gui:
         from corrscope import gui
-        gui.gui_main(cfg, cfg_path)
+
+        def command():
+            return gui.gui_main(cfg, cfg_path)
+
+        if profile:
+            import cProfile
+
+            # Pycharm can't load CProfile files with dots in the name.
+            profile_dump_name = get_profile_dump_name('gui-')
+            cProfile.runctx('command()', globals(), locals(), profile_dump_name)
+        else:
+            command()
 
     else:
         if not files:
@@ -186,24 +197,25 @@ def main(
             outputs.append(FFmpegOutputConfig(video_path))
 
         if outputs:
-            assert CorrScope  # to prevent PyCharm from deleting the import
             arg = Arguments(cfg_dir=cfg_dir, outputs=outputs)
             command = lambda: CorrScope(cfg, arg).play()
             if profile:
                 import cProfile
 
                 # Pycharm can't load CProfile files with dots in the name.
-                profile_dump_name = Path(files[0]).name.split('.')[0]
-                profile_dump_name += f'-{PROFILE_DUMP_NAME}'
-
-                # Write stats to unused filename
-                for i in count():
-                    path = Path(profile_dump_name + str(i))
-                    if not path.exists():
-                        break
-
-                # noinspection PyUnboundLocalVariable
-                cProfile.runctx('command()', globals(), locals(), str(path))
-
+                first_song_name = Path(files[0]).name.split('.')[0]
+                profile_dump_name = get_profile_dump_name(first_song_name + '-')
+                cProfile.runctx('command()', globals(), locals(), profile_dump_name)
             else:
                 command()
+
+
+def get_profile_dump_name(prefix: str) -> str:
+    # FIXME naming sucks
+    profile_dump_name = f'{prefix}{PROFILE_DUMP_NAME}'
+
+    # Write stats to unused filename
+    for i in count():
+        path = Path(profile_dump_name + str(i))
+        if not path.exists():
+            return str(path)
