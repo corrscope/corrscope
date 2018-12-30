@@ -76,7 +76,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 # Debugging
 @click.option('--profile', is_flag=True, help=
         'Debug: Write CProfiler snapshot')
-@click.version_option()
+@click.version_option(__version__)
 def main(
         files: Tuple[str],
         # cfg
