@@ -4,7 +4,6 @@ from typing import Optional, List, TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import attr
-import matplotlib
 import numpy as np
 
 from corrscope.config import register_config
@@ -24,6 +23,8 @@ every time the app is restarted, leading to startup lag EVERY time.
 corrscope does not use fonts yet, so stub out the font manager.
 """
 sys.modules['matplotlib.font_manager'] = MagicMock()
+
+import matplotlib
 matplotlib.use('agg')
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
