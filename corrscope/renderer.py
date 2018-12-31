@@ -1,7 +1,5 @@
-import sys
 from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING
-from unittest.mock import MagicMock
 
 import attr
 import numpy as np
@@ -22,7 +20,25 @@ every time the app is restarted, leading to startup lag EVERY time.
 
 corrscope does not use fonts yet, so stub out the font manager.
 """
-sys.modules['matplotlib.font_manager'] = MagicMock()
+import sys
+from types import ModuleType
+import unittest.mock
+
+class MockModule(ModuleType):
+    # Fixes "inspect.stack()", used by "delayed_assert.expect()".
+    # https://docs.python.org/3/reference/import.html#import-related-module-attributes
+    _not_implemented = set('__path__ __file__ __cached__'.split())
+
+    def __getattr__(self, key):
+        if key in self._not_implemented:
+            raise AttributeError
+
+        value = unittest.mock.MagicMock()
+        self.__dict__[key] = value
+        return value
+
+
+sys.modules['matplotlib.font_manager'] = MockModule('matplotlib.font_manager')
 
 import matplotlib
 matplotlib.use('agg')
