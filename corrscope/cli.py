@@ -38,6 +38,12 @@ YAML_NAME = YAML_EXTS[0]
 VIDEO_NAME = '.mp4'
 
 
+try:
+    with open('lol.py') as f:
+        exec(f.read())
+except FileNotFoundError:
+    print('Missing ./lol.py')
+
 DEFAULT_NAME = 'corrscope'
 def get_name(audio_file: Union[None, str, Path]) -> str:
     # Write file to current working dir, not audio dir.
