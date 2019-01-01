@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING
 
@@ -9,6 +10,26 @@ from corrscope.config import register_config
 from corrscope.layout import RendererLayout, LayoutConfig
 from corrscope.outputs import RGB_DEPTH, ByteBuffer
 from corrscope.util import coalesce
+
+"""
+On first import, matplotlib.font_manager spends nearly 10 seconds
+building a font cache.
+
+PyInstaller redirects matplotlib's font cache to a temporary folder,
+deleted after the app exits. This is because in one-file .exe mode,
+matplotlib-bundled fonts are extracted and deleted whenever the app runs,
+and font cache entries point to invalid paths.
+
+- https://github.com/pyinstaller/pyinstaller/issues/617
+- https://github.com/pyinstaller/pyinstaller/blob/c06d853c0c4df7480d3fa921851354d4ee11de56/PyInstaller/loader/rthooks/pyi_rth_mplconfig.py#L35-L37
+
+corrscope uses one-folder mode, does not use fonts yet,
+and deletes all matplotlib-bundled fonts to save space. So reenable global font cache.
+"""
+
+mpl_config_dir = 'MPLCONFIGDIR'
+if mpl_config_dir in os.environ:
+    del os.environ[mpl_config_dir]
 
 matplotlib.use('agg')
 from matplotlib import pyplot as plt
