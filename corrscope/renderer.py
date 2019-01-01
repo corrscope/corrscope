@@ -31,7 +31,7 @@ mpl_config_dir = "MPLCONFIGDIR"
 if mpl_config_dir in os.environ:
     del os.environ[mpl_config_dir]
 
-matplotlib.use("agg")
+matplotlib.use("module://mplcairo.base")
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
