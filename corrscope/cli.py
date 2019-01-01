@@ -211,8 +211,6 @@ def main(
 
 
 def get_profile_dump_name(prefix: str) -> str:
-    # FIXME naming sucks
-
     now = datetime.datetime.now()
     now = now.strftime('%Y-%m-%d_T%H-%M-%S')
 
