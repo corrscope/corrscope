@@ -1,7 +1,6 @@
 import os
 from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING
-from io import BytesIO
 
 import matplotlib
 import numpy as np
@@ -227,10 +226,9 @@ class MatplotlibRenderer(Renderer):
         w = self.cfg.width
         h = self.cfg.height
         assert (w, h) == canvas.get_width_height()
-        buffer_rgb = BytesIO()
-        canvas.print_rgba(buffer_rgb)
 
-        buffer_rgb = buffer_rgb.getvalue()
+        buffer_rgb: np.ndarray = canvas.get_renderer()._get_buffer()
+        buffer_rgb = buffer_rgb.flatten('K')
         assert len(buffer_rgb) == w * h * RGB_DEPTH
 
         return buffer_rgb

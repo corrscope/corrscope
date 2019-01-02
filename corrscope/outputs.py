@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 ByteBuffer = Union[bytes, np.ndarray]
 RGB_DEPTH = 4
-PIXEL_FORMAT = 'bgr32'
+PIXEL_FORMAT = 'rgb32'
 
 FRAMES_TO_BUFFER = 2
 
