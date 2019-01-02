@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING
+from io import BytesIO
 
 import matplotlib
 import numpy as np
@@ -33,7 +34,7 @@ if mpl_config_dir in os.environ:
 
 matplotlib.use("module://mplcairo.base")
 from matplotlib import pyplot as plt
-from matplotlib.backends.backend_agg import FigureCanvasAgg
+from mplcairo.base import FigureCanvasCairo
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
@@ -218,16 +219,18 @@ class MatplotlibRenderer(Renderer):
 
         # Agg is the default noninteractive backend except on OSX.
         # https://matplotlib.org/faq/usage_faq.html
-        if not isinstance(canvas, FigureCanvasAgg):
+        if not isinstance(canvas, FigureCanvasCairo):
             raise RuntimeError(
-                f"oh shit, cannot read data from {type(canvas)} != FigureCanvasAgg"
+                f'oh shit, cannot read data from {type(canvas)} != FigureCanvasCairo'
             )
 
         w = self.cfg.width
         h = self.cfg.height
         assert (w, h) == canvas.get_width_height()
+        buffer_rgb = BytesIO()
+        canvas.print_rgba(buffer_rgb)
 
-        buffer_rgb = canvas.tostring_rgb()
+        buffer_rgb = buffer_rgb.getvalue()
         assert len(buffer_rgb) == w * h * RGB_DEPTH
 
         return buffer_rgb
