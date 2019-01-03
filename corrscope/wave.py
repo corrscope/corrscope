@@ -1,49 +1,119 @@
-from typing import Optional, Union
-
-import numpy as np
+import copy
+import enum
 import warnings
+from enum import auto
+from typing import Optional, Union, List
+
 import attr
+import numpy as np
+
 import corrscope.utils.scipy_wavfile as wavfile
-
 from corrscope.config import CorrError, CorrWarning
-
-
-@attr.dataclass
-class _WaveConfig:
-    """Internal class, not exposed via YAML"""
-
-    amplification: float = 1
 
 
 FLOAT = np.single
 
 
+@enum.unique
+class Flatten(enum.Flag):
+    """ How to flatten a stereo signal. (Channels beyond first 2 are ignored.)
+
+    Flatten(0) == Flatten.Stereo == Flatten['Stereo']
+    """
+
+    # Keep both channels.
+    Stereo = 0
+
+    # Mono
+    Mono = auto()  # NOT publicly exposed
+
+    # Take sum or difference.
+    Sum = auto()
+    Diff = auto()
+
+    # Divide by nchan=2.
+    IsAvg = auto()  # NOT publicly exposed
+    SumAvg = Sum | IsAvg
+    DiffAvg = Diff | IsAvg
+
+    modes: List["Flatten"]
+
+
+_rejected_modes = {Flatten.Mono, Flatten.IsAvg}
+Flatten.modes = [f for f in Flatten.__members__.values() if f not in _rejected_modes]
+
+
+@attr.dataclass(kw_only=True)
+class _WaveConfig:
+    """Internal class, not exposed via YAML"""
+
+    amplification: float = 1
+    _flatten: Flatten = Flatten.SumAvg
+
+
 class Wave:
-    __slots__ = (
-        "cfg smp_s data nsamp dtype is_stereo stereo_nchan center max_val".split()
-    )
+    __slots__ = """
+    wave_path
+    amplification
+    smp_s data flatten is_mono
+    nsamp dtype
+    center max_val
+    """.split()
+
+    smp_s: int
+    data: "np.ndarray"
+    """2-D array of shape (nsamp, nchan)"""
+
+    flatten: Flatten  # DO NOT SET DIRECTLY, except through set_flatten()
+    """
+    If data is stereo:
+    - flatten can be Stereo (2D) or Sum/Diff(Avg) (1D).
+
+    If data is mono:
+    - flatten can be Stereo (2D) or Mono (1D).
+    - If flatten != Stereo, set flatten = Mono.
+    """
+
+    def set_flatten(self, flatten: Flatten) -> None:
+        """ If self.is_mono, converts all non-Stereo modes to Mono. """
+        if flatten not in Flatten.modes:
+            raise CorrError(
+                f"Wave {self.wave_path} has invalid flatten mode {flatten} "
+                f"not in {Flatten.modes}"
+            )
+        self.flatten = flatten
+        if self.is_mono:
+            if self.flatten != Flatten.Stereo:
+                self.flatten = Flatten.Mono
+        else:
+            if self.flatten == Flatten.Mono:
+                raise CorrError(
+                    f"Cannot initialize stereo file {self.wave_path} with flatten=Mono"
+                )
 
     def __init__(self, cfg: Optional[_WaveConfig], wave_path: str):
-        self.cfg = cfg or _WaveConfig()
-        self.smp_s, self.data = wavfile.read(
-            wave_path, mmap=True
-        )  # type: int, np.ndarray
-        self.nsamp = len(self.data)
-        dtype = self.data.dtype
+        self.wave_path = wave_path
+        cfg = cfg or _WaveConfig()
+        self.amplification = cfg.amplification
+        self.smp_s, self.data = wavfile.read(wave_path, mmap=True)
 
-        # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
         assert self.data.ndim in [1, 2]
-        self.is_stereo = self.data.ndim == 2
+        self.is_mono = self.data.ndim == 1
+        self.set_flatten(cfg._flatten)
 
-        # stereo_nchan is a temporary local variable.
-        if self.is_stereo:
-            stereo_nchan = self.data.shape[1]
-            if stereo_nchan != 2:
-                warnings.warn(
-                    f"File {wave_path} has {stereo_nchan} channels, "
-                    f"only first 2 will be used",
-                    CorrWarning,
-                )
+        # Cast self.data to stereo (nsamp, nchan)
+        if self.is_mono:
+            self.data.shape = (-1, 1)
+
+        self.nsamp, stereo_nchan = self.data.shape
+        if stereo_nchan > 2:
+            warnings.warn(
+                f"File {wave_path} has {stereo_nchan} channels, "
+                f"only first 2 will be used",
+                CorrWarning,
+            )
+
+        dtype = self.data.dtype
 
         # Calculate scaling factor.
         def is_type(parent: type) -> bool:
@@ -69,23 +139,35 @@ class Wave:
         else:
             raise CorrError(f"unexpected wavfile dtype {dtype}")
 
-    def __getitem__(self, index: Union[int, slice]) -> "np.ndarray[FLOAT]":
+    def with_flatten(self, flatten: Flatten) -> "Wave":
+        new = copy.copy(self)
+        new.set_flatten(flatten)
+        return new
+
+    def __getitem__(self, index: Union[int, slice]) -> np.ndarray:
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         # subok=False converts data from memmap (slow) to ndarray (faster).
-        data = self.data[index].astype(FLOAT, subok=False, copy=True)
+        data: np.ndarray = self.data[index].astype(FLOAT, subok=False, copy=True)
 
         # Flatten stereo to mono.
-        # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
-        if self.is_stereo:
+        flatten = self.flatten
+        if flatten == Flatten.Mono:
+            data = data.reshape(-1)  # ndarray.flatten() creates copy, is slow.
+        elif flatten != Flatten.Stereo:
             # data.strides = (4,), so data == contiguous float32
-            data = data[..., 0] + data[..., 1]
-            data /= 2
+            if flatten & Flatten.Sum:
+                data = data[..., 0] + data[..., 1]
+            else:
+                data = data[..., 0] - data[..., 1]
+
+            if flatten & Flatten.IsAvg:
+                data /= 2
 
         data -= self.center
-        data *= self.cfg.amplification / self.max_val
+        data *= self.amplification / self.max_val
         return data
 
-    def _get(self, begin: int, end: int, subsampling: int) -> "np.ndarray[FLOAT]":
+    def _get(self, begin: int, end: int, subsampling: int) -> np.ndarray:
         """ Copies self.data[begin:end] with zero-padding. """
         if 0 <= begin and end <= self.nsamp:
             return self[begin:end:subsampling]
@@ -115,13 +197,13 @@ class Wave:
         out_end = out_begin + len(data)
         # len(data) == ceil((end_index - begin_index) / subsampling)
 
-        out = np.zeros(out_len, dtype=FLOAT)
+        out = np.zeros((out_len, *data.shape[1:]), dtype=FLOAT)
 
         out[out_begin:out_end] = data
 
         return out
 
-    def get_around(self, sample: int, return_nsamp: int, stride: int):
+    def get_around(self, sample: int, return_nsamp: int, stride: int) -> np.ndarray:
         """ Returns `return_nsamp` samples, centered around `sample`,
         sampled with spacing `stride`.
 
