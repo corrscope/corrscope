@@ -5,6 +5,7 @@ from numpy.testing import assert_allclose
 import pytest
 from delayed_assert import expect, assert_expectations
 
+from corrscope.utils.scipy_wavfile import WavFileWarning
 from corrscope.wave import Wave
 
 prefix = 'tests/wav-formats/'
@@ -106,3 +107,16 @@ def test_stereo_doesnt_overflow():
     expect(np.amax(np.abs(np.diff(data))) < 0.5)
 
     assert_expectations()
+
+
+def test_header_larger_than_filesize():
+    """According to Zeinok, VortexTracker 2.5 produces slightly corrupted WAV files
+    whose RIFF header metadata indicates a filesize larger than the actual filesize.
+
+    Most programs read the audio chunk fine.
+    Scipy normally rejects such files, raises ValueError("Unexpected end of file.")
+    My version instead accepts such files (but warns WavFileWarning).
+    """
+    with pytest.warns(WavFileWarning):
+        wave = Wave(None, 'tests/header larger than filesize.wav')
+        assert wave
