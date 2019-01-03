@@ -274,7 +274,9 @@ def read(filename, mmap=False):
             chunk_id = fid.read(4)
 
             if not chunk_id:
-                raise ValueError("Unexpected end of file.")
+                warnings.warn("Wave ends before header's indicated file size",
+                              WavFileWarning)
+                break
             elif len(chunk_id) < 4:
                 raise ValueError("Incomplete wav chunk.")
 
