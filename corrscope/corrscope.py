@@ -72,9 +72,6 @@ class Config:
     layout: LayoutConfig
     render: RendererConfig
 
-    player: outputs_.IOutputConfig = outputs_.FFplayOutputConfig()
-    encoder: outputs_.IOutputConfig = outputs_.FFmpegOutputConfig(None)
-
     show_internals: List[str] = attr.Factory(list)
     benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
 
