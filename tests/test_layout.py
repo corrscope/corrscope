@@ -18,14 +18,11 @@ def test_layout_config():
     default = LayoutConfig()
     assert default.ncols == 1  # Should default to single-column layout
     assert default.nrows is None
-    assert default.orientation == 'h'
+    assert default.orientation == "h"
 
 
-@pytest.mark.parametrize('lcfg', [
-    LayoutConfig(ncols=2),
-    LayoutConfig(nrows=8),
-])
-@pytest.mark.parametrize('region_type', [str, tuple, list])
+@pytest.mark.parametrize("lcfg", [LayoutConfig(ncols=2), LayoutConfig(nrows=8)])
+@pytest.mark.parametrize("region_type", [str, tuple, list])
 def test_hlayout(lcfg, region_type):
     nplots = 15
     layout = RendererLayout(lcfg, nplots)
@@ -43,11 +40,11 @@ def test_hlayout(lcfg, region_type):
     assert regions[m] == region_type((m // 2, m % 2))
 
 
-@pytest.mark.parametrize('lcfg', [
-    LayoutConfig(ncols=3, orientation='v'),
-    LayoutConfig(nrows=3, orientation='v'),
-])
-@pytest.mark.parametrize('region_type', [str, tuple, list])
+@pytest.mark.parametrize(
+    "lcfg",
+    [LayoutConfig(ncols=3, orientation="v"), LayoutConfig(nrows=3, orientation="v")],
+)
+@pytest.mark.parametrize("region_type", [str, tuple, list])
 def test_vlayout(lcfg, region_type):
     nplots = 7
     layout = RendererLayout(lcfg, nplots)

@@ -12,16 +12,16 @@ def ceildiv(n, d):
     return -(-n // d)
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def coalesce(*args: Optional[T]) -> T:
     if len(args) == 0:
-        raise TypeError('coalesce expected 1 argument, got 0')
+        raise TypeError("coalesce expected 1 argument, got 0")
     for arg in args:
         if arg is not None:
             return arg
-    raise TypeError('coalesce() called with all None')
+    raise TypeError("coalesce() called with all None")
 
 
 def obj_name(obj) -> str:
@@ -29,8 +29,11 @@ def obj_name(obj) -> str:
 
 
 # Adapted from https://github.com/numpy/numpy/issues/2269#issuecomment-14436725
-def find(a: 'np.ndarray[T]', predicate: 'Callable[[np.ndarray[T]], np.ndarray[bool]]',
-         chunk_size=1024) -> Iterator[Tuple[Tuple[int], T]]:
+def find(
+    a: "np.ndarray[T]",
+    predicate: "Callable[[np.ndarray[T]], np.ndarray[bool]]",
+    chunk_size=1024,
+) -> Iterator[Tuple[Tuple[int], T]]:
     """
     Find the indices of array elements that match the predicate.
 
@@ -76,7 +79,7 @@ def find(a: 'np.ndarray[T]', predicate: 'Callable[[np.ndarray[T]], np.ndarray[bo
 
     """
     if a.ndim != 1:
-        raise ValueError('The array must be 1D, not {}.'.format(a.ndim))
+        raise ValueError("The array must be 1D, not {}.".format(a.ndim))
 
     i0 = 0
     chunk_inds = chain(range(chunk_size, a.size, chunk_size), [None])
@@ -84,7 +87,7 @@ def find(a: 'np.ndarray[T]', predicate: 'Callable[[np.ndarray[T]], np.ndarray[bo
     for i1 in chunk_inds:
         chunk = a[i0:i1]
         for idx in predicate(chunk).nonzero()[0]:
-            yield (idx + i0, ), chunk[idx]
+            yield (idx + i0,), chunk[idx]
         i0 = i1
 
 

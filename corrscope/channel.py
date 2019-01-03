@@ -18,17 +18,19 @@ class ChannelConfig:
     wav_path: str
 
     # Supplying a dict inherits attributes from global trigger.
-    trigger: Union[ITriggerConfig, dict, None] = attr.Factory(dict)    # TODO test channel-specific triggers
+    trigger: Union[ITriggerConfig, dict, None] = attr.Factory(
+        dict
+    )  # TODO test channel-specific triggers
     # Multiplies how wide the window is, in milliseconds.
     trigger_width: Optional[int] = None
     render_width: Optional[int] = None
 
-    ampl_ratio: float = 1.0     # TODO use amplification = None instead?
+    ampl_ratio: float = 1.0  # TODO use amplification = None instead?
     line_color: Optional[str] = None
 
     # region Legacy Fields
-    trigger_width_ratio = Alias('trigger_width')
-    render_width_ratio = Alias('render_width')
+    trigger_width_ratio = Alias("trigger_width")
+    render_width_ratio = Alias("render_width")
     # endregion
 
 
@@ -42,7 +44,7 @@ class Channel:
     trigger_stride: int
     render_stride: int
 
-    def __init__(self, cfg: ChannelConfig, corr_cfg: 'Config'):
+    def __init__(self, cfg: ChannelConfig, corr_cfg: "Config"):
         self.cfg = cfg
 
         # Create a Wave object.
@@ -72,19 +74,21 @@ class Channel:
         # Create a Trigger object.
         if isinstance(cfg.trigger, ITriggerConfig):
             tcfg = cfg.trigger
-        elif isinstance(cfg.trigger, (CommentedMap, dict)):  # CommentedMap may/not be subclass of dict.
+        elif isinstance(
+            cfg.trigger, (CommentedMap, dict)
+        ):  # CommentedMap may/not be subclass of dict.
             tcfg = attr.evolve(corr_cfg.trigger, **cfg.trigger)
         elif cfg.trigger is None:
             tcfg = corr_cfg.trigger
         else:
             raise CorrError(
-                f'invalid per-channel trigger {cfg.trigger}, type={type(cfg.trigger)}, '
-                f'must be (*)TriggerConfig, dict, or None')
+                f"invalid per-channel trigger {cfg.trigger}, type={type(cfg.trigger)}, "
+                f"must be (*)TriggerConfig, dict, or None"
+            )
 
         self.trigger = tcfg(
             wave=self.wave,
             tsamp=trigger_samp,
             stride=self.trigger_stride,
-            fps=corr_cfg.fps
+            fps=corr_cfg.fps,
         )
-
