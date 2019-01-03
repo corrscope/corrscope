@@ -220,7 +220,7 @@ class MatplotlibRenderer(Renderer):
         # https://matplotlib.org/faq/usage_faq.html
         if not isinstance(canvas, FigureCanvasCairo):
             raise RuntimeError(
-                f'oh shit, cannot read data from {type(canvas)} != FigureCanvasCairo'
+                f"oh shit, cannot read data from {type(canvas)} != FigureCanvasCairo"
             )
 
         w = self.cfg.width
@@ -228,7 +228,7 @@ class MatplotlibRenderer(Renderer):
         assert (w, h) == canvas.get_width_height()
 
         buffer_rgb: np.ndarray = canvas.get_renderer()._get_buffer()
-        buffer_rgb = buffer_rgb.flatten('K')
+        buffer_rgb = buffer_rgb.flatten("K")
         assert len(buffer_rgb) == w * h * RGB_DEPTH
 
         return buffer_rgb
