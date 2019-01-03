@@ -30,3 +30,7 @@ corr = 'corrscope.cli:main'
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
+
+[tool.black]
+line-length = 88
+py36 = true

@@ -6,9 +6,9 @@ from corrscope.config import register_config, CorrError
 from corrscope.util import ceildiv
 
 
-@register_config(always_dump='orientation')
+@register_config(always_dump="orientation")
 class LayoutConfig:
-    orientation: str = 'h'
+    orientation: str = "h"
     nrows: Optional[int] = None
     ncols: Optional[int] = None
 
@@ -19,18 +19,18 @@ class LayoutConfig:
             self.ncols = None
 
         if self.nrows and self.ncols:
-            raise CorrError('cannot manually assign both nrows and ncols')
+            raise CorrError("cannot manually assign both nrows and ncols")
 
         if not self.nrows and not self.ncols:
             self.ncols = 1
 
 
-Region = TypeVar('Region')
-RegionFactory = Callable[[int, int], Region]   # f(row, column) -> Region
+Region = TypeVar("Region")
+RegionFactory = Callable[[int, int], Region]  # f(row, column) -> Region
 
 
 class RendererLayout:
-    VALID_ORIENTATIONS = ['h', 'v']
+    VALID_ORIENTATIONS = ["h", "v"]
 
     def __init__(self, cfg: LayoutConfig, nplots: int):
         self.cfg = cfg
@@ -41,8 +41,10 @@ class RendererLayout:
 
         self.orientation = cfg.orientation
         if self.orientation not in self.VALID_ORIENTATIONS:
-            raise CorrError(f'Invalid orientation {self.orientation} not in '
-                             f'{self.VALID_ORIENTATIONS}')
+            raise CorrError(
+                f"Invalid orientation {self.orientation} not in "
+                f"{self.VALID_ORIENTATIONS}"
+            )
 
     def _calc_layout(self):
         """
@@ -54,13 +56,15 @@ class RendererLayout:
         if cfg.nrows:
             nrows = cfg.nrows
             if nrows is None:
-                raise ValueError('impossible cfg: nrows is None and true')
+                raise ValueError("impossible cfg: nrows is None and true")
             ncols = ceildiv(self.nplots, nrows)
         else:
             ncols = cfg.ncols
             if ncols is None:
-                raise ValueError('invalid LayoutConfig: nrows,ncols is None '
-                                 '(__attrs_post_init__ not called?)')
+                raise ValueError(
+                    "invalid LayoutConfig: nrows,ncols is None "
+                    "(__attrs_post_init__ not called?)"
+                )
             nrows = ceildiv(self.nplots, ncols)
 
         return nrows, ncols
@@ -76,13 +80,15 @@ class RendererLayout:
         rows, cols = np.unravel_index(inds, (self.nrows, self.ncols))
 
         row_col = list(zip(rows, cols))
-        regions = np.empty(len(row_col), dtype=object)          # type: np.ndarray[Region]
+        regions = np.empty(len(row_col), dtype=object)  # type: np.ndarray[Region]
         regions[:] = [region_factory(*rc) for rc in row_col]
 
-        regions2d = regions.reshape((self.nrows, self.ncols))   # type: np.ndarray[Region]
+        regions2d = regions.reshape(
+            (self.nrows, self.ncols)
+        )  # type: np.ndarray[Region]
 
         # if column major:
-        if self.orientation == 'v':
+        if self.orientation == "v":
             regions2d = regions2d.T
 
-        return regions2d.flatten()[:self.nplots].tolist()
+        return regions2d.flatten()[: self.nplots].tolist()

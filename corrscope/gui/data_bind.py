@@ -14,7 +14,7 @@ from corrscope.util import obj_name, perr
 if TYPE_CHECKING:
     from corrscope.gui import MainWindow
 
-__all__ = ['PresentationModel', 'map_gui', 'behead', 'rgetattr', 'rsetattr']
+__all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr"]
 
 
 WidgetUpdater = Callable[[], None]
@@ -52,7 +52,7 @@ class PresentationModel:
         elif rhasattr(self.cfg, key):
             rsetattr(self.cfg, key, value)
         else:
-            raise AttributeError(f'cannot set attribute {key} on {obj_name(self)}()')
+            raise AttributeError(f"cannot set attribute {key} on {obj_name(self)}()")
 
     def set_cfg(self, cfg: Attrs):
         self.cfg = cfg
@@ -61,7 +61,7 @@ class PresentationModel:
 
 
 # TODO add tests for recursive operations
-def map_gui(view: 'MainWindow', model: PresentationModel):
+def map_gui(view: "MainWindow", model: PresentationModel):
     """
     Binding:
     - .ui <widget name="layout__nrows">
@@ -71,7 +71,9 @@ def map_gui(view: 'MainWindow', model: PresentationModel):
     Only <widget>s subclassing BoundWidget will be bound.
     """
 
-    widgets: List[BoundWidget] = view.findChildren(BoundWidget)  # dear pyqt, add generic mypy return types
+    widgets: List[BoundWidget] = view.findChildren(
+        BoundWidget
+    )  # dear pyqt, add generic mypy return types
     for widget in widgets:
         path = widget.objectName()
         widget.bind_widget(model, path)
@@ -79,6 +81,7 @@ def map_gui(view: 'MainWindow', model: PresentationModel):
 
 
 Signal = Any
+
 
 class BoundWidget(QWidget):
     default_palette: QPalette
@@ -129,11 +132,13 @@ class BoundWidget(QWidget):
         with qc.QSignalBlocker(self):
             self.set_gui(self.pmodel[self.path])
 
-    def set_gui(self, value): pass
+    def set_gui(self, value):
+        pass
 
     gui_changed: ClassVar[Signal]
 
-    def set_model(self, value): pass
+    def set_model(self, value):
+        pass
 
 
 def blend_colors(color1: QColor, color2: QColor, ratio: float, gamma=2):
@@ -146,7 +151,7 @@ def blend_colors(color1: QColor, color2: QColor, ratio: float, gamma=2):
     rgb_blend = []
 
     for ch1, ch2 in zip(rgb1, rgb2):
-        blend = lerp(ch1 ** gamma, ch2 ** gamma, ratio) ** (1/gamma)
+        blend = lerp(ch1 ** gamma, ch2 ** gamma, ratio) ** (1 / gamma)
         rgb_blend.append(blend)
 
     return QColor.fromRgbF(*rgb_blend, 1.0)
@@ -162,6 +167,7 @@ def model_setter(value_type: type) -> Callable:
             self.setPalette(self.error_palette)
         else:
             self.setPalette(self.default_palette)
+
     return set_model
 
 
@@ -172,20 +178,20 @@ def alias(name: str):
 class BoundLineEdit(qw.QLineEdit, BoundWidget):
     # PyQt complains when we assign unbound methods (`set_gui = qw.QLineEdit.setText`),
     # but not if we call them indirectly.
-    set_gui = alias('setText')
-    gui_changed = alias('textChanged')
+    set_gui = alias("setText")
+    gui_changed = alias("textChanged")
     set_model = model_setter(str)
 
 
 class BoundSpinBox(qw.QSpinBox, BoundWidget):
-    set_gui = alias('setValue')
-    gui_changed = alias('valueChanged')
+    set_gui = alias("setValue")
+    gui_changed = alias("valueChanged")
     set_model = model_setter(int)
 
 
 class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
-    set_gui = alias('setValue')
-    gui_changed = alias('valueChanged')
+    set_gui = alias("setValue")
+    gui_changed = alias("valueChanged")
     set_model = model_setter(float)
 
 
@@ -214,7 +220,7 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
         combo_index = self.symbol2idx[symbol]
         self.setCurrentIndex(combo_index)
 
-    gui_changed = alias('currentIndexChanged')
+    gui_changed = alias("currentIndexChanged")
 
     # pmodel.attr = combobox.index
     @pyqtSlot(int)
@@ -227,16 +233,16 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
 def try_behead(string: str, header: str) -> Optional[str]:
     if not string.startswith(header):
         return None
-    return string[len(header):]
+    return string[len(header) :]
 
 
 def behead(string: str, header: str) -> str:
     if not string.startswith(header):
-        raise ValueError(f'{string} does not start with {header}')
-    return string[len(header):]
+        raise ValueError(f"{string} does not start with {header}")
+    return string[len(header) :]
 
 
-DUNDER = '__'
+DUNDER = "__"
 
 # https://gist.github.com/wonderbeyond/d293e7a2af1de4873f2d757edd580288
 def rgetattr(obj, dunder_delim_path: str, *default):
@@ -246,6 +252,7 @@ def rgetattr(obj, dunder_delim_path: str, *default):
     :param default: Optional default value, at any point in the path
     :return: obj.attr1.attr2.etc
     """
+
     def _getattr(obj, attr):
         return getattr(obj, attr, *default)
 
@@ -259,6 +266,7 @@ def rhasattr(obj, dunder_delim_path: str):
         return True
     except AttributeError:
         return False
+
 
 # https://stackoverflow.com/a/31174427/2683842
 def rsetattr(obj, dunder_delim_path: str, val):

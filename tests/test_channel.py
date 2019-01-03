@@ -26,22 +26,31 @@ Maybe = Optional[int]
 @pytest.mark.filterwarnings("ignore::corrscope.config.CorrWarning")
 @given(
     # Channel
-    c_trigger_width=maybe, c_render_width=maybe,
-
+    c_trigger_width=maybe,
+    c_render_width=maybe,
     # Global
-    width_ms=maybe, trigger_ms=maybe, render_ms=maybe,
-    subsampling=positive, tsub=maybe, rsub=maybe,
-    g_trigger_width=positive, g_render_width=positive,
+    width_ms=maybe,
+    trigger_ms=maybe,
+    render_ms=maybe,
+    subsampling=positive,
+    tsub=maybe,
+    rsub=maybe,
+    g_trigger_width=positive,
+    g_render_width=positive,
 )
 def test_config_channel_width_stride(
     # Channel
-    c_trigger_width: Maybe, c_render_width: Maybe,
-
+    c_trigger_width: Maybe,
+    c_render_width: Maybe,
     # Global
-    width_ms: Maybe, trigger_ms: Maybe, render_ms: Maybe,
-    subsampling: Positive, tsub: Maybe, rsub: Maybe,
-    g_trigger_width: Positive, g_render_width: Positive,
-
+    width_ms: Maybe,
+    trigger_ms: Maybe,
+    render_ms: Maybe,
+    subsampling: Positive,
+    tsub: Maybe,
+    rsub: Maybe,
+    g_trigger_width: Positive,
+    g_render_width: Positive,
     mocker: MockFixture,
 ):
     """ (Tautologically) verify:
@@ -53,9 +62,9 @@ def test_config_channel_width_stride(
     """
 
     # region setup test variables
-    corrscope.corrscope.PRINT_TIMESTAMP = False    # Cleanup Hypothesis testing logs
+    corrscope.corrscope.PRINT_TIMESTAMP = False  # Cleanup Hypothesis testing logs
 
-    Wave = mocker.patch.object(corrscope.channel, 'Wave')
+    Wave = mocker.patch.object(corrscope.channel, "Wave")
     wave = Wave.return_value
 
     def get_around(sample: int, region_nsamp: int, stride: int):
@@ -66,27 +75,24 @@ def test_config_channel_width_stride(
     wave.smp_s = 48000
 
     ccfg = ChannelConfig(
-        'tests/sine440.wav',
-        trigger_width=c_trigger_width,
-        render_width=c_render_width,
+        "tests/sine440.wav", trigger_width=c_trigger_width, render_width=c_render_width
     )
+
     def get_cfg():
         return default_config(
             width_ms=width_ms,
             trigger_ms=trigger_ms,
             render_ms=render_ms,
-
             subsampling=subsampling,
             trigger_subsampling=tsub,
             render_subsampling=rsub,
-
             trigger_width=g_trigger_width,
             render_width=g_render_width,
-
             channels=[ccfg],
             trigger=NullTriggerConfig(),
-            benchmark_mode=BenchmarkMode.OUTPUT
+            benchmark_mode=BenchmarkMode.OUTPUT,
         )
+
     # endregion
 
     if not (width_ms or (trigger_ms and render_ms)):
@@ -107,8 +113,7 @@ def test_config_channel_width_stride(
 
     def ideal_samp(width_ms, sub):
         width_s = width_ms / 1000
-        return pytest.approx(
-            round(width_s * channel.wave.smp_s / sub), rel=1e-6)
+        return pytest.approx(round(width_s * channel.wave.smp_s / sub), rel=1e-6)
 
     ideal_tsamp = ideal_samp(cfg.trigger_ms, tsub)
     ideal_rsamp = ideal_samp(cfg.render_ms, rsub)
@@ -124,8 +129,8 @@ def test_config_channel_width_stride(
     assert trigger._stride == channel.trigger_stride
 
     ## Ensure corrscope calls render using channel.render_samp and render_stride.
-    corr = CorrScope(cfg, Arguments(cfg_dir='.', outputs=[]))
-    renderer = mocker.patch.object(CorrScope, '_load_renderer').return_value
+    corr = CorrScope(cfg, Arguments(cfg_dir=".", outputs=[]))
+    renderer = mocker.patch.object(CorrScope, "_load_renderer").return_value
     corr.play()
 
     # Only render (not NullTrigger) calls wave.get_around().

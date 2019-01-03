@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
 PRINT_TIMESTAMP = True
 
+
 @register_enum
 @unique
 class BenchmarkMode(IntEnum):
@@ -33,9 +34,10 @@ class BenchmarkMode(IntEnum):
     OUTPUT = 3
 
 
-@kw_config(always_dump='render_subfps begin_time end_time subsampling')
+@kw_config(always_dump="render_subfps begin_time end_time subsampling")
 class Config:
     """ Default values indicate optional attributes. """
+
     master_audio: Optional[str]
     begin_time: float = 0
     end_time: Optional[float] = None
@@ -54,8 +56,7 @@ class Config:
 
     render_subfps: int = 1
     # FFmpeg accepts FPS as a fraction only.
-    render_fps = property(lambda self:
-                          Fraction(self.fps, self.render_subfps))
+    render_fps = property(lambda self: Fraction(self.fps, self.render_subfps))
 
     # TODO: Remove cfg._width (breaks compat)
     # ISSUE: baking into trigger_ms will stack with channel-specific ms
@@ -87,8 +88,9 @@ class Config:
                 self.benchmark_mode = BenchmarkMode[self.benchmark_mode]
         except KeyError:
             raise CorrError(
-                f'invalid benchmark_mode mode {self.benchmark_mode} not in '
-                f'{[el.name for el in BenchmarkMode]}')
+                f"invalid benchmark_mode mode {self.benchmark_mode} not in "
+                f"{[el.name for el in BenchmarkMode]}"
+            )
 
         # Compute trigger_subsampling and render_subsampling.
         subsampling = self._subsampling
@@ -102,28 +104,30 @@ class Config:
             self.render_ms = coalesce(self.render_ms, width_ms)
         except TypeError:
             raise CorrError(
-                'Must supply either width_ms or both (trigger_ms and render_ms)')
+                "Must supply either width_ms or both (trigger_ms and render_ms)"
+            )
 
         deprecated = []
         if self.trigger_width != 1:
-            deprecated.append('trigger_width')
+            deprecated.append("trigger_width")
         if self.render_width != 1:
-            deprecated.append('render_width')
+            deprecated.append("render_width")
         if deprecated:
-            warnings.warn(f"Options {deprecated} are deprecated and will be removed",
-                          CorrWarning)
+            warnings.warn(
+                f"Options {deprecated} are deprecated and will be removed", CorrWarning
+            )
 
 
 _FPS = 60  # f_s
+
 
 def default_config(**kwargs) -> Config:
     """ Default template values do NOT indicate optional attributes. """
     cfg = Config(
         render_subfps=1,
-        master_audio='',
+        master_audio="",
         fps=_FPS,
         amplification=1,
-
         trigger_ms=40,
         render_ms=40,
         trigger_subsampling=1,
@@ -137,7 +141,6 @@ def default_config(**kwargs) -> Config:
             # post=LocalPostTriggerConfig(strength=0.1),
         ),
         channels=[],
-
         layout=LayoutConfig(ncols=2),
         render=RendererConfig(1280, 720),
     )
@@ -148,6 +151,7 @@ BeginFunc = Callable[[float, float], None]
 ProgressFunc = Callable[[int], None]
 IsAborted = Callable[[], bool]
 
+
 @attr.dataclass
 class Arguments:
     cfg_dir: str
@@ -157,6 +161,7 @@ class Arguments:
     progress: ProgressFunc = print
     is_aborted: IsAborted = lambda: False
     on_end: Callable[[], None] = lambda: None
+
 
 class CorrScope:
     def __init__(self, cfg: Config, arg: Arguments):
@@ -175,7 +180,7 @@ class CorrScope:
             self.output_cfgs = []
 
         if len(self.cfg.channels) == 0:
-            raise CorrError('Config.channels is empty')
+            raise CorrError("Config.channels is empty")
 
     waves: List[Wave]
     channels: List[Channel]
@@ -200,13 +205,14 @@ class CorrScope:
                 yield
 
     def _load_renderer(self):
-        renderer = MatplotlibRenderer(self.cfg.render, self.cfg.layout, self.nchan,
-                                      self.cfg.channels)
+        renderer = MatplotlibRenderer(
+            self.cfg.render, self.cfg.layout, self.nchan, self.cfg.channels
+        )
         return renderer
 
     def play(self):
         if self.has_played:
-            raise ValueError('Cannot call CorrScope.play() more than once')
+            raise ValueError("Cannot call CorrScope.play() more than once")
         self.has_played = True
 
         self._load_channels()
@@ -231,7 +237,7 @@ class CorrScope:
             from corrscope.outputs import FFplayOutputConfig
             import attr
 
-            no_audio = attr.evolve(self.cfg, master_audio='')
+            no_audio = attr.evolve(self.cfg, master_audio="")
 
             corr = self
 
@@ -245,11 +251,11 @@ class CorrScope:
                     self.output.write_frame(self.renderer.get_frame())
 
         extra_outputs.window = None
-        if 'window' in internals:
+        if "window" in internals:
             extra_outputs.window = RenderOutput()
 
         extra_outputs.buffer = None
-        if 'buffer' in internals:
+        if "buffer" in internals:
             extra_outputs.buffer = RenderOutput()
         # endregion
 
@@ -297,22 +303,29 @@ class CorrScope:
                     else:
                         trigger_sample = sample
                     if should_render:
-                        render_datas.append(wave.get_around(
-                            trigger_sample, channel.render_samp, channel.render_stride))
+                        render_datas.append(
+                            wave.get_around(
+                                trigger_sample,
+                                channel.render_samp,
+                                channel.render_stride,
+                            )
+                        )
 
                 if not should_render:
                     continue
 
                 # region Display buffers, for debugging purposes.
                 if extra_outputs.window:
-                    triggers: List['CorrelationTrigger'] = self.triggers
+                    triggers: List["CorrelationTrigger"] = self.triggers
                     extra_outputs.window.render_frame(
-                        [trigger._prev_window for trigger in triggers])
+                        [trigger._prev_window for trigger in triggers]
+                    )
 
                 if extra_outputs.buffer:
-                    triggers: List['CorrelationTrigger'] = self.triggers
+                    triggers: List["CorrelationTrigger"] = self.triggers
                     extra_outputs.buffer.render_frame(
-                        [trigger._buffer for trigger in triggers])
+                        [trigger._buffer for trigger in triggers]
+                    )
                 # endregion
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
@@ -339,6 +352,6 @@ class CorrScope:
             # noinspection PyUnboundLocalVariable
             dtime = time.perf_counter() - begin
             render_fps = (end_frame - begin_frame) / dtime
-            print(f'FPS = {render_fps}')
+            print(f"FPS = {render_fps}")
 
     raise_on_teardown: Optional[Exception] = None

@@ -18,15 +18,15 @@ if TYPE_CHECKING:
 
 # Abstract classes
 
+
 @attr.dataclass
 class ITriggerConfig:
-    cls: ClassVar[Type['Trigger']]
+    cls: ClassVar[Type["Trigger"]]
 
     # Optional trigger for postprocessing
-    post: Optional['ITriggerConfig'] = None
+    post: Optional["ITriggerConfig"] = None
 
-    def __call__(self, wave: 'Wave', tsamp: int, stride: int, fps: float) \
-            -> 'Trigger':
+    def __call__(self, wave: "Wave", tsamp: int, stride: int, fps: float) -> "Trigger":
         return self.cls(wave, cfg=self, tsamp=tsamp, stride=stride, fps=fps)
 
 
@@ -34,6 +34,7 @@ def register_trigger(config_t: Type[ITriggerConfig]):
     """ @register_trigger(FooTriggerConfig)
     def FooTrigger(): ...
     """
+
     def inner(trigger_t: Type[Trigger]):
         config_t.cls = trigger_t
         return trigger_t
@@ -43,10 +44,11 @@ def register_trigger(config_t: Type[ITriggerConfig]):
 
 class Trigger(ABC):
     POST_PROCESSING_NSAMP = 256
-    post: Optional['Trigger']
+    post: Optional["Trigger"]
 
-    def __init__(self, wave: 'Wave', cfg: ITriggerConfig, tsamp: int, stride: int,
-                 fps: float):
+    def __init__(
+        self, wave: "Wave", cfg: ITriggerConfig, tsamp: int, stride: int, fps: float
+    ):
         self.cfg = cfg
         self._wave = wave
 
@@ -73,7 +75,7 @@ class Trigger(ABC):
         return round(time * self._wave.smp_s / self._stride)
 
     @abstractmethod
-    def get_trigger(self, index: int, cache: 'PerFrameCache') -> int:
+    def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
         """
         :param index: sample index
         :param cache: Information shared across all stacked triggers,
@@ -102,6 +104,7 @@ class PerFrameCache:
 
 # CorrelationTrigger
 
+
 @kw_config
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
@@ -117,23 +120,23 @@ class CorrelationTriggerConfig(ITriggerConfig):
     buffer_falloff: float  # Gaussian std = wave_period * buffer_falloff
 
     # region Legacy Aliases
-    trigger_strength = Alias('edge_strength')
-    falloff_width = Alias('buffer_falloff')
+    trigger_strength = Alias("edge_strength")
+    falloff_width = Alias("buffer_falloff")
     use_edge_trigger: bool
     # endregion
 
     def __attrs_post_init__(self):
-        self._validate_param('lag_prevention', 0, 1)
-        self._validate_param('responsiveness', 0, 1)
+        self._validate_param("lag_prevention", 0, 1)
+        self._validate_param("responsiveness", 0, 1)
         # TODO trigger_falloff >= 0
-        self._validate_param('buffer_falloff', 0, np.inf)
+        self._validate_param("buffer_falloff", 0, np.inf)
 
         if self.use_edge_trigger:
             if self.post:
                 warnings.warn(
                     "Ignoring old `CorrelationTriggerConfig.use_edge_trigger` flag, "
                     "overriden by newer `post` flag.",
-                    CorrWarning
+                    CorrWarning,
                 )
             else:
                 self.post = ZeroCrossingTriggerConfig()
@@ -142,7 +145,8 @@ class CorrelationTriggerConfig(ITriggerConfig):
         value = getattr(self, key)
         if not begin <= value <= end:
             raise CorrError(
-                f'Invalid {key}={value} (should be within [{begin}, {end}])')
+                f"Invalid {key}={value} (should be within [{begin}, {end}])"
+            )
 
 
 @register_trigger(CorrelationTriggerConfig)
@@ -163,7 +167,9 @@ class CorrelationTrigger(Trigger):
 
         # (mutable) Correlated with data (for triggering).
         # Updated with tightly windowed old data at various pitches.
-        self._buffer = np.zeros(self._buffer_nsamp, dtype=FLOAT)    # type: np.ndarray[FLOAT]
+        self._buffer = np.zeros(
+            self._buffer_nsamp, dtype=FLOAT
+        )  # type: np.ndarray[FLOAT]
 
         # (const) Added to self._buffer. Nonzero if edge triggering is nonzero.
         # Left half is -edge_strength, right half is +edge_strength.
@@ -197,8 +203,9 @@ class CorrelationTrigger(Trigger):
 
         # Right-pad=1 taper to 1 frame long [t-1f, t]
         if width < tsamp_frame:
-            taper = np.pad(taper, (0, tsamp_frame - width), 'constant',
-                           constant_values=1)
+            taper = np.pad(
+                taper, (0, tsamp_frame - width), "constant", constant_values=1
+            )
         assert len(taper) == tsamp_frame
 
         # Left-pad=0 taper to left `halfN` of data_taper [t-halfN, t]
@@ -227,10 +234,11 @@ class CorrelationTrigger(Trigger):
         step[halfN:] = edge_strength / 2
         step *= windows.gaussian(N, std=halfN / 3)
         return step
+
     # end setup
 
     # begin per-frame
-    def get_trigger(self, index: int, cache: 'PerFrameCache') -> int:
+    def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
         N = self._buffer_nsamp
 
         # Get data
@@ -272,10 +280,10 @@ class CorrelationTrigger(Trigger):
         - trigger = offset - peak_offset
         """
         corr = signal.correlate(data, prev_buffer)
-        assert len(corr) == 2*N - 1
+        assert len(corr) == 2 * N - 1
 
         # Find optimal offset (within trigger_diameter, default=±N/4)
-        mid = N-1
+        mid = N - 1
         radius = round(N * self.cfg.trigger_diameter / 2)
 
         left = mid - radius
@@ -286,7 +294,7 @@ class CorrelationTrigger(Trigger):
 
         # argmax(corr) == mid + peak_offset == (data >> peak_offset)
         # peak_offset == argmax(corr) - mid
-        peak_offset = np.argmax(corr) - mid   # type: int
+        peak_offset = np.argmax(corr) - mid  # type: int
         trigger = index + (stride * peak_offset)
 
         # Apply post trigger (before updating correlation buffer)
@@ -309,7 +317,7 @@ class CorrelationTrigger(Trigger):
         elif prev * period == 0:
             return prev != period
         else:
-            semitones = abs(np.log(period/prev) / np.log(2) * 12)
+            semitones = abs(np.log(period / prev) / np.log(2) * 12)
 
             # If semitones == recalc_semitones == 0, do NOT recalc.
             if semitones <= self.cfg.recalc_semitones:
@@ -330,14 +338,15 @@ class CorrelationTrigger(Trigger):
 
         N = len(data)
         if N != self._buffer_nsamp:
-            raise ValueError(f'invalid data length {len(data)} does not match '
-                             f'CorrelationTrigger {self._buffer_nsamp}')
+            raise ValueError(
+                f"invalid data length {len(data)} does not match "
+                f"CorrelationTrigger {self._buffer_nsamp}"
+            )
 
         # New waveform
         data -= cache.mean
         normalize_buffer(data)
-        window = windows.gaussian(N, std =
-            (cache.period / self._stride) * buffer_falloff)
+        window = windows.gaussian(N, std=(cache.period / self._stride) * buffer_falloff)
         data *= window
 
         # Old buffer
@@ -346,6 +355,7 @@ class CorrelationTrigger(Trigger):
 
 
 # get_trigger()
+
 
 def calc_step(nsamp: int, peak: float, stdev: float):
     """ Step function used for approximate edge triggering.
@@ -366,7 +376,7 @@ def get_period(data: np.ndarray) -> int:
     Loosely inspired by https://github.com/endolith/waveform_analysis
     """
     corr = signal.correlate(data, data)
-    corr = corr[len(corr) // 2:]
+    corr = corr[len(corr) // 2 :]
 
     # Remove the zero-correlation peak
     zero_crossings = np.where(corr < 0)[0]
@@ -394,6 +404,7 @@ def cosine_flat(n: int, diameter: int, falloff: int):
 
 MIN_AMPLITUDE = 0.01
 
+
 def normalize_buffer(data: np.ndarray) -> None:
     """
     Rescales `data` in-place.
@@ -408,29 +419,34 @@ def lerp(x: np.ndarray, y: np.ndarray, a: float):
 
 #### Post-processing triggers
 
+
 class PostTrigger(Trigger, ABC):
     """ A post-processing trigger should have stride=1,
      and no more post triggers. This is subject to change. """
+
     def __init__(self, *args, **kwargs):
         Trigger.__init__(self, *args, **kwargs)
 
         if self._stride != 1:
             raise CorrError(
-                f'{obj_name(self)} with stride != 1 is not allowed '
-                f'(supplied {self._stride})')
+                f"{obj_name(self)} with stride != 1 is not allowed "
+                f"(supplied {self._stride})"
+            )
 
         if self.post:
             raise CorrError(
-                f'Passing {obj_name(self)} a post_trigger is not allowed '
-                f'({obj_name(self.post)})'
+                f"Passing {obj_name(self)} a post_trigger is not allowed "
+                f"({obj_name(self.post)})"
             )
 
 
 # Local edge-finding trigger
 
-@kw_config(always_dump='strength')
+
+@kw_config(always_dump="strength")
 class LocalPostTriggerConfig(ITriggerConfig):
     strength: float  # Coefficient
+
 
 @register_trigger(LocalPostTriggerConfig)
 class LocalPostTrigger(PostTrigger):
@@ -444,14 +460,14 @@ class LocalPostTrigger(PostTrigger):
         self._data_window = windows.hann(self._buffer_nsamp).astype(FLOAT)
 
         # Precompute edge correlation buffer
-        self._windowed_step = calc_step(self._tsamp, self.cfg.strength, 1/3)
+        self._windowed_step = calc_step(self._tsamp, self.cfg.strength, 1 / 3)
 
         # Precompute normalized _cost_norm function
         N = self._buffer_nsamp
-        corr_len = 2*N - 1
+        corr_len = 2 * N - 1
         self._cost_norm = (np.arange(corr_len, dtype=FLOAT) - N) ** 2
 
-    def get_trigger(self, index: int, cache: 'PerFrameCache') -> int:
+    def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
         N = self._buffer_nsamp
 
         # Get data
@@ -464,12 +480,13 @@ class LocalPostTrigger(PostTrigger):
         if cache.period is None:
             raise CorrError(
                 "Missing 'cache.period', try stacking CorrelationTrigger "
-                "before LocalPostTrigger")
+                "before LocalPostTrigger"
+            )
 
         # To avoid sign errors, see comment in CorrelationTrigger.get_trigger().
         corr = signal.correlate(data, self._windowed_step)
-        assert len(corr) == 2*N - 1
-        mid = N-1
+        assert len(corr) == 2 * N - 1
+        mid = N - 1
 
         # If we're near a falling edge, don't try to make drastic changes.
         if corr[mid] < 0:
@@ -486,7 +503,7 @@ class LocalPostTrigger(PostTrigger):
         corr -= cost
 
         # Find optimal offset (within ±N/4)
-        mid = N-1
+        mid = N - 1
         radius = round(N / 4)
 
         left = mid - radius
@@ -495,15 +512,18 @@ class LocalPostTrigger(PostTrigger):
         corr = corr[left:right]
         mid = mid - left
 
-        peak_offset = np.argmax(corr) - mid   # type: int
+        peak_offset = np.argmax(corr) - mid  # type: int
         trigger = index + (self._stride * peak_offset)
 
         return trigger
 
+
 def seq_along(a: np.ndarray):
     return np.arange(len(a))
 
+
 # ZeroCrossingTrigger
+
 
 @kw_config
 class ZeroCrossingTriggerConfig(ITriggerConfig):
@@ -515,7 +535,7 @@ class ZeroCrossingTrigger(PostTrigger):
     # ZeroCrossingTrigger is only used as a postprocessing trigger.
     # stride is only passed 1, for improved precision.
 
-    def get_trigger(self, index: int, cache: 'PerFrameCache'):
+    def get_trigger(self, index: int, cache: "PerFrameCache"):
         # 'cache' is unused.
         tsamp = self._tsamp
 
@@ -530,7 +550,7 @@ class ZeroCrossingTrigger(PostTrigger):
             direction = -1
             test = lambda a: a <= 0
 
-        else:   # self._wave[sample] == 0
+        else:  # self._wave[sample] == 0
             return index + 1
 
         data = self._wave[index : index + (direction * tsamp) : direction]
@@ -539,7 +559,7 @@ class ZeroCrossingTrigger(PostTrigger):
             (delta,), value = next(intercepts)
             return index + (delta * direction) + int(value <= 0)
 
-        except StopIteration:   # No zero-intercepts
+        except StopIteration:  # No zero-intercepts
             return index
 
         # noinspection PyUnreachableCode
@@ -559,6 +579,7 @@ class ZeroCrossingTrigger(PostTrigger):
 
 # NullTrigger
 
+
 @kw_config
 class NullTriggerConfig(ITriggerConfig):
     pass
@@ -566,5 +587,5 @@ class NullTriggerConfig(ITriggerConfig):
 
 @register_trigger(NullTriggerConfig)
 class NullTrigger(Trigger):
-    def get_trigger(self, index: int, cache: 'PerFrameCache') -> int:
+    def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
         return index
