@@ -1,21 +1,69 @@
+import enum
+import warnings
+from enum import auto
 from typing import Optional, Union
 
-import numpy as np
-import warnings
 import attr
-import corrscope.utils.scipy_wavfile as wavfile
+import numpy as np
 
+import corrscope.utils.scipy_wavfile as wavfile
 from corrscope.config import CorrError, CorrWarning
 
 
-@attr.dataclass
+FLOAT = np.single
+
+
+@enum.unique
+class Flatten(enum.Flag):
+    """ How to flatten a stereo signal. (Channels beyond first 2 are ignored.)
+
+    Flatten(0) == Flatten.Stereo == Flatten['Stereo']
+    """
+
+    # Keep both channels.
+    Stereo = 0
+
+    # Take sum or difference.
+    Sum = auto()
+    Diff = auto()
+
+    # Divide by nchan=2.
+    IsAvg = auto()
+    SumAvg = Sum | IsAvg
+    DiffAvg = Diff | IsAvg
+
+    def __str__(self):
+        try:
+            return flat2str[self]
+        except KeyError:
+            return repr(self)
+
+
+str2flat = {
+    "=": Flatten.Stereo,
+    "+": Flatten.Sum,
+    "+/": Flatten.SumAvg,
+    "-": Flatten.Diff,
+    "-/": Flatten.DiffAvg,
+}
+flat2str = {flat: str_ for str_, flat in str2flat.items()}
+
+
+def make_flatten(obj: Union[str, Flatten]):
+    if isinstance(obj, Flatten):
+        return obj
+    try:
+        return str2flat[obj]
+    except KeyError:
+        raise CorrError(f"invalid Flatten mode {obj} not in {list(str2flat.keys())}")
+
+
+@attr.dataclass(kw_only=True)
 class _WaveConfig:
     """Internal class, not exposed via YAML"""
 
     amplification: float = 1
-
-
-FLOAT = np.single
+    flatten: Flatten = Flatten.SumAvg
 
 
 class Wave:
@@ -23,27 +71,31 @@ class Wave:
         "cfg smp_s data nsamp dtype is_stereo stereo_nchan center max_val".split()
     )
 
+    smp_s: int
+    data: "np.ndarray"
+    """2-D array of shape (nsamp, nchan)"""
+
     def __init__(self, cfg: Optional[_WaveConfig], wave_path: str):
         self.cfg = cfg or _WaveConfig()
         self.smp_s, self.data = wavfile.read(
             wave_path, mmap=True
         )  # type: int, np.ndarray
-        self.nsamp = len(self.data)
-        dtype = self.data.dtype
 
-        # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
+        # self.is_stereo = self.data.ndim == 2
+
+        # Cast self.data to stereo (nsamp, nchan)
         assert self.data.ndim in [1, 2]
-        self.is_stereo = self.data.ndim == 2
+        if self.data.ndim == 1:
+            self.data.shape = (-1, 1)
+        self.nsamp, stereo_nchan = self.data.shape
+        if stereo_nchan > 2:
+            warnings.warn(
+                f"File {wave_path} has {stereo_nchan} channels, "
+                f"only first 2 will be used",
+                CorrWarning,
+            )
 
-        # stereo_nchan is a temporary local variable.
-        if self.is_stereo:
-            stereo_nchan = self.data.shape[1]
-            if stereo_nchan != 2:
-                warnings.warn(
-                    f"File {wave_path} has {stereo_nchan} channels, "
-                    f"only first 2 will be used",
-                    CorrWarning,
-                )
+        dtype = self.data.dtype
 
         # Calculate scaling factor.
         def is_type(parent: type) -> bool:
@@ -75,11 +127,16 @@ class Wave:
         data = self.data[index].astype(FLOAT, subok=False, copy=True)
 
         # Flatten stereo to mono.
-        # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
-        if self.is_stereo:
+        flatten = self.cfg.flatten
+        if flatten:
             # data.strides = (4,), so data == contiguous float32
-            data = data[..., 0] + data[..., 1]
-            data /= 2
+            if flatten & Flatten.Sum:
+                data = data[..., 0] + data[..., 1]
+            else:
+                data = data[..., 0] - data[..., 1]
+
+            if flatten & Flatten.IsAvg:
+                data /= 2
 
         data -= self.center
         data *= self.cfg.amplification / self.max_val
@@ -115,7 +172,7 @@ class Wave:
         out_end = out_begin + len(data)
         # len(data) == ceil((end_index - begin_index) / subsampling)
 
-        out = np.zeros(out_len, dtype=FLOAT)
+        out = np.zeros((out_len, *data.shape[1:]), dtype=FLOAT)
 
         out[out_begin:out_end] = data
 
