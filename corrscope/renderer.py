@@ -27,11 +27,11 @@ corrscope uses one-folder mode, does not use fonts yet,
 and deletes all matplotlib-bundled fonts to save space. So reenable global font cache.
 """
 
-mpl_config_dir = 'MPLCONFIGDIR'
+mpl_config_dir = "MPLCONFIGDIR"
 if mpl_config_dir in os.environ:
     del os.environ[mpl_config_dir]
 
-matplotlib.use('agg')
+matplotlib.use("agg")
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
@@ -49,16 +49,16 @@ def default_color():
     # colors **= 1/3
     #
     # return matplotlib.colors.to_hex(colors, keep_alpha=False)
-    return '#8edeff'
+    return "#8edeff"
 
 
-@register_config(always_dump='line_width bg_color init_line_color')
+@register_config(always_dump="line_width bg_color init_line_color")
 class RendererConfig:
     width: int
     height: int
     line_width: Optional[float] = 1.5
 
-    bg_color: str = '#000000'
+    bg_color: str = "#000000"
     init_line_color: str = default_color()
 
     create_window: bool = False
@@ -71,8 +71,13 @@ class LineParam:
 
 # TODO rename to Plotter
 class Renderer(ABC):
-    def __init__(self, cfg: RendererConfig, lcfg: 'LayoutConfig', nplots: int,
-                 channel_cfgs: Optional[List['ChannelConfig']]):
+    def __init__(
+        self,
+        cfg: RendererConfig,
+        lcfg: "LayoutConfig",
+        nplots: int,
+        channel_cfgs: Optional[List["ChannelConfig"]],
+    ):
         self.cfg = cfg
         self.nplots = nplots
         self.layout = RendererLayout(lcfg, nplots)
@@ -87,15 +92,18 @@ class Renderer(ABC):
         else:
             line_colors = [None] * self.nplots
 
-        self._line_params = [LineParam(
-            color=coalesce(color, cfg.init_line_color)
-        ) for color in line_colors]
+        self._line_params = [
+            LineParam(color=coalesce(color, cfg.init_line_color))
+            for color in line_colors
+        ]
 
     @abstractmethod
-    def render_frame(self, datas: List[np.ndarray]) -> None: ...
+    def render_frame(self, datas: List[np.ndarray]) -> None:
+        ...
 
     @abstractmethod
-    def get_frame(self) -> ByteBuffer: ...
+    def get_frame(self) -> ByteBuffer:
+        ...
 
 
 class MatplotlibRenderer(Renderer):
@@ -125,11 +133,11 @@ class MatplotlibRenderer(Renderer):
         Renderer.__init__(self, *args, **kwargs)
 
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
-        self._fig: 'Figure'
-        self._axes: List['Axes']                      # set by set_layout()
-        self._lines: Optional[List['Line2D']] = None  # set by render_frame() first call
+        self._fig: "Figure"
+        self._axes: List["Axes"]  # set by set_layout()
+        self._lines: Optional[List["Line2D"]] = None  # set by render_frame() first call
 
-        self._set_layout()   # mutates self
+        self._set_layout()  # mutates self
 
     def _set_layout(self) -> None:
         """
@@ -142,16 +150,17 @@ class MatplotlibRenderer(Renderer):
 
         # Create Axes
         # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplots.html
-        if hasattr(self, '_fig'):
+        if hasattr(self, "_fig"):
             raise Exception("I don't currently expect to call _set_layout() twice")
             # plt.close(self.fig)
 
-        axes2d: np.ndarray['Axes']
+        axes2d: np.ndarray["Axes"]
         self._fig, axes2d = plt.subplots(
-            self.layout.nrows, self.layout.ncols,
+            self.layout.nrows,
+            self.layout.ncols,
             squeeze=False,
             # Remove gaps between Axes
-            gridspec_kw=dict(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
+            gridspec_kw=dict(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0),
         )
 
         # remove Axis from Axes
@@ -163,10 +172,7 @@ class MatplotlibRenderer(Renderer):
 
         # Setup figure geometry
         self._fig.set_dpi(self.DPI)
-        self._fig.set_size_inches(
-            self.cfg.width / self.DPI,
-            self.cfg.height / self.DPI
-        )
+        self._fig.set_size_inches(self.cfg.width / self.DPI, self.cfg.height / self.DPI)
         if self.cfg.create_window:
             plt.show(block=False)
 
@@ -174,7 +180,8 @@ class MatplotlibRenderer(Renderer):
         ndata = len(datas)
         if self.nplots != ndata:
             raise ValueError(
-                f'incorrect data to plot: {self.nplots} plots but {ndata} datas')
+                f"incorrect data to plot: {self.nplots} plots but {ndata} datas"
+            )
 
         # Initialize axes and draw waveform data
         if self._lines is None:
@@ -213,7 +220,8 @@ class MatplotlibRenderer(Renderer):
         # https://matplotlib.org/faq/usage_faq.html
         if not isinstance(canvas, FigureCanvasAgg):
             raise RuntimeError(
-                f'oh shit, cannot read data from {type(canvas)} != FigureCanvasAgg')
+                f"oh shit, cannot read data from {type(canvas)} != FigureCanvasAgg"
+            )
 
         w = self.cfg.width
         h = self.cfg.height
@@ -223,4 +231,3 @@ class MatplotlibRenderer(Renderer):
         assert len(buffer_rgb) == w * h * RGB_DEPTH
 
         return buffer_rgb
-

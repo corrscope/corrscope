@@ -21,7 +21,7 @@ def test_leftpad():
     assert_equal(lp[:-before], 0)
 
 
-@pytest.mark.parametrize('before', [10, 11])
+@pytest.mark.parametrize("before", [10, 11])
 def test_midpad(before):
     # Midpad should work for both odd and even arrays.
     data = np.arange(before)

@@ -14,15 +14,15 @@ if TYPE_CHECKING:
 
 ByteBuffer = Union[bytes, np.ndarray]
 RGB_DEPTH = 3
-PIXEL_FORMAT = 'rgb24'
+PIXEL_FORMAT = "rgb24"
 
 FRAMES_TO_BUFFER = 2
 
 
 class IOutputConfig:
-    cls: 'Type[Output]'
+    cls: "Type[Output]"
 
-    def __call__(self, corr_cfg: 'Config'):
+    def __call__(self, corr_cfg: "Config"):
         return self.cls(corr_cfg, cfg=self)
 
 
@@ -34,7 +34,7 @@ Stop = _Stop()
 
 
 class Output(ABC):
-    def __init__(self, corr_cfg: 'Config', cfg: IOutputConfig):
+    def __init__(self, corr_cfg: "Config", cfg: IOutputConfig):
         self.corr_cfg = corr_cfg
         self.cfg = cfg
 
@@ -56,7 +56,9 @@ class Output(ABC):
     def terminate(self):
         pass
 
+
 # Glue logic
+
 
 def register_output(config_t: Type[IOutputConfig]):
     def inner(output_t: Type[Output]):
@@ -68,8 +70,9 @@ def register_output(config_t: Type[IOutputConfig]):
 
 # FFmpeg command line generation
 
+
 class _FFmpegProcess:
-    def __init__(self, templates: List[str], corr_cfg: 'Config'):
+    def __init__(self, templates: List[str], corr_cfg: "Config"):
         self.templates = templates
         self.corr_cfg = corr_cfg
 
@@ -77,49 +80,53 @@ class _FFmpegProcess:
         if corr_cfg.master_audio:
             # Load master audio and trim to timestamps.
 
-            self.templates.append(f'-ss {corr_cfg.begin_time}')
+            self.templates.append(f"-ss {corr_cfg.begin_time}")
 
             audio_path = shlex.quote(abspath(corr_cfg.master_audio))
-            self.templates += ffmpeg_input_audio(audio_path)    # audio
+            self.templates += ffmpeg_input_audio(audio_path)  # audio
 
             if corr_cfg.end_time is not None:
                 dur = corr_cfg.end_time - corr_cfg.begin_time
-                self.templates.append(f'-to {dur}')
+                self.templates.append(f"-to {dur}")
 
-    def add_output(self, cfg: 'Union[FFmpegOutputConfig, FFplayOutputConfig]') -> None:
+    def add_output(self, cfg: "Union[FFmpegOutputConfig, FFplayOutputConfig]") -> None:
         self.templates.append(cfg.video_template)  # video
         if self.corr_cfg.master_audio:
             self.templates.append(cfg.audio_template)  # audio
 
     def popen(self, extra_args, bufsize, **kwargs) -> subprocess.Popen:
-        return subprocess.Popen(self._generate_args() + extra_args,
-                                stdin=subprocess.PIPE, bufsize=bufsize, **kwargs)
+        return subprocess.Popen(
+            self._generate_args() + extra_args,
+            stdin=subprocess.PIPE,
+            bufsize=bufsize,
+            **kwargs,
+        )
 
     def _generate_args(self) -> List[str]:
-        return [arg
-                for template in self.templates
-                for arg in shlex.split(template)]
+        return [arg for template in self.templates for arg in shlex.split(template)]
 
 
-def ffmpeg_input_video(cfg: 'Config') -> List[str]:
+def ffmpeg_input_video(cfg: "Config") -> List[str]:
     fps = cfg.render_fps
     width = cfg.render.width
     height = cfg.render.height
 
-    return [f'-f rawvideo -pixel_format {PIXEL_FORMAT} -video_size {width}x{height}',
-            f'-framerate {fps}',
-            '-i -']
+    return [
+        f"-f rawvideo -pixel_format {PIXEL_FORMAT} -video_size {width}x{height}",
+        f"-framerate {fps}",
+        "-i -",
+    ]
 
 
 def ffmpeg_input_audio(audio_path: str) -> List[str]:
-    return ['-i', audio_path]
+    return ["-i", audio_path]
 
 
 class PipeOutput(Output):
     def open(self, *pipeline: subprocess.Popen):
         """ Called by __init__ with a Popen pipeline to ffmpeg/ffplay. """
         if len(pipeline) == 0:
-            raise TypeError('must provide at least one Popen argument to popens')
+            raise TypeError("must provide at least one Popen argument to popens")
 
         self._pipeline = pipeline
         self._stream = pipeline[0].stdin
@@ -148,7 +155,7 @@ class PipeOutput(Output):
         retval = 0
         for popen in self._pipeline:
             retval |= popen.wait()
-        return retval   # final value
+        return retval  # final value
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
@@ -179,29 +186,31 @@ class PipeOutput(Output):
 
 # FFmpegOutput
 
+
 @register_config
 class FFmpegOutputConfig(IOutputConfig):
     # path=None writes to stdout.
     path: Optional[str]
-    args: str = ''
+    args: str = ""
 
-    video_template: str = '-c:v libx264 -crf 18 -preset superfast -movflags faststart'
-    audio_template: str = '-c:a aac -b:a 384k'
+    video_template: str = "-c:v libx264 -crf 18 -preset superfast -movflags faststart"
+    audio_template: str = "-c:a aac -b:a 384k"
 
 
-FFMPEG = 'ffmpeg'
+FFMPEG = "ffmpeg"
+
 
 @register_output(FFmpegOutputConfig)
 class FFmpegOutput(PipeOutput):
-    def __init__(self, corr_cfg: 'Config', cfg: FFmpegOutputConfig):
+    def __init__(self, corr_cfg: "Config", cfg: FFmpegOutputConfig):
         super().__init__(corr_cfg, cfg)
 
-        ffmpeg = _FFmpegProcess([FFMPEG, '-y'], corr_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG, "-y"], corr_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append(cfg.args)
 
         if cfg.path is None:
-            video_path = '-'    # Write to stdout
+            video_path = "-"  # Write to stdout
         else:
             video_path = abspath(cfg.path)
 
@@ -210,26 +219,28 @@ class FFmpegOutput(PipeOutput):
 
 # FFplayOutput
 
+
 @register_config
 class FFplayOutputConfig(IOutputConfig):
-    video_template: str = '-c:v copy'
-    audio_template: str = '-c:a copy'
+    video_template: str = "-c:v copy"
+    audio_template: str = "-c:a copy"
 
 
-FFPLAY = 'ffplay'
+FFPLAY = "ffplay"
+
 
 @register_output(FFplayOutputConfig)
 class FFplayOutput(PipeOutput):
-    def __init__(self, corr_cfg: 'Config', cfg: FFplayOutputConfig):
+    def __init__(self, corr_cfg: "Config", cfg: FFplayOutputConfig):
         super().__init__(corr_cfg, cfg)
 
-        ffmpeg = _FFmpegProcess([FFMPEG, '-nostats'], corr_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG, "-nostats"], corr_cfg)
         ffmpeg.add_output(cfg)
-        ffmpeg.templates.append('-f nut')
+        ffmpeg.templates.append("-f nut")
 
-        p1 = ffmpeg.popen(['-'], self.bufsize, stdout=subprocess.PIPE)
+        p1 = ffmpeg.popen(["-"], self.bufsize, stdout=subprocess.PIPE)
 
-        ffplay = shlex.split('ffplay -autoexit -')
+        ffplay = shlex.split("ffplay -autoexit -")
         p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
 
         p1.stdout.close()

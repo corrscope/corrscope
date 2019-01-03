@@ -14,13 +14,12 @@ def color2hex(color):
     try:
         return matplotlib.colors.to_hex(color, keep_alpha=False)
     except ValueError:
-        raise CorrError(f'invalid color {color}')
+        raise CorrError(f"invalid color {color}")
     except Exception as e:
-        raise CorrError(
-            f'doubly invalid color {color}, raises {e} (report bug!)')
+        raise CorrError(f"doubly invalid color {color}, raises {e} (report bug!)")
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class Locked(Generic[T]):
@@ -55,19 +54,22 @@ class Locked(Generic[T]):
 
 
 def get_save_with_ext(
-        parent: QWidget, caption: str, dir_or_file: str,
-        filters: List[str], default_suffix: str
+    parent: QWidget,
+    caption: str,
+    dir_or_file: str,
+    filters: List[str],
+    default_suffix: str,
 ) -> Optional[Path]:
     """ On KDE, getSaveFileName does not append extension. This is a workaround. """
     name, sel_filter = QFileDialog.getSaveFileName(
-        parent, caption, dir_or_file, ';;'.join(filters)
+        parent, caption, dir_or_file, ";;".join(filters)
     )
 
-    if name == '':
+    if name == "":
         return None
 
     path = Path(name)
-    if sel_filter == filters[0] and path.suffix == '':
+    if sel_filter == filters[0] and path.suffix == "":
         path = path.with_suffix(default_suffix)
     return path
 

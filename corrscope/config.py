@@ -9,12 +9,21 @@ if TYPE_CHECKING:
     from enum import Enum
 
 
-__all__ = ['yaml', 'copy_config',
-           'register_config', 'kw_config', 'Alias', 'Ignored', 'register_enum',
-           'CorrError', 'CorrWarning']
+__all__ = [
+    "yaml",
+    "copy_config",
+    "register_config",
+    "kw_config",
+    "Alias",
+    "Ignored",
+    "register_enum",
+    "CorrError",
+    "CorrWarning",
+]
 
 
 # Setup YAML loading (yaml object).
+
 
 class MyYAML(YAML):
     def dump(self, data, stream=None, **kw):
@@ -49,7 +58,7 @@ According to https://stackoverflow.com/questions/1410615/ ,
 pickle is faster, but less general (works fine for @register_config objects).
 """
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 # Unused
 # def yaml_copy(obj: T) -> T:
@@ -67,7 +76,8 @@ def copy_config(obj: T) -> T:
 
 # Setup configuration load/dump infrastructure.
 
-def register_config(cls=None, *, kw_only=False, always_dump: str = ''):
+
+def register_config(cls=None, *, kw_only=False, always_dump: str = ""):
     """ Marks class as attrs, and enables YAML dumping (excludes default fields). """
 
     def decorator(cls: Type):
@@ -96,6 +106,7 @@ class _ConfigMixin:
     Ideally I'd use inheritance, but @yaml_object and @dataclass rely on decorators,
     and I want @register_config to Just Work and not need inheritance.
     """
+
     always_dump: ClassVar[str]
 
     # SafeRepresenter.represent_yaml_object() uses __getstate__ to dump objects.
@@ -104,7 +115,7 @@ class _ConfigMixin:
         self.always_dump. """
 
         always_dump = set(self.always_dump.split())
-        dump_all = ('*' in always_dump)
+        dump_all = "*" in always_dump
 
         state = {}
         cls = type(self)
@@ -114,7 +125,7 @@ class _ConfigMixin:
             # They have already been baked into other config fields.
 
             name = field.name
-            if name[0] == '_':
+            if name[0] == "_":
                 continue
 
             value = getattr(self, name)
@@ -126,8 +137,10 @@ class _ConfigMixin:
             if field.default == value:
                 continue
             # noinspection PyTypeChecker,PyUnresolvedReferences
-            if isinstance(field.default, attr.Factory) \
-                    and field.default.factory() == value:
+            if (
+                isinstance(field.default, attr.Factory)
+                and field.default.factory() == value
+            ):
                 continue
 
             state[name] = value
@@ -149,8 +162,8 @@ class _ConfigMixin:
                 target = class_var.key
                 if target in state:
                     raise CorrError(
-                        f'{type(self).__name__} received both Alias {key} and '
-                        f'equivalent {target}'
+                        f"{type(self).__name__} received both Alias {key} and "
+                        f"equivalent {target}"
                     )
 
                 state[target] = value
@@ -168,6 +181,7 @@ class Alias:
         x: int
         xx = Alias('x')     # do not add a type hint
     """
+
     key: str
 
 
@@ -176,6 +190,7 @@ Ignored = object()
 
 # Setup Enum load/dump infrastructure
 
+
 def register_enum(cls: Type):
     cls.to_yaml = _EnumMixin.to_yaml
     return _yaml_loadable(cls)
@@ -183,19 +198,22 @@ def register_enum(cls: Type):
 
 class _EnumMixin:
     @classmethod
-    def to_yaml(cls, representer: Representer, node: 'Enum'):
+    def to_yaml(cls, representer: Representer, node: "Enum"):
         return representer.represent_str(node._name_)
 
 
 # Miscellaneous
 
+
 class CorrError(ValueError):
     """ Error caused by invalid end-user input (via YAML/GUI config).
     (Should be) caught by GUI and displayed to user. """
+
     pass
 
 
 class CorrWarning(UserWarning):
     """ Warning about deprecated end-user config (YAML/GUI).
     (Should be) caught by GUI and displayed to user. """
+
     pass

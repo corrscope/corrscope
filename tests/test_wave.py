@@ -8,14 +8,14 @@ from delayed_assert import expect, assert_expectations
 from corrscope.utils.scipy_wavfile import WavFileWarning
 from corrscope.wave import Wave
 
-prefix = 'tests/wav-formats/'
+prefix = "tests/wav-formats/"
 wave_paths = [
     # 2000 samples, with a full-scale peak at data[1000].
-    'u8-impulse1000.wav',
-    's16-impulse1000.wav',
-    's32-impulse1000.wav',
-    'f32-impulse1000.wav',
-    'f64-impulse1000.wav',
+    "u8-impulse1000.wav",
+    "s16-impulse1000.wav",
+    "s32-impulse1000.wav",
+    "f32-impulse1000.wav",
+    "f64-impulse1000.wav",
 ]
 
 
@@ -44,13 +44,13 @@ def test_stereo_merge():
 
     # Contains a full-scale sine wave in left channel, and silence in right.
     # λ=100, nsamp=2000
-    wave = Wave(None, prefix + 'stereo-sine-left-2000.wav')
+    wave = Wave(None, prefix + "stereo-sine-left-2000.wav")
     period = 100
     nsamp = 2000
 
     # [-1, 1) from [-32768..32768)
     int16_step = (1 - -1) / (2 ** 16)
-    assert int16_step == 2**-15
+    assert int16_step == 2 ** -15
 
     # Check wave indexing dimensions.
     assert wave[0].shape == ()
@@ -59,7 +59,7 @@ def test_stereo_merge():
     # Check stereo merging.
     assert_allclose(wave[0], 0)
     assert_allclose(wave[period], 0)
-    assert_allclose(wave[period//4], 0.5, atol=int16_step)
+    assert_allclose(wave[period // 4], 0.5, atol=int16_step)
 
     def check_bound(obj):
         amax = np.amax(obj)
@@ -72,12 +72,12 @@ def test_stereo_merge():
 
 
 def test_stereo_mmap():
-    wave = Wave(None, prefix + 'stereo-sine-left-2000.wav')
+    wave = Wave(None, prefix + "stereo-sine-left-2000.wav")
     assert isinstance(wave.data, np.memmap)
 
 
 def test_wave_subsampling():
-    wave = Wave(None, 'tests/sine440.wav')
+    wave = Wave(None, "tests/sine440.wav")
     # period = 48000 / 440 = 109.(09)*
 
     wave.get_around(1000, region_nsamp=501, stride=4)
@@ -85,7 +85,7 @@ def test_wave_subsampling():
     # If region_len % subsampling != 0, len() != region_len // subsampling.
 
     stride = 4
-    region = 100    # diameter = region * stride
+    region = 100  # diameter = region * stride
     for i in [-1000, 50000]:
         data = wave.get_around(i, region, stride)
         assert (data == 0).all()
@@ -93,7 +93,7 @@ def test_wave_subsampling():
 
 def test_stereo_doesnt_overflow():
     """ Ensure loud stereo tracks do not overflow. """
-    wave = Wave(None, 'tests/stereo in-phase.wav')
+    wave = Wave(None, "tests/stereo in-phase.wav")
 
     samp = 100
     stride = 1
@@ -118,5 +118,5 @@ def test_header_larger_than_filesize():
     My version instead accepts such files (but warns WavFileWarning).
     """
     with pytest.warns(WavFileWarning):
-        wave = Wave(None, 'tests/header larger than filesize.wav')
+        wave = Wave(None, "tests/header larger than filesize.wav")
         assert wave
