@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from matplotlib.colors import to_rgb
+import matplotlib.colors
 
 from corrscope.channel import ChannelConfig
 from corrscope.outputs import RGB_DEPTH
@@ -59,16 +59,25 @@ def verify(r: MatplotlibRenderer, bg_str, fg_str):
         (-1, RGB_DEPTH)
     )
 
-    bg_u8 = [round(c * 255) for c in to_rgb(bg_str)]
-    fg_u8 = [round(c * 255) for c in to_rgb(fg_str)]
+    bg_u8 = to_bgra(bg_str)
+    fg_u8 = to_bgra(fg_str)
 
     # Ensure background is correct
-    assert (frame_colors[0] == bg_u8).all()
+    np.testing.assert_equal(frame_colors[0], bg_u8)
 
     # Ensure foreground is present
     assert np.prod(
         frame_colors == fg_u8, axis=-1
     ).any(), "incorrect foreground, it might be 136 = #888888"
 
-    assert (np.amax(frame_colors, axis=0) == np.maximum(bg_u8, fg_u8)).all()
-    assert (np.amin(frame_colors, axis=0) == np.minimum(bg_u8, fg_u8)).all()
+    np.testing.assert_equal(np.amax(frame_colors, axis=0), np.maximum(bg_u8, fg_u8))
+    np.testing.assert_equal(np.amin(frame_colors, axis=0), np.minimum(bg_u8, fg_u8))
+
+
+def to_bgra(c):
+    # https://github.com/anntzer/mplcairo/issues/12#issuecomment-451035973
+    # Cairo outputs bgrA.
+    # ffmpeg bgr0 and rgb32 are equivalent, but rgb32 uses less CPU in ffplay.
+    rgb = [round(c * 255) for c in matplotlib.colors.to_rgb(c)]
+    bgra = rgb[::-1] + [255]
+    return bgra

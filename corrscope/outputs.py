@@ -15,6 +15,9 @@ if TYPE_CHECKING:
 ByteBuffer = Union[bytes, np.ndarray]
 RGB_DEPTH = 4
 PIXEL_FORMAT = 'rgb32'
+# https://github.com/anntzer/mplcairo/issues/12#issuecomment-451035973
+# Cairo outputs bgrA.
+# ffmpeg bgr0 and rgb32 are equivalent, but rgb32 uses less CPU in ffplay.
 
 FRAMES_TO_BUFFER = 2
 
