@@ -12,6 +12,7 @@ from corrscope.config import CorrError, CorrWarning
 @attr.dataclass
 class _WaveConfig:
     """Internal class, not exposed via YAML"""
+
     amplification: float = 1
 
 
@@ -19,17 +20,21 @@ FLOAT = np.single
 
 
 class Wave:
-    __slots__ = 'cfg smp_s data nsamp dtype is_stereo stereo_nchan center max_val'.split()
+    __slots__ = (
+        "cfg smp_s data nsamp dtype is_stereo stereo_nchan center max_val".split()
+    )
 
     def __init__(self, cfg: Optional[_WaveConfig], wave_path: str):
         self.cfg = cfg or _WaveConfig()
-        self.smp_s, self.data = wavfile.read(wave_path, mmap=True)  # type: int, np.ndarray
+        self.smp_s, self.data = wavfile.read(
+            wave_path, mmap=True
+        )  # type: int, np.ndarray
         self.nsamp = len(self.data)
         dtype = self.data.dtype
 
         # Multiple channels: 2-D array of shape (Nsamples, Nchannels).
         assert self.data.ndim in [1, 2]
-        self.is_stereo = (self.data.ndim == 2)
+        self.is_stereo = self.data.ndim == 2
 
         # stereo_nchan is a temporary local variable.
         if self.is_stereo:
@@ -38,7 +43,7 @@ class Wave:
                 warnings.warn(
                     f"File {wave_path} has {stereo_nchan} channels, "
                     f"only first 2 will be used",
-                    CorrWarning
+                    CorrWarning,
                 )
 
         # Calculate scaling factor.
@@ -63,9 +68,9 @@ class Wave:
             self.max_val = 1
 
         else:
-            raise CorrError(f'unexpected wavfile dtype {dtype}')
+            raise CorrError(f"unexpected wavfile dtype {dtype}")
 
-    def __getitem__(self, index: Union[int, slice]) -> 'np.ndarray[FLOAT]':
+    def __getitem__(self, index: Union[int, slice]) -> "np.ndarray[FLOAT]":
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         # subok=False converts data from memmap (slow) to ndarray (faster).
         data = self.data[index].astype(FLOAT, subok=False, copy=True)
@@ -81,7 +86,7 @@ class Wave:
         data *= self.cfg.amplification / self.max_val
         return data
 
-    def _get(self, begin: int, end: int, subsampling: int) -> 'np.ndarray[FLOAT]':
+    def _get(self, begin: int, end: int, subsampling: int) -> "np.ndarray[FLOAT]":
         """ Copies self.data[begin:end] with zero-padding. """
         if 0 <= begin and end <= self.nsamp:
             return self[begin:end:subsampling]
@@ -91,11 +96,11 @@ class Wave:
         def constrain(idx):
             delta = 0
             if idx < 0:
-                delta = 0 - idx             # delta > 0
+                delta = 0 - idx  # delta > 0
                 assert idx + delta == 0
 
             if idx > self.nsamp:
-                delta = self.nsamp - idx    # delta < 0
+                delta = self.nsamp - idx  # delta < 0
                 assert idx + delta == self.nsamp
 
             return delta
@@ -103,7 +108,7 @@ class Wave:
         begin_index = constrain(begin)
         end_index = region_len + constrain(end)
         del end
-        data = self[begin+begin_index : begin+end_index : subsampling]
+        data = self[begin + begin_index : begin + end_index : subsampling]
 
         # Compute subsampled output ranges
         out_len = region_len // subsampling
@@ -113,7 +118,7 @@ class Wave:
 
         out = np.zeros(out_len, dtype=FLOAT)
 
-        out[out_begin : out_end] = data
+        out[out_begin:out_end] = data
 
         return out
 
@@ -129,5 +134,3 @@ class Wave:
         :return: time (seconds)
         """
         return self.nsamp / self.smp_s
-
-

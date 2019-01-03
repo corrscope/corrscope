@@ -38,17 +38,34 @@ import warnings
 
 import numpy as np
 
-__all__ = ['boxcar', 'triang', 'parzen', 'bohman', 'blackman', 'nuttall',
-           'blackmanharris', 'flattop', 'bartlett', 'hanning', 'barthann',
-           'hamming', 'gaussian', 'general_cosine','general_gaussian',
-           'general_hamming', 'cosine', 'hann',
-           'exponential', 'tukey']
+__all__ = [
+    "boxcar",
+    "triang",
+    "parzen",
+    "bohman",
+    "blackman",
+    "nuttall",
+    "blackmanharris",
+    "flattop",
+    "bartlett",
+    "hanning",
+    "barthann",
+    "hamming",
+    "gaussian",
+    "general_cosine",
+    "general_gaussian",
+    "general_hamming",
+    "cosine",
+    "hann",
+    "exponential",
+    "tukey",
+]
 
 
 def _len_guards(M):
     """Handle small or incorrect window lengths"""
     if int(M) != M or M < 0:
-        raise ValueError('Window length M must be a non-negative integer')
+        raise ValueError("Window length M must be a non-negative integer")
     return M <= 1
 
 
@@ -322,8 +339,7 @@ def parzen(M, sym=True):
     na = np.extract(n < -(M - 1) / 4.0, n)
     nb = np.extract(abs(n) <= (M - 1) / 4.0, n)
     wa = 2 * (1 - np.abs(na) / (M / 2.0)) ** 3.0
-    wb = (1 - 6 * (np.abs(nb) / (M / 2.0)) ** 2.0 +
-          6 * (np.abs(nb) / (M / 2.0)) ** 3.0)
+    wb = 1 - 6 * (np.abs(nb) / (M / 2.0)) ** 2.0 + 6 * (np.abs(nb) / (M / 2.0)) ** 3.0
     w = np.r_[wa, wb, wa[::-1]]
 
     return _truncate(w, needs_trunc)
@@ -524,7 +540,7 @@ def nuttall(M, sym=True):
     >>> plt.xlabel("Normalized frequency [cycles per sample]")
 
     """
-    return general_cosine(M, [0.3635819, 0.4891775, 0.1365995, 0.0106411], sym)
+    return general_cosine(M, [0.363_581_9, 0.489_177_5, 0.136_599_5, 0.010_641_1], sym)
 
 
 def blackmanharris(M, sym=True):
@@ -632,7 +648,7 @@ def flattop(M, sym=True):
     >>> plt.xlabel("Normalized frequency [cycles per sample]")
 
     """
-    a = [0.21557895, 0.41663158, 0.277263158, 0.083578947, 0.006947368]
+    a = [0.215_578_95, 0.416_631_58, 0.277_263_158, 0.083_578_947, 0.006_947_368]
     return general_cosine(M, a, sym)
 
 
@@ -728,8 +744,9 @@ def bartlett(M, sym=True):
     M, needs_trunc = _extend(M, sym)
 
     n = np.arange(0, M)
-    w = np.where(np.less_equal(n, (M - 1) / 2.0),
-                 2.0 * n / (M - 1), 2.0 - 2.0 * n / (M - 1))
+    w = np.where(
+        np.less_equal(n, (M - 1) / 2.0), 2.0 * n / (M - 1), 2.0 - 2.0 * n / (M - 1)
+    )
 
     return _truncate(w, needs_trunc)
 
@@ -815,7 +832,7 @@ def hann(M, sym=True):
     return general_hamming(M, 0.5, sym)
 
 
-@np.deprecate(new_name='scipy.signal.windows.hann')
+@np.deprecate(new_name="scipy.signal.windows.hann")
 def hanning(*args, **kwargs):
     return hann(*args, **kwargs)
 
@@ -882,21 +899,21 @@ def tukey(M, alpha=0.5, sym=True):
         return np.ones(M)
 
     if alpha <= 0:
-        return np.ones(M, 'd')
+        return np.ones(M, "d")
     elif alpha >= 1.0:
         return hann(M, sym=sym)
 
     M, needs_trunc = _extend(M, sym)
 
     n = np.arange(0, M)
-    width = int(np.floor(alpha*(M-1)/2.0))
-    n1 = n[0:width+1]
-    n2 = n[width+1:M-width-1]
-    n3 = n[M-width-1:]
+    width = int(np.floor(alpha * (M - 1) / 2.0))
+    n1 = n[0 : width + 1]
+    n2 = n[width + 1 : M - width - 1]
+    n3 = n[M - width - 1 :]
 
-    w1 = 0.5 * (1 + np.cos(np.pi * (-1 + 2.0*n1/alpha/(M-1))))
+    w1 = 0.5 * (1 + np.cos(np.pi * (-1 + 2.0 * n1 / alpha / (M - 1))))
     w2 = np.ones(n2.shape)
-    w3 = 0.5 * (1 + np.cos(np.pi * (-2.0/alpha + 1 + 2.0*n3/alpha/(M-1))))
+    w3 = 0.5 * (1 + np.cos(np.pi * (-2.0 / alpha + 1 + 2.0 * n3 / alpha / (M - 1))))
 
     w = np.concatenate((w1, w2, w3))
 
@@ -1042,7 +1059,7 @@ def general_hamming(M, alpha, sym=True):
     .. [4] Matthieu Bourbigot ESA, "Sentinel-1 Product Definition",
            https://sentinel.esa.int/documents/247904/1877131/Sentinel-1-Product-Definition
     """
-    return general_cosine(M, [alpha, 1. - alpha], sym)
+    return general_cosine(M, [alpha, 1.0 - alpha], sym)
 
 
 def hamming(M, sym=True):
@@ -1320,12 +1337,12 @@ def cosine(M, sym=True):
         return np.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = np.sin(np.pi / M * (np.arange(0, M) + .5))
+    w = np.sin(np.pi / M * (np.arange(0, M) + 0.5))
 
     return _truncate(w, needs_trunc)
 
 
-def exponential(M, center=None, tau=1., sym=True):
+def exponential(M, center=None, tau=1.0, sym=True):
     r"""Return an exponential (or Poisson) window.
 
     Parameters
@@ -1405,10 +1422,10 @@ def exponential(M, center=None, tau=1., sym=True):
     M, needs_trunc = _extend(M, sym)
 
     if center is None:
-        center = (M-1) / 2
+        center = (M - 1) / 2
 
     n = np.arange(0, M)
-    w = np.exp(-np.abs(n-center) / tau)
+    w = np.exp(-np.abs(n - center) / tau)
 
     return _truncate(w, needs_trunc)
 

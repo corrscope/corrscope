@@ -30,15 +30,17 @@ OutFile = click.Path(dir_okay=False)
 
 
 # List of recognized Config file extensions.
-YAML_EXTS = ['.yaml']
+YAML_EXTS = [".yaml"]
 # Default extension when writing Config.
 YAML_NAME = YAML_EXTS[0]
 
 # Default output extension
-VIDEO_NAME = '.mp4'
+VIDEO_NAME = ".mp4"
 
 
-DEFAULT_NAME = 'corrscope'
+DEFAULT_NAME = "corrscope"
+
+
 def get_name(audio_file: Union[None, str, Path]) -> str:
     # Write file to current working dir, not audio dir.
     if audio_file:
@@ -55,10 +57,10 @@ def get_path(audio_file: Union[None, str, Path], ext: str) -> Path:
     return Path(name).with_suffix(ext)
 
 
-PROFILE_DUMP_NAME = 'cprofile'
+PROFILE_DUMP_NAME = "cprofile"
 
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 # fmt: off
 @click.command(context_settings=CONTEXT_SETTINGS)

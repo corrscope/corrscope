@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def Popen(mocker: 'pytest_mock.MockFixture'):
+def Popen(mocker: "pytest_mock.MockFixture"):
     real_Popen = subprocess.Popen
 
     def popen_factory(*args, **kwargs):
@@ -22,6 +22,6 @@ def Popen(mocker: 'pytest_mock.MockFixture'):
         popen.wait.return_value = 0
         return popen
 
-    Popen = mocker.patch.object(subprocess, 'Popen', autospec=True)
+    Popen = mocker.patch.object(subprocess, "Popen", autospec=True)
     Popen.side_effect = popen_factory
     yield Popen

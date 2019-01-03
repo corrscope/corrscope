@@ -6,8 +6,13 @@ from typing import TYPE_CHECKING
 import pytest
 
 from corrscope.channel import ChannelConfig
-from corrscope.outputs import RGB_DEPTH, \
-    FFmpegOutput, FFmpegOutputConfig, FFplayOutput, FFplayOutputConfig
+from corrscope.outputs import (
+    RGB_DEPTH,
+    FFmpegOutput,
+    FFmpegOutputConfig,
+    FFplayOutput,
+    FFplayOutputConfig,
+)
 from corrscope.corrscope import default_config, CorrScope, Arguments
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
 from tests.test_renderer import WIDTH, HEIGHT, ALL_ZEROS
@@ -16,12 +21,12 @@ if TYPE_CHECKING:
     import pytest_mock
 
 
-if not shutil.which('ffmpeg'):
-    pytestmark = pytest.mark.skip('Missing ffmpeg, skipping output tests')
+if not shutil.which("ffmpeg"):
+    pytestmark = pytest.mark.skip("Missing ffmpeg, skipping output tests")
 
 
 CFG = default_config(render=RendererConfig(WIDTH, HEIGHT))
-NULL_OUTPUT = FFmpegOutputConfig(None, '-f null')
+NULL_OUTPUT = FFmpegOutputConfig(None, "-f null")
 
 
 def test_render_output():
@@ -43,11 +48,11 @@ def test_output():
 
     assert out.close() == 0
     # Ensure video is written to stdout, and not current directory.
-    assert not Path('-').exists()
+    assert not Path("-").exists()
 
 
 # Ensure CorrScope closes pipe to output upon completion.
-@pytest.mark.usefixtures('Popen')
+@pytest.mark.usefixtures("Popen")
 def test_close_output(Popen):
     """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
     exceptions occur.
@@ -64,7 +69,7 @@ def test_close_output(Popen):
 
 
 # Ensure CorrScope terminates FFplay upon exceptions.
-@pytest.mark.usefixtures('Popen')
+@pytest.mark.usefixtures("Popen")
 def test_terminate_ffplay(Popen):
     """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
     exceptions occur.
@@ -83,22 +88,22 @@ def test_terminate_ffplay(Popen):
 
 def sine440_config():
     cfg = default_config(
-        channels=[ChannelConfig('tests/sine440.wav')],
-        master_audio='tests/sine440.wav',
+        channels=[ChannelConfig("tests/sine440.wav")],
+        master_audio="tests/sine440.wav",
         end_time=0.5,  # Reduce test duration
     )
     return cfg
 
 
-@pytest.mark.usefixtures('Popen')
-def test_corr_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
+@pytest.mark.usefixtures("Popen")
+def test_corr_terminate_ffplay(Popen, mocker: "pytest_mock.MockFixture"):
     """ Integration test: Ensure corrscope calls terminate() on ffmpeg and ffplay when
     Python exceptions occur. """
 
     cfg = sine440_config()
-    corr = CorrScope(cfg, Arguments('.', [FFplayOutputConfig()]))
+    corr = CorrScope(cfg, Arguments(".", [FFplayOutputConfig()]))
 
-    render_frame = mocker.patch.object(MatplotlibRenderer, 'render_frame')
+    render_frame = mocker.patch.object(MatplotlibRenderer, "render_frame")
     render_frame.side_effect = DummyException()
     with pytest.raises(DummyException):
         corr.play()
@@ -110,13 +115,13 @@ def test_corr_terminate_ffplay(Popen, mocker: 'pytest_mock.MockFixture'):
         popen.terminate.assert_called()
 
 
-@pytest.mark.skip('Launches ffmpeg and ffplay processes, creating a ffplay window')
+@pytest.mark.skip("Launches ffmpeg and ffplay processes, creating a ffplay window")
 def test_corr_terminate_works():
     """ Ensure that ffmpeg/ffplay terminate quickly after Python exceptions, when
     `popen.terminate()` is called. """
 
     cfg = sine440_config()
-    corr = CorrScope(cfg, Arguments('.', [FFplayOutputConfig()]))
+    corr = CorrScope(cfg, Arguments(".", [FFplayOutputConfig()]))
     corr.raise_on_teardown = DummyException
 
     with pytest.raises(DummyException):
@@ -126,6 +131,7 @@ def test_corr_terminate_works():
 
 # TODO test to ensure ffplay is killed before it terminates
 
+
 def test_corr_output_without_audio():
     """Ensure running CorrScope with FFmpeg output, with master audio disabled,
     does not crash.
@@ -133,7 +139,7 @@ def test_corr_output_without_audio():
     cfg = sine440_config()
     cfg.master_audio = None
 
-    corr = CorrScope(cfg, Arguments('.', [NULL_OUTPUT]))
+    corr = CorrScope(cfg, Arguments(".", [NULL_OUTPUT]))
     # Should not raise exception.
     corr.play()
 
@@ -163,12 +169,12 @@ def test_render_subfps_one():
     cfg = sine440_config()
     cfg.render_subfps = 1
 
-    corr = CorrScope(cfg, Arguments('.', [DummyOutputConfig()]))
+    corr = CorrScope(cfg, Arguments(".", [DummyOutputConfig()]))
     corr.play()
     assert DummyOutput.frames_written >= 2
 
 
-def test_render_subfps_non_integer(mocker: 'pytest_mock.MockFixture'):
+def test_render_subfps_non_integer(mocker: "pytest_mock.MockFixture"):
     """ Ensure we output non-integer subfps as fractions,
     and that ffmpeg doesn't crash.
     TODO does ffmpeg understand decimals??
@@ -183,7 +189,7 @@ def test_render_subfps_non_integer(mocker: 'pytest_mock.MockFixture'):
     assert cfg.render_fps != int(cfg.render_fps)
     assert Fraction(1) == int(1)
 
-    corr = CorrScope(cfg, Arguments('.', [NULL_OUTPUT]))
+    corr = CorrScope(cfg, Arguments(".", [NULL_OUTPUT]))
     corr.play()
 
     # But it seems FFmpeg actually allows decimal -framerate (although a bad idea).
