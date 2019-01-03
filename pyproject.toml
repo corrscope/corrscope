@@ -34,3 +34,4 @@ build-backend = "poetry.masonry.api"
 [tool.black]
 line-length = 88
 py36 = true
+exclude = 'utils/scipy_'
