@@ -50,7 +50,7 @@ after_test:
   # Running pyinstaller is much faster on x64 I think,
   # but the resulting files are 64-bit only.
   - 'poetry build'
-  - 'poetry run pyinstaller corrscope.spec -y'
+  - 'poetry run pyinstaller corrscope.spec -y --log-level DEBUG'
 
 artifacts:
   - path: 'dist\*'
