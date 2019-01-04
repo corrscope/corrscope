@@ -80,18 +80,18 @@ class TracebackDialog(QErrorMessage):
     h = 360
     template = """\
     <style>
-    body {{
+    body {
         white-space: pre-wrap;
-    }}
+    }
     </style>
-    <body>{}</body>"""
+    <body>%s</body>"""
 
     def __init__(self, parent=None):
         QErrorMessage.__init__(self, parent)
         self.resize(self.w, self.h)
 
     def showMessage(self, message, type=None):
-        message = self.template.format(html.escape(message))
+        message = self.template % (html.escape(message))
         QErrorMessage.showMessage(self, message, type)
 
 
