@@ -68,3 +68,16 @@ python -m corrscope (args)
 
 1. Render and encode MP4 video (requires ffmpeg)
     - `corrscope master.yaml -r/--render`
+
+## Contributing
+
+Issues, feature requests, and pull requests are accepted.
+
+This project uses [Black code formatting](https://github.com/ambv/black). Either pull request authors can reformat code before creating a PR, or maintainers can reformat code before merging.
+
+You can install a Git pre-commit hook to apply Black formatting before each commit. Open a terminal/cmd in this repository and run:
+
+```sh
+pip install --user pre-commit
+pre-commit install
+```
