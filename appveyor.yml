@@ -46,7 +46,6 @@ test_script:
   - 'poetry run pytest --tb=short'
 
 after_test:
-  - 'if not "%pydir%"=="C:\Python36" appveyor exit'
   # Running pyinstaller is much faster on x64 I think,
   # but the resulting files are 64-bit only.
   - 'poetry build'
