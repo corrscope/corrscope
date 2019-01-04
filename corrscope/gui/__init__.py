@@ -33,12 +33,8 @@ from corrscope.gui.util import (
     find_ranges,
     TracebackDialog,
 )
-from corrscope.outputs import (
-    IOutputConfig,
-    FFplayOutputConfig,
-    FFmpegOutputConfig,
-    MissingFFmpegError,
-)
+from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
+from corrscope.ffmpeg_path import MissingFFmpegError
 from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
 from corrscope.util import obj_name
 
