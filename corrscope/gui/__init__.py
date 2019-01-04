@@ -1,4 +1,5 @@
 import os
+import platform
 import sys
 import traceback
 from pathlib import Path
@@ -353,7 +354,7 @@ class MainWindow(qw.QMainWindow):
         TracebackDialog(self).showMessage(stack_trace)
 
     def on_play_thread_ffmpeg_missing(self):
-        pass
+        DownloadFFmpegActivity(self)
 
     def _get_args(self, outputs: List[IOutputConfig]):
         arg = Arguments(cfg_dir=self.cfg_dir, outputs=outputs)
@@ -817,3 +818,51 @@ class ChannelModel(qc.QAbstractTableModel):
 
 
 nope = qc.QVariant()
+
+
+def get_ffmpeg_url() -> str:
+    # is_python_64 = sys.maxsize > 2 ** 32
+    is_os_64 = platform.machine().endswith("64")
+
+    def url(os_ver):
+        return f"https://ffmpeg.zeranoe.com/builds/{os_ver}/shared/ffmpeg-latest-{os_ver}-shared.zip"
+
+    if sys.platform == "win32" and is_os_64:
+        return url("win64")
+    elif sys.platform == "win32" and not is_os_64:
+        return url("win32")
+    elif sys.platform == "darwin" and is_os_64:
+        return url("macos64")
+    else:
+        return ""
+
+
+class DownloadFFmpegActivity:
+    title = "Missing FFmpeg"
+
+    ffmpeg_url = get_ffmpeg_url()
+    can_download = bool(ffmpeg_url)
+
+    required = "FFmpeg must be in PATH in order to use corrscope.<br>"
+    ffmpeg_template = (
+        required
+        + f"""\
+        Download and extract ffmpeg in program directory?<br>
+        <a href="{ffmpeg_url}">{ffmpeg_url}</a>"""
+    )
+    fail_template = required + "Cannot download FFmpeg for your platform."
+
+    def __init__(self, window: qw.QWidget):
+        """Prompt the user to download and install ffmpeg."""
+        Msg = qw.QMessageBox
+
+        if not self.can_download:
+            Msg.information(window, self.title, self.fail_template, Msg.Ok)
+            return
+
+        should_install = Msg.information(
+            window, self.title, self.ffmpeg_template, Msg.Cancel
+        )
+        # Msg.Ok |
+        # if should_install == Msg.Ok:
+        #     print("FIXME", self.ffmpeg_url)  # FIXME
