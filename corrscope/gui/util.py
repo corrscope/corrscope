@@ -1,3 +1,4 @@
+import html
 from pathlib import Path
 from typing import *
 from typing import Iterable, Tuple
@@ -5,7 +6,7 @@ from typing import Iterable, Tuple
 import matplotlib.colors
 import more_itertools
 from PyQt5.QtCore import QMutex
-from PyQt5.QtWidgets import QWidget, QFileDialog
+from PyQt5.QtWidgets import QWidget, QFileDialog, QErrorMessage
 
 from corrscope.config import CorrError
 
@@ -72,6 +73,26 @@ def get_save_with_ext(
     if sel_filter == filters[0] and path.suffix == "":
         path = path.with_suffix(default_suffix)
     return path
+
+
+class TracebackDialog(QErrorMessage):
+    w = 640
+    h = 360
+    template = """\
+    <style>
+    body {
+        white-space: pre-wrap;
+    }
+    </style>
+    <body>%s</body>"""
+
+    def __init__(self, parent=None):
+        QErrorMessage.__init__(self, parent)
+        self.resize(self.w, self.h)
+
+    def showMessage(self, message, type=None):
+        message = self.template % (html.escape(message))
+        QErrorMessage.showMessage(self, message, type)
 
 
 def find_ranges(iterable: Iterable[T]) -> Iterable[Tuple[T, int]]:
