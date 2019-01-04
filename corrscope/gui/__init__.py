@@ -24,7 +24,13 @@ from corrscope.gui.data_bind import (
     rgetattr,
     rsetattr,
 )
-from corrscope.gui.util import color2hex, Locked, get_save_with_ext, find_ranges
+from corrscope.gui.util import (
+    color2hex,
+    Locked,
+    get_save_with_ext,
+    find_ranges,
+    TracebackDialog,
+)
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from corrscope.corrscope import CorrScope, Config, Arguments, default_config
 from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
@@ -335,7 +341,7 @@ class MainWindow(qw.QMainWindow):
         t.start()
 
     def on_play_thread_error(self, stack_trace: str):
-        qw.QMessageBox.critical(self, "Error rendering oscilloscope", stack_trace)
+        TracebackDialog(self).showMessage(stack_trace)
 
     def on_play_thread_finished(self):
         self.corr_thread.set(None)
