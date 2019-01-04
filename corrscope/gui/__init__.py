@@ -1,5 +1,6 @@
 import os
 import sys
+import traceback
 from pathlib import Path
 from typing import *
 from typing import List, Any
@@ -333,8 +334,8 @@ class MainWindow(qw.QMainWindow):
         t.finished.connect(self.on_play_thread_finished)
         t.start()
 
-    def on_play_thread_error(self, exc: BaseException):
-        qw.QMessageBox.critical(self, "Error rendering oscilloscope", str(exc))
+    def on_play_thread_error(self, stack_trace: str):
+        qw.QMessageBox.critical(self, "Error rendering oscilloscope", stack_trace)
 
     def on_play_thread_finished(self):
         self.corr_thread.set(None)
@@ -394,13 +395,14 @@ class CorrThread(qc.QThread):
         arg = self.arg
         try:
             CorrScope(cfg, arg).play()
-        except Exception as e:
+        except Exception:
             arg.on_end()
-            self.error.emit(e)
+            stack_trace = traceback.format_exc()
+            self.error.emit(stack_trace)
         else:
             arg.on_end()
 
-    error = qc.pyqtSignal(Exception)
+    error = qc.pyqtSignal(str)
 
 
 class CorrProgressDialog(qw.QProgressDialog):
