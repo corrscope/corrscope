@@ -8,11 +8,13 @@ from PyInstaller.building.datastruct import TOC
 block_cipher = None
 
 
-dir = "corrscope/gui"
-includes = glob.glob("corrscope/gui/*.ui")
-assert includes
+def keep(dir, wildcard):
+    includes = glob.glob(f"{dir}/{wildcard}")
+    assert includes
+    return [(include, dir) for include in includes]
 
-datas = [(include, dir) for include in includes]
+
+datas = keep("corrscope/gui", "*.ui") + keep("corrscope/path", "*")
 
 a = Analysis(
     ["corrscope\\__main__.py"],
