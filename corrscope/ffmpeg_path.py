@@ -39,7 +39,7 @@ class MissingFFmpegError(CorrError):
     ffmpeg_url = get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
-    message = f"FFmpeg must be in PATH or " f'"{path_dir}" in order to use corrscope.\n'
+    message = f'FFmpeg must be in PATH or "{path_dir}" in order to use corrscope.\n'
 
     if can_download:
         message += f"Download ffmpeg from {ffmpeg_url}."
