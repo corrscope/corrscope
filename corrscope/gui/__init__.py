@@ -106,7 +106,7 @@ class MainWindow(qw.QMainWindow):
         self.actionExit.triggered.connect(qw.QApplication.closeAllWindows)
 
         # Initialize CorrScope-thread attribute.
-        self.corr_thread: Locked[Optional[CorrThread]] = Locked(None)
+        self.corr_thread: Optional[CorrThread] = None
 
         # Bind config to UI.
         self.load_cfg(cfg, cfg_path)
@@ -291,44 +291,39 @@ class MainWindow(qw.QMainWindow):
     def on_action_play(self):
         """ Launch CorrScope and ffplay. """
         error_msg = "Cannot play, another play/render is active"
-        with self.corr_thread as t:
-            if t is not None:
-                self.corr_thread.unlock()
-                qw.QMessageBox.critical(self, "Error", error_msg)
-                return
+        if self.corr_thread is not None:
+            qw.QMessageBox.critical(self, "Error", error_msg)
+            return
 
-            outputs = [FFplayOutputConfig()]
-            self.play_thread(outputs, dlg=None)
+        outputs = [FFplayOutputConfig()]
+        self.play_thread(outputs, dlg=None)
 
     def on_action_render(self):
         """ Get file name. Then show a progress dialog while rendering to file. """
         error_msg = "Cannot render to file, another play/render is active"
-        with self.corr_thread as t:
-            if t is not None:
-                self.corr_thread.unlock()
-                qw.QMessageBox.critical(self, "Error", error_msg)
-                return
+        if self.corr_thread is not None:
+            qw.QMessageBox.critical(self, "Error", error_msg)
+            return
 
-            video_path = os.path.join(self.cfg_dir, self.file_stem) + cli.VIDEO_NAME
-            filters = ["MP4 files (*.mp4)", "All files (*)"]
-            path = get_save_with_ext(
-                self, "Render to Video", video_path, filters, cli.VIDEO_NAME
-            )
-            if path:
-                name = str(path)
-                # FIXME what if missing mp4?
-                dlg = CorrProgressDialog(self, "Rendering video")
+        video_path = os.path.join(self.cfg_dir, self.file_stem) + cli.VIDEO_NAME
+        filters = ["MP4 files (*.mp4)", "All files (*)"]
+        path = get_save_with_ext(
+            self, "Render to Video", video_path, filters, cli.VIDEO_NAME
+        )
+        if path:
+            name = str(path)
+            # FIXME what if missing mp4?
+            dlg = CorrProgressDialog(self, "Rendering video")
 
-                outputs = [FFmpegOutputConfig(name)]
-                self.play_thread(outputs, dlg)
+            outputs = [FFmpegOutputConfig(name)]
+            self.play_thread(outputs, dlg)
 
     def play_thread(
         self, outputs: List[IOutputConfig], dlg: Optional["CorrProgressDialog"]
     ):
-        """ self.corr_thread MUST be locked. """
         arg = self._get_args(outputs)
         cfg = copy_config(self.model.cfg)
-        t = self.corr_thread.obj = CorrThread(cfg, arg)
+        t = self.corr_thread = CorrThread(cfg, arg)
 
         if dlg:
             dlg.canceled.connect(t.abort)
@@ -346,7 +341,7 @@ class MainWindow(qw.QMainWindow):
         t.start()
 
     def on_play_thread_finished(self):
-        self.corr_thread.set(None)
+        self.corr_thread = None
 
     def on_play_thread_error(self, stack_trace: str):
         TracebackDialog(self).showMessage(stack_trace)
