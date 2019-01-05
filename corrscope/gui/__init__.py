@@ -327,17 +327,19 @@ class MainWindow(qw.QMainWindow):
     ):
         """ self.corr_thread MUST be locked. """
         arg = self._get_args(outputs)
+        cfg = copy_config(self.model.cfg)
+        t = self.corr_thread.obj = CorrThread(cfg, arg)
+
         if dlg:
-            arg = attr.evolve(
+            dlg.canceled.connect(t.abort)
+            t.arg = attr.evolve(
                 arg,
                 on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
                 progress=run_on_ui_thread(dlg.setValue, (int,)),
-                is_aborted=run_on_ui_thread(dlg.wasCanceled, ()),
+                is_aborted=t.is_aborted.get,
                 on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
             )
 
-        cfg = copy_config(self.model.cfg)
-        t = self.corr_thread.obj = CorrThread(cfg, arg)
         t.finished.connect(self.on_play_thread_finished)
         t.error.connect(self.on_play_thread_error)
         t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
@@ -387,6 +389,7 @@ class CorrThread(qc.QThread):
         qc.QThread.__init__(self)
         self.cfg = cfg
         self.arg = arg
+        self.is_aborted = Locked(False)
 
     def run(self) -> None:
         cfg = self.cfg
@@ -408,6 +411,12 @@ class CorrThread(qc.QThread):
 
         else:
             arg.on_end()
+
+    is_aborted: Locked[bool]
+
+    @qc.pyqtSlot()
+    def abort(self):
+        self.is_aborted.set(True)
 
     error = qc.pyqtSignal(str)
     ffmpeg_missing = qc.pyqtSignal()

@@ -53,6 +53,10 @@ class Locked(Generic[T]):
             self.obj = value
         return value
 
+    def get(self) -> T:
+        with self:
+            return self.obj
+
 
 def get_save_with_ext(
     parent: QWidget,
