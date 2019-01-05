@@ -381,20 +381,6 @@ class MainWindow(qw.QMainWindow):
         return self.model.cfg
 
 
-class ShortcutButton(qw.QPushButton):
-    scoped_shortcut: QShortcut
-
-    def add_shortcut(self, scope: qw.QWidget, shortcut: str) -> None:
-        """ Adds shortcut and tooltip. """
-        keys = QKeySequence(shortcut, QKeySequence.PortableText)
-
-        self.scoped_shortcut = qw.QShortcut(keys, scope)
-        self.scoped_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
-        self.scoped_shortcut.activated.connect(self.click)
-
-        self.setToolTip(keys.toString(QKeySequence.NativeText))
-
-
 class CorrThread(qc.QThread):
     def __init__(self, cfg: Config, arg: Arguments):
         qc.QThread.__init__(self)
@@ -445,6 +431,20 @@ class CorrProgressDialog(qw.QProgressDialog):
     def on_begin(self, begin_time, end_time):
         self.setRange(int(round(begin_time)), int(round(end_time)))
         # self.setValue is called by CorrScope, on the first frame.
+
+
+class ShortcutButton(qw.QPushButton):
+    scoped_shortcut: QShortcut
+
+    def add_shortcut(self, scope: qw.QWidget, shortcut: str) -> None:
+        """ Adds shortcut and tooltip. """
+        keys = QKeySequence(shortcut, QKeySequence.PortableText)
+
+        self.scoped_shortcut = qw.QShortcut(keys, scope)
+        self.scoped_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self.scoped_shortcut.activated.connect(self.click)
+
+        self.setToolTip(keys.toString(QKeySequence.NativeText))
 
 
 def nrow_ncol_property(altered: str, unaltered: str) -> property:
