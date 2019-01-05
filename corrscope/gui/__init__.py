@@ -1,3 +1,4 @@
+import functools
 import os
 import sys
 import traceback
@@ -329,10 +330,10 @@ class MainWindow(qw.QMainWindow):
         if dlg:
             arg = attr.evolve(
                 arg,
-                on_begin=dlg.on_begin,
-                progress=dlg.setValue,
-                is_aborted=dlg.wasCanceled,
-                on_end=dlg.reset,  # TODO dlg.close
+                on_begin=run_on_ui_thread(dlg.on_begin),
+                progress=run_on_ui_thread(dlg.setValue),
+                is_aborted=run_on_ui_thread(dlg.wasCanceled, bool),
+                on_end=run_on_ui_thread(dlg.reset),  # TODO dlg.close
             )
 
         cfg = copy_config(self.model.cfg)
@@ -431,6 +432,41 @@ class CorrProgressDialog(qw.QProgressDialog):
     def on_begin(self, begin_time, end_time):
         self.setRange(int(round(begin_time)), int(round(end_time)))
         # self.setValue is called by CorrScope, on the first frame.
+
+
+T = TypeVar("T", bound=Callable)
+
+
+def run_on_ui_thread(bound_slot: T, return_type: Optional[type] = None) -> T:
+    """ Runs an object's slot on the object's own thread. """
+    qmo = qc.QMetaObject
+
+    # [static]
+    # bool QMetaObject::invokeMethod(
+    # QObject *obj,
+    obj = bound_slot.__self__
+
+    # const char *member,
+    member = bound_slot.__name__
+
+    # Qt::ConnectionType type,
+    if return_type:
+        typ = Qt.BlockingQueuedConnection
+    else:
+        typ = Qt.QueuedConnection
+
+    # QGenericReturnArgument ret,
+    # https://riverbankcomputing.com/pipermail/pyqt/2014-December/035223.html
+    ret = qc.Q_RETURN_ARG(str(return_type))
+
+    # QGenericArgument val0 = QGenericArgument(nullptr),
+    # );
+
+    @functools.wraps(bound_slot)
+    def inner(*args):
+        return qmo.invokeMethod(obj, member, typ, ret, *args)
+
+    return cast(T, inner)
 
 
 class ShortcutButton(qw.QPushButton):
