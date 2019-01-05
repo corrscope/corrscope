@@ -1,8 +1,7 @@
 import glob
 
-from PyInstaller.building.build_main import Analysis
 from PyInstaller.building.api import PYZ, EXE, COLLECT
-
+from PyInstaller.building.build_main import Analysis
 from PyInstaller.building.datastruct import TOC
 
 block_cipher = None
@@ -39,16 +38,6 @@ path_excludes = (
     mpl-data/fonts
     mpl-data/images
     mpl-data/sample_data
-    """
-    # Scipy (FIXME not excluded and breaks anyway)
-    """
-    scipy/sparse
-    scipy/linalg
-    scipy/spatial
-    scipy/special
-    scipy/interpolate
-    scipy/optimize
-    scipy/ndimage
     """
     # PyQt
     """
