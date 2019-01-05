@@ -339,6 +339,10 @@ class MainWindow(qw.QMainWindow):
         t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
         t.start()
 
+    def _get_args(self, outputs: List[IOutputConfig]):
+        arg = Arguments(cfg_dir=self.cfg_dir, outputs=outputs)
+        return arg
+
     def on_play_thread_finished(self):
         self.corr_thread = None
 
@@ -347,10 +351,6 @@ class MainWindow(qw.QMainWindow):
 
     def on_play_thread_ffmpeg_missing(self):
         DownloadFFmpegActivity(self)
-
-    def _get_args(self, outputs: List[IOutputConfig]):
-        arg = Arguments(cfg_dir=self.cfg_dir, outputs=outputs)
-        return arg
 
     # File paths
     @property
