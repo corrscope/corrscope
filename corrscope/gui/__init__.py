@@ -469,7 +469,7 @@ def run_on_ui_thread(
         # https://www.qtcentre.org/threads/29156-Calling-a-slot-from-another-thread?p=137140#post137140
         # QMetaObject.invokeMethod(skypeThread, "startSkypeCall", Qt.QueuedConnection, QtCore.Q_ARG("QString", "someguy"))
 
-        _args = [qc.Q_ARG(typ.__name__, typ(arg)) for typ, arg in zip(types, args)]
+        _args = [qc.Q_ARG(typ, typ(arg)) for typ, arg in zip(types, args)]
         return qmo.invokeMethod(obj, member, conn, *_ret, *_args)
 
     return cast(T, inner)
