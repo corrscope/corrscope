@@ -18,10 +18,6 @@ os.environ["PATH"] += os.pathsep + path_dir
 #     return shutil.which("ffmpeg") is not None
 
 
-class MissingFFmpegError(CorrError):
-    pass
-
-
 def get_ffmpeg_url() -> str:
     # is_python_64 = sys.maxsize > 2 ** 32
     is_os_64 = platform.machine().endswith("64")
@@ -37,3 +33,18 @@ def get_ffmpeg_url() -> str:
         return url("macos64")
     else:
         return ""
+
+
+class MissingFFmpegError(CorrError):
+    ffmpeg_url = get_ffmpeg_url()
+    can_download = bool(ffmpeg_url)
+
+    message = f"FFmpeg must be in PATH or " f'"{path_dir}" in order to use corrscope.\n'
+
+    if can_download:
+        message += f"Download ffmpeg from {ffmpeg_url}."
+    else:
+        message += "Cannot download FFmpeg for your platform."
+
+    def __str__(self):
+        return self.message
