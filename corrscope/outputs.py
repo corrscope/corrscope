@@ -103,9 +103,7 @@ class _FFmpegProcess:
                 args, stdin=subprocess.PIPE, bufsize=bufsize, **kwargs
             )
         except FileNotFoundError as e:
-            raise MissingFFmpegError(
-                # FIXME REMOVE f'Class {obj_name(self)}: program {args[0]} is missing'
-            )
+            raise MissingFFmpegError()
 
     def _generate_args(self) -> List[str]:
         return [arg for template in self.templates for arg in shlex.split(template)]

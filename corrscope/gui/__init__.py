@@ -312,7 +312,6 @@ class MainWindow(qw.QMainWindow):
         )
         if path:
             name = str(path)
-            # FIXME what if missing mp4?
             dlg = CorrProgressDialog(self, "Rendering video")
 
             outputs = [FFmpegOutputConfig(name)]
@@ -444,7 +443,9 @@ T = TypeVar("T", bound=Callable)
 
 # *arg_types: type
 def run_on_ui_thread(bound_slot: T, types: Tuple[type, ...]) -> T:
-    """ Runs an object's slot on the object's own thread. """
+    """ Runs an object's slot on the object's own thread.
+    It's terrible code but it works (as long as the slot has no return value).
+    """
     qmo = qc.QMetaObject
 
     # QObject *obj,
