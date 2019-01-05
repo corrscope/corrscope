@@ -1,12 +1,13 @@
-# https://ffmpeg.org/ffplay.html
-import numpy as np
 import shlex
 import subprocess
 from abc import ABC, abstractmethod
 from os.path import abspath
 from typing import TYPE_CHECKING, Type, List, Union, Optional
 
+import numpy as np
+
 from corrscope.config import register_config
+from corrscope.ffmpeg_path import MissingFFmpegError
 
 if TYPE_CHECKING:
     from corrscope.corrscope import Config
@@ -95,12 +96,16 @@ class _FFmpegProcess:
             self.templates.append(cfg.audio_template)  # audio
 
     def popen(self, extra_args, bufsize, **kwargs) -> subprocess.Popen:
-        return subprocess.Popen(
-            self._generate_args() + extra_args,
-            stdin=subprocess.PIPE,
-            bufsize=bufsize,
-            **kwargs,
-        )
+        """Raises FileNotFoundError if FFmpeg missing"""
+        try:
+            args = self._generate_args() + extra_args
+            return subprocess.Popen(
+                args, stdin=subprocess.PIPE, bufsize=bufsize, **kwargs
+            )
+        except FileNotFoundError as e:
+            raise MissingFFmpegError(
+                # FIXME REMOVE f'Class {obj_name(self)}: program {args[0]} is missing'
+            )
 
     def _generate_args(self) -> List[str]:
         return [arg for template in self.templates for arg in shlex.split(template)]
