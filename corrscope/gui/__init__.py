@@ -332,7 +332,7 @@ class MainWindow(qw.QMainWindow):
                 arg,
                 on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
                 progress=run_on_ui_thread(dlg.setValue, (int,)),
-                is_aborted=run_on_ui_thread(dlg.wasCanceled, (), bool),
+                is_aborted=run_on_ui_thread(dlg.wasCanceled, ()),
                 on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
             )
 
@@ -439,9 +439,7 @@ T = TypeVar("T", bound=Callable)
 
 
 # *arg_types: type
-def run_on_ui_thread(
-    bound_slot: T, types: Tuple[type], ret: Optional[type] = None
-) -> T:
+def run_on_ui_thread(bound_slot: T, types: Tuple[type, ...]) -> T:
     """ Runs an object's slot on the object's own thread. """
     qmo = qc.QMetaObject
 
@@ -454,12 +452,7 @@ def run_on_ui_thread(
     # Qt::ConnectionType type,
     # QGenericReturnArgument ret,
     # https://riverbankcomputing.com/pipermail/pyqt/2014-December/035223.html
-    if ret:
-        conn = Qt.BlockingQueuedConnection
-        _ret = [qc.Q_RETURN_ARG(ret.__name__)]
-    else:
-        conn = Qt.QueuedConnection
-        _ret = []
+    conn = Qt.QueuedConnection
 
     @functools.wraps(bound_slot)
     def inner(*args):
@@ -470,7 +463,7 @@ def run_on_ui_thread(
         # QMetaObject.invokeMethod(skypeThread, "startSkypeCall", Qt.QueuedConnection, QtCore.Q_ARG("QString", "someguy"))
 
         _args = [qc.Q_ARG(typ, typ(arg)) for typ, arg in zip(types, args)]
-        return qmo.invokeMethod(obj, member, conn, *_ret, *_args)
+        return qmo.invokeMethod(obj, member, conn, *_args)
 
     return cast(T, inner)
 
