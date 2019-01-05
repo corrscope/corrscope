@@ -330,10 +330,10 @@ class MainWindow(qw.QMainWindow):
         if dlg:
             arg = attr.evolve(
                 arg,
-                on_begin=run_on_ui_thread(dlg.on_begin),
-                progress=run_on_ui_thread(dlg.setValue),
-                is_aborted=run_on_ui_thread(dlg.wasCanceled, bool),
-                on_end=run_on_ui_thread(dlg.reset),  # TODO dlg.close
+                on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
+                progress=run_on_ui_thread(dlg.setValue, (int,)),
+                is_aborted=run_on_ui_thread(dlg.wasCanceled, (), bool),
+                on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
             )
 
         cfg = copy_config(self.model.cfg)
@@ -439,7 +439,9 @@ T = TypeVar("T", bound=Callable)
 
 
 # *arg_types: type
-def run_on_ui_thread(bound_slot: T, ret: Optional[type] = None) -> T:
+def run_on_ui_thread(
+    bound_slot: T, types: Tuple[type], ret: Optional[type] = None
+) -> T:
     """ Runs an object's slot on the object's own thread. """
     qmo = qc.QMetaObject
 
@@ -461,9 +463,13 @@ def run_on_ui_thread(bound_slot: T, ret: Optional[type] = None) -> T:
 
     @functools.wraps(bound_slot)
     def inner(*args):
+        if len(types) != len(args):
+            raise TypeError(f"len(types)={len(types)} != len(args)={len(args)}")
+
         # https://www.qtcentre.org/threads/29156-Calling-a-slot-from-another-thread?p=137140#post137140
         # QMetaObject.invokeMethod(skypeThread, "startSkypeCall", Qt.QueuedConnection, QtCore.Q_ARG("QString", "someguy"))
-        _args = [qc.Q_ARG(obj_name(arg), arg) for arg in args]
+
+        _args = [qc.Q_ARG(typ.__name__, typ(arg)) for typ, arg in zip(types, args)]
         return qmo.invokeMethod(obj, member, conn, *_ret, *_args)
 
     return cast(T, inner)
