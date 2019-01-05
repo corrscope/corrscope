@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import QShortcut
 
 from corrscope import __version__  # variable
 from corrscope import cli  # module wtf?
+from corrscope import ffmpeg_path
 from corrscope.channel import ChannelConfig
 from corrscope.config import CorrError, copy_config, yaml
 from corrscope.corrscope import CorrScope, Config, Arguments, default_config
@@ -34,7 +35,6 @@ from corrscope.gui.util import (
     TracebackDialog,
 )
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
-from corrscope.ffmpeg_path import MissingFFmpegError
 from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
 from corrscope.util import obj_name
 
@@ -408,7 +408,7 @@ class CorrThread(qc.QThread):
         try:
             CorrScope(cfg, arg).play()
 
-        except MissingFFmpegError:
+        except ffmpeg_path.MissingFFmpegError:
             arg.on_end()
             self.ffmpeg_missing.emit()
 
@@ -839,12 +839,15 @@ class DownloadFFmpegActivity:
     ffmpeg_url = get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
-    required = "FFmpeg must be in PATH in order to use corrscope.<br>"
-    ffmpeg_template = (
-        required
-        + f"""\
-        Download and extract ffmpeg in program directory?<br>
-        <a href="{ffmpeg_url}">{ffmpeg_url}</a>"""
+    path_uri = qc.QUrl.fromLocalFile(ffmpeg_path.path_dir).toString()
+
+    required = (
+        f"FFmpeg must be in PATH or "
+        f'<a href="{path_uri}">corrscope folder</a> in order to use corrscope.<br>'
+    )
+
+    ffmpeg_template = required + (
+        f'Download ffmpeg from <a href="{ffmpeg_url}">{ffmpeg_url}</a>.'
     )
     fail_template = required + "Cannot download FFmpeg for your platform."
 
@@ -856,9 +859,4 @@ class DownloadFFmpegActivity:
             Msg.information(window, self.title, self.fail_template, Msg.Ok)
             return
 
-        should_install = Msg.information(
-            window, self.title, self.ffmpeg_template, Msg.Cancel
-        )
-        # Msg.Ok |
-        # if should_install == Msg.Ok:
-        #     print("FIXME", self.ffmpeg_url)  # FIXME
+        Msg.information(window, self.title, self.ffmpeg_template, Msg.Ok)
