@@ -1,5 +1,4 @@
 import os
-import platform
 import sys
 import traceback
 from pathlib import Path
@@ -816,27 +815,10 @@ class ChannelModel(qc.QAbstractTableModel):
 nope = qc.QVariant()
 
 
-def get_ffmpeg_url() -> str:
-    # is_python_64 = sys.maxsize > 2 ** 32
-    is_os_64 = platform.machine().endswith("64")
-
-    def url(os_ver):
-        return f"https://ffmpeg.zeranoe.com/builds/{os_ver}/shared/ffmpeg-latest-{os_ver}-shared.zip"
-
-    if sys.platform == "win32" and is_os_64:
-        return url("win64")
-    elif sys.platform == "win32" and not is_os_64:
-        return url("win32")
-    elif sys.platform == "darwin" and is_os_64:
-        return url("macos64")
-    else:
-        return ""
-
-
 class DownloadFFmpegActivity:
     title = "Missing FFmpeg"
 
-    ffmpeg_url = get_ffmpeg_url()
+    ffmpeg_url = ffmpeg_path.get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
     path_uri = qc.QUrl.fromLocalFile(ffmpeg_path.path_dir).toString()

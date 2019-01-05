@@ -1,5 +1,6 @@
 import os
-import shutil
+import platform
+import sys
 from pathlib import Path
 
 from corrscope.config import CorrError
@@ -13,9 +14,26 @@ os.environ["PATH"] += os.pathsep + path_dir
 
 
 # Unused
-def ffmpeg_exists():
-    return shutil.which("ffmpeg") is not None
+# def ffmpeg_exists():
+#     return shutil.which("ffmpeg") is not None
 
 
 class MissingFFmpegError(CorrError):
     pass
+
+
+def get_ffmpeg_url() -> str:
+    # is_python_64 = sys.maxsize > 2 ** 32
+    is_os_64 = platform.machine().endswith("64")
+
+    def url(os_ver):
+        return f"https://ffmpeg.zeranoe.com/builds/{os_ver}/shared/ffmpeg-latest-{os_ver}-shared.zip"
+
+    if sys.platform == "win32" and is_os_64:
+        return url("win64")
+    elif sys.platform == "win32" and not is_os_64:
+        return url("win32")
+    elif sys.platform == "darwin" and is_os_64:
+        return url("macos64")
+    else:
+        return ""
