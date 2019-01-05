@@ -1,4 +1,5 @@
 import datetime
+import sys
 from itertools import count
 from pathlib import Path
 from typing import Optional, List, Tuple, Union, Iterator
@@ -8,6 +9,7 @@ import click
 from corrscope import __version__
 from corrscope.channel import ChannelConfig
 from corrscope.config import yaml
+from corrscope.ffmpeg_path import MissingFFmpegError
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from corrscope.corrscope import default_config, CorrScope, Config, Arguments
 
@@ -211,7 +213,11 @@ def main(
                 profile_dump_name = get_profile_dump_name(first_song_name)
                 cProfile.runctx('command()', globals(), locals(), profile_dump_name)
             else:
-                command()
+                try:
+                    command()
+                except MissingFFmpegError as e:
+                    # Tell user how to install ffmpeg (__str__).
+                    print(e, file=sys.stderr)
 
 
 def get_profile_dump_name(prefix: str) -> str:

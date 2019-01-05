@@ -15,8 +15,10 @@ from PyQt5.QtWidgets import QShortcut
 
 from corrscope import __version__  # variable
 from corrscope import cli  # module wtf?
+from corrscope import ffmpeg_path
 from corrscope.channel import ChannelConfig
 from corrscope.config import CorrError, copy_config, yaml
+from corrscope.corrscope import CorrScope, Config, Arguments, default_config
 from corrscope.gui.data_bind import (
     PresentationModel,
     map_gui,
@@ -32,7 +34,6 @@ from corrscope.gui.util import (
     TracebackDialog,
 )
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
-from corrscope.corrscope import CorrScope, Config, Arguments, default_config
 from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
 from corrscope.util import obj_name
 
@@ -336,15 +337,19 @@ class MainWindow(qw.QMainWindow):
 
         cfg = copy_config(self.model.cfg)
         t = self.corr_thread.obj = CorrThread(cfg, arg)
-        t.error.connect(self.on_play_thread_error)
         t.finished.connect(self.on_play_thread_finished)
+        t.error.connect(self.on_play_thread_error)
+        t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
         t.start()
+
+    def on_play_thread_finished(self):
+        self.corr_thread.set(None)
 
     def on_play_thread_error(self, stack_trace: str):
         TracebackDialog(self).showMessage(stack_trace)
 
-    def on_play_thread_finished(self):
-        self.corr_thread.set(None)
+    def on_play_thread_ffmpeg_missing(self):
+        DownloadFFmpegActivity(self)
 
     def _get_args(self, outputs: List[IOutputConfig]):
         arg = Arguments(cfg_dir=self.cfg_dir, outputs=outputs)
@@ -401,14 +406,24 @@ class CorrThread(qc.QThread):
         arg = self.arg
         try:
             CorrScope(cfg, arg).play()
-        except Exception:
+
+        except ffmpeg_path.MissingFFmpegError:
             arg.on_end()
-            stack_trace = traceback.format_exc()
+            self.ffmpeg_missing.emit()
+
+        except Exception as e:
+            arg.on_end()
+            if isinstance(e, CorrError):
+                stack_trace = traceback.format_exc(limit=0)
+            else:
+                stack_trace = traceback.format_exc()
             self.error.emit(stack_trace)
+
         else:
             arg.on_end()
 
     error = qc.pyqtSignal(str)
+    ffmpeg_missing = qc.pyqtSignal()
 
 
 class CorrProgressDialog(qw.QProgressDialog):
@@ -626,7 +641,6 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
         Column("line_color", str, None, "Line Color"),
-        # TODO move from table view to sidebar QDataWidgetMapper?
         Column("trigger__edge_strength", float, None),
         Column("trigger__responsiveness", float, None),
         Column("trigger__buffer_falloff", float, None),
@@ -799,3 +813,32 @@ class ChannelModel(qc.QAbstractTableModel):
 
 
 nope = qc.QVariant()
+
+
+class DownloadFFmpegActivity:
+    title = "Missing FFmpeg"
+
+    ffmpeg_url = ffmpeg_path.get_ffmpeg_url()
+    can_download = bool(ffmpeg_url)
+
+    path_uri = qc.QUrl.fromLocalFile(ffmpeg_path.path_dir).toString()
+
+    required = (
+        f"FFmpeg must be in PATH or "
+        f'<a href="{path_uri}">corrscope folder</a> in order to use corrscope.<br>'
+    )
+
+    ffmpeg_template = required + (
+        f'Download ffmpeg from <a href="{ffmpeg_url}">{ffmpeg_url}</a>.'
+    )
+    fail_template = required + "Cannot download FFmpeg for your platform."
+
+    def __init__(self, window: qw.QWidget):
+        """Prompt the user to download and install ffmpeg."""
+        Msg = qw.QMessageBox
+
+        if not self.can_download:
+            Msg.information(window, self.title, self.fail_template, Msg.Ok)
+            return
+
+        Msg.information(window, self.title, self.ffmpeg_template, Msg.Ok)
