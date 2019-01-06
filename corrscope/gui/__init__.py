@@ -512,7 +512,7 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
     return property(get, set)
 
 
-def default_property(path: str, default):
+def default_property(path: str, default) -> property:
     def getter(self: "ConfigModel"):
         val = rgetattr(self.cfg, path)
         if val is None:
@@ -526,7 +526,7 @@ def default_property(path: str, default):
     return property(getter, setter)
 
 
-def color2hex_property(path: str):
+def color2hex_property(path: str) -> property:
     def getter(self: "ConfigModel"):
         color_attr = rgetattr(self.cfg, path)
         return color2hex(color_attr)
@@ -538,7 +538,7 @@ def color2hex_property(path: str):
     return property(getter, setter)
 
 
-def path_fix_property(path: str):
+def path_fix_property(path: str) -> property:
     """Removes quotes from paths, when setting from GUI."""
 
     def getter(self: "ConfigModel") -> str:
