@@ -357,7 +357,11 @@ class MainWindow(qw.QMainWindow):
     def cfg_dir(self) -> str:
         maybe_path = self._cfg_path or self.cfg.master_audio
         if maybe_path:
-            return str(Path(maybe_path).resolve().parent)
+            # Windows likes to raise OSError when path contains *
+            try:
+                return str(Path(maybe_path).resolve().parent)
+            except OSError:
+                return "."
 
         return "."
 
