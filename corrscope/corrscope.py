@@ -4,6 +4,7 @@ import warnings
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
 from fractions import Fraction
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional, List, Union, TYPE_CHECKING, Callable
 
@@ -189,6 +190,13 @@ class CorrScope:
 
     def _load_channels(self):
         with pushd(self.arg.cfg_dir):
+            # Tell user if master audio path is invalid.
+            # (Otherwise, only ffmpeg uses the value of master_audio)
+            # Windows likes to raise OSError when path contains *, but we don't care.
+            if self.cfg.master_audio and not Path(self.cfg.master_audio).exists():
+                raise CorrError(
+                    f'File not found: master_audio="{self.cfg.master_audio}"'
+                )
             self.channels = [Channel(ccfg, self.cfg) for ccfg in self.cfg.channels]
             self.waves = [channel.wave for channel in self.channels]
             self.triggers = [channel.trigger for channel in self.channels]
