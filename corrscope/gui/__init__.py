@@ -538,10 +538,26 @@ def color2hex_property(path: str):
     return property(getter, setter)
 
 
+def path_fix_property(path: str):
+    """Removes quotes from paths, when setting from GUI."""
+
+    def getter(self: "ConfigModel") -> str:
+        return rgetattr(self.cfg, path)
+
+    def setter(self: "ConfigModel", val: str):
+        if len(val) and val[0] == val[-1] == '"':
+            val = val[1:-1]
+        rsetattr(self.cfg, path, val)
+
+    return property(getter, setter)
+
+
 class ConfigModel(PresentationModel):
     cfg: Config
     combo_symbols = {}
     combo_text = {}
+
+    master_audio = path_fix_property("master_audio")
 
     render__bg_color = color2hex_property("render__bg_color")
     render__init_line_color = color2hex_property("render__init_line_color")
