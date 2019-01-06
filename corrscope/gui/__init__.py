@@ -195,6 +195,7 @@ class MainWindow(qw.QMainWindow):
 
         if self.model is None:
             self.model = ConfigModel(cfg)
+            self.model.edited.connect(self.on_model_edited)
             # Calls self.on_gui_edited() whenever GUI widgets change.
             map_gui(self, self.model)
         else:
@@ -203,12 +204,12 @@ class MainWindow(qw.QMainWindow):
         self.channel_model = ChannelModel(cfg.channels)
         # Calling setModel again disconnects previous model.
         self.channel_view.setModel(self.channel_model)
-        self.channel_model.dataChanged.connect(self.on_gui_edited)
-        self.channel_model.rowsInserted.connect(self.on_gui_edited)
-        self.channel_model.rowsMoved.connect(self.on_gui_edited)
-        self.channel_model.rowsRemoved.connect(self.on_gui_edited)
+        self.channel_model.dataChanged.connect(self.on_model_edited)
+        self.channel_model.rowsInserted.connect(self.on_model_edited)
+        self.channel_model.rowsMoved.connect(self.on_model_edited)
+        self.channel_model.rowsRemoved.connect(self.on_model_edited)
 
-    def on_gui_edited(self):
+    def on_model_edited(self):
         self.any_unsaved = True
 
     title_cache: str
@@ -250,7 +251,6 @@ class MainWindow(qw.QMainWindow):
             master_audio = "master_audio"
             self.model[master_audio] = name
             self.model.update_widget[master_audio]()
-            self.on_gui_edited()
 
     def on_channel_add(self):
         wavs, file_type = qw.QFileDialog.getOpenFileNames(
