@@ -1,3 +1,4 @@
+import functools
 import os
 import sys
 import traceback
@@ -105,7 +106,7 @@ class MainWindow(qw.QMainWindow):
         self.actionExit.triggered.connect(qw.QApplication.closeAllWindows)
 
         # Initialize CorrScope-thread attribute.
-        self.corr_thread: Locked[Optional[CorrThread]] = Locked(None)
+        self.corr_thread: Optional[CorrThread] = None
 
         # Bind config to UI.
         self.load_cfg(cfg, cfg_path)
@@ -290,70 +291,66 @@ class MainWindow(qw.QMainWindow):
     def on_action_play(self):
         """ Launch CorrScope and ffplay. """
         error_msg = "Cannot play, another play/render is active"
-        with self.corr_thread as t:
-            if t is not None:
-                self.corr_thread.unlock()
-                qw.QMessageBox.critical(self, "Error", error_msg)
-                return
+        if self.corr_thread is not None:
+            qw.QMessageBox.critical(self, "Error", error_msg)
+            return
 
-            outputs = [FFplayOutputConfig()]
-            self.play_thread(outputs, dlg=None)
+        outputs = [FFplayOutputConfig()]
+        self.play_thread(outputs, dlg=None)
 
     def on_action_render(self):
         """ Get file name. Then show a progress dialog while rendering to file. """
         error_msg = "Cannot render to file, another play/render is active"
-        with self.corr_thread as t:
-            if t is not None:
-                self.corr_thread.unlock()
-                qw.QMessageBox.critical(self, "Error", error_msg)
-                return
+        if self.corr_thread is not None:
+            qw.QMessageBox.critical(self, "Error", error_msg)
+            return
 
-            video_path = os.path.join(self.cfg_dir, self.file_stem) + cli.VIDEO_NAME
-            filters = ["MP4 files (*.mp4)", "All files (*)"]
-            path = get_save_with_ext(
-                self, "Render to Video", video_path, filters, cli.VIDEO_NAME
-            )
-            if path:
-                name = str(path)
-                # FIXME what if missing mp4?
-                dlg = CorrProgressDialog(self, "Rendering video")
+        video_path = os.path.join(self.cfg_dir, self.file_stem) + cli.VIDEO_NAME
+        filters = ["MP4 files (*.mp4)", "All files (*)"]
+        path = get_save_with_ext(
+            self, "Render to Video", video_path, filters, cli.VIDEO_NAME
+        )
+        if path:
+            name = str(path)
+            dlg = CorrProgressDialog(self, "Rendering video")
 
-                outputs = [FFmpegOutputConfig(name)]
-                self.play_thread(outputs, dlg)
+            outputs = [FFmpegOutputConfig(name)]
+            self.play_thread(outputs, dlg)
 
     def play_thread(
         self, outputs: List[IOutputConfig], dlg: Optional["CorrProgressDialog"]
     ):
-        """ self.corr_thread MUST be locked. """
         arg = self._get_args(outputs)
+        cfg = copy_config(self.model.cfg)
+        t = self.corr_thread = CorrThread(cfg, arg)
+
         if dlg:
-            arg = attr.evolve(
+            dlg.canceled.connect(t.abort)
+            t.arg = attr.evolve(
                 arg,
-                on_begin=dlg.on_begin,
-                progress=dlg.setValue,
-                is_aborted=dlg.wasCanceled,
-                on_end=dlg.reset,  # TODO dlg.close
+                on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
+                progress=run_on_ui_thread(dlg.setValue, (int,)),
+                is_aborted=t.is_aborted.get,
+                on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
             )
 
-        cfg = copy_config(self.model.cfg)
-        t = self.corr_thread.obj = CorrThread(cfg, arg)
         t.finished.connect(self.on_play_thread_finished)
         t.error.connect(self.on_play_thread_error)
         t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
         t.start()
 
+    def _get_args(self, outputs: List[IOutputConfig]):
+        arg = Arguments(cfg_dir=self.cfg_dir, outputs=outputs)
+        return arg
+
     def on_play_thread_finished(self):
-        self.corr_thread.set(None)
+        self.corr_thread = None
 
     def on_play_thread_error(self, stack_trace: str):
         TracebackDialog(self).showMessage(stack_trace)
 
     def on_play_thread_ffmpeg_missing(self):
         DownloadFFmpegActivity(self)
-
-    def _get_args(self, outputs: List[IOutputConfig]):
-        arg = Arguments(cfg_dir=self.cfg_dir, outputs=outputs)
-        return arg
 
     # File paths
     @property
@@ -381,25 +378,12 @@ class MainWindow(qw.QMainWindow):
         return self.model.cfg
 
 
-class ShortcutButton(qw.QPushButton):
-    scoped_shortcut: QShortcut
-
-    def add_shortcut(self, scope: qw.QWidget, shortcut: str) -> None:
-        """ Adds shortcut and tooltip. """
-        keys = QKeySequence(shortcut, QKeySequence.PortableText)
-
-        self.scoped_shortcut = qw.QShortcut(keys, scope)
-        self.scoped_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
-        self.scoped_shortcut.activated.connect(self.click)
-
-        self.setToolTip(keys.toString(QKeySequence.NativeText))
-
-
 class CorrThread(qc.QThread):
     def __init__(self, cfg: Config, arg: Arguments):
         qc.QThread.__init__(self)
         self.cfg = cfg
         self.arg = arg
+        self.is_aborted = Locked(False)
 
     def run(self) -> None:
         cfg = self.cfg
@@ -422,6 +406,12 @@ class CorrThread(qc.QThread):
         else:
             arg.on_end()
 
+    is_aborted: Locked[bool]
+
+    @qc.pyqtSlot()
+    def abort(self):
+        self.is_aborted.set(True)
+
     error = qc.pyqtSignal(str)
     ffmpeg_missing = qc.pyqtSignal()
 
@@ -442,9 +432,59 @@ class CorrProgressDialog(qw.QProgressDialog):
         # Close after CorrScope finishes.
         self.setAutoClose(True)
 
+    @qc.pyqtSlot(float, float)
     def on_begin(self, begin_time, end_time):
         self.setRange(int(round(begin_time)), int(round(end_time)))
         # self.setValue is called by CorrScope, on the first frame.
+
+
+T = TypeVar("T", bound=Callable)
+
+
+# *arg_types: type
+def run_on_ui_thread(bound_slot: T, types: Tuple[type, ...]) -> T:
+    """ Runs an object's slot on the object's own thread.
+    It's terrible code but it works (as long as the slot has no return value).
+    """
+    qmo = qc.QMetaObject
+
+    # QObject *obj,
+    obj = bound_slot.__self__
+
+    # const char *member,
+    member = bound_slot.__name__
+
+    # Qt::ConnectionType type,
+    # QGenericReturnArgument ret,
+    # https://riverbankcomputing.com/pipermail/pyqt/2014-December/035223.html
+    conn = Qt.QueuedConnection
+
+    @functools.wraps(bound_slot)
+    def inner(*args):
+        if len(types) != len(args):
+            raise TypeError(f"len(types)={len(types)} != len(args)={len(args)}")
+
+        # https://www.qtcentre.org/threads/29156-Calling-a-slot-from-another-thread?p=137140#post137140
+        # QMetaObject.invokeMethod(skypeThread, "startSkypeCall", Qt.QueuedConnection, QtCore.Q_ARG("QString", "someguy"))
+
+        _args = [qc.Q_ARG(typ, typ(arg)) for typ, arg in zip(types, args)]
+        return qmo.invokeMethod(obj, member, conn, *_args)
+
+    return cast(T, inner)
+
+
+class ShortcutButton(qw.QPushButton):
+    scoped_shortcut: QShortcut
+
+    def add_shortcut(self, scope: qw.QWidget, shortcut: str) -> None:
+        """ Adds shortcut and tooltip. """
+        keys = QKeySequence(shortcut, QKeySequence.PortableText)
+
+        self.scoped_shortcut = qw.QShortcut(keys, scope)
+        self.scoped_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self.scoped_shortcut.activated.connect(self.click)
+
+        self.setToolTip(keys.toString(QKeySequence.NativeText))
 
 
 def nrow_ncol_property(altered: str, unaltered: str) -> property:
