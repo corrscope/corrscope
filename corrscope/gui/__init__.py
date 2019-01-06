@@ -247,6 +247,7 @@ class MainWindow(qw.QMainWindow):
             master_audio = "master_audio"
             self.model[master_audio] = name
             self.model.update_widget[master_audio]()
+            self.on_gui_edited()
 
     def on_channel_add(self):
         wavs, file_type = qw.QFileDialog.getOpenFileNames(
