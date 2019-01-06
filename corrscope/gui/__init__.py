@@ -204,6 +204,9 @@ class MainWindow(qw.QMainWindow):
         # Calling setModel again disconnects previous model.
         self.channel_view.setModel(self.channel_model)
         self.channel_model.dataChanged.connect(self.on_gui_edited)
+        self.channel_model.rowsInserted.connect(self.on_gui_edited)
+        self.channel_model.rowsMoved.connect(self.on_gui_edited)
+        self.channel_model.rowsRemoved.connect(self.on_gui_edited)
 
     def on_gui_edited(self):
         self.any_unsaved = True
