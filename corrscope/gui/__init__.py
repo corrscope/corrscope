@@ -3,8 +3,8 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from typing import *
-from typing import List, Any
+from types import MethodType
+from typing import Type, Optional, List, Any, Tuple, Callable, Union
 
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
@@ -320,6 +320,8 @@ class MainWindow(qw.QMainWindow):
     def play_thread(
         self, outputs: List[IOutputConfig], dlg: Optional["CorrProgressDialog"]
     ):
+        assert self.model
+
         arg = self._get_args(outputs)
         cfg = copy_config(self.model.cfg)
         t = self.corr_thread = CorrThread(cfg, arg)
@@ -357,7 +359,11 @@ class MainWindow(qw.QMainWindow):
     def cfg_dir(self) -> str:
         maybe_path = self._cfg_path or self.cfg.master_audio
         if maybe_path:
-            return str(Path(maybe_path).resolve().parent)
+            # Windows likes to raise OSError when path contains *
+            try:
+                return str(Path(maybe_path).resolve().parent)
+            except OSError:
+                return "."
 
         return "."
 
@@ -379,6 +385,15 @@ class MainWindow(qw.QMainWindow):
 
 
 class CorrThread(qc.QThread):
+    is_aborted: Locked[bool]
+
+    @qc.pyqtSlot()
+    def abort(self):
+        self.is_aborted.set(True)
+
+    error = qc.pyqtSignal(str)
+    ffmpeg_missing = qc.pyqtSignal()
+
     def __init__(self, cfg: Config, arg: Arguments):
         qc.QThread.__init__(self)
         self.cfg = cfg
@@ -406,15 +421,6 @@ class CorrThread(qc.QThread):
         else:
             arg.on_end()
 
-    is_aborted: Locked[bool]
-
-    @qc.pyqtSlot()
-    def abort(self):
-        self.is_aborted.set(True)
-
-    error = qc.pyqtSignal(str)
-    ffmpeg_missing = qc.pyqtSignal()
-
 
 class CorrProgressDialog(qw.QProgressDialog):
     def __init__(self, parent: Optional[qw.QWidget], title: str):
@@ -438,11 +444,8 @@ class CorrProgressDialog(qw.QProgressDialog):
         # self.setValue is called by CorrScope, on the first frame.
 
 
-T = TypeVar("T", bound=Callable)
-
-
 # *arg_types: type
-def run_on_ui_thread(bound_slot: T, types: Tuple[type, ...]) -> T:
+def run_on_ui_thread(bound_slot: MethodType, types: Tuple[type, ...]) -> Callable:
     """ Runs an object's slot on the object's own thread.
     It's terrible code but it works (as long as the slot has no return value).
     """
@@ -470,7 +473,7 @@ def run_on_ui_thread(bound_slot: T, types: Tuple[type, ...]) -> T:
         _args = [qc.Q_ARG(typ, typ(arg)) for typ, arg in zip(types, args)]
         return qmo.invokeMethod(obj, member, conn, *_args)
 
-    return cast(T, inner)
+    return inner
 
 
 class ShortcutButton(qw.QPushButton):
@@ -508,7 +511,7 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
     return property(get, set)
 
 
-def default_property(path: str, default):
+def default_property(path: str, default) -> property:
     def getter(self: "ConfigModel"):
         val = rgetattr(self.cfg, path)
         if val is None:
@@ -522,7 +525,7 @@ def default_property(path: str, default):
     return property(getter, setter)
 
 
-def color2hex_property(path: str):
+def color2hex_property(path: str) -> property:
     def getter(self: "ConfigModel"):
         color_attr = rgetattr(self.cfg, path)
         return color2hex(color_attr)
@@ -534,10 +537,31 @@ def color2hex_property(path: str):
     return property(getter, setter)
 
 
+def path_strip_quotes(path: str) -> str:
+    if len(path) and path[0] == path[-1] == '"':
+        return path[1:-1]
+    return path
+
+
+def path_fix_property(path: str) -> property:
+    """Removes quotes from paths, when setting from GUI."""
+
+    def getter(self: "ConfigModel") -> str:
+        return rgetattr(self.cfg, path)
+
+    def setter(self: "ConfigModel", val: str):
+        val = path_strip_quotes(val)
+        rsetattr(self.cfg, path, val)
+
+    return property(getter, setter)
+
+
 class ConfigModel(PresentationModel):
     cfg: Config
     combo_symbols = {}
     combo_text = {}
+
+    master_audio = path_fix_property("master_audio")
 
     render__bg_color = color2hex_property("render__bg_color")
     render__init_line_color = color2hex_property("render__init_line_color")
@@ -634,7 +658,7 @@ class ChannelTableView(qw.QTableView):
 @attr.dataclass
 class Column:
     key: str
-    cls: Type
+    cls: Union[Type, Callable]
     default: Any
 
     def _display_name(self) -> str:
@@ -677,7 +701,7 @@ class ChannelModel(qc.QAbstractTableModel):
 
     # columns
     col_data = [
-        Column("wav_path", str, "", "WAV Path"),
+        Column("wav_path", path_strip_quotes, "", "WAV Path"),
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
         Column("line_color", str, None, "Line Color"),
