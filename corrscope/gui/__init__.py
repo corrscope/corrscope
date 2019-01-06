@@ -538,6 +538,12 @@ def color2hex_property(path: str) -> property:
     return property(getter, setter)
 
 
+def path_strip_quotes(path: str) -> str:
+    if len(path) and path[0] == path[-1] == '"':
+        return path[1:-1]
+    return path
+
+
 def path_fix_property(path: str) -> property:
     """Removes quotes from paths, when setting from GUI."""
 
@@ -545,8 +551,7 @@ def path_fix_property(path: str) -> property:
         return rgetattr(self.cfg, path)
 
     def setter(self: "ConfigModel", val: str):
-        if len(val) and val[0] == val[-1] == '"':
-            val = val[1:-1]
+        val = path_strip_quotes(val)
         rsetattr(self.cfg, path, val)
 
     return property(getter, setter)
@@ -654,7 +659,7 @@ class ChannelTableView(qw.QTableView):
 @attr.dataclass
 class Column:
     key: str
-    cls: Type
+    cls: Union[Type, Callable]
     default: Any
 
     def _display_name(self) -> str:
@@ -697,7 +702,7 @@ class ChannelModel(qc.QAbstractTableModel):
 
     # columns
     col_data = [
-        Column("wav_path", str, "", "WAV Path"),
+        Column("wav_path", path_strip_quotes, "", "WAV Path"),
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
         Column("line_color", str, None, "Line Color"),
