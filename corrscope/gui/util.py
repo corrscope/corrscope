@@ -37,7 +37,7 @@ class Locked(Generic[T]):
         return self.obj
 
     def unlock(self):
-        # FIXME does it work? i was not thinking clearly when i wrote this
+        # FIXME don't use. What if we unlock, then someone else locks before we exit?
         if not self.skip_exit:
             self.skip_exit = True
             self.lock.unlock()
@@ -52,6 +52,10 @@ class Locked(Generic[T]):
         with self:
             self.obj = value
         return value
+
+    def get(self) -> T:
+        with self:
+            return self.obj
 
 
 def get_save_with_ext(
