@@ -21,7 +21,7 @@ WidgetUpdater = Callable[[], None]
 Attrs = Any
 
 
-class PresentationModel:
+class PresentationModel(qc.QObject):
     """ Key-value MVP presentation-model.
 
     Qt's built-in model-view framework expects all models to
@@ -33,8 +33,10 @@ class PresentationModel:
     # Although less explicit, these can be assigned using __init_subclass__.
     combo_symbols: Dict[str, List[str]]
     combo_text: Dict[str, List[str]]
+    edited = qc.pyqtSignal()
 
     def __init__(self, cfg: Attrs):
+        super().__init__()
         self.cfg = cfg
         self.update_widget: Dict[str, WidgetUpdater] = {}
 
@@ -46,6 +48,8 @@ class PresentationModel:
             return rgetattr(self.cfg, item)
 
     def __setitem__(self, key, value):
+        self.edited.emit()
+
         # Custom properties
         if hasattr(type(self), key):
             setattr(self, key, value)
@@ -77,7 +81,6 @@ def map_gui(view: "MainWindow", model: PresentationModel):
     for widget in widgets:
         path = widget.objectName()
         widget.bind_widget(model, path)
-        widget.gui_changed.connect(view.on_gui_edited)
 
 
 Signal = Any
