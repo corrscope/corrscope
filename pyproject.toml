@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "corrscope"
-version = "0.1.1-pre"
+version = "0.1.1"
 description = ""
 authors = ["nyanpasu64 <nyanpasu64@tuta.io>"]
 license = "BSD-2-Clause"
@@ -26,12 +26,12 @@ pywin32-ctypes = {version = "^0.2.0",platform = "win32"}
 
 [tool.poetry.scripts]
 corr = 'corrscope.cli:main'
+[tool.black]
+line-length = 88
+py36 = true
+exclude = 'utils/scipy_'
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
 
-[tool.black]
-line-length = 88
-py36 = true
-exclude = 'utils/scipy_'
