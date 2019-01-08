@@ -43,14 +43,6 @@ _rejected_modes = {Flatten.Mono, Flatten.IsAvg}
 Flatten.modes = [f for f in Flatten.__members__.values() if f not in _rejected_modes]
 
 
-@attr.dataclass(kw_only=True)
-class _WaveConfig:
-    """Internal class, not exposed via YAML"""
-
-    amplification: float = 1
-    _flatten: Flatten = Flatten.SumAvg
-
-
 class Wave:
     __slots__ = """
     wave_path
@@ -94,15 +86,19 @@ class Wave:
                     f"Cannot initialize stereo file {self.wave_path} with flatten=Mono"
                 )
 
-    def __init__(self, cfg: Optional[_WaveConfig], wave_path: str):
+    def __init__(
+        self,
+        wave_path: str,
+        amplification: float = 1.0,
+        flatten: Flatten = Flatten.SumAvg,
+    ):
         self.wave_path = wave_path
-        cfg = cfg or _WaveConfig()
-        self.amplification = cfg.amplification
+        self.amplification = amplification
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)
 
         assert self.data.ndim in [1, 2]
         self.is_mono = self.data.ndim == 1
-        self.flatten = cfg._flatten
+        self.flatten = flatten
 
         # Cast self.data to stereo (nsamp, nchan)
         if self.is_mono:
