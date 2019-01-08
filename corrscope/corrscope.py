@@ -180,7 +180,8 @@ class CorrScope:
         else:
             self.cfg.before_preview()
 
-    waves: List[Wave]
+    trigger_waves: List[Wave]
+    render_waves: List[Wave]
     channels: List[Channel]
     outputs: List[outputs_.Output]
     nchan: int
@@ -195,7 +196,8 @@ class CorrScope:
                     f'File not found: master_audio="{self.cfg.master_audio}"'
                 )
             self.channels = [Channel(ccfg, self.cfg) for ccfg in self.cfg.channels]
-            self.waves = [channel.wave for channel in self.channels]
+            self.trigger_waves = [channel.trigger_wave for channel in self.channels]
+            self.render_waves = [channel.render_wave for channel in self.channels]
             self.triggers = [channel.trigger for channel in self.channels]
             self.nchan = len(self.channels)
 
@@ -226,7 +228,7 @@ class CorrScope:
 
         begin_frame = round(fps * self.cfg.begin_time)
 
-        end_time = coalesce(self.cfg.end_time, self.waves[0].get_s())
+        end_time = coalesce(self.cfg.end_time, self.render_waves[0].get_s())
         end_frame = fps * end_time
         end_frame = int(end_frame) + 1
 
@@ -299,18 +301,21 @@ class CorrScope:
                     prev = rounded
 
                 render_datas = []
-                # Get data from each wave
-                for wave, channel in zip(self.waves, self.channels):
-                    sample = round(wave.smp_s * time_seconds)
+                # Get render-data from each wave.
+                for render_wave, channel in zip(self.render_waves, self.channels):
+                    sample = round(render_wave.smp_s * time_seconds)
 
+                    # Get trigger.
                     if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
                         cache = PerFrameCache()
                         trigger_sample = channel.trigger.get_trigger(sample, cache)
                     else:
                         trigger_sample = sample
+
+                    # Get render data.
                     if should_render:
                         render_datas.append(
-                            wave.get_around(
+                            render_wave.get_around(
                                 trigger_sample,
                                 channel.render_samp,
                                 channel.render_stride,

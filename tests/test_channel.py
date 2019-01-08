@@ -52,6 +52,7 @@ def test_config_channel_width_stride(
         return np.zeros(return_nsamp)
 
     wave.get_around.side_effect = get_around
+    wave.with_flatten.return_value = wave
     wave.nsamp = 10000
     wave.smp_s = 48000
 
@@ -82,7 +83,9 @@ def test_config_channel_width_stride(
     # Ensure channel.window_samp, trigger_subsampling, render_subsampling are correct.
     def ideal_samp(width_ms, sub):
         width_s = width_ms / 1000
-        return pytest.approx(round(width_s * channel.wave.smp_s / sub), rel=1e-6)
+        return pytest.approx(
+            round(width_s * channel.trigger_wave.smp_s / sub), rel=1e-6
+        )
 
     ideal_tsamp = ideal_samp(cfg.trigger_ms, tsub)
     ideal_rsamp = ideal_samp(cfg.render_ms, rsub)
