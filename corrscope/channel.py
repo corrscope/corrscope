@@ -6,7 +6,8 @@ from ruamel.yaml.comments import CommentedMap
 
 from corrscope.config import register_config, Alias, CorrError
 from corrscope.triggers import ITriggerConfig
-from corrscope.wave import Wave
+from corrscope.util import coalesce
+from corrscope.wave import Wave, Flatten
 
 if TYPE_CHECKING:
     from corrscope.corrscope import Config
@@ -25,6 +26,11 @@ class ChannelConfig:
     render_width: int = 1
 
     ampl_ratio: float = 1.0  # TODO use amplification = None instead?
+
+    # Stereo config
+    trigger_stereo: Optional[Flatten] = None
+    render_stereo: Optional[Flatten] = None
+
     line_color: Optional[str] = None
 
     # region Legacy Fields
@@ -47,9 +53,16 @@ class Channel:
         self.cfg = cfg
 
         # Create a Wave object.
-        self.wave = Wave(
+        wave = Wave(
             abspath(cfg.wav_path), amplification=corr_cfg.amplification * cfg.ampl_ratio
         )
+
+        # Flatten wave stereo for trigger and render.
+        tflat = coalesce(cfg.trigger_stereo, corr_cfg.trigger_stereo)
+        rflat = coalesce(cfg.render_stereo, corr_cfg.render_stereo)
+
+        self.trigger_wave = wave.with_flatten(tflat)
+        self.render_wave = wave.with_flatten(rflat)
 
         # `subsampling` increases `stride` and decreases `nsamp`.
         # `width` increases `stride` without changing `nsamp`.
@@ -63,7 +76,7 @@ class Channel:
         # stride = subsampling * width
         def calculate_nsamp(width_ms, sub):
             width_s = width_ms / 1000
-            return round(width_s * self.wave.smp_s / sub)
+            return round(width_s * wave.smp_s / sub)
 
         trigger_samp = calculate_nsamp(corr_cfg.trigger_ms, tsub)
         self.render_samp = calculate_nsamp(corr_cfg.render_ms, rsub)
@@ -87,7 +100,7 @@ class Channel:
             )
 
         self.trigger = tcfg(
-            wave=self.wave,
+            wave=self.trigger_wave,
             tsamp=trigger_samp,
             stride=self.trigger_stride,
             fps=corr_cfg.fps,

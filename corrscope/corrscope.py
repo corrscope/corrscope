@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import time
-import warnings
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
 from fractions import Fraction
@@ -12,9 +11,9 @@ import attr
 
 from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig
-from corrscope.config import kw_config, register_enum, Ignored, CorrError, CorrWarning
-from corrscope.renderer import MatplotlibRenderer, RendererConfig
+from corrscope.config import kw_config, register_enum, CorrError
 from corrscope.layout import LayoutConfig
+from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave, Flatten
@@ -156,7 +155,8 @@ class CorrScope:
         if len(self.cfg.channels) == 0:
             raise CorrError("Config.channels is empty")
 
-    waves: List[Wave]
+    trigger_waves: List[Wave]
+    render_waves: List[Wave]
     channels: List[Channel]
     outputs: List[outputs_.Output]
     nchan: int
@@ -171,7 +171,8 @@ class CorrScope:
                     f'File not found: master_audio="{self.cfg.master_audio}"'
                 )
             self.channels = [Channel(ccfg, self.cfg) for ccfg in self.cfg.channels]
-            self.waves = [channel.wave for channel in self.channels]
+            self.trigger_waves = [channel.trigger_wave for channel in self.channels]
+            self.render_waves = [channel.render_wave for channel in self.channels]
             self.triggers = [channel.trigger for channel in self.channels]
             self.nchan = len(self.channels)
 
