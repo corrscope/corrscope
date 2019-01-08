@@ -30,23 +30,13 @@ class Locked(Generic[T]):
         super().__init__()
         self.obj = obj
         self.lock = QMutex(QMutex.Recursive)
-        self.skip_exit = False
 
     def __enter__(self) -> T:
         self.lock.lock()
         return self.obj
 
-    def unlock(self):
-        # FIXME don't use. What if we unlock, then someone else locks before we exit?
-        if not self.skip_exit:
-            self.skip_exit = True
-            self.lock.unlock()
-
     def __exit__(self, *args, **kwargs):
-        if self.skip_exit:
-            self.skip_exit = False
-        else:
-            self.lock.unlock()
+        self.lock.unlock()
 
     def set(self, value: T) -> T:
         with self:
