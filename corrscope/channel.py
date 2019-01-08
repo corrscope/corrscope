@@ -22,8 +22,8 @@ class ChannelConfig:
         dict
     )  # TODO test channel-specific triggers
     # Multiplies how wide the window is, in milliseconds.
-    trigger_width: Optional[int] = None
-    render_width: Optional[int] = None
+    trigger_width: int = 1
+    render_width: int = 1
 
     ampl_ratio: float = 1.0  # TODO use amplification = None instead?
     line_color: Optional[str] = None
@@ -54,10 +54,10 @@ class Channel:
         # `subsampling` increases `stride` and decreases `nsamp`.
         # `width` increases `stride` without changing `nsamp`.
         tsub = corr_cfg.trigger_subsampling
-        tw = coalesce(cfg.trigger_width, corr_cfg.trigger_width)
+        tw = cfg.trigger_width
 
         rsub = corr_cfg.render_subsampling
-        rw = coalesce(cfg.render_width, corr_cfg.render_width)
+        rw = cfg.render_width
 
         # nsamp = orig / subsampling
         # stride = subsampling * width
