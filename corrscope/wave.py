@@ -36,31 +36,6 @@ class Flatten(enum.Flag):
     SumAvg = Sum | IsAvg
     DiffAvg = Diff | IsAvg
 
-    def __str__(self):
-        try:
-            return flat2str[self]
-        except KeyError:
-            return repr(self)
-
-
-str2flat = {
-    "=": Flatten.Stereo,
-    "+": Flatten.Sum,
-    "+/": Flatten.SumAvg,
-    "-": Flatten.Diff,
-    "-/": Flatten.DiffAvg,
-}
-flat2str = {flat: str_ for str_, flat in str2flat.items()}
-
-
-def make_flatten(obj: Union[str, Flatten]):
-    if isinstance(obj, Flatten):
-        return obj
-    try:
-        return str2flat[obj]
-    except KeyError:
-        raise CorrError(f"invalid Flatten mode {obj} not in {list(str2flat.keys())}")
-
 
 @attr.dataclass(kw_only=True)
 class _WaveConfig:
