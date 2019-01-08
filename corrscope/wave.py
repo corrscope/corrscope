@@ -2,18 +2,17 @@ import copy
 import enum
 import warnings
 from enum import auto
-from typing import Optional, Union, List
+from typing import Union, List
 
-import attr
 import numpy as np
 
 import corrscope.utils.scipy_wavfile as wavfile
-from corrscope.config import CorrError, CorrWarning
-
+from corrscope.config import CorrError, CorrWarning, register_enum
 
 FLOAT = np.single
 
 
+@register_enum
 @enum.unique
 class Flatten(enum.Flag):
     """ How to flatten a stereo signal. (Channels beyond first 2 are ignored.)
