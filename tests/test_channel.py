@@ -67,8 +67,8 @@ def test_config_channel_width_stride(
     Wave = mocker.patch.object(corrscope.channel, "Wave")
     wave = Wave.return_value
 
-    def get_around(sample: int, region_nsamp: int, stride: int):
-        return np.zeros(region_nsamp)
+    def get_around(sample: int, return_nsamp: int, stride: int):
+        return np.zeros(return_nsamp)
 
     wave.get_around.side_effect = get_around
     wave.nsamp = 10000
@@ -134,8 +134,8 @@ def test_config_channel_width_stride(
     corr.play()
 
     # Only render (not NullTrigger) calls wave.get_around().
-    (_sample, _region_nsamp, _subsampling), kwargs = wave.get_around.call_args
-    assert _region_nsamp == channel.render_samp
+    (_sample, _return_nsamp, _subsampling), kwargs = wave.get_around.call_args
+    assert _return_nsamp == channel.render_samp
     assert _subsampling == channel.render_stride
 
     # Inspect arguments to renderer.render_frame()

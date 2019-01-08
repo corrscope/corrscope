@@ -80,7 +80,7 @@ def test_wave_subsampling():
     wave = Wave(None, "tests/sine440.wav")
     # period = 48000 / 440 = 109.(09)*
 
-    wave.get_around(1000, region_nsamp=501, stride=4)
+    wave.get_around(1000, return_nsamp=501, stride=4)
     # len([:region_len:subsampling]) == ceil(region_len / subsampling)
     # If region_len % subsampling != 0, len() != region_len // subsampling.
 
