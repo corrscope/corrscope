@@ -45,30 +45,23 @@ class Config:
 
     fps: int
 
-    trigger_ms: Optional[int] = None
-    render_ms: Optional[int] = None
-    _width_ms: Optional[int] = None
+    trigger_ms: int
+    render_ms: int
 
     # trigger_subsampling and render_subsampling override subsampling.
     # Always non-None after __attrs_post_init__()
-    trigger_subsampling: int = None
-    render_subsampling: int = None
-    _subsampling: int = 1
+    trigger_subsampling: int = 1
+    render_subsampling: int = 1
 
     render_subfps: int = 1
     # FFmpeg accepts FPS as a fraction only.
     render_fps = property(lambda self: Fraction(self.fps, self.render_subfps))
 
-    # TODO: Remove cfg._width (breaks compat)
-    # ISSUE: baking into trigger_ms will stack with channel-specific ms
-    trigger_width: int = 1
-    render_width: int = 1
-
     amplification: float
 
     trigger: ITriggerConfig  # Can be overriden per Wave
 
-    # Can override trigger_width, render_width, trigger
+    # Multiplies by trigger_width, render_width. Can override trigger.
     channels: List[ChannelConfig]
 
     layout: LayoutConfig
@@ -76,11 +69,6 @@ class Config:
 
     show_internals: List[str] = attr.Factory(list)
     benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
-
-    # region Legacy Fields
-    outputs = Ignored
-    wav_prefix = Ignored
-    # endregion
 
     def __attrs_post_init__(self):
         # Cast benchmark_mode to enum.
@@ -91,31 +79,6 @@ class Config:
             raise CorrError(
                 f"invalid benchmark_mode mode {self.benchmark_mode} not in "
                 f"{[el.name for el in BenchmarkMode]}"
-            )
-
-        # Compute trigger_subsampling and render_subsampling.
-        subsampling = self._subsampling
-        self.trigger_subsampling = coalesce(self.trigger_subsampling, subsampling)
-        self.render_subsampling = coalesce(self.render_subsampling, subsampling)
-
-        # Compute trigger_ms and render_ms.
-        width_ms = self._width_ms
-        try:
-            self.trigger_ms = coalesce(self.trigger_ms, width_ms)
-            self.render_ms = coalesce(self.render_ms, width_ms)
-        except TypeError:
-            raise CorrError(
-                "Must supply either width_ms or both (trigger_ms and render_ms)"
-            )
-
-        deprecated = []
-        if self.trigger_width != 1:
-            deprecated.append("trigger_width")
-        if self.render_width != 1:
-            deprecated.append("render_width")
-        if deprecated:
-            warnings.warn(
-                f"Options {deprecated} are deprecated and will be removed", CorrWarning
             )
 
 
