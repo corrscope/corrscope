@@ -55,7 +55,7 @@ class Wave:
     __slots__ = """
     wave_path
     amplification
-    smp_s data flatten is_mono
+    smp_s data _flatten is_mono
     nsamp dtype
     center max_val
     """.split()
@@ -64,27 +64,30 @@ class Wave:
     data: "np.ndarray"
     """2-D array of shape (nsamp, nchan)"""
 
-    flatten: Flatten  # DO NOT SET DIRECTLY, except through set_flatten()
-    """
-    If data is stereo:
-    - flatten can be Stereo (2D) or Sum/Diff(Avg) (1D).
+    @property
+    def flatten(self) -> Flatten:
+        """
+        If data is stereo:
+        - flatten can be Stereo (2D) or Sum/Diff(Avg) (1D).
 
-    If data is mono:
-    - flatten can be Stereo (2D) or Mono (1D).
-    - If flatten != Stereo, set flatten = Mono.
-    """
+        If data is mono:
+        - flatten can be Stereo (2D) or Mono (1D).
+        - If flatten != Stereo, set flatten = Mono.
+        """
+        return self._flatten
 
-    def set_flatten(self, flatten: Flatten) -> None:
+    @flatten.setter
+    def flatten(self, flatten: Flatten) -> None:
         """ If self.is_mono, converts all non-Stereo modes to Mono. """
         if flatten not in Flatten.modes:
             raise CorrError(
                 f"Wave {self.wave_path} has invalid flatten mode {flatten} "
                 f"not in {Flatten.modes}"
             )
-        self.flatten = flatten
+        self._flatten = flatten
         if self.is_mono:
-            if self.flatten != Flatten.Stereo:
-                self.flatten = Flatten.Mono
+            if flatten != Flatten.Stereo:
+                self._flatten = Flatten.Mono
         else:
             if self.flatten == Flatten.Mono:
                 raise CorrError(
@@ -99,7 +102,7 @@ class Wave:
 
         assert self.data.ndim in [1, 2]
         self.is_mono = self.data.ndim == 1
-        self.set_flatten(cfg._flatten)
+        self.flatten = cfg._flatten
 
         # Cast self.data to stereo (nsamp, nchan)
         if self.is_mono:
@@ -141,7 +144,7 @@ class Wave:
 
     def with_flatten(self, flatten: Flatten) -> "Wave":
         new = copy.copy(self)
-        new.set_flatten(flatten)
+        new.flatten = flatten
         return new
 
     def __getitem__(self, index: Union[int, slice]) -> np.ndarray:
@@ -150,7 +153,7 @@ class Wave:
         data: np.ndarray = self.data[index].astype(FLOAT, subok=False, copy=True)
 
         # Flatten stereo to mono.
-        flatten = self.flatten
+        flatten = self._flatten  # Potentially faster than property getter.
         if flatten == Flatten.Mono:
             data = data.reshape(-1)  # ndarray.flatten() creates copy, is slow.
         elif flatten != Flatten.Stereo:
