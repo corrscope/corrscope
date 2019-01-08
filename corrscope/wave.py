@@ -1,3 +1,4 @@
+import copy
 import enum
 import warnings
 from enum import auto
@@ -120,6 +121,11 @@ class Wave:
 
         else:
             raise CorrError(f"unexpected wavfile dtype {dtype}")
+
+    def with_flatten(self, flatten: Flatten) -> "Wave":
+        new = copy.copy(self)
+        new.cfg = attr.evolve(self.cfg, flatten=flatten)
+        return new
 
     def __getitem__(self, index: Union[int, slice]) -> "np.ndarray[FLOAT]":
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
