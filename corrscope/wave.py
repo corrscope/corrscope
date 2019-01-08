@@ -24,6 +24,9 @@ class Flatten(enum.Flag):
     # Keep both channels.
     Stereo = 0
 
+    # Mono
+    Mono = auto()
+
     # Take sum or difference.
     Sum = auto()
     Diff = auto()
@@ -64,30 +67,50 @@ class _WaveConfig:
     """Internal class, not exposed via YAML"""
 
     amplification: float = 1
-    flatten: Flatten = Flatten.SumAvg
+    _flatten: Flatten = Flatten.SumAvg
 
 
 class Wave:
-    __slots__ = (
-        "cfg smp_s data nsamp dtype is_stereo stereo_nchan center max_val".split()
-    )
+    __slots__ = """
+    amplification
+    smp_s data flatten is_mono
+    nsamp dtype
+    center max_val
+    """.split()
 
     smp_s: int
     data: "np.ndarray"
     """2-D array of shape (nsamp, nchan)"""
 
-    def __init__(self, cfg: Optional[_WaveConfig], wave_path: str):
-        self.cfg = cfg or _WaveConfig()
-        self.smp_s, self.data = wavfile.read(
-            wave_path, mmap=True
-        )  # type: int, np.ndarray
+    flatten: Flatten
+    """
+    If data is stereo:
+    - flatten can be Stereo (2D) or Sum/Diff(Avg) (1D).
 
-        # self.is_stereo = self.data.ndim == 2
+    If data is mono:
+    - flatten can be Stereo (2D) or Mono (1D).
+    - If flatten != Stereo, set flatten = Mono.
+    """
+
+    def set_flatten(self, flatten: Flatten) -> None:
+        """ If self.is_mono, converts all non-Stereo modes to Mono. """
+        self.flatten = flatten
+        if self.is_mono and self.flatten != Flatten.Stereo:
+            self.flatten = Flatten.Mono
+
+    def __init__(self, cfg: Optional[_WaveConfig], wave_path: str):
+        cfg = cfg or _WaveConfig()
+        self.amplification = cfg.amplification
+        self.smp_s, self.data = wavfile.read(wave_path, mmap=True)
+
+        assert self.data.ndim in [1, 2]
+        self.is_mono = self.data.ndim == 1
+        self.set_flatten(cfg._flatten)
 
         # Cast self.data to stereo (nsamp, nchan)
-        assert self.data.ndim in [1, 2]
-        if self.data.ndim == 1:
+        if self.is_mono:
             self.data.shape = (-1, 1)
+
         self.nsamp, stereo_nchan = self.data.shape
         if stereo_nchan > 2:
             warnings.warn(
@@ -124,17 +147,19 @@ class Wave:
 
     def with_flatten(self, flatten: Flatten) -> "Wave":
         new = copy.copy(self)
-        new.cfg = attr.evolve(self.cfg, flatten=flatten)
+        new.flatten = flatten
         return new
 
     def __getitem__(self, index: Union[int, slice]) -> "np.ndarray[FLOAT]":
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         # subok=False converts data from memmap (slow) to ndarray (faster).
-        data = self.data[index].astype(FLOAT, subok=False, copy=True)
+        data: np.ndarray = self.data[index].astype(FLOAT, subok=False, copy=True)
 
         # Flatten stereo to mono.
-        flatten = self.cfg.flatten
-        if flatten:
+        flatten = self.flatten
+        if flatten == Flatten.Mono:
+            data = data.reshape(-1)  # ndarray.flatten() creates copy, is slow.
+        elif flatten != Flatten.Stereo:
             # data.strides = (4,), so data == contiguous float32
             if flatten & Flatten.Sum:
                 data = data[..., 0] + data[..., 1]
@@ -145,10 +170,10 @@ class Wave:
                 data /= 2
 
         data -= self.center
-        data *= self.cfg.amplification / self.max_val
+        data *= self.amplification / self.max_val
         return data
 
-    def _get(self, begin: int, end: int, subsampling: int) -> "np.ndarray[FLOAT]":
+    def _get(self, begin: int, end: int, subsampling: int) -> np.ndarray:
         """ Copies self.data[begin:end] with zero-padding. """
         if 0 <= begin and end <= self.nsamp:
             return self[begin:end:subsampling]
@@ -184,7 +209,7 @@ class Wave:
 
         return out
 
-    def get_around(self, sample: int, return_nsamp: int, stride: int):
+    def get_around(self, sample: int, return_nsamp: int, stride: int) -> np.ndarray:
         """ Returns `return_nsamp` samples, centered around `sample`,
         sampled with spacing `stride`.
 
