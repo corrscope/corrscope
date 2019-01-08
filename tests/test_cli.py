@@ -2,6 +2,7 @@ import shlex
 from os.path import abspath
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
+from unittest import mock
 
 import click
 import pytest
@@ -28,17 +29,22 @@ def call_main(argv):
 # corrscope configuration sinks
 
 
-def yaml_sink(mocker: "pytest_mock.MockFixture", command: str):
+def yaml_sink(_mocker, command: str):
     """ Mocks yaml.dump() and returns call args. Does not test dumping to string. """
-    dump = mocker.patch.object(yaml, "dump")
+    with mock.patch.object(yaml, "dump") as dump:
 
-    argv = shlex.split(command) + ["-w"]
-    call_main(argv)
+        argv = shlex.split(command) + ["-w"]
+        call_main(argv)
 
-    dump.assert_called_once()
-    (cfg, stream), kwargs = dump.call_args
+        dump.assert_called_once()
+        (cfg, stream), kwargs = dump.call_args
 
-    assert isinstance(cfg, Config)
+        assert isinstance(cfg, Config)
+
+    yaml_dump = yaml.dump(cfg)
+    cfg_round_trip = yaml.load(yaml_dump)
+    assert cfg_round_trip == cfg, yaml_dump
+
     return (cfg, stream)
 
 
