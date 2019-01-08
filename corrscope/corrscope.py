@@ -203,7 +203,7 @@ class CorrScope:
 
         begin_frame = round(fps * self.cfg.begin_time)
 
-        end_time = coalesce(self.cfg.end_time, self.waves[0].get_s())
+        end_time = coalesce(self.cfg.end_time, self.render_waves[0].get_s())
         end_frame = fps * end_time
         end_frame = int(end_frame) + 1
 
@@ -275,18 +275,21 @@ class CorrScope:
                     prev = rounded
 
                 render_datas = []
-                # Get data from each wave
-                for wave, channel in zip(self.waves, self.channels):
-                    sample = round(wave.smp_s * time_seconds)
+                # Get render-data from each wave.
+                for render_wave, channel in zip(self.render_waves, self.channels):
+                    sample = round(render_wave.smp_s * time_seconds)
 
+                    # Get trigger.
                     if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
                         cache = PerFrameCache()
                         trigger_sample = channel.trigger.get_trigger(sample, cache)
                     else:
                         trigger_sample = sample
+
+                    # Get render data.
                     if should_render:
                         render_datas.append(
-                            wave.get_around(
+                            render_wave.get_around(
                                 trigger_sample,
                                 channel.render_samp,
                                 channel.render_stride,
