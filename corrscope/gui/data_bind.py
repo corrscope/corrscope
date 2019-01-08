@@ -124,6 +124,10 @@ class BoundWidget(QWidget):
         error_palette.setColor(QPalette.Base, red_bg)
         return error_palette
 
+    # My class/method naming scheme is inconsistent and unintuitive.
+    # PresentationModel+set_model vs. cfg2gui+set_gui vs. widget
+    # Feel free to improve the naming.
+
     def cfg2gui(self):
         """ Update the widget without triggering signals.
 
