@@ -6,7 +6,6 @@ from ruamel.yaml.comments import CommentedMap
 
 from corrscope.config import register_config, Alias, CorrError
 from corrscope.triggers import ITriggerConfig
-from corrscope.util import coalesce
 from corrscope.wave import _WaveConfig, Wave
 
 if TYPE_CHECKING:
