@@ -5,7 +5,6 @@ import warnings
 import attr
 import corrscope.utils.scipy_wavfile as wavfile
 
-
 from corrscope.config import CorrError, CorrWarning
 
 
@@ -122,11 +121,14 @@ class Wave:
 
         return out
 
-    def get_around(self, sample: int, region_nsamp: int, stride: int):
-        """ Copies self.data[...] """
-        region_nsamp *= stride
-        end = sample + region_nsamp // 2
-        begin = end - region_nsamp
+    def get_around(self, sample: int, return_nsamp: int, stride: int):
+        """ Returns `return_nsamp` samples, centered around `sample`,
+        sampled with spacing `stride`.
+
+        Copies self.data[...] """
+        distance = return_nsamp * stride
+        end = sample + distance // 2
+        begin = end - distance
         return self._get(begin, end, stride)
 
     def get_s(self) -> float:
