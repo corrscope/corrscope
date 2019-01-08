@@ -72,6 +72,7 @@ class _WaveConfig:
 
 class Wave:
     __slots__ = """
+    wave_path
     amplification
     smp_s data flatten is_mono
     nsamp dtype
@@ -95,10 +96,17 @@ class Wave:
     def set_flatten(self, flatten: Flatten) -> None:
         """ If self.is_mono, converts all non-Stereo modes to Mono. """
         self.flatten = flatten
-        if self.is_mono and self.flatten != Flatten.Stereo:
-            self.flatten = Flatten.Mono
+        if self.is_mono:
+            if self.flatten != Flatten.Stereo:
+                self.flatten = Flatten.Mono
+        else:
+            if self.flatten == Flatten.Mono:
+                raise CorrError(
+                    f"Cannot initialize stereo file {self.wave_path} with flatten=Mono"
+                )
 
     def __init__(self, cfg: Optional[_WaveConfig], wave_path: str):
+        self.wave_path = wave_path
         cfg = cfg or _WaveConfig()
         self.amplification = cfg.amplification
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)
