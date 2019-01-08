@@ -46,7 +46,7 @@ FPS = 60
 
 
 def test_trigger(cfg: CorrelationTriggerConfig):
-    wave = Wave(None, "tests/impulse24000.wav")
+    wave = Wave("tests/impulse24000.wav")
 
     iters = 5
     plot = False
@@ -78,7 +78,7 @@ def test_trigger(cfg: CorrelationTriggerConfig):
 
 
 def test_trigger_stride(cfg: CorrelationTriggerConfig):
-    wave = Wave(None, "tests/sine440.wav")
+    wave = Wave("tests/sine440.wav")
     # period = 48000 / 440 = 109.(09)*
 
     iters = 5
@@ -120,7 +120,7 @@ def test_trigger_stride(cfg: CorrelationTriggerConfig):
 def test_post_trigger_stride(post_cfg: CorrelationTriggerConfig):
     cfg = post_cfg
 
-    wave = Wave(None, "tests/sine440.wav")
+    wave = Wave("tests/sine440.wav")
     iters = 5
     x0 = 24000
     stride = 4
@@ -141,7 +141,7 @@ def test_post_trigger_stride(post_cfg: CorrelationTriggerConfig):
 
 
 def test_trigger_stride_edges(cfg: CorrelationTriggerConfig):
-    wave = Wave(None, "tests/sine440.wav")
+    wave = Wave("tests/sine440.wav")
     # period = 48000 / 440 = 109.(09)*
 
     stride = 4
@@ -156,7 +156,7 @@ def test_trigger_stride_edges(cfg: CorrelationTriggerConfig):
 
 def test_trigger_should_recalc_window():
     cfg = cfg_template(recalc_semitones=1.0)
-    wave = Wave(None, "tests/sine440.wav")
+    wave = Wave("tests/sine440.wav")
     trigger: CorrelationTrigger = cfg(wave, tsamp=1000, stride=1, fps=FPS)
 
     for x in [0, 1, 1000]:

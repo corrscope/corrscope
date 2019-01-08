@@ -134,7 +134,7 @@ def test_load_yaml_another_dir(mocker, Popen):
 
     # Test `wave_path`
     args, kwargs = Wave.call_args
-    cfg, wave_path = args
+    (wave_path,) = args
     assert wave_path == wav_abs
 
     # Test output `master_audio` and video `path`

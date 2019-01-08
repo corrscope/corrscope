@@ -6,7 +6,7 @@ from ruamel.yaml.comments import CommentedMap
 
 from corrscope.config import register_config, Alias, CorrError
 from corrscope.triggers import ITriggerConfig
-from corrscope.wave import _WaveConfig, Wave
+from corrscope.wave import Wave
 
 if TYPE_CHECKING:
     from corrscope.corrscope import Config
@@ -47,8 +47,9 @@ class Channel:
         self.cfg = cfg
 
         # Create a Wave object.
-        wcfg = _WaveConfig(amplification=corr_cfg.amplification * cfg.ampl_ratio)
-        self.wave = Wave(wcfg, abspath(cfg.wav_path))
+        self.wave = Wave(
+            abspath(cfg.wav_path), amplification=corr_cfg.amplification * cfg.ampl_ratio
+        )
 
         # `subsampling` increases `stride` and decreases `nsamp`.
         # `width` increases `stride` without changing `nsamp`.
