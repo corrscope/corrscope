@@ -17,7 +17,7 @@ from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.layout import LayoutConfig
 from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from corrscope.util import pushd, coalesce
-from corrscope.wave import Wave
+from corrscope.wave import Wave, Flatten
 
 if TYPE_CHECKING:
     from corrscope.triggers import CorrelationTrigger
@@ -35,7 +35,13 @@ class BenchmarkMode(IntEnum):
     OUTPUT = 3
 
 
-@kw_config(always_dump="render_subfps begin_time end_time subsampling")
+@kw_config(
+    always_dump="""
+    begin_time end_time
+    render_subfps trigger_subsampling render_subsampling
+    trigger_stereo render_stereo
+    """
+)
 class Config:
     """ Default values indicate optional attributes. """
 
@@ -58,6 +64,10 @@ class Config:
     render_fps = property(lambda self: Fraction(self.fps, self.render_subfps))
 
     amplification: float
+
+    # Stereo config
+    trigger_stereo: Flatten = Flatten.SumAvg
+    render_stereo: Flatten = Flatten.SumAvg
 
     trigger: ITriggerConfig  # Can be overriden per Wave
 
