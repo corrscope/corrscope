@@ -2,7 +2,7 @@ import copy
 import enum
 import warnings
 from enum import auto
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import attr
 import numpy as np
@@ -25,16 +25,22 @@ class Flatten(enum.Flag):
     Stereo = 0
 
     # Mono
-    Mono = auto()
+    Mono = auto()  # NOT publicly exposed
 
     # Take sum or difference.
     Sum = auto()
     Diff = auto()
 
     # Divide by nchan=2.
-    IsAvg = auto()
+    IsAvg = auto()  # NOT publicly exposed
     SumAvg = Sum | IsAvg
     DiffAvg = Diff | IsAvg
+
+    modes: List["Flatten"]
+
+
+_rejected_modes = {Flatten.Mono, Flatten.IsAvg}
+Flatten.modes = [f for f in Flatten.__members__.values() if f not in _rejected_modes]
 
 
 @attr.dataclass(kw_only=True)
@@ -58,7 +64,7 @@ class Wave:
     data: "np.ndarray"
     """2-D array of shape (nsamp, nchan)"""
 
-    flatten: Flatten
+    flatten: Flatten  # DO NOT SET DIRECTLY, except through set_flatten()
     """
     If data is stereo:
     - flatten can be Stereo (2D) or Sum/Diff(Avg) (1D).
@@ -70,6 +76,11 @@ class Wave:
 
     def set_flatten(self, flatten: Flatten) -> None:
         """ If self.is_mono, converts all non-Stereo modes to Mono. """
+        if flatten not in Flatten.modes:
+            raise CorrError(
+                f"Wave {self.wave_path} has invalid flatten mode {flatten} "
+                f"not in {Flatten.modes}"
+            )
         self.flatten = flatten
         if self.is_mono:
             if self.flatten != Flatten.Stereo:
@@ -130,10 +141,10 @@ class Wave:
 
     def with_flatten(self, flatten: Flatten) -> "Wave":
         new = copy.copy(self)
-        new.flatten = flatten
+        new.set_flatten(flatten)
         return new
 
-    def __getitem__(self, index: Union[int, slice]) -> "np.ndarray[FLOAT]":
+    def __getitem__(self, index: Union[int, slice]) -> np.ndarray:
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         # subok=False converts data from memmap (slow) to ndarray (faster).
         data: np.ndarray = self.data[index].astype(FLOAT, subok=False, copy=True)
