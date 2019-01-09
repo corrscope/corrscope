@@ -1,6 +1,7 @@
 import pickle
+from enum import Enum
 from io import StringIO, BytesIO
-from typing import ClassVar, TYPE_CHECKING, Type, TypeVar
+from typing import ClassVar, Type, TypeVar
 
 import attr
 from ruamel.yaml import (
@@ -11,10 +12,6 @@ from ruamel.yaml import (
     Constructor,
     Node,
 )
-
-if TYPE_CHECKING:
-    from enum import Enum
-
 
 __all__ = [
     "yaml",
@@ -49,7 +46,9 @@ class NoAliasRepresenter(RoundTripRepresenter):
     """ Disable aliases. """
 
     def ignore_aliases(self, data):
-        return True
+        if isinstance(data, Enum):
+            return True
+        return super().ignore_aliases(data)
 
 
 # Default typ='roundtrip' creates 'ruamel.yaml.comments.CommentedMap' instead of dict.
