@@ -3,7 +3,14 @@ from io import StringIO, BytesIO
 from typing import ClassVar, TYPE_CHECKING, Type, TypeVar
 
 import attr
-from ruamel.yaml import yaml_object, YAML, Representer
+from ruamel.yaml import (
+    yaml_object,
+    YAML,
+    Representer,
+    RoundTripRepresenter,
+    Constructor,
+    Node,
+)
 
 if TYPE_CHECKING:
     from enum import Enum
@@ -17,6 +24,7 @@ __all__ = [
     "Alias",
     "Ignored",
     "register_enum",
+    "typed_enum",
     "CorrError",
     "CorrWarning",
 ]
@@ -27,6 +35,7 @@ __all__ = [
 
 class MyYAML(YAML):
     def dump(self, data, stream=None, **kw):
+        """ Allow dumping to str. """
         inefficient = False
         if stream is None:
             inefficient = True
@@ -36,9 +45,19 @@ class MyYAML(YAML):
             return stream.getvalue()
 
 
+class NoAliasRepresenter(RoundTripRepresenter):
+    """ Disable aliases. """
+
+    def ignore_aliases(self, data):
+        return True
+
+
 # Default typ='roundtrip' creates 'ruamel.yaml.comments.CommentedMap' instead of dict.
 # Is isinstance(CommentedMap, dict)? IDK
 yaml = MyYAML()
+assert yaml.Representer == RoundTripRepresenter
+yaml.Representer = NoAliasRepresenter
+
 _yaml_loadable = yaml_object(yaml)
 
 
@@ -196,10 +215,24 @@ def register_enum(cls: Type):
     return _yaml_loadable(cls)
 
 
+def typed_enum(cls: Type):
+    cls.to_yaml = classmethod(_TypedEnumMixin.to_yaml)
+    cls.from_yaml = classmethod(_TypedEnumMixin.from_yaml)
+    return _yaml_loadable(cls)
+
+
 class _EnumMixin:
     @classmethod
     def to_yaml(cls, representer: Representer, node: "Enum"):
         return representer.represent_str(node._name_)
+
+
+class _TypedEnumMixin:
+    def to_yaml(cls: Type["Enum"], representer: Representer, node: "Enum"):
+        return representer.represent_scalar("!" + cls.__name__, node._name_)
+
+    def from_yaml(cls: Type["Enum"], constructor: Constructor, node: "Node"):
+        return cls[node.value]
 
 
 # Miscellaneous

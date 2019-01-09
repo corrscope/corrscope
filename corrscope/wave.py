@@ -7,12 +7,12 @@ from typing import Union, List
 import numpy as np
 
 import corrscope.utils.scipy_wavfile as wavfile
-from corrscope.config import CorrError, CorrWarning, register_enum
+from corrscope.config import CorrError, CorrWarning, typed_enum
 
 FLOAT = np.single
 
 
-@register_enum
+@typed_enum
 @enum.unique
 class Flatten(enum.Flag):
     """ How to flatten a stereo signal. (Channels beyond first 2 are ignored.)
