@@ -42,6 +42,8 @@ def yaml_sink(_mocker, command: str):
         assert isinstance(cfg, Config)
 
     yaml_dump = yaml.dump(cfg)
+    assert "end_time: null" not in yaml_dump
+
     cfg_round_trip = yaml.load(yaml_dump)
     assert cfg_round_trip == cfg, yaml_dump
 
