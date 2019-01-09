@@ -24,7 +24,7 @@ __all__ = [
     "Alias",
     "Ignored",
     "register_enum",
-    "typed_enum",
+    "TypedEnumDump",
     "CorrError",
     "CorrWarning",
 ]
@@ -215,22 +215,21 @@ def register_enum(cls: Type):
     return _yaml_loadable(cls)
 
 
-def typed_enum(cls: Type):
-    cls.to_yaml = classmethod(_TypedEnumMixin.to_yaml)
-    cls.from_yaml = classmethod(_TypedEnumMixin.from_yaml)
-    return _yaml_loadable(cls)
-
-
 class _EnumMixin:
     @classmethod
     def to_yaml(cls, representer: Representer, node: "Enum"):
         return representer.represent_str(node._name_)
 
 
-class _TypedEnumMixin:
+class TypedEnumDump:
+    def __init_subclass__(cls, **kwargs):
+        _yaml_loadable(cls)
+
+    @classmethod
     def to_yaml(cls: Type["Enum"], representer: Representer, node: "Enum"):
         return representer.represent_scalar("!" + cls.__name__, node._name_)
 
+    @classmethod
     def from_yaml(cls: Type["Enum"], constructor: Constructor, node: "Node"):
         return cls[node.value]
 
