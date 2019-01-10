@@ -52,7 +52,7 @@ def default_color():
     return "#8edeff"
 
 
-@register_config(always_dump="line_width bg_color init_line_color")
+@register_config(always_dump="*")
 class RendererConfig:
     width: int
     height: int
@@ -60,8 +60,6 @@ class RendererConfig:
 
     bg_color: str = "#000000"
     init_line_color: str = default_color()
-
-    create_window: bool = False
 
 
 @attr.dataclass
@@ -173,8 +171,6 @@ class MatplotlibRenderer(Renderer):
         # Setup figure geometry
         self._fig.set_dpi(self.DPI)
         self._fig.set_size_inches(self.cfg.width / self.DPI, self.cfg.height / self.DPI)
-        if self.cfg.create_window:
-            plt.show(block=False)
 
     def render_frame(self, datas: List[np.ndarray]) -> None:
         ndata = len(datas)
