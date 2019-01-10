@@ -1,4 +1,4 @@
-from typing import Optional, TypeVar, Callable, List
+from typing import Optional, TypeVar, Callable, List, Generic
 
 import numpy as np
 
@@ -92,3 +92,11 @@ class RendererLayout:
             regions2d = regions2d.T
 
         return regions2d.flatten()[: self.nplots].tolist()
+
+
+class EdgeFinder(Generic[Region]):
+    def __init__(self, regions2d: np.ndarray):
+        self.tops: List[Region] = regions2d[0, :].tolist()
+        self.bottoms: List[Region] = regions2d[-1, :].tolist()
+        self.lefts: List[Region] = regions2d[:, 0].tolist()
+        self.rights: List[Region] = regions2d[:, -1].tolist()
