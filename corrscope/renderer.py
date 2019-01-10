@@ -7,7 +7,7 @@ import numpy as np
 import attr
 
 from corrscope.config import register_config
-from corrscope.layout import RendererLayout, LayoutConfig
+from corrscope.layout import RendererLayout, LayoutConfig, EdgeFinder
 from corrscope.outputs import RGB_DEPTH, ByteBuffer
 from corrscope.util import coalesce
 
@@ -168,18 +168,31 @@ class MatplotlibRenderer(Renderer):
         )
 
         ax: "Axes"
-        # Remove Axis from Axes
-        for ax in axes2d.flatten():
-            if grid_color:
+        if grid_color:
+            # Initialize borders
+            for ax in axes2d.flatten():
                 # Background color
-                # TODO per-panel color? performance +-?
                 ax.set_facecolor(self.transparent)
 
                 # Set border colors
-                # TODO hide half the borders for speed?
                 for spine in ax.spines.values():
                     spine.set_color(grid_color)
-            else:
+
+                # gridspec_kw indexes from bottom-left corner.
+                # Only show bottom-left borders (x=0, y=0)
+                ax.spines["top"].set_visible(False)
+                ax.spines["right"].set_visible(False)
+
+            # Hide bottom-left edges for speed.
+            edge_axes: EdgeFinder["Axes"] = EdgeFinder(axes2d)
+            for ax in edge_axes.bottoms:
+                ax.spines["bottom"].set_visible(False)
+            for ax in edge_axes.lefts:
+                ax.spines["left"].set_visible(False)
+
+        else:
+            # Remove Axis from Axes
+            for ax in axes2d.flatten():
                 ax.set_axis_off()
 
         # Generate arrangement (using nplots, cfg.orientation)
