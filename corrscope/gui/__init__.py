@@ -494,6 +494,9 @@ class ShortcutButton(qw.QPushButton):
         self.setToolTip(keys.toString(QKeySequence.NativeText))
 
 
+# Begin ConfigModel properties
+
+
 def nrow_ncol_property(altered: str, unaltered: str) -> property:
     def get(self: "ConfigModel"):
         val = getattr(self.cfg.layout, altered)
@@ -541,6 +544,24 @@ def color2hex_property(path: str) -> property:
     return property(getter, setter)
 
 
+def color2hex_maybe_property(path: str) -> property:
+    # TODO turn into class, and use __set_name__ to determine assignment LHS=path.
+    def getter(self: "ConfigModel"):
+        color_attr = rgetattr(self.cfg, path)
+        if not color_attr:
+            return ""
+        return color2hex(color_attr)
+
+    def setter(self: "ConfigModel", val: str):
+        if val:
+            color = color2hex(val)
+        else:
+            color = None
+        rsetattr(self.cfg, path, color)
+
+    return property(getter, setter)
+
+
 def path_strip_quotes(path: str) -> str:
     if len(path) and path[0] == path[-1] == '"':
         return path[1:-1]
@@ -569,6 +590,7 @@ class ConfigModel(PresentationModel):
 
     render__bg_color = color2hex_property("render__bg_color")
     render__init_line_color = color2hex_property("render__init_line_color")
+    render__grid_color = color2hex_maybe_property("render__grid_color")
 
     @property
     def render_video_size(self) -> str:
@@ -601,6 +623,9 @@ class ConfigModel(PresentationModel):
     combo_text["layout__orientation"] = ["Horizontal", "Vertical"]
 
     render__line_width = default_property("render__line_width", 1.5)
+
+
+# End ConfigModel
 
 
 class ChannelTableView(qw.QTableView):

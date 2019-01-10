@@ -7,7 +7,7 @@ import numpy as np
 import attr
 
 from corrscope.config import register_config
-from corrscope.layout import RendererLayout, LayoutConfig
+from corrscope.layout import RendererLayout, LayoutConfig, EdgeFinder
 from corrscope.outputs import RGB_DEPTH, ByteBuffer
 from corrscope.util import coalesce
 
@@ -60,6 +60,7 @@ class RendererConfig:
 
     bg_color: str = "#000000"
     init_line_color: str = default_color()
+    grid_color: Optional[str] = None
 
 
 @attr.dataclass
@@ -137,6 +138,8 @@ class MatplotlibRenderer(Renderer):
 
         self._set_layout()  # mutates self
 
+    transparent = "#00000000"
+
     def _set_layout(self) -> None:
         """
         Creates a flat array of Matplotlib Axes, with the new layout.
@@ -152,18 +155,50 @@ class MatplotlibRenderer(Renderer):
             raise Exception("I don't currently expect to call _set_layout() twice")
             # plt.close(self.fig)
 
+        grid_color = self.cfg.grid_color
         axes2d: np.ndarray["Axes"]
         self._fig, axes2d = plt.subplots(
             self.layout.nrows,
             self.layout.ncols,
             squeeze=False,
-            # Remove gaps between Axes
+            # Remove axis ticks (which slow down rendering)
+            subplot_kw=dict(xticks=[], yticks=[]),
+            # Remove gaps between Axes TODO borders shouldn't be half-visible
             gridspec_kw=dict(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0),
         )
 
-        # remove Axis from Axes
-        for ax in axes2d.flatten():
-            ax.set_axis_off()
+        ax: "Axes"
+        if grid_color:
+            # Initialize borders
+            for ax in axes2d.flatten():
+                # Hide Axises
+                # (drawing them is very slow, and we disable ticks+labels anyway)
+                ax.get_xaxis().set_visible(False)
+                ax.get_yaxis().set_visible(False)
+
+                # Background color
+                ax.set_facecolor(self.transparent)
+
+                # Set border colors
+                for spine in ax.spines.values():
+                    spine.set_color(grid_color)
+
+                # gridspec_kw indexes from bottom-left corner.
+                # Only show bottom-left borders (x=0, y=0)
+                ax.spines["top"].set_visible(False)
+                ax.spines["right"].set_visible(False)
+
+            # Hide bottom-left edges for speed.
+            edge_axes: EdgeFinder["Axes"] = EdgeFinder(axes2d)
+            for ax in edge_axes.bottoms:
+                ax.spines["bottom"].set_visible(False)
+            for ax in edge_axes.lefts:
+                ax.spines["left"].set_visible(False)
+
+        else:
+            # Remove Axis from Axes
+            for ax in axes2d.flatten():
+                ax.set_axis_off()
 
         # Generate arrangement (using nplots, cfg.orientation)
         self._axes = self.layout.arrange(lambda row, col: axes2d[row, col])
