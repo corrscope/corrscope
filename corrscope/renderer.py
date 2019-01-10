@@ -60,6 +60,7 @@ class RendererConfig:
 
     bg_color: str = "#000000"
     init_line_color: str = default_color()
+    grid_color: Optional[str] = None
 
 
 @attr.dataclass
@@ -137,6 +138,8 @@ class MatplotlibRenderer(Renderer):
 
         self._set_layout()  # mutates self
 
+    transparent = "#00000000"
+
     def _set_layout(self) -> None:
         """
         Creates a flat array of Matplotlib Axes, with the new layout.
@@ -152,18 +155,32 @@ class MatplotlibRenderer(Renderer):
             raise Exception("I don't currently expect to call _set_layout() twice")
             # plt.close(self.fig)
 
+        grid_color = self.cfg.grid_color
         axes2d: np.ndarray["Axes"]
         self._fig, axes2d = plt.subplots(
             self.layout.nrows,
             self.layout.ncols,
             squeeze=False,
-            # Remove gaps between Axes
+            # Remove axis ticks (which slow down rendering)
+            subplot_kw=dict(xticks=[], yticks=[]),
+            # Remove gaps between Axes TODO borders shouldn't be half-visible
             gridspec_kw=dict(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0),
         )
 
-        # remove Axis from Axes
+        ax: "Axes"
+        # Remove Axis from Axes
         for ax in axes2d.flatten():
-            ax.set_axis_off()
+            if grid_color:
+                # Background color
+                # TODO per-panel color? performance +-?
+                ax.set_facecolor(self.transparent)
+
+                # Set border colors
+                # TODO hide half the borders for speed?
+                for spine in ax.spines.values():
+                    spine.set_color(grid_color)
+            else:
+                ax.set_axis_off()
 
         # Generate arrangement (using nplots, cfg.orientation)
         self._axes = self.layout.arrange(lambda row, col: axes2d[row, col])
