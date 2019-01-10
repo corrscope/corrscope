@@ -171,6 +171,11 @@ class MatplotlibRenderer(Renderer):
         if grid_color:
             # Initialize borders
             for ax in axes2d.flatten():
+                # Hide Axises
+                # (drawing them is very slow, and we disable ticks+labels anyway)
+                ax.get_xaxis().set_visible(False)
+                ax.get_yaxis().set_visible(False)
+
                 # Background color
                 ax.set_facecolor(self.transparent)
 
