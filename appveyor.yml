@@ -22,11 +22,12 @@ environment:
     py: '%pydir%\python.exe'
     APPVEYOR_SAVE_CACHE_ON_ERROR: true
 
+
 cache:
-- '%LOCALAPPDATA%\pypoetry\Cache -> .appveyor\clear-caches'
-- '%USERPROFILE%\.poetry -> .appveyor\clear-caches'
-    # \cache\repositories\pypi\
-    # \virtualenvs\xyz-py3.x\
+  - '%LOCALAPPDATA%\pypoetry\Cache -> .appveyor\clear-caches'
+  - '%USERPROFILE%\.poetry -> .appveyor\clear-caches'
+  # \cache\repositories\pypi\
+  # \virtualenvs\xyz-py3.x\
 
 install:
   # needed? to fix `appveyor` command
@@ -43,7 +44,8 @@ build_script:
   - exit
 
 test_script:
-  - 'poetry run pytest --tb=short'
+  - 'poetry run pytest --tb=short --cov=corrscope'
+  - 'poetry run codecov'
 
 after_test:
   - 'if not "%pydir%"=="C:\Python37" appveyor exit'
