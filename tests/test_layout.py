@@ -1,6 +1,7 @@
+import numpy as np
 import pytest
 
-from corrscope.layout import LayoutConfig, RendererLayout
+from corrscope.layout import LayoutConfig, RendererLayout, EdgeFinder
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
 from tests.test_renderer import WIDTH, HEIGHT
 
@@ -72,3 +73,17 @@ def test_renderer_layout():
     # 2 columns, 8 rows
     assert r.layout.ncols == 2
     assert r.layout.nrows == 8
+
+
+# Test EdgeFinder
+
+
+def test_edge_finder():
+    regions2d = np.arange(24).reshape(3, 8)
+    edges = EdgeFinder(regions2d)
+
+    # Check borders
+    np.testing.assert_equal(edges.lefts, regions2d[:, 0])
+    np.testing.assert_equal(edges.rights, regions2d[:, -1])
+    np.testing.assert_equal(edges.tops, regions2d[0, :])
+    np.testing.assert_equal(edges.bottoms, regions2d[-1, :])
