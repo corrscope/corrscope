@@ -179,6 +179,9 @@ class MatplotlibRenderer(Renderer):
                 ax.get_yaxis().set_visible(False)
 
                 # Background color
+                # ax.patch.set_fill(False) sets _fill=False,
+                # then calls _set_facecolor(...) "alpha = self._alpha if self._fill else 0".
+                # It is no faster than below.
                 ax.set_facecolor(self.transparent)
 
                 # Set border colors
