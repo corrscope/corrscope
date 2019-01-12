@@ -4,10 +4,10 @@
 #https://github.com/sdispater/poetry/blob/master/.appveyor.yml
 #https://github.com/sdispater/pendulum/blob/master/appveyor.yml
 
-branches:
-  # whitelist
-  only:
-    - master
+#branches:
+#  # whitelist
+#  only:
+#    - master
 
 image: Visual Studio 2017
 shallow_clone: true
