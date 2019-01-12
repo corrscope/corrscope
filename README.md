@@ -1,5 +1,9 @@
 # Corrscope
 
+[![Build status](https://ci.appveyor.com/api/projects/status/awiajnwd6a4uhu37/branch/master?svg=true)](https://ci.appveyor.com/project/jimbo1qaz/ovgenpy/branch/master)
+[![codecov](https://codecov.io/gh/jimbo1qaz/corrscope/branch/master/graph/badge.svg)](https://codecov.io/gh/jimbo1qaz/corrscope)
+[![Latest pre-release](https://img.shields.io/github/release-pre/jimbo1qaz/corrscope.svg)](https://github.com/jimbo1qaz/corrscope/releases)
+
 Corrscope renders oscilloscope views of WAV files recorded from chiptune (game music from retro sound chips).
 
 Corrscope uses "waveform correlation" to track complex waves (including SNES and Sega Genesis/FM synthesis) which jump around on other oscilloscope programs.
