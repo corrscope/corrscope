@@ -2,9 +2,9 @@ import os
 from abc import ABC, abstractmethod
 from typing import Optional, List, TYPE_CHECKING
 
+import attr
 import matplotlib
 import numpy as np
-import attr
 
 from corrscope.config import register_config
 from corrscope.layout import RendererLayout, LayoutConfig, EdgeFinder
@@ -32,12 +32,11 @@ if mpl_config_dir in os.environ:
     del os.environ[mpl_config_dir]
 
 matplotlib.use("agg")
-from matplotlib import pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.figure import Figure
     from matplotlib.lines import Line2D
     from corrscope.channel import ChannelConfig
 
@@ -157,7 +156,10 @@ class MatplotlibRenderer(Renderer):
 
         grid_color = self.cfg.grid_color
         axes2d: np.ndarray["Axes"]
-        self._fig, axes2d = plt.subplots(
+        self._fig = Figure()
+        FigureCanvasAgg(self._fig)
+
+        axes2d = self._fig.subplots(
             self.layout.nrows,
             self.layout.ncols,
             squeeze=False,
@@ -177,6 +179,9 @@ class MatplotlibRenderer(Renderer):
                 ax.get_yaxis().set_visible(False)
 
                 # Background color
+                # ax.patch.set_fill(False) sets _fill=False,
+                # then calls _set_facecolor(...) "alpha = self._alpha if self._fill else 0".
+                # It is no faster than below.
                 ax.set_facecolor(self.transparent)
 
                 # Set border colors
