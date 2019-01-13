@@ -224,6 +224,7 @@ class CorrScope:
         self.arg.on_begin(self.cfg.begin_time, end_time)
 
         renderer = self._load_renderer()
+        self.renderer = renderer  # only used for unit tests
 
         # region show_internals
         # Display buffers, for debugging purposes.
