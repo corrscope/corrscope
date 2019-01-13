@@ -1,3 +1,9 @@
+"""
+Integration tests found in:
+- test_cli.py
+- test_output.py
+"""
+
 import os
 import subprocess
 from typing import TYPE_CHECKING
