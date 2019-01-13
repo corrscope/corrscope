@@ -167,6 +167,9 @@ fabric.properties
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# vscode Local History extension
+.history
+
 
 # Project-specific
 *-cprofile-*
