@@ -48,15 +48,25 @@ class Config:
     trigger_ms: int
     render_ms: int
 
-    # trigger_subsampling and render_subsampling override subsampling.
-    # Always non-None after __attrs_post_init__()
+    # Performance
     trigger_subsampling: int = 1
     render_subsampling: int = 1
 
+    # Performance (skipped when recording to video)
     render_subfps: int = 1
-    # FFmpeg accepts FPS as a fraction only.
     render_fps = property(lambda self: Fraction(self.fps, self.render_subfps))
+    # FFmpeg accepts FPS as a fraction. (decimals may work, but are inaccurate.)
 
+    def before_preview(self) -> None:
+        """ Called *once* before preview. Decreases render fps/etc. """
+        self.render.before_preview()
+
+    def before_record(self) -> None:
+        """ Called *once* before recording video. Force high-quality rendering. """
+        self.render_subfps = 1
+        self.render.before_record()
+
+    # End Performance
     amplification: float
 
     trigger: ITriggerConfig  # Can be overriden per Wave
@@ -129,6 +139,10 @@ class Arguments:
 
 class CorrScope:
     def __init__(self, cfg: Config, arg: Arguments):
+        """ cfg is mutated!
+        Recording config is triggered if any FFmpegOutputConfig is found.
+        Preview mode is triggered if all outputs are FFplay or others.
+        """
         self.cfg = cfg
         self.arg = arg
         self.has_played = False
@@ -145,6 +159,17 @@ class CorrScope:
 
         if len(self.cfg.channels) == 0:
             raise CorrError("Config.channels is empty")
+
+        # Check for ffmpeg video recording, then mutate cfg.
+        is_record = False
+        for output in self.output_cfgs:
+            if isinstance(output, outputs_.FFmpegOutputConfig):
+                is_record = True
+                break
+        if is_record:
+            self.cfg.before_record()
+        else:
+            self.cfg.before_preview()
 
     waves: List[Wave]
     channels: List[Channel]

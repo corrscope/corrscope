@@ -61,6 +61,24 @@ class RendererConfig:
     init_line_color: str = default_color()
     grid_color: Optional[str] = None
 
+    # Performance (skipped when recording to video)
+    res_divisor: float = 1.0
+
+    def __attrs_post_init__(self):
+        # round(np.int32 / float) == np.float32, but we want int.
+        assert isinstance(self.width, (int, float))
+        assert isinstance(self.height, (int, float))
+
+    def before_preview(self) -> None:
+        """ Called *once* before preview. Decreases render resolution/etc. """
+        self.width = round(self.width / self.res_divisor)
+        self.height = round(self.height / self.res_divisor)
+        self.line_width /= self.res_divisor
+
+    def before_record(self) -> None:
+        """ Called *once* before recording video. Does nothing yet. """
+        pass
+
 
 @attr.dataclass
 class LineParam:
