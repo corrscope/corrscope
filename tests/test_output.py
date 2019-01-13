@@ -1,3 +1,7 @@
+"""
+- Test Output classes.
+- Integration tests (see conftest.py).
+"""
 import shutil
 from fractions import Fraction
 from pathlib import Path
@@ -6,6 +10,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from corrscope.channel import ChannelConfig
+from corrscope.corrscope import default_config, Config, CorrScope, Arguments
 from corrscope.outputs import (
     RGB_DEPTH,
     FFmpegOutput,
@@ -13,7 +18,6 @@ from corrscope.outputs import (
     FFplayOutput,
     FFplayOutputConfig,
 )
-from corrscope.corrscope import default_config, CorrScope, Arguments
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
 from tests.test_renderer import WIDTH, HEIGHT, ALL_ZEROS
 
@@ -208,3 +212,108 @@ def test_render_subfps_non_integer(mocker: "pytest_mock.MockFixture"):
 
 class DummyException(Exception):
     pass
+
+
+# Tests for Output-dependent performance options
+
+
+def perf_cfg():
+    """ Return config which reduces rendering workload when previewing. """
+    cfg = sine440_config()
+
+    # Skip frames.
+    assert cfg.end_time == 0.5
+    cfg.render_subfps = 2
+
+    # Divide dimensions.
+    cfg.render.width = 192
+    cfg.render.height = 108
+    cfg.render.res_divisor = 1.5
+
+    return cfg
+
+
+def previews_records(mocker):
+    configs = (Config, RendererConfig)
+
+    previews = [mocker.spy(cls, "before_preview") for cls in configs]
+    records = [mocker.spy(cls, "before_record") for cls in configs]
+    return previews, records
+
+
+NO_FFMPEG = [[], [FFplayOutputConfig()]]
+
+
+@pytest.mark.usefixtures("Popen")  # Prevents FFplayOutput from launching processes.
+@pytest.mark.parametrize("outputs", NO_FFMPEG)
+def test_preview_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
+    """ Ensure performance optimizations enabled
+    if all outputs are FFplay or others. """
+    get_frame = mocker.spy(MatplotlibRenderer, "get_frame")
+    previews, records = previews_records(mocker)
+
+    cfg = perf_cfg()
+    corr = CorrScope(cfg, Arguments(".", outputs))
+    corr.play()
+
+    # Check that only before_preview() called.
+    for p in previews:
+        p.assert_called()
+    for r in records:
+        r.assert_not_called()
+
+    # Check renderer is 128x72
+    assert corr.renderer.cfg.width == 128
+    assert corr.renderer.cfg.height == 72
+
+    # Ensure subfps is enabled (only odd frames are rendered, 1..29).
+    # See CorrScope `should_render` variable.
+    assert (
+        get_frame.call_count == round(cfg.end_time * cfg.fps / cfg.render_subfps) == 15
+    )
+
+
+YES_FFMPEG = [l + [FFmpegOutputConfig(None)] for l in NO_FFMPEG]
+
+
+@pytest.mark.usefixtures("Popen")
+@pytest.mark.parametrize("outputs", YES_FFMPEG)
+def test_record_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
+    """ Ensure performance optimizations disabled
+    if any FFmpegOutputConfig is found. """
+    get_frame = mocker.spy(MatplotlibRenderer, "get_frame")
+    previews, records = previews_records(mocker)
+
+    cfg = perf_cfg()
+    corr = CorrScope(cfg, Arguments(".", outputs))
+    corr.play()
+
+    # Check that only before_record() called.
+    for p in previews:
+        p.assert_not_called()
+    for r in records:
+        r.assert_called()
+
+    # Check renderer is 192x108
+    assert corr.renderer.cfg.width == 192
+    assert corr.renderer.cfg.height == 108
+
+    # Ensure subfps is disabled.
+    assert get_frame.call_count == round(cfg.end_time * cfg.fps) + 1 == 31
+
+
+# Moved to test_output.py from test_cli.py.
+# Because test depends on ffmpeg (not available in Appveyor CI),
+# and only test_output.py (not test_cli.py) is skipped in Appveyor.
+def test_no_audio(mocker):
+    """ Corrscope Config without master audio should work. """
+    subdir = "tests"
+    wav = "sine440.wav"
+
+    channels = [ChannelConfig(wav)]
+    cfg = default_config(master_audio=None, channels=channels, begin_time=100)
+    # begin_time=100 skips all actual rendering.
+
+    output = FFmpegOutputConfig(None)
+    corr = CorrScope(cfg, Arguments(subdir, [output]))
+    corr.play()

@@ -246,9 +246,66 @@
          </widget>
         </item>
         <item>
-         <widget class="QGroupBox" name="optionChannel">
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tabPerf">
+       <attribute name="title">
+        <string>&amp;Performance</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QGroupBox" name="perfAll">
           <property name="title">
            <string>Performance</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout_5">
+           <item row="0" column="0">
+            <widget class="QLabel" name="trigger_subsamplingL">
+             <property name="text">
+              <string>Trigger Subsampling</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="BoundSpinBox" name="trigger_subsampling">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="render_subsamplingL">
+             <property name="text">
+              <string>Render Subsampling</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="BoundSpinBox" name="render_subsampling">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="perfPlayback">
+          <property name="title">
+           <string>Playback</string>
           </property>
           <layout class="QFormLayout" name="formLayout_3">
            <item row="0" column="0">
@@ -266,30 +323,19 @@
             </widget>
            </item>
            <item row="1" column="0">
-            <widget class="QLabel" name="trigger_subsamplingL">
+            <widget class="QLabel" name="render__res_divisorL">
              <property name="text">
-              <string>Trigger Subsampling</string>
+              <string>Video Size Divisor</string>
              </property>
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="BoundSpinBox" name="trigger_subsampling">
+            <widget class="BoundDoubleSpinBox" name="render__res_divisor">
              <property name="minimum">
-              <number>1</number>
+              <double>1.000000000000000</double>
              </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="render_subsamplingL">
-             <property name="text">
-              <string>Render Subsampling</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="BoundSpinBox" name="render_subsampling">
-             <property name="minimum">
-              <number>1</number>
+             <property name="singleStep">
+              <double>0.500000000000000</double>
              </property>
             </widget>
            </item>
@@ -297,7 +343,7 @@
          </widget>
         </item>
         <item>
-         <spacer name="verticalSpacer_2">
+         <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
           </property>
