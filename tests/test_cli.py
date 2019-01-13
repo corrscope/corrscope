@@ -1,3 +1,7 @@
+"""
+- Test command-line parsing and Config generation.
+- Integration tests (see conftest.py).
+"""
 import shlex
 from os.path import abspath
 from pathlib import Path
@@ -11,8 +15,8 @@ import corrscope.channel
 from corrscope import cli
 from corrscope.cli import YAML_NAME
 from corrscope.config import yaml
+from corrscope.corrscope import Arguments, Config, CorrScope
 from corrscope.outputs import FFmpegOutputConfig
-from corrscope.corrscope import Config, CorrScope, Arguments
 from corrscope.util import pushd
 
 if TYPE_CHECKING:
@@ -105,6 +109,9 @@ def test_write_dir(mocker):
     assert outpath.parent / cfg.master_audio == audio_path
 
 
+# Integration tests
+
+
 @pytest.mark.usefixtures("Popen")
 def test_load_yaml_another_dir(mocker, Popen):
     """ YAML file located in `another/dir` should resolve `master_audio`, `channels[].
@@ -142,6 +149,3 @@ def test_load_yaml_another_dir(mocker, Popen):
     argv = args[0]
     assert argv[-1] == mp4_abs
     assert f"-i {wav_abs}" in " ".join(argv)
-
-
-# TODO integration test without --audio

@@ -208,3 +208,21 @@ def test_render_subfps_non_integer(mocker: "pytest_mock.MockFixture"):
 
 class DummyException(Exception):
     pass
+
+
+
+# Moved to test_output.py from test_cli.py.
+# Because test depends on ffmpeg (not available in Appveyor CI),
+# and only test_output.py (not test_cli.py) is skipped in Appveyor.
+def test_no_audio(mocker):
+    """ Corrscope Config without master audio should work. """
+    subdir = "tests"
+    wav = "sine440.wav"
+
+    channels = [ChannelConfig(wav)]
+    cfg = default_config(master_audio=None, channels=channels, begin_time=100)
+    # begin_time=100 skips all actual rendering.
+
+    output = FFmpegOutputConfig(None)
+    corr = CorrScope(cfg, Arguments(subdir, [output]))
+    corr.play()
