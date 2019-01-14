@@ -162,10 +162,6 @@ fabric.properties
 
 # https://raw.githubusercontent.com/github/gitignore/master/Global/VisualStudioCode.gitignore
 .vscode/*
-# !.vscode/settings.json    # contains machine-specific python interpreter paths
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
 
 # vscode Local History extension
 .history
