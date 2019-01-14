@@ -16,7 +16,7 @@ def keep(dir, wildcard):
 datas = keep("corrscope/gui", "*.ui") + keep("corrscope/path", "*")
 
 a = Analysis(
-    ["corrscope\\__main__.py"],
+    ["corrscope/__main__.py"],
     pathex=["."],
     binaries=[],
     datas=datas,
