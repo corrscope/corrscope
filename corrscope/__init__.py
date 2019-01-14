@@ -1,2 +1,4 @@
-# https://github.com/sdispater/poetry/issues/144
-__version__ = "0.2.0-pre"
+""" Initialize version number (__version__). """
+from corrscope.version import get_version
+
+__version__ = get_version()
