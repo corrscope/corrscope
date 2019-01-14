@@ -4,16 +4,22 @@ from PyInstaller.building.api import PYZ, EXE, COLLECT
 from PyInstaller.building.build_main import Analysis
 from PyInstaller.building.datastruct import TOC
 
+from corrscope import version
+
+
 block_cipher = None
 
 
 def keep(dir, wildcard):
     includes = glob.glob(f"{dir}/{wildcard}")
-    assert includes
+    assert includes, f"{dir}, {wildcard} has no matches"
     return [(include, dir) for include in includes]
 
 
 datas = keep("corrscope/gui", "*.ui") + keep("corrscope/path", "*")
+
+version.pyinstaller_write_version()
+datas.append((version.version_txt, "."))
 
 a = Analysis(
     ["corrscope/__main__.py"],
