@@ -184,3 +184,8 @@ build-*
 
 # Poetry
 setup.py
+
+
+# Corrscope pyinstaller version codes
+_version.py
+version.txt
