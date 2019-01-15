@@ -1,22 +1,33 @@
 import glob
+import zipfile
+from pathlib import Path
 
 from PyInstaller.building.api import PYZ, EXE, COLLECT
 from PyInstaller.building.build_main import Analysis
 from PyInstaller.building.datastruct import TOC
+
+from corrscope import version as v
+
 
 block_cipher = None
 
 
 def keep(dir, wildcard):
     includes = glob.glob(f"{dir}/{wildcard}")
-    assert includes
+    assert includes, f"{dir}, {wildcard} has no matches"
     return [(include, dir) for include in includes]
 
 
 datas = keep("corrscope/gui", "*.ui") + keep("corrscope/path", "*")
 
+version = v.pyinstaller_write_version()
+datas.append((v.version_txt, "."))
+
+app_name = "corrscope"
+app_name_version = f"{app_name}-{version}"
+
 a = Analysis(
-    ["corrscope\\__main__.py"],
+    ["corrscope/__main__.py"],
     pathex=["."],
     binaries=[],
     datas=datas,
@@ -32,7 +43,7 @@ a = Analysis(
 
 
 # Some dirs are included by PyInstaller hooks and must be removed after the fact.
-path_excludes = (
+_path_excludes = (
     # Matplotlib
     """
     mpl-data/fonts
@@ -53,7 +64,7 @@ path_excludes = (
     libEGL.dll libGLESv2.dll d3dcompiler_ opengl32sw.dll
     """
 ).split()
-path_excludes = {s.lower() for s in path_excludes}
+path_excludes = {s.lower() for s in _path_excludes}
 
 
 def path_contains(path: str) -> bool:
@@ -83,13 +94,27 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="corrscope",
+    name=app_name,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     console=True,
 )
-coll = COLLECT(
-    exe, a.binaries, a.zipfiles, a.datas, strip=False, upx=True, name="corrscope"
+
+class ZipCollect(COLLECT):
+    name: str   # absolute-ish path, != __init__(name=)
+
+    def assemble(self):
+        ret = super().assemble()
+
+        new_name = str(Path(self.name).with_name(app_name_version))
+        with zipfile.ZipFile(new_name + '.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+            z.write(self.name)
+
+        return ret
+
+
+coll = ZipCollect(
+    exe, a.binaries, a.zipfiles, a.datas, strip=False, upx=True, name=app_name
 )
