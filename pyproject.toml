@@ -25,7 +25,6 @@ pyinstaller = "^3.4"
 pywin32-ctypes = {version = "^0.2.0",platform = "win32"}
 coverage = "^4.5"
 pytest-cov = "^2.6"
-diff_cover = "^1.0"
 codecov = "^2.0"
 
 [tool.poetry.scripts]
