@@ -40,18 +40,23 @@ def get_version() -> str:
         return base_version
 
 
-def pyinstaller_write_version():
-    """ Called only at pyinstaller time.
+def pyinstaller_write_version() -> str:
+    """ Returns version.
+
+    Called only at pyinstaller time.
     Writes to filesystem, does NOT call get_version().
     Filesystem is ignored if version number isn't prerelease (x.y.z-pre).
     """
     build_metadata = _calc_metadata()
+    version = _base_plus_metadata(build_metadata)
 
     with version_txt.open("w") as txt:
-        txt.write(_base_plus_metadata(build_metadata))
+        txt.write(version)
 
     with version_py.open("w") as f:
         f.write(f"{metadata_key} = {repr(build_metadata)}")
+
+    return version
 
 
 # Compute version suffix

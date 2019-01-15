@@ -56,4 +56,3 @@ after_test:
 
 artifacts:
   - path: 'dist\*'
-  - path: 'dist\corrscope'
