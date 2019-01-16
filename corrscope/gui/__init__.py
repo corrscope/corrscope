@@ -14,7 +14,7 @@ from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
 from PyQt5.QtWidgets import QShortcut
 
-from corrscope import __version__  # variable
+import corrscope
 from corrscope import cli  # module wtf?
 from corrscope import ffmpeg_path
 from corrscope.channel import ChannelConfig
@@ -40,7 +40,7 @@ from corrscope.util import obj_name
 
 FILTER_WAV_FILES = "WAV files (*.wav)"
 
-APP_NAME = f"corrscope {__version__}"
+APP_NAME = f"{corrscope.app_name} {corrscope.__version__}"
 APP_DIR = Path(__file__).parent
 
 
