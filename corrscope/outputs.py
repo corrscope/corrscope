@@ -1,3 +1,4 @@
+import errno
 import shlex
 import subprocess
 from abc import ABC, abstractmethod
@@ -143,13 +144,26 @@ class PipeOutput(Output):
         try:
             self._stream.write(frame)
             return None
+
+        # Exception handling taken from Popen._stdin_write().
+        # https://bugs.python.org/issue35754
         except BrokenPipeError:
-            return Stop
+            pass  # communicate() must ignore broken pipe errors.
+        except OSError as exc:
+            if exc.errno == errno.EINVAL:
+                # bpo-19612, bpo-30418: On Windows, stdin.write() fails
+                # with EINVAL if the child process exited or if the child
+                # process is still running but closed the pipe.
+                pass
+            else:
+                raise
 
     def close(self, wait=True) -> int:
         try:
             self._stream.close()
-        except (BrokenPipeError, OSError):  # BrokenPipeError is a OSError
+        # technically it should match the above exception handler,
+        # but I personally don't care about exceptions when *closing* a pipe.
+        except OSError:
             pass
 
         if not wait:
