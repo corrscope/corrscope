@@ -9,7 +9,7 @@ import click
 import corrscope
 from corrscope.channel import ChannelConfig
 from corrscope.config import yaml
-from corrscope.ffmpeg_path import MissingFFmpegError
+from corrscope.settings.paths import MissingFFmpegError
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from corrscope.corrscope import default_config, CorrScope, Config, Arguments
 
