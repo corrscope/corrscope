@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import QShortcut
 
 import corrscope
 from corrscope import cli  # module wtf?
-from corrscope import ffmpeg_path
+from corrscope.settings import paths
 from corrscope.channel import ChannelConfig
 from corrscope.config import CorrError, copy_config, yaml
 from corrscope.corrscope import CorrScope, Config, Arguments, default_config
@@ -410,7 +410,7 @@ class CorrThread(qc.QThread):
         try:
             CorrScope(cfg, arg).play()
 
-        except ffmpeg_path.MissingFFmpegError:
+        except paths.MissingFFmpegError:
             arg.on_end()
             self.ffmpeg_missing.emit()
 
@@ -911,10 +911,10 @@ nope = qc.QVariant()
 class DownloadFFmpegActivity:
     title = "Missing FFmpeg"
 
-    ffmpeg_url = ffmpeg_path.get_ffmpeg_url()
+    ffmpeg_url = paths.get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
-    path_uri = qc.QUrl.fromLocalFile(ffmpeg_path.path_dir).toString()
+    path_uri = qc.QUrl.fromLocalFile(paths.path_dir).toString()
 
     required = (
         f"FFmpeg must be in PATH or "
