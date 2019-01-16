@@ -3,19 +3,26 @@ import platform
 import sys
 from pathlib import Path
 
+from appdirs import user_data_dir
+
+import corrscope
 from corrscope.config import CorrError
 
-# Add app-specific ffmpeg path.
 
-path_dir = str(Path(__file__).parent / "path")
+__all__ = ["data_dir", "path_dir", "get_ffmpeg_url", "MissingFFmpegError"]
+
+
+data_dir = Path(user_data_dir(corrscope.app_name, appauthor=False, roaming=True))
+data_dir.mkdir(exist_ok=True)
+
+# Add app-specific ffmpeg path.
+_path_dir = data_dir / "path"
+_path_dir.mkdir(exist_ok=True)
+
+path_dir = str(_path_dir)
 os.environ["PATH"] += os.pathsep + path_dir
 # Editing sys.path doesn't work.
 # https://bugs.python.org/issue8557 is relevant but may be outdated.
-
-
-# Unused
-# def ffmpeg_exists():
-#     return shutil.which("ffmpeg") is not None
 
 
 def get_ffmpeg_url() -> str:
