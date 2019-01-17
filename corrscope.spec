@@ -19,7 +19,7 @@ def keep(dir, wildcard):
     return [(include, dir) for include in includes]
 
 
-datas = keep("corrscope/gui", "*.ui") + keep("corrscope/path", "*")
+datas = keep("corrscope/gui", "*.ui")
 
 version = v.pyinstaller_write_version()
 datas.append((v.version_txt, "."))
