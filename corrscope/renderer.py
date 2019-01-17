@@ -6,7 +6,7 @@ import attr
 import matplotlib
 import numpy as np
 
-from corrscope.config import register_config
+from corrscope.config import DumpableAttrs
 from corrscope.layout import RendererLayout, LayoutConfig, EdgeFinder
 from corrscope.outputs import RGB_DEPTH, ByteBuffer
 from corrscope.util import coalesce
@@ -51,8 +51,7 @@ def default_color():
     return "#8edeff"
 
 
-@register_config(always_dump="*")
-class RendererConfig:
+class RendererConfig(DumpableAttrs, always_dump="*"):
     width: int
     height: int
     line_width: float = 1.5

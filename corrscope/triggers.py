@@ -2,16 +2,15 @@ import warnings
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Type, Tuple, Optional, ClassVar
 
+import attr
 import numpy as np
+
 import corrscope.utils.scipy_signal as signal
 import corrscope.utils.scipy_windows as windows
-import attr
-
-from corrscope.config import kw_config, CorrError, Alias, CorrWarning
+from corrscope.config import KeywordAttrs, CorrError, Alias, CorrWarning
 from corrscope.util import find, obj_name
 from corrscope.utils.windows import midpad, leftpad
 from corrscope.wave import FLOAT
-
 
 if TYPE_CHECKING:
     from corrscope.wave import Wave
@@ -19,8 +18,7 @@ if TYPE_CHECKING:
 # Abstract classes
 
 
-@attr.dataclass
-class ITriggerConfig:
+class ITriggerConfig(KeywordAttrs):
     cls: ClassVar[Type["Trigger"]]
 
     # Optional trigger for postprocessing
@@ -105,7 +103,6 @@ class PerFrameCache:
 # CorrelationTrigger
 
 
-@kw_config
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
     edge_strength: float
@@ -443,8 +440,7 @@ class PostTrigger(Trigger, ABC):
 # Local edge-finding trigger
 
 
-@kw_config(always_dump="strength")
-class LocalPostTriggerConfig(ITriggerConfig):
+class LocalPostTriggerConfig(ITriggerConfig, always_dump="strength"):
     strength: float  # Coefficient
 
 
@@ -525,7 +521,6 @@ def seq_along(a: np.ndarray):
 # ZeroCrossingTrigger
 
 
-@kw_config
 class ZeroCrossingTriggerConfig(ITriggerConfig):
     pass
 
@@ -580,7 +575,6 @@ class ZeroCrossingTrigger(PostTrigger):
 # NullTrigger
 
 
-@kw_config
 class NullTriggerConfig(ITriggerConfig):
     pass
 

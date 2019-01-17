@@ -1,6 +1,6 @@
 import pickle
 from io import StringIO, BytesIO
-from typing import ClassVar, TYPE_CHECKING, Type, TypeVar
+from typing import ClassVar, TYPE_CHECKING, Type, TypeVar, Set
 
 import attr
 from ruamel.yaml import yaml_object, YAML, Representer
@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 __all__ = [
     "yaml",
     "copy_config",
-    "register_config",
-    "kw_config",
+    "DumpableAttrs",
+    "KeywordAttrs",
     "Alias",
     "Ignored",
     "register_enum",
@@ -55,7 +55,7 @@ print(timeit.timeit(lambda: f(cfg), number=number))
 pickle_copy is fastest.
 
 According to https://stackoverflow.com/questions/1410615/ ,
-pickle is faster, but less general (works fine for @register_config objects).
+pickle is faster, but less general (works fine for DumpableAttrs objects).
 """
 
 T = TypeVar("T")
@@ -77,44 +77,41 @@ def copy_config(obj: T) -> T:
 # Setup configuration load/dump infrastructure.
 
 
-def register_config(cls=None, *, kw_only=False, always_dump: str = ""):
+class DumpableAttrs:
     """ Marks class as attrs, and enables YAML dumping (excludes default fields). """
 
-    def decorator(cls: Type):
-        cls.__getstate__ = _ConfigMixin.__getstate__
-        cls.__setstate__ = _ConfigMixin.__setstate__
-        cls.always_dump = always_dump
+    __always_dump: ClassVar[Set[str]]
 
-        # https://stackoverflow.com/a/51497219/2683842
-        # YAML().register_class(cls) works... on versions more recent than 2018-07-12.
-        return _yaml_loadable(attr.dataclass(cls, kw_only=kw_only))
+    if TYPE_CHECKING:
 
-    if cls is not None:
-        return decorator(cls)
-    else:
-        return decorator
+        def __init__(self, *args, **kwargs):
+            pass
 
+    def __init_subclass__(cls, kw_only=False, always_dump: str = ""):
+        cls.__always_dump = set(always_dump.split())
+        del always_dump
 
-def kw_config(*args, **kwargs):
-    return register_config(*args, **kwargs, kw_only=True)
+        _yaml_loadable(attr.dataclass(cls, kw_only=kw_only))
 
+        dump_fields = cls.__always_dump - {"*"}  # remove "*" if exists
+        if "*" in cls.__always_dump:
+            assert (
+                not dump_fields
+            ), f"Invalid always_dump, contains * and elements {dump_fields}"
 
-@attr.dataclass()
-class _ConfigMixin:
-    """
-    Class is unused. __getstate__ and __setstate__ are assigned into other classes.
-    Ideally I'd use inheritance, but @yaml_object and @dataclass rely on decorators,
-    and I want @register_config to Just Work and not need inheritance.
-    """
-
-    always_dump: ClassVar[str]
+        else:
+            all_fields = {f.name for f in attr.fields(cls)}
+            for dump_field in dump_fields:
+                assert (
+                    dump_field in all_fields
+                ), f'Invalid always_dump="...{dump_field}" missing from class {cls.__name__}'
 
     # SafeRepresenter.represent_yaml_object() uses __getstate__ to dump objects.
     def __getstate__(self):
         """ Removes all fields with default values, but not found in
         self.always_dump. """
 
-        always_dump = set(self.always_dump.split())
+        always_dump = self.__always_dump
         dump_all = "*" in always_dump
 
         state = {}
@@ -173,11 +170,20 @@ class _ConfigMixin:
         self.__dict__ = obj.__dict__
 
 
+class KeywordAttrs(DumpableAttrs):
+    if TYPE_CHECKING:
+
+        def __init__(self, **kwargs):
+            pass
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(kw_only=True, **kwargs)
+
+
 @attr.dataclass
 class Alias:
     """
-    @register_config
-    class Foo:
+    class Foo(DumpableAttrs):
         x: int
         xx = Alias('x')     # do not add a type hint
     """

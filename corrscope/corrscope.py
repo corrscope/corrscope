@@ -12,7 +12,14 @@ import attr
 
 from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig
-from corrscope.config import kw_config, register_enum, Ignored, CorrError, CorrWarning
+from corrscope.config import (
+    KeywordAttrs,
+    register_enum,
+    Ignored,
+    CorrError,
+    CorrWarning,
+)
+
 from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.layout import LayoutConfig
 from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
@@ -35,8 +42,7 @@ class BenchmarkMode(IntEnum):
     OUTPUT = 3
 
 
-@kw_config(always_dump="render_subfps begin_time end_time subsampling")
-class Config:
+class Config(KeywordAttrs, always_dump="render_subfps begin_time end_time"):
     """ Default values indicate optional attributes. """
 
     master_audio: Optional[str]
