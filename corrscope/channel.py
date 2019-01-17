@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Optional, Union
 import attr
 from ruamel.yaml.comments import CommentedMap
 
-from corrscope.config import register_config, Alias, CorrError
+from corrscope.config import DumpableAttrs, Alias, CorrError
 from corrscope.triggers import ITriggerConfig
 from corrscope.wave import _WaveConfig, Wave
 
@@ -12,8 +12,7 @@ if TYPE_CHECKING:
     from corrscope.corrscope import Config
 
 
-@register_config
-class ChannelConfig:
+class ChannelConfig(DumpableAttrs):
     wav_path: str
 
     # Supplying a dict inherits attributes from global trigger.
