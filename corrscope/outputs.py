@@ -3,11 +3,11 @@ import shlex
 import subprocess
 from abc import ABC, abstractmethod
 from os.path import abspath
-from typing import TYPE_CHECKING, Type, List, Union, Optional
+from typing import TYPE_CHECKING, Type, List, Union, Optional, ClassVar
 
 import numpy as np
 
-from corrscope.config import register_config
+from corrscope.config import DumpableAttrs
 from corrscope.settings.paths import MissingFFmpegError
 
 if TYPE_CHECKING:
@@ -23,8 +23,8 @@ FRAMES_TO_BUFFER = 2
 FFMPEG_QUIET = "-nostats -hide_banner -loglevel error".split()
 
 
-class IOutputConfig:
-    cls: "Type[Output]"
+class IOutputConfig(DumpableAttrs):
+    cls: "ClassVar[Type[Output]]"
 
     def __call__(self, corr_cfg: "Config"):
         return self.cls(corr_cfg, cfg=self)
@@ -207,7 +207,6 @@ class PipeOutput(Output):
 # FFmpegOutput
 
 
-@register_config
 class FFmpegOutputConfig(IOutputConfig):
     # path=None writes to stdout.
     path: Optional[str]
@@ -240,7 +239,6 @@ class FFmpegOutput(PipeOutput):
 # FFplayOutput
 
 
-@register_config
 class FFplayOutputConfig(IOutputConfig):
     video_template: str = "-c:v copy"
     audio_template: str = "-c:a copy"

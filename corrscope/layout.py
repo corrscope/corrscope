@@ -2,12 +2,11 @@ from typing import Optional, TypeVar, Callable, List, Generic
 
 import numpy as np
 
-from corrscope.config import register_config, CorrError
+from corrscope.config import DumpableAttrs, CorrError
 from corrscope.util import ceildiv
 
 
-@register_config(always_dump="orientation")
-class LayoutConfig:
+class LayoutConfig(DumpableAttrs, always_dump="orientation"):
     orientation: str = "h"
     nrows: Optional[int] = None
     ncols: Optional[int] = None
