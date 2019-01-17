@@ -914,7 +914,7 @@ class DownloadFFmpegActivity:
     ffmpeg_url = paths.get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
-    path_uri = qc.QUrl.fromLocalFile(paths.path_dir).toString()
+    path_uri = qc.QUrl.fromLocalFile(paths.PATH_dir).toString()
 
     required = (
         f"FFmpeg must be in PATH or "

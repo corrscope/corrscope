@@ -10,7 +10,7 @@ import corrscope
 from corrscope.config import CorrError
 
 
-__all__ = ["data_dir", "path_dir", "get_ffmpeg_url", "MissingFFmpegError"]
+__all__ = ["appdata_dir", "PATH_dir", "get_ffmpeg_url", "MissingFFmpegError"]
 
 
 def prepend(dic: Dict[str, str], _key: List[str], prefix: str) -> None:
@@ -19,15 +19,15 @@ def prepend(dic: Dict[str, str], _key: List[str], prefix: str) -> None:
     dic[key] = prefix + dic[key]
 
 
-data_dir = Path(user_data_dir(corrscope.app_name, appauthor=False, roaming=True))
-data_dir.mkdir(exist_ok=True)
+appdata_dir = Path(user_data_dir(corrscope.app_name, appauthor=False, roaming=True))
+appdata_dir.mkdir(exist_ok=True)
 
 # Add app-specific ffmpeg path.
-_path_dir = data_dir / "path"
+_path_dir = appdata_dir / "path"
 _path_dir.mkdir(exist_ok=True)
 
-path_dir = str(_path_dir)
-prepend(os.environ, ["PATH"], path_dir + os.pathsep)
+PATH_dir = str(_path_dir)
+prepend(os.environ, ["PATH"], PATH_dir + os.pathsep)
 # Editing sys.path doesn't work.
 # https://bugs.python.org/issue8557 is relevant but may be outdated.
 
@@ -53,7 +53,7 @@ class MissingFFmpegError(CorrError):
     ffmpeg_url = get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
-    message = f'FFmpeg must be in PATH or "{path_dir}" in order to use corrscope.\n'
+    message = f'FFmpeg must be in PATH or "{PATH_dir}" in order to use corrscope.\n'
 
     if can_download:
         message += f"Download ffmpeg from {ffmpeg_url}."
