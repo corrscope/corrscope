@@ -1,21 +1,35 @@
 import os
 import platform
 import sys
+from typing import Dict, List
 from pathlib import Path
 
+from appdirs import user_data_dir
+
+import corrscope
 from corrscope.config import CorrError
 
-# Add app-specific ffmpeg path.
 
-path_dir = str(Path(__file__).parent / "path")
-os.environ["PATH"] += os.pathsep + path_dir
+__all__ = ["appdata_dir", "PATH_dir", "get_ffmpeg_url", "MissingFFmpegError"]
+
+
+def prepend(dic: Dict[str, str], _key: List[str], prefix: str) -> None:
+    """ Dubiously readable syntactic sugar for prepending to a string in a dict. """
+    key = _key[0]
+    dic[key] = prefix + dic[key]
+
+
+appdata_dir = Path(user_data_dir(corrscope.app_name, appauthor=False, roaming=True))
+appdata_dir.mkdir(exist_ok=True)
+
+# Add app-specific ffmpeg path.
+_path_dir = appdata_dir / "path"
+_path_dir.mkdir(exist_ok=True)
+
+PATH_dir = str(_path_dir)
+prepend(os.environ, ["PATH"], PATH_dir + os.pathsep)
 # Editing sys.path doesn't work.
 # https://bugs.python.org/issue8557 is relevant but may be outdated.
-
-
-# Unused
-# def ffmpeg_exists():
-#     return shutil.which("ffmpeg") is not None
 
 
 def get_ffmpeg_url() -> str:
@@ -39,7 +53,7 @@ class MissingFFmpegError(CorrError):
     ffmpeg_url = get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
-    message = f'FFmpeg must be in PATH or "{path_dir}" in order to use corrscope.\n'
+    message = f'FFmpeg must be in PATH or "{PATH_dir}" in order to use corrscope.\n'
 
     if can_download:
         message += f"Download ffmpeg from {ffmpeg_url}."

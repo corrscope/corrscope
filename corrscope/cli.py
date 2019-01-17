@@ -6,10 +6,10 @@ from typing import Optional, List, Tuple, Union, Iterator
 
 import click
 
-from corrscope import __version__
+import corrscope
 from corrscope.channel import ChannelConfig
 from corrscope.config import yaml
-from corrscope.ffmpeg_path import MissingFFmpegError
+from corrscope.settings.paths import MissingFFmpegError
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from corrscope.corrscope import default_config, CorrScope, Config, Arguments
 
@@ -40,7 +40,7 @@ YAML_NAME = YAML_EXTS[0]
 VIDEO_NAME = ".mp4"
 
 
-DEFAULT_NAME = "corrscope"
+DEFAULT_NAME = corrscope.app_name
 
 
 def get_name(audio_file: Union[None, str, Path]) -> str:
@@ -82,7 +82,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 # Debugging
 @click.option('--profile', is_flag=True, help=
         'Debug: Write CProfiler snapshot')
-@click.version_option(__version__)
+@click.version_option(corrscope.__version__)
 # fmt: on
 def main(
         files: Tuple[str],

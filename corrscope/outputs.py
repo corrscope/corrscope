@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Type, List, Union, Optional
 import numpy as np
 
 from corrscope.config import register_config
-from corrscope.ffmpeg_path import MissingFFmpegError
+from corrscope.settings.paths import MissingFFmpegError
 
 if TYPE_CHECKING:
     from corrscope.corrscope import Config

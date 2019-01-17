@@ -14,9 +14,9 @@ from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
 from PyQt5.QtWidgets import QShortcut
 
-from corrscope import __version__  # variable
+import corrscope
 from corrscope import cli  # module wtf?
-from corrscope import ffmpeg_path
+from corrscope.settings import paths
 from corrscope.channel import ChannelConfig
 from corrscope.config import CorrError, copy_config, yaml
 from corrscope.corrscope import CorrScope, Config, Arguments, default_config
@@ -40,7 +40,7 @@ from corrscope.util import obj_name
 
 FILTER_WAV_FILES = "WAV files (*.wav)"
 
-APP_NAME = f"corrscope {__version__}"
+APP_NAME = f"{corrscope.app_name} {corrscope.__version__}"
 APP_DIR = Path(__file__).parent
 
 
@@ -410,7 +410,7 @@ class CorrThread(qc.QThread):
         try:
             CorrScope(cfg, arg).play()
 
-        except ffmpeg_path.MissingFFmpegError:
+        except paths.MissingFFmpegError:
             arg.on_end()
             self.ffmpeg_missing.emit()
 
@@ -911,10 +911,10 @@ nope = qc.QVariant()
 class DownloadFFmpegActivity:
     title = "Missing FFmpeg"
 
-    ffmpeg_url = ffmpeg_path.get_ffmpeg_url()
+    ffmpeg_url = paths.get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
-    path_uri = qc.QUrl.fromLocalFile(ffmpeg_path.path_dir).toString()
+    path_uri = qc.QUrl.fromLocalFile(paths.PATH_dir).toString()
 
     required = (
         f"FFmpeg must be in PATH or "
