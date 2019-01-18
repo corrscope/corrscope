@@ -133,9 +133,6 @@ def test_corr_terminate_works():
         corr.play()
 
 
-# TODO test to ensure ffplay is killed before it terminates
-
-
 def test_corr_output_without_audio():
     """Ensure running CorrScope with FFmpeg output, with master audio disabled,
     does not crash.
