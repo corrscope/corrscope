@@ -19,6 +19,8 @@ PIXEL_FORMAT = "rgb24"
 
 FRAMES_TO_BUFFER = 2
 
+FFMPEG_QUIET = "-nostats -hide_banner -loglevel error".split()
+
 
 class IOutputConfig:
     cls: "Type[Output]"
@@ -117,6 +119,7 @@ def ffmpeg_input_video(cfg: "Config") -> List[str]:
     return [
         f"-f rawvideo -pixel_format {PIXEL_FORMAT} -video_size {width}x{height}",
         f"-framerate {fps}",
+        *FFMPEG_QUIET,
         "-i -",
     ]
 
@@ -237,13 +240,13 @@ class FFplayOutput(PipeOutput):
     def __init__(self, corr_cfg: "Config", cfg: FFplayOutputConfig):
         super().__init__(corr_cfg, cfg)
 
-        ffmpeg = _FFmpegProcess([FFMPEG, "-nostats"], corr_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG, *FFMPEG_QUIET], corr_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append("-f nut")
 
         p1 = ffmpeg.popen(["-"], self.bufsize, stdout=subprocess.PIPE)
 
-        ffplay = shlex.split("ffplay -autoexit -")
+        ffplay = shlex.split("ffplay -autoexit -") + FFMPEG_QUIET
         p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
 
         p1.stdout.close()
