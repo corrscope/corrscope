@@ -2,7 +2,10 @@
 - Test Output classes.
 - Integration tests (see conftest.py).
 """
+import errno
+import os
 import shutil
+import subprocess
 from fractions import Fraction
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -17,6 +20,7 @@ from corrscope.outputs import (
     FFmpegOutputConfig,
     FFplayOutput,
     FFplayOutputConfig,
+    Stop,
 )
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
 from tests.test_renderer import WIDTH, HEIGHT, ALL_ZEROS
@@ -149,6 +153,56 @@ def test_corr_terminate_works():
         corr.play()
 
 
+# Mock Popen to raise an exception.
+def exception_Popen(mocker: "pytest_mock.MockFixture", exc: Exception):
+    real_Popen = subprocess.Popen
+
+    def popen_factory(*args, **kwargs):
+        popen = mocker.create_autospec(real_Popen)
+
+        popen.stdin = mocker.mock_open()(os.devnull, "wb")
+        popen.stdout = mocker.mock_open()(os.devnull, "rb")
+        assert popen.stdin != popen.stdout
+
+        popen.stdin.write.side_effect = exc
+        popen.wait.return_value = 0
+        return popen
+
+    Popen = mocker.patch.object(subprocess, "Popen", autospec=True)
+    Popen.side_effect = popen_factory
+    return Popen
+
+
+# Simulate user closing ffplay window.
+# Why OSError? See comment at PipeOutput.write_frame().
+
+
+@pytest.mark.parametrize("errno_id", [errno.EPIPE, errno.EINVAL])
+def test_closing_ffplay_stops_main(mocker: "pytest_mock.MockFixture", errno_id):
+    """ Closing FFplay should make FFplayOutput.write_frame() return Stop
+    to main loop. """
+
+    # Create mocks.
+    exc = OSError(errno_id, "Simulated ffplay-closed error")
+    if errno_id == errno.EPIPE:
+        assert type(exc) == BrokenPipeError
+
+    # Yo Mock, I herd you like not working properly,
+    # so I put a test in your test so I can test your mocks while I test my code.
+    Popen = exception_Popen(mocker, exc)
+    assert Popen is subprocess.Popen
+    assert Popen.side_effect
+
+    # Launch corrscope
+    with FFplayOutputConfig()(CFG) as output:
+        ret = output.write_frame(b"")
+
+    # Ensure FFplayOutput catches OSError.
+    # Also ensure it returns Stop after exception.
+    assert ret is Stop, ret
+
+
+# Integration tests
 def test_corr_output_without_audio():
     """Ensure running CorrScope with FFmpeg output, with master audio disabled,
     does not crash.
@@ -161,6 +215,7 @@ def test_corr_output_without_audio():
     corr.play()
 
 
+# Test framerate subsampling
 def test_render_subfps_one():
     """ Ensure video gets rendered when render_subfps=1.
     This test fails if ceildiv is used to calculate `ahead`.
