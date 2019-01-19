@@ -1,27 +1,28 @@
 # -*- coding: utf-8 -*-
 import time
-import warnings
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
 from fractions import Fraction
+from multiprocessing import Process, Pipe
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Optional, List, Union, TYPE_CHECKING, Callable
+from typing import Optional, List, Union, TYPE_CHECKING, Iterator, Callable
 
 import attr
 
 from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig
-from corrscope.config import kw_config, register_enum, Ignored, CorrError, CorrWarning
-from corrscope.renderer import MatplotlibRenderer, RendererConfig
+from corrscope.config import kw_config, register_enum, CorrError
 from corrscope.layout import LayoutConfig
+from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave
 
 if TYPE_CHECKING:
+    from corrscope.wave import Wave
     from corrscope.triggers import CorrelationTrigger
-
+    from multiprocessing.connection import Connection
 
 PRINT_TIMESTAMP = True
 
@@ -31,8 +32,9 @@ PRINT_TIMESTAMP = True
 class BenchmarkMode(IntEnum):
     NONE = 0
     TRIGGER = 1
-    RENDER = 2
-    OUTPUT = 3
+    SEND_TO_WORKER = 2
+    RENDER = 3
+    OUTPUT = 4
 
 
 @kw_config(always_dump="render_subfps begin_time end_time subsampling")
@@ -171,7 +173,7 @@ class CorrScope:
         else:
             self.cfg.before_preview()
 
-    waves: List[Wave]
+    waves: List["Wave"]
     channels: List[Channel]
     outputs: List[outputs_.Output]
     nchan: int
@@ -190,22 +192,6 @@ class CorrScope:
             self.triggers = [channel.trigger for channel in self.channels]
             self.nchan = len(self.channels)
 
-    @contextmanager
-    def _load_outputs(self):
-        with pushd(self.arg.cfg_dir):
-            with ExitStack() as stack:
-                self.outputs = [
-                    stack.enter_context(output_cfg(self.cfg))
-                    for output_cfg in self.output_cfgs
-                ]
-                yield
-
-    def _load_renderer(self):
-        renderer = MatplotlibRenderer(
-            self.cfg.render, self.cfg.layout, self.nchan, self.cfg.channels
-        )
-        return renderer
-
     def play(self):
         if self.has_played:
             raise ValueError("Cannot call CorrScope.play() more than once")
@@ -222,9 +208,6 @@ class CorrScope:
         end_frame = int(end_frame) + 1
 
         self.arg.on_begin(self.cfg.begin_time, end_time)
-
-        renderer = self._load_renderer()
-        self.renderer = renderer  # only used for unit tests
 
         # region show_internals
         # Display buffers, for debugging purposes.
@@ -262,9 +245,19 @@ class CorrScope:
         benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
-        with self._load_outputs():
-            prev = -1
+        parent, child = Pipe(duplex=True)
+        parent_send = connection_host(parent)
 
+        render_thread = Process(
+            name="render_thread",
+            target=self.render_worker,
+            args=(child, benchmark_mode, not_benchmarking),
+        )
+        del child
+        render_thread.start()
+
+        prev = -1
+        try:
             # When subsampling FPS, render frames from the future to alleviate lag.
             # subfps=1, ahead=0.
             # subfps=2, ahead=1.
@@ -294,7 +287,11 @@ class CorrScope:
                 for wave, channel in zip(self.waves, self.channels):
                     sample = round(wave.smp_s * time_seconds)
 
-                    if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
+                    if not_benchmarking or (
+                        BenchmarkMode.TRIGGER
+                        <= benchmark_mode
+                        <= BenchmarkMode.SEND_TO_WORKER
+                    ):
                         cache = PerFrameCache()
                         trigger_sample = channel.trigger.get_trigger(sample, cache)
                     else:
@@ -325,25 +322,17 @@ class CorrScope:
                     )
                 # endregion
 
-                if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
-                    # Render frame
-                    renderer.render_frame(render_datas)
-                    frame_data = renderer.get_frame()
+                if not_benchmarking or benchmark_mode >= BenchmarkMode.SEND_TO_WORKER:
+                    # Type should match QueueMessage.
+                    parent_send(render_datas)
+                    # Processed by self.render_worker().
 
-                    if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
-                        # Output frame
-                        aborted = False
-                        for output in self.outputs:
-                            if output.write_frame(frame_data) is outputs_.Stop:
-                                aborted = True
-                                break
-                        if aborted:
-                            # Outputting frame happens after most computation finished.
-                            end_frame = frame + 1
-                            break
+        # Terminate render thread.
+        finally:
+            parent_send(None)
 
-            if self.raise_on_teardown:
-                raise self.raise_on_teardown
+        if self.raise_on_teardown:
+            raise self.raise_on_teardown
 
         if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
@@ -351,4 +340,98 @@ class CorrScope:
             render_fps = (end_frame - begin_frame) / dtime
             print(f"FPS = {render_fps}")
 
+        # Print FPS before waiting for render thread to terminate.
+        render_thread.join()
+
     raise_on_teardown: Optional[Exception] = None
+
+    #### Render/output thread
+    def render_worker(self, conn: "Connection", benchmark_mode, not_benchmarking):
+        """ Communicates with main process via `pipe`.
+        Accepts QueueMessage, sends Optional[exception info].
+
+        Accepts N QueueMessage followed by None.
+        Replies with N Optional[exception info].
+
+        The parent checks for replies N times (before sending N-1 QueueMessage + None)
+        """
+        # assert threading.current_thread() != threading.main_thread()
+
+        renderer = self._load_renderer()
+        with self._load_outputs():
+            # foreach frame
+            for datas in iter_conn(conn):  # type: Message
+                should_break = False
+                try:
+                    # Render frame
+                    if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
+                        renderer.render_frame(datas)
+                        frame_data = renderer.get_frame()
+
+                        if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
+                            # Output frame
+                            for output in self.outputs:
+                                if output.write_frame(frame_data) is outputs_.Stop:
+                                    should_break = True
+                except BaseException as e:
+                    conn.send(True)
+                    raise
+
+                conn.send(should_break)
+                if should_break:
+                    break
+
+    @contextmanager
+    def _load_outputs(self):
+        with pushd(self.arg.cfg_dir):
+            with ExitStack() as stack:
+                self.outputs = [
+                    stack.enter_context(output_cfg(self.cfg))
+                    for output_cfg in self.output_cfgs
+                ]
+                yield
+
+    def _load_renderer(self):
+        renderer = MatplotlibRenderer(
+            self.cfg.render, self.cfg.layout, self.nchan, self.cfg.channels
+        )
+        return renderer
+
+
+# message[chan] = trigger_sample (created by trigger)
+Message = List["np.ndarray"]
+ReplyMessage = bool  # Has exception occurred?
+
+
+# Parent
+def connection_host(conn: "Connection"):
+    """ Checks for exceptions, then sends a message to the child process. """
+    not_first = False
+    # If child process is dead, do not `finally` send None.
+    dead = False
+
+    def send(obj) -> None:
+        nonlocal not_first, dead
+        if dead:
+            return
+
+        if not_first:
+            is_child_exc = conn.recv()  # type: ReplyMessage
+            if is_child_exc:
+                dead = True
+                exit(1)
+
+        conn.send(obj)
+        not_first = True
+
+    return send
+
+
+# Child
+def iter_conn(conn: "Connection") -> Iterator[Message]:
+    """ Yields elements of a threading queue, stops on None. """
+    while True:
+        item = conn.recv()
+        if item is None:
+            break
+        yield item
