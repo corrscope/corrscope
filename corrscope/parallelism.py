@@ -1,62 +1,91 @@
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Pipe
 from multiprocessing.connection import Connection
-from typing import List, Iterator, Callable, Union
+from typing import List, Iterator, Optional
 
 import numpy as np
 
 __all__ = [
     "Message",
+    "MaybeMessage",
     "ReplyMessage",
-    "Worker",
+    # "Worker",
     "ParallelWorker",
     # "SerialWorker",
-    "iter_conn",
 ]
 
 
-Message = Union[List[np.ndarray], None]
+Message = List[np.ndarray]
+MaybeMessage = Optional[Message]
 ReplyMessage = bool  # Has exception occurred?
 
 
-class Worker(ABC):
-    @abstractmethod
-    def __init__(self, child_func: Callable[[Connection], None]):
-        pass
+class Job(ABC):
+    """ All methods (except __init__) *must* be called from thread. """
 
+    @abstractmethod
     def __enter__(self):
+        return self
+
+    @abstractmethod
+    def foreach(self, msg: Message) -> ReplyMessage:
         pass
 
     @abstractmethod
-    def parent_send(self, obj: Message) -> None:
-        pass
-
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
 
+# class Worker(ABC):
+#     @abstractmethod
+#     def __init__(self, child_job: "Job"):
+#         # self.child_job = child_job
+#         pass
+#
+#     def __enter__(self):
+#         pass
+#
+#     @abstractmethod
+#     def parent_send(self, msg: Message) -> None:
+#         pass
+#
+#     def __exit__(self, exc_type, exc_val, exc_tb):
+#         pass
+
+
 # noinspection PyAttributeOutsideInit
-class ParallelWorker(Worker):
+class ParallelWorker:
     _parent_conn: Connection
 
-    def __init__(self, child_func: Callable[[Connection], None], name: str = None):
-        """ To pass parameters to child_func, wrap it in a closure.
-        This allows for type-checking. """
-        super().__init__(child_func)
+    def __init__(self, child_job: Job, name: str = None):
+        self._parent_conn, child_conn = Pipe(duplex=True)
 
-        _child_conn: Connection
-        self._parent_conn, _child_conn = Pipe(duplex=True)
+        self._child_thread = Process(
+            name=name, target=self._child_thread_func, args=[child_job, child_conn]
+        )
 
-        self._child_thread = Process(name=name, target=child_func, args=[_child_conn])
-        self._child_thread.start()
+    @staticmethod
+    def _child_thread_func(child_job: Job, child_conn: Connection):
+        """ Must be called from thread. """
+        with child_job:
+            for msg in iter_conn(child_conn):
+                try:
+                    reply = child_job.foreach(msg)
+                except BaseException as e:
+                    child_conn.send(True)
+                    raise
+                else:
+                    child_conn.send(reply)
 
     def __enter__(self):
         """ Ensure this class cannot be called without a with statement. """
+        self._child_thread.start()
+
         self._not_first = False
         self._child_dead = False
         return self
 
-    def parent_send(self, obj: Message) -> None:
+    def parent_send(self, msg: Message) -> None:
         """ Checks for exceptions, then sends a message to the child process. """
 
         # If child process is dead, do not `finally` send None.
@@ -74,7 +103,7 @@ class ParallelWorker(Worker):
                 self._child_dead = True
                 exit(1)
 
-        self._parent_conn.send(obj)
+        self._parent_conn.send(msg)
         self._not_first = True
 
     def __exit__(self, exc_type, exc_val, exc_tb):

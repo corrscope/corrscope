@@ -14,6 +14,7 @@ from corrscope import parallelism
 from corrscope.channel import Channel, ChannelConfig
 from corrscope.config import kw_config, register_enum, CorrError
 from corrscope.layout import LayoutConfig
+from corrscope.parallelism import Message, ReplyMessage
 from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from corrscope.util import pushd, coalesce
@@ -22,7 +23,6 @@ from corrscope.wave import Wave
 if TYPE_CHECKING:
     from corrscope.wave import Wave
     from corrscope.triggers import CorrelationTrigger
-    from multiprocessing.connection import Connection
 
 PRINT_TIMESTAMP = True
 
@@ -175,7 +175,6 @@ class CorrScope:
 
     waves: List["Wave"]
     channels: List[Channel]
-    outputs: List[outputs_.Output]
     nchan: int
 
     def _load_channels(self):
@@ -247,8 +246,7 @@ class CorrScope:
 
         prev = -1
         with parallelism.ParallelWorker(
-            lambda conn: self.render_worker(conn, benchmark_mode, not_benchmarking),
-            "render_worker",
+            RenderJob(self, benchmark_mode, not_benchmarking), "render_worker"
         ) as render_worker:
             # When subsampling FPS, render frames from the future to alleviate lag.
             # subfps=1, ahead=0.
@@ -330,56 +328,58 @@ class CorrScope:
 
     raise_on_teardown: Optional[Exception] = None
 
-    #### Render/output thread
-    def render_worker(
-        self, conn: "Connection", benchmark_mode, not_benchmarking
-    ) -> None:
-        """ Communicates with main process via `pipe`.
-        Accepts QueueMessage, sends Optional[exception info].
 
-        Accepts N QueueMessage followed by None.
-        Replies with N Optional[exception info].
+class RenderJob(parallelism.Job):
+    def __init__(
+        self, cs: CorrScope, benchmark_mode: BenchmarkMode, not_benchmarking: bool
+    ):
+        self.cs = cs
+        self.benchmark_mode = benchmark_mode
+        self.not_benchmarking = not_benchmarking
 
-        The parent checks for replies N times (before sending N-1 QueueMessage + None)
-        """
-        # assert threading.current_thread() != threading.main_thread()
+    def __enter__(self):
+        self.renderer = self._load_renderer()
+        self.load_outputs = self._load_outputs()
+        self.load_outputs.__enter__()
 
-        renderer = self._load_renderer()
-        with self._load_outputs():
-            # foreach frame
-            for datas in parallelism.iter_conn(conn):  # type: parallelism.Message
-                should_break = False
-                try:
-                    # Render frame
-                    if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
-                        renderer.render_frame(datas)
-                        frame_data = renderer.get_frame()
+    def _load_renderer(self):
+        cs = self.cs
+        renderer = MatplotlibRenderer(
+            cs.cfg.render, cs.cfg.layout, cs.nchan, cs.cfg.channels
+        )
+        return renderer
 
-                        if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
-                            # Output frame
-                            for output in self.outputs:
-                                if output.write_frame(frame_data) is outputs_.Stop:
-                                    should_break = True
-                except BaseException as e:
-                    conn.send(True)
-                    raise
-
-                conn.send(should_break)
-                if should_break:
-                    break
+    outputs: List[outputs_.Output]
 
     @contextmanager
     def _load_outputs(self):
-        with pushd(self.arg.cfg_dir):
+        cs = self.cs
+        with pushd(cs.arg.cfg_dir):
             with ExitStack() as stack:
                 self.outputs = [
-                    stack.enter_context(output_cfg(self.cfg))
-                    for output_cfg in self.output_cfgs
+                    stack.enter_context(output_cfg(cs.cfg))
+                    for output_cfg in cs.output_cfgs
                 ]
                 yield
 
-    def _load_renderer(self):
-        renderer = MatplotlibRenderer(
-            self.cfg.render, self.cfg.layout, self.nchan, self.cfg.channels
-        )
-        return renderer
+    def foreach(self, datas: Message) -> ReplyMessage:
+        """ foreach frame """
+        not_benchmarking = self.not_benchmarking
+        benchmark_mode = self.benchmark_mode
+
+        should_break = False
+        # Render frame
+        if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
+            self.renderer.render_frame(datas)
+            frame_data = self.renderer.get_frame()
+
+            if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
+                # Output frame
+                for output in self.outputs:
+                    if output.write_frame(frame_data) is outputs_.Stop:
+                        should_break = True
+
+        return should_break
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
