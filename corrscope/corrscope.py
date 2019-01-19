@@ -3,7 +3,6 @@ import time
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
 from fractions import Fraction
-from multiprocessing import Process, Pipe
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional, List, Union, TYPE_CHECKING, Callable
@@ -11,10 +10,10 @@ from typing import Optional, List, Union, TYPE_CHECKING, Callable
 import attr
 
 from corrscope import outputs as outputs_
+from corrscope import parallelism
 from corrscope.channel import Channel, ChannelConfig
 from corrscope.config import kw_config, register_enum, CorrError
 from corrscope.layout import LayoutConfig
-from corrscope.parallelism import Message, connection_host, iter_conn
 from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from corrscope.util import pushd, coalesce
@@ -246,19 +245,11 @@ class CorrScope:
         benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
-        parent, child = Pipe(duplex=True)
-        parent_send = connection_host(parent)
-
-        render_thread = Process(
-            name="render_thread",
-            target=self.render_worker,
-            args=(child, benchmark_mode, not_benchmarking),
-        )
-        del child
-        render_thread.start()
-
         prev = -1
-        try:
+        with parallelism.ParallelWorker(
+            lambda conn: self.render_worker(conn, benchmark_mode, not_benchmarking),
+            "render_worker",
+        ) as render_worker:
             # When subsampling FPS, render frames from the future to alleviate lag.
             # subfps=1, ahead=0.
             # subfps=2, ahead=1.
@@ -325,12 +316,8 @@ class CorrScope:
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.SEND_TO_WORKER:
                     # Type should match QueueMessage.
-                    parent_send(render_datas)
+                    render_worker.parent_send(render_datas)
                     # Processed by self.render_worker().
-
-        # Terminate render thread.
-        finally:
-            parent_send(None)
 
         if self.raise_on_teardown:
             raise self.raise_on_teardown
@@ -341,13 +328,12 @@ class CorrScope:
             render_fps = (end_frame - begin_frame) / dtime
             print(f"FPS = {render_fps}")
 
-        # Print FPS before waiting for render thread to terminate.
-        render_thread.join()
-
     raise_on_teardown: Optional[Exception] = None
 
     #### Render/output thread
-    def render_worker(self, conn: "Connection", benchmark_mode, not_benchmarking):
+    def render_worker(
+        self, conn: "Connection", benchmark_mode, not_benchmarking
+    ) -> None:
         """ Communicates with main process via `pipe`.
         Accepts QueueMessage, sends Optional[exception info].
 
@@ -361,7 +347,7 @@ class CorrScope:
         renderer = self._load_renderer()
         with self._load_outputs():
             # foreach frame
-            for datas in iter_conn(conn):  # type: Message
+            for datas in parallelism.iter_conn(conn):  # type: parallelism.Message
                 should_break = False
                 try:
                     # Render frame
