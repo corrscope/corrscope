@@ -14,7 +14,7 @@ from corrscope import parallelism
 from corrscope.channel import Channel, ChannelConfig
 from corrscope.config import kw_config, register_enum, CorrError
 from corrscope.layout import LayoutConfig
-from corrscope.parallelism import Message, ReplyMessage
+from corrscope.parallelism import Message, ReplyIsAborted
 from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from corrscope.util import pushd, coalesce
@@ -313,9 +313,11 @@ class CorrScope:
                 # endregion
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.SEND_TO_WORKER:
-                    # Type should match QueueMessage.
-                    render_worker.parent_send(render_datas)
-                    # Processed by self.render_worker().
+                    # Processed by RenderJob. Type should match QueueMessage.
+                    if render_worker.parent_send(render_datas):  # is aborted
+                        # Outputting frame happens after most computation finished.
+                        end_frame = frame + 1
+                        break
 
         if self.raise_on_teardown:
             raise self.raise_on_teardown
@@ -362,7 +364,7 @@ class RenderJob(parallelism.Job):
                 ]
                 yield
 
-    def foreach(self, datas: Message) -> ReplyMessage:
+    def foreach(self, datas: Message) -> ReplyIsAborted:
         """ foreach frame """
         not_benchmarking = self.not_benchmarking
         benchmark_mode = self.benchmark_mode
