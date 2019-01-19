@@ -1,7 +1,6 @@
 import html
 from pathlib import Path
-from typing import *
-from typing import Iterable, Tuple
+from typing import TypeVar, Optional, Iterable, Generic, List, Tuple
 
 import matplotlib.colors
 import more_itertools
