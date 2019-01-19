@@ -1,3 +1,4 @@
+import errno
 import shlex
 import subprocess
 from abc import ABC, abstractmethod
@@ -18,6 +19,8 @@ RGB_DEPTH = 3
 PIXEL_FORMAT = "rgb24"
 
 FRAMES_TO_BUFFER = 2
+
+FFMPEG_QUIET = "-nostats -hide_banner -loglevel error".split()
 
 
 class IOutputConfig:
@@ -117,6 +120,7 @@ def ffmpeg_input_video(cfg: "Config") -> List[str]:
     return [
         f"-f rawvideo -pixel_format {PIXEL_FORMAT} -video_size {width}x{height}",
         f"-framerate {fps}",
+        *FFMPEG_QUIET,
         "-i -",
     ]
 
@@ -143,13 +147,26 @@ class PipeOutput(Output):
         try:
             self._stream.write(frame)
             return None
+
+        # Exception handling taken from Popen._stdin_write().
+        # https://bugs.python.org/issue35754
         except BrokenPipeError:
-            return Stop
+            return Stop  # communicate() must ignore broken pipe errors.
+        except OSError as exc:
+            if exc.errno == errno.EINVAL:
+                # bpo-19612, bpo-30418: On Windows, stdin.write() fails
+                # with EINVAL if the child process exited or if the child
+                # process is still running but closed the pipe.
+                return Stop
+            else:
+                raise
 
     def close(self, wait=True) -> int:
         try:
             self._stream.close()
-        except (BrokenPipeError, OSError):  # BrokenPipeError is a OSError
+        # technically it should match the above exception handler,
+        # but I personally don't care about exceptions when *closing* a pipe.
+        except OSError:
             pass
 
         if not wait:
@@ -237,13 +254,13 @@ class FFplayOutput(PipeOutput):
     def __init__(self, corr_cfg: "Config", cfg: FFplayOutputConfig):
         super().__init__(corr_cfg, cfg)
 
-        ffmpeg = _FFmpegProcess([FFMPEG, "-nostats"], corr_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG, *FFMPEG_QUIET], corr_cfg)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append("-f nut")
 
         p1 = ffmpeg.popen(["-"], self.bufsize, stdout=subprocess.PIPE)
 
-        ffplay = shlex.split("ffplay -autoexit -")
+        ffplay = shlex.split("ffplay -autoexit -") + FFMPEG_QUIET
         p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
 
         p1.stdout.close()
