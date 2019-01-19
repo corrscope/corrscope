@@ -32,7 +32,6 @@ frame 1:
 frame:
 - parent reads and quits
 """
-import datetime
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from multiprocessing import Process, Pipe
@@ -40,8 +39,6 @@ from multiprocessing.connection import Connection
 from typing import *
 
 import numpy as np
-
-from corrscope.util import perr
 
 __all__ = [
     "Message",
@@ -137,7 +134,6 @@ class ParallelWorker(Worker):
         # Receive reply from child.
         if self._not_first:
             is_aborted_or_error = self._parent_conn.recv()  # type: ReplyOrError
-            perr(datetime.datetime.now(), "parent recv", str(is_aborted_or_error)[:10])
             if is_aborted_or_error is not False:
                 self._child_dead = True
 
@@ -150,7 +146,6 @@ class ParallelWorker(Worker):
                 pass
 
         # Send parent message.
-        perr(datetime.datetime.now(), "parent to child", str(msg)[:10])
         self._parent_conn.send(msg)
         self._not_first = True
 
@@ -165,7 +160,6 @@ class ParallelWorker(Worker):
             while True:
                 # Receive parent message.
                 msg = child_conn.recv()
-                perr(datetime.datetime.now(), "child recv", str(msg)[:10])
                 if msg is None:
                     break  # See module docstring
 
@@ -173,11 +167,9 @@ class ParallelWorker(Worker):
                 try:
                     reply = child_job.foreach(msg)
                 except BaseException as e:
-                    perr(datetime.datetime.now(), "child Error")
                     child_conn.send(Error.Error)
                     raise
                 else:
-                    perr(datetime.datetime.now(), "child to parent", str(reply)[:10])
                     child_conn.send(reply)
                     if reply:
                         break
