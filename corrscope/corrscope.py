@@ -6,7 +6,7 @@ from fractions import Fraction
 from multiprocessing import Process, Pipe
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Optional, List, Union, TYPE_CHECKING, Iterator, Callable
+from typing import Optional, List, Union, TYPE_CHECKING, Callable
 
 import attr
 
@@ -14,6 +14,7 @@ from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig
 from corrscope.config import kw_config, register_enum, CorrError
 from corrscope.layout import LayoutConfig
+from corrscope.parallelism import Message, connection_host, iter_conn
 from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from corrscope.util import pushd, coalesce
@@ -396,42 +397,3 @@ class CorrScope:
             self.cfg.render, self.cfg.layout, self.nchan, self.cfg.channels
         )
         return renderer
-
-
-# message[chan] = trigger_sample (created by trigger)
-Message = List["np.ndarray"]
-ReplyMessage = bool  # Has exception occurred?
-
-
-# Parent
-def connection_host(conn: "Connection"):
-    """ Checks for exceptions, then sends a message to the child process. """
-    not_first = False
-    # If child process is dead, do not `finally` send None.
-    dead = False
-
-    def send(obj) -> None:
-        nonlocal not_first, dead
-        if dead:
-            return
-
-        if not_first:
-            is_child_exc = conn.recv()  # type: ReplyMessage
-            if is_child_exc:
-                dead = True
-                exit(1)
-
-        conn.send(obj)
-        not_first = True
-
-    return send
-
-
-# Child
-def iter_conn(conn: "Connection") -> Iterator[Message]:
-    """ Yields elements of a threading queue, stops on None. """
-    while True:
-        item = conn.recv()
-        if item is None:
-            break
-        yield item
