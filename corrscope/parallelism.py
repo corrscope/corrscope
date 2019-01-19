@@ -180,7 +180,10 @@ class ParallelWorker(Worker):
 
         self._child_dead = True
         self._parent_conn.close()
-        self._child_thread.join()
+        self._child_thread.join(1)
+        if self._child_thread.exitcode is None:
+            self._child_thread.terminate()
+            raise ValueError("renderer thread failed to terminate after 1 second")
 
 
 class SerialWorker(Worker):
