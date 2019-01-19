@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     import pytest_mock
 
 
+# TODO patch outputs.Popen to avoid breaking multiprocessing
 @pytest.fixture
 def Popen(mocker: "pytest_mock.MockFixture"):
     real_Popen = subprocess.Popen

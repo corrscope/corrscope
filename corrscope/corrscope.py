@@ -1,27 +1,29 @@
 # -*- coding: utf-8 -*-
 import time
-import warnings
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
 from fractions import Fraction
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Optional, List, Union, TYPE_CHECKING, Callable
+from typing import Optional, List, Union, TYPE_CHECKING, Callable, Type
 
 import attr
+import numpy as np
 
 from corrscope import outputs as outputs_
+from corrscope import parallelism
 from corrscope.channel import Channel, ChannelConfig
-from corrscope.config import kw_config, register_enum, Ignored, CorrError, CorrWarning
-from corrscope.renderer import MatplotlibRenderer, RendererConfig
+from corrscope.config import kw_config, register_enum, CorrError
 from corrscope.layout import LayoutConfig
+from corrscope.parallelism import ReplyIsAborted, ParallelWorker, Worker
+from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave
 
 if TYPE_CHECKING:
+    from corrscope.wave import Wave
     from corrscope.triggers import CorrelationTrigger
-
 
 PRINT_TIMESTAMP = True
 
@@ -31,8 +33,9 @@ PRINT_TIMESTAMP = True
 class BenchmarkMode(IntEnum):
     NONE = 0
     TRIGGER = 1
-    RENDER = 2
-    OUTPUT = 3
+    SEND_TO_WORKER = 2
+    RENDER = 3
+    OUTPUT = 4
 
 
 @kw_config(always_dump="render_subfps begin_time end_time subsampling")
@@ -130,6 +133,9 @@ IsAborted = Callable[[], bool]
 class Arguments:
     cfg_dir: str
     outputs: List[outputs_.IOutputConfig]
+    profile_name: Optional[str] = None
+
+    worker: Type[parallelism.Worker] = parallelism.ParallelWorker
 
     on_begin: BeginFunc = lambda begin_time, end_time: None
     progress: ProgressFunc = print
@@ -137,8 +143,11 @@ class Arguments:
     on_end: Callable[[], None] = lambda: None
 
 
+TriggerSamples = List[int]
+
+
 class CorrScope:
-    def __init__(self, cfg: Config, arg: Arguments):
+    def __init__(self, cfg: Config, arg: Arguments) -> None:
         """ cfg is mutated!
         Recording config is triggered if any FFmpegOutputConfig is found.
         Preview mode is triggered if all outputs are FFplay or others.
@@ -171,9 +180,8 @@ class CorrScope:
         else:
             self.cfg.before_preview()
 
-    waves: List[Wave]
+    waves: List["Wave"]
     channels: List[Channel]
-    outputs: List[outputs_.Output]
     nchan: int
 
     def _load_channels(self):
@@ -190,23 +198,7 @@ class CorrScope:
             self.triggers = [channel.trigger for channel in self.channels]
             self.nchan = len(self.channels)
 
-    @contextmanager
-    def _load_outputs(self):
-        with pushd(self.arg.cfg_dir):
-            with ExitStack() as stack:
-                self.outputs = [
-                    stack.enter_context(output_cfg(self.cfg))
-                    for output_cfg in self.output_cfgs
-                ]
-                yield
-
-    def _load_renderer(self):
-        renderer = MatplotlibRenderer(
-            self.cfg.render, self.cfg.layout, self.nchan, self.cfg.channels
-        )
-        return renderer
-
-    def play(self):
+    def play(self) -> None:
         if self.has_played:
             raise ValueError("Cannot call CorrScope.play() more than once")
         self.has_played = True
@@ -223,9 +215,6 @@ class CorrScope:
 
         self.arg.on_begin(self.cfg.begin_time, end_time)
 
-        renderer = self._load_renderer()
-        self.renderer = renderer  # only used for unit tests
-
         # region show_internals
         # Display buffers, for debugging purposes.
         internals = self.cfg.show_internals
@@ -240,6 +229,7 @@ class CorrScope:
 
             class RenderOutput:
                 def __init__(self):
+                    # FIXME then add test for RenderOutput
                     self.renderer = corr._load_renderer()
                     self.output = FFplayOutputConfig()(no_audio)
 
@@ -262,9 +252,12 @@ class CorrScope:
         benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
-        with self._load_outputs():
-            prev = -1
-
+        prev = -1
+        with self.arg.worker(
+            RenderJob(self, benchmark_mode, not_benchmarking),
+            f"{self.arg.profile_name}_render" if self.arg.profile_name else None,
+        ) as render_worker:  # type: Worker[TriggerSamples]
+            self.render_worker = render_worker  # For unit tests
             # When subsampling FPS, render frames from the future to alleviate lag.
             # subfps=1, ahead=0.
             # subfps=2, ahead=1.
@@ -277,6 +270,7 @@ class CorrScope:
                     # Used for FPS calculation
                     end_frame = frame
 
+                    # FIXME add test for arg.is_aborted callbacks
                     for output in self.outputs:
                         output.terminate()
                     break
@@ -289,24 +283,21 @@ class CorrScope:
                     self.arg.progress(rounded)
                     prev = rounded
 
-                render_datas = []
+                trigger_samples: TriggerSamples = []
                 # Get data from each wave
                 for wave, channel in zip(self.waves, self.channels):
                     sample = round(wave.smp_s * time_seconds)
 
-                    if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
+                    if not_benchmarking or (
+                        BenchmarkMode.TRIGGER
+                        <= benchmark_mode
+                        <= BenchmarkMode.SEND_TO_WORKER
+                    ):
                         cache = PerFrameCache()
                         trigger_sample = channel.trigger.get_trigger(sample, cache)
                     else:
                         trigger_sample = sample
-                    if should_render:
-                        render_datas.append(
-                            wave.get_around(
-                                trigger_sample,
-                                channel.render_samp,
-                                channel.render_stride,
-                            )
-                        )
+                    trigger_samples.append(trigger_sample)
 
                 if not should_render:
                     continue
@@ -325,25 +316,15 @@ class CorrScope:
                     )
                 # endregion
 
-                if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
-                    # Render frame
-                    renderer.render_frame(render_datas)
-                    frame_data = renderer.get_frame()
+                if not_benchmarking or benchmark_mode >= BenchmarkMode.SEND_TO_WORKER:
+                    # Processed by RenderJob. Type should match QueueMessage.
+                    if render_worker.parent_send(trigger_samples):  # is aborted
+                        # Outputting frame happens after most computation finished.
+                        end_frame = frame + 1
+                        break
 
-                    if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
-                        # Output frame
-                        aborted = False
-                        for output in self.outputs:
-                            if output.write_frame(frame_data) is outputs_.Stop:
-                                aborted = True
-                                break
-                        if aborted:
-                            # Outputting frame happens after most computation finished.
-                            end_frame = frame + 1
-                            break
-
-            if self.raise_on_teardown:
-                raise self.raise_on_teardown
+        if self.raise_on_teardown:
+            raise self.raise_on_teardown
 
         if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
@@ -352,3 +333,70 @@ class CorrScope:
             print(f"FPS = {render_fps}")
 
     raise_on_teardown: Optional[Exception] = None
+
+
+class RenderJob(parallelism.Job[TriggerSamples]):
+    def __init__(
+        self, cs: CorrScope, benchmark_mode: BenchmarkMode, not_benchmarking: bool
+    ):
+        self.cs = cs
+        self.benchmark_mode = benchmark_mode
+        self.not_benchmarking = not_benchmarking
+
+    def __enter__(self):
+        self.renderer = self._load_renderer()
+        self.load_outputs = self._load_outputs()
+        self.load_outputs.__enter__()
+
+    def _load_renderer(self):
+        cs = self.cs
+        renderer = MatplotlibRenderer(
+            cs.cfg.render, cs.cfg.layout, cs.nchan, cs.cfg.channels
+        )
+        return renderer
+
+    outputs: List[outputs_.Output]
+
+    @contextmanager
+    def _load_outputs(self):
+        cs = self.cs
+        with pushd(cs.arg.cfg_dir):
+            with ExitStack() as stack:
+                self.outputs = [
+                    stack.enter_context(output_cfg(cs.cfg))
+                    for output_cfg in cs.output_cfgs
+                ]
+                yield
+
+    def foreach(self, trigger_samples: TriggerSamples) -> ReplyIsAborted:
+        """ foreach frame """
+        render_datas = []
+        for wave, channel, trigger_sample in zip(
+            self.cs.waves, self.cs.channels, trigger_samples
+        ):
+            # FIXME move "get render data" into Channel
+            render_datas.append(
+                wave.get_around(
+                    trigger_sample, channel.render_samp, channel.render_stride
+                )
+            )
+
+        not_benchmarking = self.not_benchmarking
+        benchmark_mode = self.benchmark_mode
+
+        should_break = False
+        # Render frame
+        if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
+            self.renderer.render_frame(render_datas)
+            frame_data = self.renderer.get_frame()
+
+            if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
+                # Output frame
+                for output in self.outputs:
+                    if output.write_frame(frame_data) is outputs_.Stop:
+                        should_break = True
+
+        return should_break
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.load_outputs.__exit__(exc_type, exc_val, exc_tb)

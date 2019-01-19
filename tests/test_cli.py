@@ -12,7 +12,7 @@ import pytest
 from click.testing import CliRunner
 
 import corrscope.channel
-from corrscope import cli
+from corrscope import cli, parallelism
 from corrscope.cli import YAML_NAME
 from corrscope.config import yaml
 from corrscope.corrscope import Arguments, Config, CorrScope
@@ -132,7 +132,7 @@ def test_load_yaml_another_dir(mocker, Popen):
     # Issue: this test does not use cli.main() to compute output path.
     # Possible solution: Call cli.main() via Click runner.
     output = FFmpegOutputConfig(cli.get_path(cfg.master_audio, cli.VIDEO_NAME))
-    corr = CorrScope(cfg, Arguments(subdir, [output]))
+    corr = CorrScope(cfg, Arguments(subdir, [output], worker=parallelism.SerialWorker))
     corr.play()
 
     # Compute absolute paths

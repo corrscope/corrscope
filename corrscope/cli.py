@@ -211,6 +211,7 @@ def main(
                 # Pycharm can't load CProfile files with dots in the name.
                 first_song_name = Path(files[0]).name.split('.')[0]
                 profile_dump_name = get_profile_dump_name(first_song_name)
+                arg.profile_name = profile_dump_name
                 cProfile.runctx('command()', globals(), locals(), profile_dump_name)
             else:
                 try:
