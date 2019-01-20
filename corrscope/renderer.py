@@ -31,8 +31,8 @@ mpl_config_dir = "MPLCONFIGDIR"
 if mpl_config_dir in os.environ:
     del os.environ[mpl_config_dir]
 
-matplotlib.use("agg")
-from matplotlib.backends.backend_agg import FigureCanvasAgg
+matplotlib.use("module://mplcairo.base")
+from mplcairo.base import FigureCanvasCairo
 from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
@@ -175,7 +175,7 @@ class MatplotlibRenderer(Renderer):
         grid_color = self.cfg.grid_color
         axes2d: np.ndarray["Axes"]
         self._fig = Figure()
-        FigureCanvasAgg(self._fig)
+        FigureCanvasCairo(self._fig)
 
         axes2d = self._fig.subplots(
             self.layout.nrows,
@@ -272,16 +272,17 @@ class MatplotlibRenderer(Renderer):
 
         # Agg is the default noninteractive backend except on OSX.
         # https://matplotlib.org/faq/usage_faq.html
-        if not isinstance(canvas, FigureCanvasAgg):
+        if not isinstance(canvas, FigureCanvasCairo):
             raise RuntimeError(
-                f"oh shit, cannot read data from {type(canvas)} != FigureCanvasAgg"
+                f"oh shit, cannot read data from {type(canvas)} != FigureCanvasCairo"
             )
 
         w = self.cfg.width
         h = self.cfg.height
         assert (w, h) == canvas.get_width_height()
 
-        buffer_rgb = canvas.tostring_rgb()
+        buffer_rgb: np.ndarray = canvas.get_renderer()._get_buffer()
+        buffer_rgb = buffer_rgb.flatten("K")
         assert len(buffer_rgb) == w * h * RGB_DEPTH
 
         return buffer_rgb

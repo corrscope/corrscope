@@ -2,7 +2,7 @@ from typing import Optional
 
 import numpy as np
 import pytest
-from matplotlib.colors import to_rgb
+import matplotlib.colors
 
 from corrscope.channel import ChannelConfig
 from corrscope.layout import LayoutConfig
@@ -69,8 +69,8 @@ def verify(r: MatplotlibRenderer, bg_str, fg_str, grid_str: Optional[str]):
         (-1, RGB_DEPTH)
     )
 
-    bg_u8 = [round(c * 255) for c in to_rgb(bg_str)]
-    fg_u8 = [round(c * 255) for c in to_rgb(fg_str)]
+    bg_u8 = to_bgra(bg_str)
+    fg_u8 = to_bgra(fg_str)
     all_colors = [bg_u8, fg_u8]
 
     if grid_str:
@@ -94,3 +94,12 @@ def verify(r: MatplotlibRenderer, bg_str, fg_str, grid_str: Optional[str]):
 
     assert (np.amax(frame_colors, axis=0) == np.amax(all_colors, axis=0)).all()
     assert (np.amin(frame_colors, axis=0) == np.amin(all_colors, axis=0)).all()
+
+
+def to_bgra(c):
+    # https://github.com/anntzer/mplcairo/issues/12#issuecomment-451035973
+    # Cairo outputs bgrA.
+    # ffmpeg bgr0 and rgb32 are equivalent, but rgb32 uses less CPU in ffplay.
+    rgb = [round(c * 255) for c in matplotlib.colors.to_rgb(c)]
+    bgra = rgb[::-1] + [255]
+    return bgra
