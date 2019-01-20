@@ -23,7 +23,10 @@ from corrscope.outputs import (
     Stop,
 )
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
-from tests.test_renderer import WIDTH, HEIGHT, ALL_ZEROS
+from tests.test_renderer import ALL_ZEROS
+
+WIDTH = 192
+HEIGHT = 108
 
 if TYPE_CHECKING:
     import pytest_mock
@@ -61,7 +64,8 @@ class DummyException(Exception):
 
 NULL_FFMPEG_OUTPUT = FFmpegOutputConfig(None, "-f null")
 
-CFG = default_config(render=RendererConfig(WIDTH, HEIGHT))
+render_cfg = RendererConfig(WIDTH, HEIGHT)
+CFG = default_config(render=render_cfg)
 
 
 def sine440_config():
@@ -69,6 +73,7 @@ def sine440_config():
         channels=[ChannelConfig("tests/sine440.wav")],
         master_audio="tests/sine440.wav",
         end_time=0.5,  # Reduce test duration
+        render=render_cfg,
     )
     return cfg
 
