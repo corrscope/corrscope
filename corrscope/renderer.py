@@ -32,6 +32,7 @@ if mpl_config_dir in os.environ:
     del os.environ[mpl_config_dir]
 
 matplotlib.use("module://mplcairo.base")
+matplotlib.rcParams["agg.path.chunksize"] = 1000
 from mplcairo.base import FigureCanvasCairo
 from matplotlib.figure import Figure
 
