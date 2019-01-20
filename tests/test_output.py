@@ -27,10 +27,36 @@ from tests.test_renderer import WIDTH, HEIGHT, ALL_ZEROS
 
 if TYPE_CHECKING:
     import pytest_mock
+    from unittest.mock import MagicMock
 
 
+# Global setup
 if not shutil.which("ffmpeg"):
     pytestmark = pytest.mark.skip("Missing ffmpeg, skipping output tests")
+
+
+def exception_Popen(mocker: "pytest_mock.MockFixture", exc: Exception) -> "MagicMock":
+    """Mock Popen to raise an exception."""
+    real_Popen = subprocess.Popen
+
+    def popen_factory(*args, **kwargs):
+        popen = mocker.create_autospec(real_Popen)
+
+        popen.stdin = mocker.mock_open()(os.devnull, "wb")
+        popen.stdout = mocker.mock_open()(os.devnull, "rb")
+        assert popen.stdin != popen.stdout
+
+        popen.stdin.write.side_effect = exc
+        popen.wait.return_value = 0
+        return popen
+
+    Popen = mocker.patch.object(subprocess, "Popen", autospec=True)
+    Popen.side_effect = popen_factory
+    return Popen
+
+
+class DummyException(Exception):
+    pass
 
 
 NULL_FFMPEG_OUTPUT = FFmpegOutputConfig(None, "-f null")
@@ -47,6 +73,8 @@ def sine440_config():
     return cfg
 
 
+## Begin tests
+# Calls MatplotlibRenderer, FFmpegOutput, FFmpeg.
 def test_render_output():
     """ Ensure rendering to output does not raise exceptions. """
     renderer = MatplotlibRenderer(CFG.render, CFG.layout, nplots=1, channel_cfgs=None)
@@ -58,6 +86,7 @@ def test_render_output():
     assert out.close() == 0
 
 
+# Calls FFmpegOutput and FFmpeg.
 def test_output():
     out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG)
 
@@ -69,7 +98,8 @@ def test_output():
     assert not Path("-").exists()
 
 
-# Ensure CorrScope closes pipe to output upon completion.
+## Ensure CorrScope closes pipe to output upon completion.
+# Calls FFplayOutput, mocks Popen.
 @pytest.mark.usefixtures("Popen")
 def test_close_output(Popen):
     """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
@@ -86,6 +116,7 @@ def test_close_output(Popen):
         popen.wait.assert_called()  # Does wait() need to be called?
 
 
+# Calls CorrScope, mocks FFmpegOutput.
 def test_corrscope_main_uses_contextmanager(mocker: "pytest_mock.MockFixture"):
     """ Ensure CorrScope() main wraps output in context manager. """
     FFmpegOutput = mocker.patch.object(FFmpegOutputConfig, "cls")
@@ -101,7 +132,7 @@ def test_corrscope_main_uses_contextmanager(mocker: "pytest_mock.MockFixture"):
     output.__exit__.assert_called()
 
 
-# Ensure CorrScope terminates FFplay upon exceptions.
+# Calls FFplayOutput, mocks Popen.
 @pytest.mark.usefixtures("Popen")
 def test_terminate_ffplay(Popen):
     """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
@@ -119,6 +150,7 @@ def test_terminate_ffplay(Popen):
             popen.terminate.assert_called()
 
 
+# Integration: Calls CorrScope, mocks Popen.
 @pytest.mark.usefixtures("Popen")
 def test_corr_terminate_ffplay(Popen, mocker: "pytest_mock.MockFixture"):
     """ Integration test: Ensure corrscope calls terminate() on ffmpeg and ffplay when
@@ -139,6 +171,7 @@ def test_corr_terminate_ffplay(Popen, mocker: "pytest_mock.MockFixture"):
         popen.terminate.assert_called()
 
 
+# Integration: Calls CorrScope and FFplay.
 @pytest.mark.skip("Launches ffmpeg and ffplay processes, creating a ffplay window")
 def test_corr_terminate_works():
     """ Ensure that ffmpeg/ffplay terminate quickly after Python exceptions, when
@@ -153,30 +186,9 @@ def test_corr_terminate_works():
         corr.play()
 
 
-# Mock Popen to raise an exception.
-def exception_Popen(mocker: "pytest_mock.MockFixture", exc: Exception):
-    real_Popen = subprocess.Popen
-
-    def popen_factory(*args, **kwargs):
-        popen = mocker.create_autospec(real_Popen)
-
-        popen.stdin = mocker.mock_open()(os.devnull, "wb")
-        popen.stdout = mocker.mock_open()(os.devnull, "rb")
-        assert popen.stdin != popen.stdout
-
-        popen.stdin.write.side_effect = exc
-        popen.wait.return_value = 0
-        return popen
-
-    Popen = mocker.patch.object(subprocess, "Popen", autospec=True)
-    Popen.side_effect = popen_factory
-    return Popen
-
-
 # Simulate user closing ffplay window.
 # Why OSError? See comment at PipeOutput.write_frame().
-
-
+# Calls FFplayOutput, mocks Popen.
 @pytest.mark.parametrize("errno_id", [errno.EPIPE, errno.EINVAL])
 def test_closing_ffplay_stops_main(mocker: "pytest_mock.MockFixture", errno_id):
     """ Closing FFplay should make FFplayOutput.write_frame() return Stop
@@ -202,7 +214,8 @@ def test_closing_ffplay_stops_main(mocker: "pytest_mock.MockFixture", errno_id):
     assert ret is Stop, ret
 
 
-# Integration tests
+## Integration tests (calls CorrScope and FFmpeg).
+# Duplicate test test_no_audio() removed.
 def test_corr_output_without_audio():
     """Ensure running CorrScope with FFmpeg output, with master audio disabled,
     does not crash.
@@ -278,14 +291,8 @@ def test_render_subfps_non_integer(mocker: "pytest_mock.MockFixture"):
 # when subfps>1, to avoid frames lagging behind audio.
 
 
-class DummyException(Exception):
-    pass
-
-
-# Tests for Output-dependent performance options
-
-
-def perf_cfg():
+## Tests for Output-dependent performance options
+def cfg_192x108():
     """ Return config which reduces rendering workload when previewing. """
     cfg = sine440_config()
 
@@ -302,6 +309,7 @@ def perf_cfg():
 
 
 def previews_records(mocker):
+    """Returns 2 lists of method MagicMock."""
     configs = (Config, RendererConfig)
 
     previews = [mocker.spy(cls, "before_preview") for cls in configs]
@@ -320,7 +328,7 @@ def test_preview_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
     get_frame = mocker.spy(MatplotlibRenderer, "get_frame")
     previews, records = previews_records(mocker)
 
-    cfg = perf_cfg()
+    cfg = cfg_192x108()
     corr = CorrScope(cfg, Arguments(".", outputs))
     corr.play()
 
@@ -352,7 +360,7 @@ def test_record_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
     get_frame = mocker.spy(MatplotlibRenderer, "get_frame")
     previews, records = previews_records(mocker)
 
-    cfg = perf_cfg()
+    cfg = cfg_192x108()
     corr = CorrScope(cfg, Arguments(".", outputs))
     corr.play()
 
@@ -368,20 +376,3 @@ def test_record_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
 
     # Ensure subfps is disabled.
     assert get_frame.call_count == round(cfg.end_time * cfg.fps) + 1 == 31
-
-
-# Moved to test_output.py from test_cli.py.
-# Because test depends on ffmpeg (not available in Appveyor CI),
-# and only test_output.py (not test_cli.py) is skipped in Appveyor.
-def test_no_audio(mocker):
-    """ Corrscope Config without master audio should work. """
-    subdir = "tests"
-    wav = "sine440.wav"
-
-    channels = [ChannelConfig(wav)]
-    cfg = default_config(master_audio=None, channels=channels, begin_time=100)
-    # begin_time=100 skips all actual rendering.
-
-    output = FFmpegOutputConfig(None)
-    corr = CorrScope(cfg, Arguments(subdir, [output]))
-    corr.play()
