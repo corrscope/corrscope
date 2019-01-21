@@ -115,9 +115,8 @@ def main(
 
     show_gui = not any([write, play, render])
 
-    # Create cfg: Config object.
-    cfg: Optional[Config] = None
-    cfg_path: Optional[Path] = None
+    # Gather data for cfg: Config object.
+    cfg_or_path: Union[Config, Path, None] = None
     cfg_dir: Optional[str] = None
 
     wav_list: List[Path] = []
@@ -144,8 +143,7 @@ def main(
             if len(files) > 1:
                 raise click.ClickException(
                     f'Cannot supply multiple arguments when providing config {path}')
-            cfg = yaml.load(path)
-            cfg_path = path
+            cfg_or_path = path
             cfg_dir = str(path.parent)
             break
 
@@ -159,11 +157,11 @@ def main(
                         f'Supplied nonexistent file or wildcard: {path}')
             wav_list += matches
 
-    if not cfg:
+    if not cfg_or_path:
         # cfg and cfg_dir are always initialized together.
         channels = [ChannelConfig(str(wav_path)) for wav_path in wav_list]
 
-        cfg = default_config(
+        cfg_or_path = default_config(
             master_audio=audio,
             # fps=default,
             channels=channels,
@@ -172,10 +170,11 @@ def main(
         )
         cfg_dir = '.'
 
+    assert cfg_or_path is not None
     if show_gui:
         def command():
             from corrscope import gui
-            return gui.gui_main(cfg, cfg_path)
+            return gui.gui_main(cfg_or_path)
 
         if profile:
             import cProfile
@@ -189,6 +188,16 @@ def main(
     else:
         if not files:
             raise click.UsageError('Must specify files or folders to play')
+
+        if isinstance(cfg_or_path, Config):
+            cfg = cfg_or_path
+            cfg_path = None
+        elif isinstance(cfg_or_path, Path):
+            cfg = yaml.load(cfg_or_path)
+            cfg_path = cfg_or_path
+        else:
+            assert False, cfg_or_path
+
         if write:
             write_path = get_path(audio, YAML_NAME)
             yaml.dump(cfg, write_path)

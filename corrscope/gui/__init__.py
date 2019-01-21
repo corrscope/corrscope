@@ -48,8 +48,7 @@ def res(file: str) -> str:
     return str(APP_DIR / file)
 
 
-def gui_main(cfg: Config, cfg_path: Optional[Path]):
-    # TODO read config within MainWindow, and show popup if loading fails.
+def gui_main(cfg_or_path: Union[Config, Path]):
     # qw.QApplication.setStyle('fusion')
     QApp = qw.QApplication
     QApp.setAttribute(qc.Qt.AA_EnableHighDpiScaling)
@@ -63,7 +62,7 @@ def gui_main(cfg: Config, cfg_path: Optional[Path]):
         QApp.setFont(font)
 
     app = qw.QApplication(sys.argv)
-    window = MainWindow(cfg, cfg_path)
+    window = MainWindow(cfg_or_path)
     sys.exit(app.exec_())
 
 
@@ -72,14 +71,15 @@ class MainWindow(qw.QMainWindow):
     Main window.
 
     Control flow:
-    __init__
-        load_cfg
+    __init__: either
+    - load_cfg
+    - load_cfg_from_path
 
-    # Opening a document
-    load_cfg
+    Opening a document:
+    - load_cfg_from_path
     """
 
-    def __init__(self, cfg: Config, cfg_path: Optional[Path]):
+    def __init__(self, cfg_or_path: Union[Config, Path]):
         super().__init__()
 
         # Load UI.
@@ -109,7 +109,14 @@ class MainWindow(qw.QMainWindow):
         self.corr_thread: Optional[CorrThread] = None
 
         # Bind config to UI.
-        self.load_cfg(cfg, cfg_path)
+        if isinstance(cfg_or_path, Config):
+            self.load_cfg(cfg_or_path, None)
+        elif isinstance(cfg_or_path, Path):
+            self.load_cfg_from_path(cfg_or_path)
+        else:
+            raise TypeError(
+                f"argument cfg={cfg_or_path} has invalid type {obj_name(cfg_or_path)}"
+            )
 
         self.show()
 
@@ -132,37 +139,6 @@ class MainWindow(qw.QMainWindow):
     channel_model: "ChannelModel"
     channel_view: "ChannelTableView"
     channelsGroup: qw.QGroupBox
-
-    def closeEvent(self, event: QCloseEvent) -> None:
-        """Called on closing window."""
-        if self.prompt_save():
-            event.accept()
-        else:
-            event.ignore()
-
-    def on_action_new(self):
-        if not self.prompt_save():
-            return
-        cfg = default_config()
-        self.load_cfg(cfg, None)
-
-    def on_action_open(self):
-        if not self.prompt_save():
-            return
-        name, file_type = qw.QFileDialog.getOpenFileName(
-            self, "Open config", self.cfg_dir, "YAML files (*.yaml)"
-        )
-        if name != "":
-            cfg_path = Path(name)
-            try:
-                # Raises YAML structural exceptions
-                cfg = yaml.load(cfg_path)
-                # Raises color getter exceptions
-                # ISSUE: catching an exception will leave UI in undefined state?
-                self.load_cfg(cfg, cfg_path)
-            except Exception as e:
-                qw.QMessageBox.critical(self, "Error loading file", str(e))
-                return
 
     def prompt_save(self) -> bool:
         """
@@ -187,6 +163,45 @@ class MainWindow(qw.QMainWindow):
             return True
         else:
             return self.on_action_save()
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Called on closing window."""
+        if self.prompt_save():
+            event.accept()
+        else:
+            event.ignore()
+
+    def on_action_new(self):
+        if not self.prompt_save():
+            return
+        cfg = default_config()
+        self.load_cfg(cfg, None)
+
+    def on_action_open(self):
+        if not self.prompt_save():
+            return
+        name, file_type = qw.QFileDialog.getOpenFileName(
+            self, "Open config", self.cfg_dir, "YAML files (*.yaml)"
+        )
+        if name != "":
+            cfg_path = Path(name)
+            self.load_cfg_from_path(cfg_path)
+
+    def load_cfg_from_path(self, cfg_path: Path):
+        # Bind GUI to dummy config, in case loading cfg_path raises Exception.
+        if self.model is None:
+            self.load_cfg(default_config(), None)
+
+        try:
+            # Raises YAML structural exceptions
+            cfg = yaml.load(cfg_path)
+
+            # Raises color getter exceptions
+            self.load_cfg(cfg, cfg_path)
+
+        except Exception as e:
+            qw.QMessageBox.critical(self, "Error loading file", str(e))
+            return
 
     def load_cfg(self, cfg: Config, cfg_path: Optional[Path]):
         self._cfg_path = cfg_path
