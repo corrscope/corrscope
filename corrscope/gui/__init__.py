@@ -15,8 +15,8 @@ from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
 from PyQt5.QtWidgets import QShortcut
 
 import corrscope
-from corrscope import cli  # module wtf?
-from corrscope.settings import paths
+import corrscope.settings.global_prefs as gp
+from corrscope import cli
 from corrscope.channel import ChannelConfig
 from corrscope.config import CorrError, copy_config, yaml
 from corrscope.corrscope import CorrScope, Config, Arguments, default_config
@@ -35,6 +35,7 @@ from corrscope.gui.util import (
     TracebackDialog,
 )
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
+from corrscope.settings import paths
 from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
 from corrscope.util import obj_name
 
@@ -81,6 +82,9 @@ class MainWindow(qw.QMainWindow):
 
     def __init__(self, cfg_or_path: Union[Config, Path]):
         super().__init__()
+
+        # Load settings.
+        self.pref = gp.load_prefs()
 
         # Load UI.
         uic.loadUi(res("mainwindow.ui"), self)  # sets windowTitle
@@ -167,6 +171,7 @@ class MainWindow(qw.QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         """Called on closing window."""
         if self.prompt_save():
+            gp.dump_prefs(self.pref)
             event.accept()
         else:
             event.ignore()
@@ -191,6 +196,9 @@ class MainWindow(qw.QMainWindow):
         # Bind GUI to dummy config, in case loading cfg_path raises Exception.
         if self.model is None:
             self.load_cfg(default_config(), None)
+
+        assert cfg_path.is_file()
+        self.pref.file_dir = str(cfg_path.parent.resolve())
 
         try:
             # Raises YAML structural exceptions
@@ -396,6 +404,7 @@ class MainWindow(qw.QMainWindow):
 
     @property
     def file_stem(self) -> str:
+        """ Returns a "config name" with no dots or slashes. """
         return cli.get_name(self._cfg_path or self.cfg.master_audio)
 
     @property
