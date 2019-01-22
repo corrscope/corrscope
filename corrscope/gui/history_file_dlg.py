@@ -31,7 +31,7 @@ def _get_hist_name(
     # Get recently used dir.
     dir_or_file: str = history_dir.get()
     if default_name:
-        dir_or_file = os.path.join(dir_or_file, default_name)
+        dir_or_file = os.path.join(dir_or_file, Path(default_name).name)
 
     # Compute file extension filter.
     filter: str = ";;".join(filters)

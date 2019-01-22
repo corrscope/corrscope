@@ -312,7 +312,7 @@ class MainWindow(qw.QMainWindow):
         """
         :return: False if user cancels save action.
         """
-        cfg_path_default = os.path.join(self.cfg_dir, self.file_stem) + cli.YAML_NAME
+        cfg_path_default = self.file_stem + cli.YAML_NAME
 
         filters = ["YAML files (*.yaml)", "All files (*)"]
         path = get_save_file_path(
@@ -348,7 +348,7 @@ class MainWindow(qw.QMainWindow):
             qw.QMessageBox.critical(self, "Error", error_msg)
             return
 
-        video_path = os.path.join(self.cfg_dir, self.file_stem) + cli.VIDEO_NAME
+        video_path = self.file_stem + cli.VIDEO_NAME
         filters = ["MP4 files (*.mp4)", "All files (*)"]
 
         # Points to either `file_dir` or `render_dir`.
