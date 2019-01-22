@@ -100,6 +100,11 @@ class MainWindow(qw.QMainWindow):
         self.channelDelete.clicked.connect(self.on_channel_delete)
 
         # Bind actions.
+        self.action_separate_render_dir.setChecked(self.pref.separate_render_dir)
+        self.action_separate_render_dir.toggled.connect(
+            self.on_separate_render_dir_toggled
+        )
+
         self.actionNew.triggered.connect(self.on_action_new)
         self.actionOpen.triggered.connect(self.on_action_open)
         self.actionSave.triggered.connect(self.on_action_save)
@@ -253,6 +258,8 @@ class MainWindow(qw.QMainWindow):
     channelDelete: "ShortcutButton"
     channelUp: "ShortcutButton"
     channelDown: "ShortcutButton"
+
+    action_separate_render_dir: qw.QAction
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
     menuBar: qw.QMenuBar
     actionNew: qw.QAction
@@ -271,6 +278,13 @@ class MainWindow(qw.QMainWindow):
             master_audio = "master_audio"
             self.model[master_audio] = name
             self.model.update_widget[master_audio]()
+
+    def on_separate_render_dir_toggled(self, checked: bool):
+        self.pref.separate_render_dir = checked
+        if checked:
+            self.pref.render_dir = self.pref.file_dir
+        else:
+            self.pref.render_dir = ""
 
     def on_channel_add(self):
         wavs = get_open_file_list(
