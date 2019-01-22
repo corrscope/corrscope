@@ -27,19 +27,18 @@ from corrscope.gui.data_bind import (
     rgetattr,
     rsetattr,
 )
-from corrscope.gui.util import (
-    color2hex,
-    Locked,
-    get_save_with_ext,
-    find_ranges,
-    TracebackDialog,
+from corrscope.gui.history_file_dlg import (
+    get_open_file_name,
+    get_open_file_list,
+    get_save_file_path,
 )
+from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from corrscope.settings import paths
 from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
 from corrscope.util import obj_name
 
-FILTER_WAV_FILES = "WAV files (*.wav)"
+FILTER_WAV_FILES = ["WAV files (*.wav)"]
 
 APP_NAME = f"{corrscope.app_name} {corrscope.__version__}"
 APP_DIR = Path(__file__).parent
@@ -185,10 +184,10 @@ class MainWindow(qw.QMainWindow):
     def on_action_open(self):
         if not self.prompt_save():
             return
-        name, file_type = qw.QFileDialog.getOpenFileName(
-            self, "Open config", self.cfg_dir, "YAML files (*.yaml)"
+        name = get_open_file_name(
+            self.pref.file_dir_ref, self, "Open config", ["YAML files (*.yaml)"]
         )
-        if name != "":
+        if name:
             cfg_path = Path(name)
             self.load_cfg_from_path(cfg_path)
 
@@ -265,19 +264,17 @@ class MainWindow(qw.QMainWindow):
     actionExit: qw.QAction
 
     def on_master_audio_browse(self):
-        # TODO add default file-open dir, initialized to yaml path and remembers prev
-        # useless if people don't reopen old projects
-        name, file_type = qw.QFileDialog.getOpenFileName(
-            self, "Open master audio file", self.cfg_dir, FILTER_WAV_FILES
+        name = get_open_file_name(
+            self.pref.file_dir_ref, self, "Open master audio file", FILTER_WAV_FILES
         )
-        if name != "":
+        if name:
             master_audio = "master_audio"
             self.model[master_audio] = name
             self.model.update_widget[master_audio]()
 
     def on_channel_add(self):
-        wavs, file_type = qw.QFileDialog.getOpenFileNames(
-            self, "Add audio channels", self.cfg_dir, FILTER_WAV_FILES
+        wavs = get_open_file_list(
+            self.pref.file_dir_ref, self, "Add audio channels", FILTER_WAV_FILES
         )
         if wavs:
             self.channel_view.append_channels(wavs)
@@ -304,8 +301,13 @@ class MainWindow(qw.QMainWindow):
         cfg_path_default = os.path.join(self.cfg_dir, self.file_stem) + cli.YAML_NAME
 
         filters = ["YAML files (*.yaml)", "All files (*)"]
-        path = get_save_with_ext(
-            self, "Save As", cfg_path_default, filters, cli.YAML_NAME
+        path = get_save_file_path(
+            self.pref.file_dir_ref,
+            self,
+            "Save As",
+            cfg_path_default,
+            filters,
+            cli.YAML_NAME,
         )
         if path:
             self._cfg_path = path
@@ -334,8 +336,12 @@ class MainWindow(qw.QMainWindow):
 
         video_path = os.path.join(self.cfg_dir, self.file_stem) + cli.VIDEO_NAME
         filters = ["MP4 files (*.mp4)", "All files (*)"]
-        path = get_save_with_ext(
-            self, "Render to Video", video_path, filters, cli.VIDEO_NAME
+
+        # Points to either `file_dir` or `render_dir`.
+        ref = self.pref.render_dir_ref
+
+        path = get_save_file_path(
+            ref, self, "Render to Video", video_path, filters, cli.VIDEO_NAME
         )
         if path:
             name = str(path)
@@ -384,6 +390,8 @@ class MainWindow(qw.QMainWindow):
     # File paths
     @property
     def cfg_dir(self) -> str:
+        """Only used when generating Arguments when playing corrscope.
+        Not used to determine default path of file dialogs."""
         maybe_path = self._cfg_path or self.cfg.master_audio
         if maybe_path:
             # Windows likes to raise OSError when path contains *
