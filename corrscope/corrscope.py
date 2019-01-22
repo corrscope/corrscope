@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import time
-import warnings
 from contextlib import ExitStack, contextmanager
 from enum import unique, IntEnum
 from fractions import Fraction
@@ -12,16 +11,9 @@ import attr
 
 from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig
-from corrscope.config import (
-    KeywordAttrs,
-    register_enum,
-    Ignored,
-    CorrError,
-    CorrWarning,
-)
-
-from corrscope.renderer import MatplotlibRenderer, RendererConfig
+from corrscope.config import KeywordAttrs, register_enum, CorrError
 from corrscope.layout import LayoutConfig
+from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave
