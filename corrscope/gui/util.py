@@ -1,11 +1,10 @@
 import html
-from pathlib import Path
-from typing import TypeVar, Optional, Iterable, Generic, List, Tuple
+from typing import TypeVar, Iterable, Generic, Tuple
 
 import matplotlib.colors
 import more_itertools
 from PyQt5.QtCore import QMutex
-from PyQt5.QtWidgets import QWidget, QFileDialog, QErrorMessage
+from PyQt5.QtWidgets import QErrorMessage
 
 from corrscope.config import CorrError
 
@@ -45,27 +44,6 @@ class Locked(Generic[T]):
     def get(self) -> T:
         with self:
             return self.obj
-
-
-def get_save_with_ext(
-    parent: QWidget,
-    caption: str,
-    dir_or_file: str,
-    filters: List[str],
-    default_suffix: str,
-) -> Optional[Path]:
-    """ On KDE, getSaveFileName does not append extension. This is a workaround. """
-    name, sel_filter = QFileDialog.getSaveFileName(
-        parent, caption, dir_or_file, ";;".join(filters)
-    )
-
-    if name == "":
-        return None
-
-    path = Path(name)
-    if sel_filter == filters[0] and path.suffix == "":
-        path = path.with_suffix(default_suffix)
-    return path
 
 
 class TracebackDialog(QErrorMessage):
