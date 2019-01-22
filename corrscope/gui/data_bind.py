@@ -7,7 +7,7 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtWidgets import QWidget
 
-from corrscope.config import CorrError
+from corrscope.config import CorrError, DumpableAttrs
 from corrscope.triggers import lerp
 from corrscope.util import obj_name, perr
 
@@ -18,7 +18,6 @@ __all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr"]
 
 
 WidgetUpdater = Callable[[], None]
-Attrs = Any
 
 
 class PresentationModel(qc.QObject):
@@ -35,7 +34,7 @@ class PresentationModel(qc.QObject):
     combo_text: Dict[str, List[str]]
     edited = qc.pyqtSignal()
 
-    def __init__(self, cfg: Attrs):
+    def __init__(self, cfg: DumpableAttrs):
         super().__init__()
         self.cfg = cfg
         self.update_widget: Dict[str, WidgetUpdater] = {}
@@ -58,7 +57,7 @@ class PresentationModel(qc.QObject):
         else:
             raise AttributeError(f"cannot set attribute {key} on {obj_name(self)}()")
 
-    def set_cfg(self, cfg: Attrs):
+    def set_cfg(self, cfg: DumpableAttrs):
         self.cfg = cfg
         for updater in self.update_widget.values():
             updater()
