@@ -1,6 +1,6 @@
 import functools
 import operator
-from typing import Optional, List, Callable, Dict, Any, ClassVar, TYPE_CHECKING
+from typing import Optional, List, Callable, Dict, Any, ClassVar, TYPE_CHECKING, Union
 
 from PyQt5 import QtWidgets as qw, QtCore as qc
 from PyQt5.QtCore import pyqtSlot
@@ -13,11 +13,17 @@ from corrscope.util import obj_name, perr
 
 if TYPE_CHECKING:
     from corrscope.gui import MainWindow
+    from enum import Enum
+
+    assert Enum
 
 __all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr"]
 
 
 WidgetUpdater = Callable[[], None]
+
+
+Symbol = Union[str, "Enum"]
 
 
 class PresentationModel(qc.QObject):
@@ -30,7 +36,7 @@ class PresentationModel(qc.QObject):
 
     # These fields are specific to each subclass, and assigned there.
     # Although less explicit, these can be assigned using __init_subclass__.
-    combo_symbols: Dict[str, List[str]]
+    combo_symbols: Dict[str, List[Symbol]]
     combo_text: Dict[str, List[str]]
     edited = qc.pyqtSignal()
 
@@ -202,8 +208,8 @@ class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
 
 
 class BoundComboBox(qw.QComboBox, BoundWidget):
-    combo_symbols: List[str]
-    symbol2idx: Dict[str, int]
+    combo_symbols: List[Symbol]
+    symbol2idx: Dict[Symbol, int]
 
     # noinspection PyAttributeOutsideInit
     def bind_widget(self, model: PresentationModel, path: str) -> None:
@@ -222,7 +228,7 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
         BoundWidget.bind_widget(self, model, path)
 
     # combobox.index = pmodel.attr
-    def set_gui(self, symbol: str):
+    def set_gui(self, symbol: Symbol):
         combo_index = self.symbol2idx[symbol]
         self.setCurrentIndex(combo_index)
 
