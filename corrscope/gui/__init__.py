@@ -1,10 +1,9 @@
 import functools
-import os
 import sys
 import traceback
 from pathlib import Path
 from types import MethodType
-from typing import Type, Optional, List, Any, Tuple, Callable, Union
+from typing import Type, Optional, List, Any, Tuple, Callable, Union, Dict
 
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
@@ -26,6 +25,7 @@ from corrscope.gui.data_bind import (
     behead,
     rgetattr,
     rsetattr,
+    Symbol,
 )
 from corrscope.gui.history_file_dlg import (
     get_open_file_name,
@@ -37,6 +37,7 @@ from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputCon
 from corrscope.settings import paths
 from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
 from corrscope.util import obj_name
+from corrscope.wave import Flatten
 
 FILTER_WAV_FILES = ["WAV files (*.wav)"]
 
@@ -627,12 +628,31 @@ def path_fix_property(path: str) -> property:
     return property(getter, setter)
 
 
+flatten_modes = {
+    Flatten.SumAvg: "Average: (L+R)/2",
+    Flatten.DiffAvg: "DiffAvg: (L-R)/2",
+    Flatten.Sum: "Sum: (L+R)",
+    Flatten.Diff: "Difference: (L-R)",
+    Flatten.Stereo: "Stereo (broken)",
+}
+assert set(flatten_modes.keys()) == set(Flatten.modes)
+
+flatten_symbols = list(flatten_modes.keys())
+flatten_text = list(flatten_modes.values())
+
+
 class ConfigModel(PresentationModel):
     cfg: Config
-    combo_symbols = {}
-    combo_text = {}
+    combo_symbols: Dict[str, List[Symbol]] = {}
+    combo_text: Dict[str, List[str]] = {}
 
     master_audio = path_fix_property("master_audio")
+
+    # Stereo flattening
+    for path in ["trigger_stereo", "render_stereo"]:
+        combo_symbols[path] = flatten_symbols
+        combo_text[path] = flatten_text
+    del path
 
     render__bg_color = color2hex_property("render__bg_color")
     render__init_line_color = color2hex_property("render__init_line_color")
