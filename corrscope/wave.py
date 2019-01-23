@@ -26,18 +26,13 @@ class Flatten(TypedEnumDump, enum.Flag):
     Mono = auto()  # NOT publicly exposed
 
     # Take sum or difference.
-    Sum = auto()
-    Diff = auto()
-
-    # Divide by nchan=2.
-    IsAvg = auto()  # NOT publicly exposed
-    SumAvg = Sum | IsAvg
-    DiffAvg = Diff | IsAvg
+    SumAvg = auto()
+    DiffAvg = auto()
 
     modes: List["Flatten"]
 
 
-_rejected_modes = {Flatten.Mono, Flatten.IsAvg}
+_rejected_modes = {Flatten.Mono}
 Flatten.modes = [f for f in Flatten.__members__.values() if f not in _rejected_modes]
 
 
@@ -152,13 +147,11 @@ class Wave:
             data = data.reshape(-1)  # ndarray.flatten() creates copy, is slow.
         elif flatten != Flatten.Stereo:
             # data.strides = (4,), so data == contiguous float32
-            if flatten & Flatten.Sum:
+            if flatten & Flatten.SumAvg:
                 data = data[..., 0] + data[..., 1]
             else:
                 data = data[..., 0] - data[..., 1]
-
-            if flatten & Flatten.IsAvg:
-                data /= 2
+            data /= 2
 
         data -= self.center
         data *= self.amplification / self.max_val

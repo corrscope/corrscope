@@ -101,12 +101,10 @@ def test_stereo_flatten_modes(flatten: Flatten):
         assert data.shape == (nsamp, 2)
     else:
         assert data.shape == (nsamp,)
-        if flatten & Flatten.Diff:
+        if flatten & Flatten.DiffAvg:
             np.testing.assert_equal(data, 0)
         else:
-            assert flatten & Flatten.Sum
-            if flatten & Flatten.IsAvg:
-                pass  # FIXME
+            assert flatten & Flatten.SumAvg  # FIXME
 
 
 def test_stereo_mmap():

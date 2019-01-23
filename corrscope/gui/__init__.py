@@ -631,8 +631,6 @@ def path_fix_property(path: str) -> property:
 flatten_modes = {
     Flatten.SumAvg: "Average: (L+R)/2",
     Flatten.DiffAvg: "DiffAvg: (L-R)/2",
-    Flatten.Sum: "Sum: (L+R)",
-    Flatten.Diff: "Difference: (L-R)",
     Flatten.Stereo: "Stereo (broken)",
 }
 assert set(flatten_modes.keys()) == set(Flatten.modes)
