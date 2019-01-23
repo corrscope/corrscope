@@ -612,7 +612,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Separate Render Folder</string>
+    <string>&amp;Separate Render Folder</string>
    </property>
   </action>
  </widget>
