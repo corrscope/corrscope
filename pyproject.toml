@@ -42,7 +42,7 @@ html = 'scripts:html'
 [tool.black]
 line-length = 88
 py36 = true
-exclude = 'utils/scipy_'
+exclude = 'utils/scipy/'
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
