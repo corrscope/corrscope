@@ -53,3 +53,24 @@ def test_rgetattr():
     assert not rhasattr(p, "pet__ghost__species")
     assert not rhasattr(p, "ghost")
     assert not rhasattr(p, "ghost__species")
+
+
+@pytest.mark.xfail(
+    reason="rgetattr copied from Stack Overflow and subtly broken", strict=True
+)
+def test_rgetattr_broken():
+    """
+    rgetattr(default) fails to short-circuit/return on the first missing attribute.
+    I never use rgetattr(default) so I won't bother fixing the bug.
+
+    Wrong answer:
+    - None.foo AKA 1
+    - 1.bar AKA 1
+    - 1.imag == 0
+
+    Right answer:
+    - None.foo AKA return 1 to caller
+    """
+
+    result = rgetattr(None, "foo__bar__imag", 1)
+    assert result == 1, result
