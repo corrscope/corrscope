@@ -246,6 +246,35 @@
          </widget>
         </item>
         <item>
+         <widget class="QGroupBox" name="optionStereo">
+          <property name="title">
+           <string>Stereo Downmixing</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout_6">
+           <item row="0" column="0">
+            <widget class="QLabel" name="trigger_stereoL">
+             <property name="text">
+              <string>Trigger Stereo</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="BoundComboBox" name="trigger_stereo"/>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="render_stereoL">
+             <property name="text">
+              <string>Render Stereo</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="BoundComboBox" name="render_stereo"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
          <spacer name="verticalSpacer_2">
           <property name="orientation">
            <enum>Qt::Vertical</enum>

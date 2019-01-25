@@ -46,6 +46,11 @@ def yaml_sink(_mocker, command: str):
         assert isinstance(cfg, Config)
 
     yaml_dump = yaml.dump(cfg)
+
+    # YAML Representer.ignore_aliases() should return True for Enums.
+    # If it returns True for other types, "null" is dumped explicitly, which is ugly.
+    assert "end_time: null" not in yaml_dump
+
     cfg_round_trip = yaml.load(yaml_dump)
     assert cfg_round_trip == cfg, yaml_dump
 
@@ -147,7 +152,7 @@ def test_load_yaml_another_dir(mocker, Popen):
 
     # Test `wave_path`
     args, kwargs = Wave.call_args
-    cfg, wave_path = args
+    (wave_path,) = args
     assert wave_path == wav_abs
 
     # Test output `master_audio` and video `path`

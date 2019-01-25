@@ -1,13 +1,17 @@
 import pickle
+from enum import Enum
 from io import StringIO, BytesIO
 from typing import ClassVar, TYPE_CHECKING, Type, TypeVar, Set
 
 import attr
-from ruamel.yaml import yaml_object, YAML, Representer
-
-if TYPE_CHECKING:
-    from enum import Enum
-
+from ruamel.yaml import (
+    yaml_object,
+    YAML,
+    Representer,
+    RoundTripRepresenter,
+    Constructor,
+    Node,
+)
 
 __all__ = [
     "yaml",
@@ -17,6 +21,7 @@ __all__ = [
     "Alias",
     "Ignored",
     "register_enum",
+    "TypedEnumDump",
     "CorrError",
     "CorrWarning",
 ]
@@ -27,6 +32,7 @@ __all__ = [
 
 class MyYAML(YAML):
     def dump(self, data, stream=None, **kw):
+        """ Allow dumping to str. """
         inefficient = False
         if stream is None:
             inefficient = True
@@ -36,9 +42,25 @@ class MyYAML(YAML):
             return stream.getvalue()
 
 
+class NoAliasRepresenter(RoundTripRepresenter):
+    """
+    Ensure that dumping 2 identical enum values
+    doesn't produce ugly aliases.
+    TODO test
+    """
+
+    def ignore_aliases(self, data):
+        if isinstance(data, Enum):
+            return True
+        return super().ignore_aliases(data)
+
+
 # Default typ='roundtrip' creates 'ruamel.yaml.comments.CommentedMap' instead of dict.
 # Is isinstance(CommentedMap, dict)? IDK
 yaml = MyYAML()
+assert yaml.Representer == RoundTripRepresenter
+yaml.Representer = NoAliasRepresenter
+
 _yaml_loadable = yaml_object(yaml)
 
 
@@ -204,8 +226,21 @@ def register_enum(cls: Type):
 
 class _EnumMixin:
     @classmethod
-    def to_yaml(cls, representer: Representer, node: "Enum"):
+    def to_yaml(cls, representer: Representer, node: Enum):
         return representer.represent_str(node._name_)
+
+
+class TypedEnumDump:
+    def __init_subclass__(cls, **kwargs):
+        _yaml_loadable(cls)
+
+    @classmethod
+    def to_yaml(cls: Type[Enum], representer: Representer, node: Enum):
+        return representer.represent_scalar("!" + cls.__name__, node._name_)
+
+    @classmethod
+    def from_yaml(cls: Type[Enum], constructor: Constructor, node: Node):
+        return cls[node.value]
 
 
 # Miscellaneous
