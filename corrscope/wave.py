@@ -13,7 +13,7 @@ FLOAT = np.single
 
 
 @enum.unique
-class Flatten(TypedEnumDump, enum.Flag):
+class Flatten(TypedEnumDump, enum.Enum):
     """ How to flatten a stereo signal. (Channels beyond first 2 are ignored.)
 
     Flatten(0) == Flatten.Stereo == Flatten['Stereo']
@@ -63,21 +63,18 @@ class Wave:
 
     @flatten.setter
     def flatten(self, flatten: Flatten) -> None:
-        """ If self.is_mono, converts all non-Stereo modes to Mono. """
+        # Reject invalid modes (including Mono).
         if flatten not in Flatten.modes:
+            # Flatten.Mono not in Flatten.modes.
             raise CorrError(
                 f"Wave {self.wave_path} has invalid flatten mode {flatten} "
                 f"not in {Flatten.modes}"
             )
+
+        # If self.is_mono, converts all non-Stereo modes to Mono.
         self._flatten = flatten
-        if self.is_mono:
-            if flatten != Flatten.Stereo:
-                self._flatten = Flatten.Mono
-        else:
-            if self.flatten == Flatten.Mono:
-                raise CorrError(
-                    f"Cannot initialize stereo file {self.wave_path} with flatten=Mono"
-                )
+        if self.is_mono and flatten != Flatten.Stereo:
+            self._flatten = Flatten.Mono
 
     def __init__(
         self,
@@ -147,7 +144,7 @@ class Wave:
             data = data.reshape(-1)  # ndarray.flatten() creates copy, is slow.
         elif flatten != Flatten.Stereo:
             # data.strides = (4,), so data == contiguous float32
-            if flatten & Flatten.SumAvg:
+            if flatten == Flatten.SumAvg:
                 data = data[..., 0] + data[..., 1]
             else:
                 data = data[..., 0] - data[..., 1]
