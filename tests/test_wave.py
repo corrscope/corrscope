@@ -1,12 +1,16 @@
 import warnings
+from typing import Sequence
 
+from hypothesis import given
+import hypothesis.strategies as hs
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 from delayed_assert import expect, assert_expectations
 
+from corrscope.config import CorrError
 from corrscope.utils.scipy_wavfile import WavFileWarning
-from corrscope.wave import Wave
+from corrscope.wave import Wave, Flatten
 
 prefix = "tests/wav-formats/"
 wave_paths = [
@@ -25,7 +29,7 @@ def test_wave(wave_path):
         # Cause all warnings to always be triggered.
         warnings.simplefilter("always")
 
-        wave = Wave(None, prefix + wave_path)
+        wave = Wave(prefix + wave_path)
         data = wave[:]
 
         # Audacity dithers <=16-bit WAV files upon export, creating a few bits of noise.
@@ -38,13 +42,15 @@ def test_wave(wave_path):
         assert not [str(w) for w in warns]
 
 
+# Stereo tests
+
+
 def test_stereo_merge():
-    """ Ensure stereo channels are combined properly, when indexing by slices
-    *or* ints. """
+    """Test indexing Wave by slices *or* ints. Flatten using default SumAvg mode."""
 
     # Contains a full-scale sine wave in left channel, and silence in right.
     # λ=100, nsamp=2000
-    wave = Wave(None, prefix + "stereo-sine-left-2000.wav")
+    wave = Wave(prefix + "stereo-sine-left-2000.wav")
     period = 100
     nsamp = 2000
 
@@ -71,13 +77,72 @@ def test_stereo_merge():
     check_bound(wave[:])
 
 
+AllFlattens = Flatten.__members__.values()
+
+
+@pytest.mark.parametrize("flatten", AllFlattens)
+@pytest.mark.parametrize(
+    "path,nchan,peaks",
+    [
+        ("tests/sine440.wav", 1, [0.5]),
+        ("tests/stereo in-phase.wav", 2, [1, 1]),
+        ("tests/wav-formats/stereo-sine-left-2000.wav", 2, [1, 0]),
+    ],
+)
+def test_stereo_flatten_modes(
+    flatten: Flatten, path: str, nchan: int, peaks: Sequence[float]
+):
+    """Ensures all Flatten modes are handled properly
+    for stereo and mono signals."""
+    assert nchan == len(peaks)
+    wave = Wave(path)
+
+    if flatten not in Flatten.modes:
+        with pytest.raises(CorrError):
+            wave.with_flatten(flatten)
+        return
+    else:
+        wave = wave.with_flatten(flatten)
+
+    nsamp = wave.nsamp
+    data = wave[:]
+
+    # wave.data == 2-D array of shape (nsamp, nchan)
+    if flatten == Flatten.Stereo:
+        assert data.shape == (nsamp, nchan)
+        for chan_data, peak in zip(data.T, peaks):
+            assert_full_scale(chan_data, peak)
+    else:
+        assert data.shape == (nsamp,)
+
+        # If DiffAvg and in-phase, L-R=0.
+        if flatten == Flatten.DiffAvg:
+            if len(peaks) >= 2 and peaks[0] == peaks[1]:
+                np.testing.assert_equal(data, 0)
+            else:
+                pass
+        # If SumAvg, check average.
+        else:
+            assert flatten == Flatten.SumAvg
+            assert_full_scale(data, np.mean(peaks))
+
+
+def assert_full_scale(data, peak):
+    peak = abs(peak)
+    assert np.amax(data) == pytest.approx(peak, rel=0.01)
+    assert np.amin(data) == pytest.approx(-peak, rel=0.01)
+
+
 def test_stereo_mmap():
-    wave = Wave(None, prefix + "stereo-sine-left-2000.wav")
+    wave = Wave(prefix + "stereo-sine-left-2000.wav")
     assert isinstance(wave.data, np.memmap)
 
 
+# Miscellaneous tests
+
+
 def test_wave_subsampling():
-    wave = Wave(None, "tests/sine440.wav")
+    wave = Wave("tests/sine440.wav")
     # period = 48000 / 440 = 109.(09)*
 
     wave.get_around(1000, return_nsamp=501, stride=4)
@@ -93,7 +158,7 @@ def test_wave_subsampling():
 
 def test_stereo_doesnt_overflow():
     """ Ensure loud stereo tracks do not overflow. """
-    wave = Wave(None, "tests/stereo in-phase.wav")
+    wave = Wave("tests/stereo in-phase.wav")
 
     samp = 100
     stride = 1
@@ -118,5 +183,5 @@ def test_header_larger_than_filesize():
     My version instead accepts such files (but warns WavFileWarning).
     """
     with pytest.warns(WavFileWarning):
-        wave = Wave(None, "tests/header larger than filesize.wav")
+        wave = Wave("tests/header larger than filesize.wav")
         assert wave
