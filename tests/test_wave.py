@@ -1,4 +1,5 @@
 import warnings
+from typing import Sequence
 
 from hypothesis import given
 import hypothesis.strategies as hs
@@ -76,15 +77,25 @@ def test_stereo_merge():
     check_bound(wave[:])
 
 
-AllFlattens = hs.sampled_from(list(Flatten.__members__.values()))
-ValidFlattens = hs.sampled_from(Flatten.modes)
+AllFlattens = Flatten.__members__.values()
 
 
-@given(AllFlattens)
-def test_stereo_flatten_modes(flatten: Flatten):
+@pytest.mark.parametrize("flatten", AllFlattens)
+@pytest.mark.parametrize(
+    "path,nchan,peaks",
+    [
+        ("tests/sine440.wav", 1, [0.5]),
+        ("tests/stereo in-phase.wav", 2, [1, 1]),
+        ("tests/wav-formats/stereo-sine-left-2000.wav", 2, [1, 0]),
+    ],
+)
+def test_stereo_flatten_modes(
+    flatten: Flatten, path: str, nchan: int, peaks: Sequence[float]
+):
     """Ensures all Flatten modes are handled properly
     for stereo and mono signals."""
-    wave = Wave("tests/stereo in-phase.wav")
+    assert nchan == len(peaks)
+    wave = Wave(path)
 
     if flatten not in Flatten.modes:
         with pytest.raises(CorrError):
@@ -98,13 +109,28 @@ def test_stereo_flatten_modes(flatten: Flatten):
 
     # wave.data == 2-D array of shape (nsamp, nchan)
     if flatten == Flatten.Stereo:
-        assert data.shape == (nsamp, 2)
+        assert data.shape == (nsamp, nchan)
+        for chan_data, peak in zip(data.T, peaks):
+            assert_full_scale(chan_data, peak)
     else:
         assert data.shape == (nsamp,)
+
+        # If DiffAvg and in-phase, L-R=0.
         if flatten & Flatten.DiffAvg:
-            np.testing.assert_equal(data, 0)
+            if len(peaks) >= 2 and peaks[0] == peaks[1]:
+                np.testing.assert_equal(data, 0)
+            else:
+                pass
+        # If SumAvg, check average.
         else:
-            assert flatten & Flatten.SumAvg  # FIXME
+            assert flatten & Flatten.SumAvg
+            assert_full_scale(data, np.mean(peaks))
+
+
+def assert_full_scale(data, peak):
+    peak = abs(peak)
+    assert np.amax(data) == pytest.approx(peak, rel=0.01)
+    assert np.amin(data) == pytest.approx(-peak, rel=0.01)
 
 
 def test_stereo_mmap():
