@@ -116,14 +116,14 @@ def test_stereo_flatten_modes(
         assert data.shape == (nsamp,)
 
         # If DiffAvg and in-phase, L-R=0.
-        if flatten & Flatten.DiffAvg:
+        if flatten == Flatten.DiffAvg:
             if len(peaks) >= 2 and peaks[0] == peaks[1]:
                 np.testing.assert_equal(data, 0)
             else:
                 pass
         # If SumAvg, check average.
         else:
-            assert flatten & Flatten.SumAvg
+            assert flatten == Flatten.SumAvg
             assert_full_scale(data, np.mean(peaks))
 
 
