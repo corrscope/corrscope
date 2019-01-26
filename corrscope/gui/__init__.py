@@ -1,16 +1,16 @@
 import functools
 import sys
 import traceback
-from enum import Enum
 from pathlib import Path
 from types import MethodType
-from typing import Type, Optional, List, Any, Tuple, Callable, Union, Dict, Sequence
+from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence
 
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
 import attr
 from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
+from PyQt5.QtCore import QVariant
 from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
 from PyQt5.QtWidgets import QShortcut
 
@@ -39,8 +39,6 @@ from corrscope.settings import paths
 from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
 from corrscope.util import obj_name
 from corrscope.wave import Flatten
-
-from PyQt5.QtCore import QVariant
 
 FILTER_WAV_FILES = ["WAV files (*.wav)"]
 

@@ -1,12 +1,9 @@
-from typing import Optional, TypeVar, Callable, List, Generic
+from typing import Optional, TypeVar, Callable, List, Generic, Tuple
 
 import numpy as np
 
 from corrscope.config import DumpableAttrs, CorrError
 from corrscope.util import ceildiv
-
-
-from typing import Tuple
 
 
 class LayoutConfig(DumpableAttrs, always_dump="orientation"):
