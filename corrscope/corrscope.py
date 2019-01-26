@@ -1,33 +1,39 @@
 # -*- coding: utf-8 -*-
 import time
 from contextlib import ExitStack, contextmanager
-from enum import unique, IntEnum
+from enum import unique, Enum
 from fractions import Fraction
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Optional, List, Union, TYPE_CHECKING, Callable
+from typing import Iterator
+from typing import Optional, List, Union, Callable, cast
 
 import attr
 
 from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig
-from corrscope.config import KeywordAttrs, register_enum, CorrError
+from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError
 from corrscope.layout import LayoutConfig
-from corrscope.renderer import MatplotlibRenderer, RendererConfig
-from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
+from corrscope.renderer import MatplotlibRenderer, RendererConfig, Renderer
+from corrscope.triggers import (
+    ITriggerConfig,
+    CorrelationTriggerConfig,
+    PerFrameCache,
+    CorrelationTrigger,
+)
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave, Flatten
-
-if TYPE_CHECKING:
-    from corrscope.triggers import CorrelationTrigger
 
 
 PRINT_TIMESTAMP = True
 
 
-@register_enum
+# Placing Enum before any other superclass results in errors.
+# Placing DumpEnumAsStr before IntEnum or (int, Enum) results in errors on Python 3.6:
+# - TypeError: object.__new__(BenchmarkMode) is not safe, use int.__new__()
+# I don't know *why* this works. It's magic.
 @unique
-class BenchmarkMode(IntEnum):
+class BenchmarkMode(int, DumpEnumAsStr, Enum):
     NONE = 0
     TRIGGER = 1
     RENDER = 2
@@ -89,7 +95,7 @@ class Config(
     show_internals: List[str] = attr.Factory(list)
     benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         # Cast benchmark_mode to enum.
         try:
             if not isinstance(self.benchmark_mode, BenchmarkMode):
@@ -186,7 +192,7 @@ class CorrScope:
     outputs: List[outputs_.Output]
     nchan: int
 
-    def _load_channels(self):
+    def _load_channels(self) -> None:
         with pushd(self.arg.cfg_dir):
             # Tell user if master audio path is invalid.
             # (Otherwise, only ffmpeg uses the value of master_audio)
@@ -202,7 +208,7 @@ class CorrScope:
             self.nchan = len(self.channels)
 
     @contextmanager
-    def _load_outputs(self):
+    def _load_outputs(self) -> Iterator[None]:
         with pushd(self.arg.cfg_dir):
             with ExitStack() as stack:
                 self.outputs = [
@@ -211,13 +217,13 @@ class CorrScope:
                 ]
                 yield
 
-    def _load_renderer(self):
+    def _load_renderer(self) -> Renderer:
         renderer = MatplotlibRenderer(
             self.cfg.render, self.cfg.layout, self.nchan, self.cfg.channels
         )
         return renderer
 
-    def play(self):
+    def play(self) -> None:
         if self.has_played:
             raise ValueError("Cannot call CorrScope.play() more than once")
         self.has_played = True
@@ -270,7 +276,7 @@ class CorrScope:
         if PRINT_TIMESTAMP:
             begin = time.perf_counter()
 
-        benchmark_mode = self.cfg.benchmark_mode
+        benchmark_mode = cast(BenchmarkMode, self.cfg.benchmark_mode)
         not_benchmarking = not benchmark_mode
 
         with self._load_outputs():
@@ -327,13 +333,13 @@ class CorrScope:
 
                 # region Display buffers, for debugging purposes.
                 if extra_outputs.window:
-                    triggers: List["CorrelationTrigger"] = self.triggers
+                    triggers = cast(List[CorrelationTrigger], self.triggers)
                     extra_outputs.window.render_frame(
                         [trigger._prev_window for trigger in triggers]
                     )
 
                 if extra_outputs.buffer:
-                    triggers: List["CorrelationTrigger"] = self.triggers
+                    triggers = cast(List[CorrelationTrigger], self.triggers)
                     extra_outputs.buffer.render_frame(
                         [trigger._buffer for trigger in triggers]
                     )

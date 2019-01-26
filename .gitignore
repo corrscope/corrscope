@@ -189,3 +189,6 @@ setup.py
 # Corrscope pyinstaller version codes
 _version.py
 version.txt
+/annotations.json
+/monkeytype.sqlite3
+/err

@@ -27,6 +27,7 @@ pywin32-ctypes = {version = "^0.2.0",platform = "win32"}
 coverage = "^4.5"
 pytest-cov = "^2.6"
 codecov = "^2.0"
+mypy = "^0.660.0"
 
 [tool.poetry.scripts]
 corr = 'corrscope.cli:main'

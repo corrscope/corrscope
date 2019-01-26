@@ -1,6 +1,6 @@
 import warnings
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Type, Tuple, Optional, ClassVar
+from typing import TYPE_CHECKING, Type, Tuple, Optional, ClassVar, Callable, Union
 
 import attr
 import numpy as np
@@ -28,7 +28,9 @@ class ITriggerConfig(KeywordAttrs):
         return self.cls(wave, cfg=self, tsamp=tsamp, stride=stride, fps=fps)
 
 
-def register_trigger(config_t: Type[ITriggerConfig]):
+def register_trigger(
+    config_t: Type[ITriggerConfig]
+) -> "Callable[[Type[Trigger]], Type[Trigger]]":  # my god mypy-strict sucks
     """ @register_trigger(FooTriggerConfig)
     def FooTrigger(): ...
     """
@@ -69,7 +71,7 @@ class Trigger(ABC):
         else:
             self.post = None
 
-    def time2tsamp(self, time: float):
+    def time2tsamp(self, time: float) -> int:
         return round(time * self._wave.smp_s / self._stride)
 
     @abstractmethod
@@ -122,7 +124,7 @@ class CorrelationTriggerConfig(ITriggerConfig):
     use_edge_trigger: bool
     # endregion
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         self._validate_param("lag_prevention", 0, 1)
         self._validate_param("responsiveness", 0, 1)
         # TODO trigger_falloff >= 0
@@ -138,7 +140,7 @@ class CorrelationTriggerConfig(ITriggerConfig):
             else:
                 self.post = ZeroCrossingTriggerConfig()
 
-    def _validate_param(self, key: str, begin, end):
+    def _validate_param(self, key: str, begin: float, end: float) -> None:
         value = getattr(self, key)
         if not begin <= value <= end:
             raise CorrError(
@@ -174,10 +176,10 @@ class CorrelationTrigger(Trigger):
         self._windowed_step = self._calc_step()
 
         # Will be overwritten on the first frame.
-        self._prev_period = None
-        self._prev_window = None
+        self._prev_period: Optional[int] = None
+        self._prev_window: Optional[np.ndarray] = None
 
-    def _calc_data_taper(self):
+    def _calc_data_taper(self) -> np.ndarray:
         """ Input data window. Zeroes out all data older than 1 frame old.
         See https://github.com/jimbo1qaz/corrscope/wiki/Correlation-Trigger
         """
@@ -215,7 +217,7 @@ class CorrelationTrigger(Trigger):
 
         return data_taper
 
-    def _calc_step(self):
+    def _calc_step(self) -> np.ndarray:
         """ Step function used for approximate edge triggering. """
 
         # Increasing buffer_falloff (width of history buffer)
@@ -304,7 +306,7 @@ class CorrelationTrigger(Trigger):
 
         return trigger
 
-    def _is_window_invalid(self, period):
+    def _is_window_invalid(self, period: int) -> bool:
         """ Returns True if pitch has changed more than `recalc_semitones`. """
 
         prev = self._prev_period
@@ -354,7 +356,7 @@ class CorrelationTrigger(Trigger):
 # get_trigger()
 
 
-def calc_step(nsamp: int, peak: float, stdev: float):
+def calc_step(nsamp: int, peak: float, stdev: float) -> np.ndarray:
     """ Step function used for approximate edge triggering.
     TODO deduplicate CorrelationTrigger._calc_step() """
     N = nsamp
@@ -387,7 +389,7 @@ def get_period(data: np.ndarray) -> int:
     return int(peakX)
 
 
-def cosine_flat(n: int, diameter: int, falloff: int):
+def cosine_flat(n: int, diameter: int, falloff: int) -> np.ndarray:
     cosine = windows.hann(falloff * 2)
     left, right = cosine[:falloff], cosine[falloff:]
 
@@ -410,7 +412,7 @@ def normalize_buffer(data: np.ndarray) -> None:
     data /= max(peak, MIN_AMPLITUDE)
 
 
-def lerp(x: np.ndarray, y: np.ndarray, a: float):
+def lerp(x: np.ndarray, y: np.ndarray, a: float) -> Union[np.ndarray, float]:
     return x * (1 - a) + y * a
 
 
@@ -530,7 +532,7 @@ class ZeroCrossingTrigger(PostTrigger):
     # ZeroCrossingTrigger is only used as a postprocessing trigger.
     # stride is only passed 1, for improved precision.
 
-    def get_trigger(self, index: int, cache: "PerFrameCache"):
+    def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
         # 'cache' is unused.
         tsamp = self._tsamp
 

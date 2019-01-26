@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from corrscope.channel import ChannelConfig
 
 
-def default_color():
+def default_color() -> str:
     # import matplotlib.colors
     # colors = np.array([int(x, 16) for x in '1f 77 b4'.split()], dtype=float)
     # colors /= np.amax(colors)
@@ -63,7 +63,7 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     # Performance (skipped when recording to video)
     res_divisor: float = 1.0
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         # round(np.int32 / float) == np.float32, but we want int.
         assert isinstance(self.width, (int, float))
         assert isinstance(self.height, (int, float))

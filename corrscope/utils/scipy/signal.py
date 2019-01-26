@@ -3,7 +3,7 @@ from bisect import bisect_left
 import numpy as np
 
 
-def correlate(in1, in2) -> np.ndarray:
+def correlate(in1: np.ndarray, in2: np.ndarray) -> np.ndarray:
     """
     Based on scipy.correlate.
     Assumed: mode='full', method='fft'
@@ -30,11 +30,11 @@ def correlate(in1, in2) -> np.ndarray:
     return ret
 
 
-def _reverse_and_conj(x):
+def _reverse_and_conj(x: np.ndarray) -> np.ndarray:
     return x[::-1].conj()
 
 
-def next_fast_len(target):
+def next_fast_len(target: int) -> int:
     """
     Find the next fast size of input data to `fft`, for zero-padding, etc.
 
