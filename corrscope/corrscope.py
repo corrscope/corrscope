@@ -15,7 +15,12 @@ from corrscope.channel import Channel, ChannelConfig
 from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError
 from corrscope.layout import LayoutConfig
 from corrscope.renderer import MatplotlibRenderer, RendererConfig, Renderer
-from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
+from corrscope.triggers import (
+    ITriggerConfig,
+    CorrelationTriggerConfig,
+    PerFrameCache,
+    CorrelationTrigger,
+)
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave, Flatten
 
@@ -328,13 +333,13 @@ class CorrScope:
 
                 # region Display buffers, for debugging purposes.
                 if extra_outputs.window:
-                    triggers = cast(List["CorrelationTrigger"], self.triggers)
+                    triggers = cast(List[CorrelationTrigger], self.triggers)
                     extra_outputs.window.render_frame(
                         [trigger._prev_window for trigger in triggers]
                     )
 
                 if extra_outputs.buffer:
-                    triggers = cast(List["CorrelationTrigger"], self.triggers)
+                    triggers = cast(List[CorrelationTrigger], self.triggers)
                     extra_outputs.buffer.render_frame(
                         [trigger._buffer for trigger in triggers]
                     )
