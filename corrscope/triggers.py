@@ -212,7 +212,8 @@ class CorrelationTrigger(Trigger):
 
         # Generate left half-taper to prevent correlating with 1-frame-old data.
         # Right-pad=1 taper to [t-halfN, t-halfN+N]
-        data_taper = np.ones(N)  # TODO why not extract a right-pad function?
+        # TODO why not extract a right-pad function?
+        data_taper = np.ones(N, dtype=FLOAT)
         data_taper[:halfN] = np.minimum(data_taper[:halfN], taper)
 
         return data_taper
