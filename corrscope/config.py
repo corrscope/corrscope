@@ -115,7 +115,7 @@ class DumpableAttrs:
         def __init__(self, *args, **kwargs):
             pass
 
-    def __init_subclass__(cls, kw_only: bool = False, always_dump: str = "") -> None:
+    def __init_subclass__(cls, kw_only: bool = False, always_dump: str = ""):
         cls.__always_dump = set(always_dump.split())
         del always_dump
 
@@ -204,7 +204,7 @@ class KeywordAttrs(DumpableAttrs):
         def __init__(self, **kwargs):
             pass
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(kw_only=True, **kwargs)
 
 
@@ -227,7 +227,7 @@ SomeEnum = TypeVar("SomeEnum", bound=Enum)
 
 
 class DumpEnumAsStr(Enum):
-    def __init_subclass__(cls) -> None:
+    def __init_subclass__(cls):
         _yaml_loadable(cls)
 
     @classmethod
@@ -236,7 +236,7 @@ class DumpEnumAsStr(Enum):
 
 
 class TypedEnumDump(Enum):
-    def __init_subclass__(cls) -> None:
+    def __init_subclass__(cls):
         _yaml_loadable(cls)
 
     @classmethod
