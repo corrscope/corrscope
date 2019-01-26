@@ -570,7 +570,7 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
     return property(get, set)
 
 
-def default_property(path: str, default: float) -> property:
+def default_property(path: str, default: Any) -> property:
     def getter(self: "ConfigModel"):
         val = rgetattr(self.cfg, path)
         if val is None:
@@ -654,8 +654,7 @@ class ConfigModel(PresentationModel):
 
     # Stereo flattening
     for path in ["trigger_stereo", "render_stereo"]:
-        x: Sequence[Enum] = flatten_symbols
-        combo_symbols[path] = x
+        combo_symbols[path] = flatten_symbols
         combo_text[path] = flatten_text
     del path
 
