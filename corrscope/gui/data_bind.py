@@ -1,6 +1,16 @@
 import functools
 import operator
-from typing import Optional, List, Callable, Dict, Any, ClassVar, TYPE_CHECKING, Union
+from typing import (
+    Optional,
+    List,
+    Callable,
+    Dict,
+    Any,
+    ClassVar,
+    TYPE_CHECKING,
+    Union,
+    Sequence,
+)
 
 from PyQt5 import QtWidgets as qw, QtCore as qc
 from PyQt5.QtCore import pyqtSlot
@@ -36,8 +46,8 @@ class PresentationModel(qc.QObject):
 
     # These fields are specific to each subclass, and assigned there.
     # Although less explicit, these can be assigned using __init_subclass__.
-    combo_symbols: Dict[str, List[Symbol]]
-    combo_text: Dict[str, List[str]]
+    combo_symbols: Dict[str, Sequence[Symbol]]
+    combo_text: Dict[str, Sequence[str]]
     edited = qc.pyqtSignal()
 
     def __init__(self, cfg: DumpableAttrs):
@@ -45,7 +55,7 @@ class PresentationModel(qc.QObject):
         self.cfg = cfg
         self.update_widget: Dict[str, WidgetUpdater] = {}
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: str) -> Any:
         try:
             # Custom properties
             return getattr(self, item)
@@ -70,7 +80,7 @@ class PresentationModel(qc.QObject):
 
 
 # TODO add tests for recursive operations
-def map_gui(view: "MainWindow", model: PresentationModel):
+def map_gui(view: "MainWindow", model: PresentationModel) -> None:
     """
     Binding:
     - .ui <widget name="layout__nrows">
@@ -133,7 +143,7 @@ class BoundWidget(QWidget):
     # PresentationModel+set_model vs. cfg2gui+set_gui vs. widget
     # Feel free to improve the naming.
 
-    def cfg2gui(self):
+    def cfg2gui(self) -> None:
         """ Update the widget without triggering signals.
 
         When the presentation pmodel updates dependent widget 1,
@@ -153,7 +163,9 @@ class BoundWidget(QWidget):
         pass
 
 
-def blend_colors(color1: QColor, color2: QColor, ratio: float, gamma=2):
+def blend_colors(
+    color1: QColor, color2: QColor, ratio: float, gamma: float = 2
+) -> QColor:
     """ Blends two colors in linear color space.
     Produces better results on both light and dark themes,
     than integer blending (which is too dark).
@@ -169,7 +181,7 @@ def blend_colors(color1: QColor, color2: QColor, ratio: float, gamma=2):
     return QColor.fromRgbF(*rgb_blend, 1.0)
 
 
-def model_setter(value_type: type) -> Callable:
+def model_setter(value_type: type) -> Callable[[Any], None]:
     @pyqtSlot(value_type)
     def set_model(self: BoundWidget, value):
         assert isinstance(value, value_type)
@@ -183,7 +195,7 @@ def model_setter(value_type: type) -> Callable:
     return set_model
 
 
-def alias(name: str):
+def alias(name: str) -> property:
     return property(operator.attrgetter(name))
 
 
@@ -208,7 +220,7 @@ class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
 
 
 class BoundComboBox(qw.QComboBox, BoundWidget):
-    combo_symbols: List[Symbol]
+    combo_symbols: Sequence[Symbol]
     symbol2idx: Dict[Symbol, int]
 
     # noinspection PyAttributeOutsideInit
@@ -228,7 +240,7 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
         BoundWidget.bind_widget(self, model, path)
 
     # combobox.index = pmodel.attr
-    def set_gui(self, symbol: Symbol):
+    def set_gui(self, symbol: Symbol) -> None:
         combo_index = self.symbol2idx[symbol]
         self.setCurrentIndex(combo_index)
 
@@ -257,7 +269,7 @@ def behead(string: str, header: str) -> str:
 DUNDER = "__"
 
 # https://gist.github.com/wonderbeyond/d293e7a2af1de4873f2d757edd580288
-def rgetattr(obj, dunder_delim_path: str, *default):
+def rgetattr(obj: DumpableAttrs, dunder_delim_path: str, *default) -> Any:
     """
     :param obj: Object
     :param dunder_delim_path: 'attr1__attr2__etc'
@@ -268,7 +280,7 @@ def rgetattr(obj, dunder_delim_path: str, *default):
     def _getattr(obj, attr):
         return getattr(obj, attr, *default)
 
-    attrs = dunder_delim_path.split(DUNDER)
+    attrs: List[Any] = dunder_delim_path.split(DUNDER)
     return functools.reduce(_getattr, [obj] + attrs)
 
 

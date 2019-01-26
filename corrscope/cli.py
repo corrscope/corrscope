@@ -2,7 +2,7 @@ import datetime
 import sys
 from itertools import count
 from pathlib import Path
-from typing import Optional, List, Tuple, Union, Iterator
+from typing import Optional, List, Tuple, Union, Iterator, cast
 
 import click
 
@@ -83,7 +83,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.option('--profile', is_flag=True, help=
         'Debug: Write CProfiler snapshot')
 @click.version_option(corrscope.__version__)
-# fmt: on
+# fmt: on is ignored, because of https://github.com/ambv/black/issues/560
 def main(
         files: Tuple[str],
         # cfg
@@ -116,6 +116,8 @@ def main(
     show_gui = not any([write, play, render])
 
     # Gather data for cfg: Config object.
+    CfgOrPath = Union[Config, Path]
+
     cfg_or_path: Union[Config, Path, None] = None
     cfg_dir: Optional[str] = None
 
@@ -171,10 +173,11 @@ def main(
         cfg_dir = '.'
 
     assert cfg_or_path is not None
+    assert cfg_dir is not None
     if show_gui:
         def command():
             from corrscope import gui
-            return gui.gui_main(cfg_or_path)
+            return gui.gui_main(cast(CfgOrPath, cfg_or_path))
 
         if profile:
             import cProfile
@@ -227,18 +230,20 @@ def main(
                 except MissingFFmpegError as e:
                     # Tell user how to install ffmpeg (__str__).
                     print(e, file=sys.stderr)
+# fmt: on
 
 
 def get_profile_dump_name(prefix: str) -> str:
-    now = datetime.datetime.now()
-    now = now.strftime('%Y-%m-%d_T%H-%M-%S')
+    now_date = datetime.datetime.now()
+    now_str = now_date.strftime("%Y-%m-%d_T%H-%M-%S")
 
-    profile_dump_name = f'{prefix}-{PROFILE_DUMP_NAME}-{now}'
+    profile_dump_name = f"{prefix}-{PROFILE_DUMP_NAME}-{now_str}"
 
     # Write stats to unused filename
     for path in add_numeric_suffixes(profile_dump_name):
         if not Path(path).exists():
             return path
+    assert False  # never happens since add_numeric_suffixes is endless.
 
 
 def add_numeric_suffixes(s: str) -> Iterator[str]:

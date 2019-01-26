@@ -1,7 +1,7 @@
 import pickle
 from enum import Enum
 from io import StringIO, BytesIO
-from typing import ClassVar, TYPE_CHECKING, Type, TypeVar, Set
+from typing import *
 
 import attr
 from ruamel.yaml import (
@@ -13,6 +13,9 @@ from ruamel.yaml import (
     Node,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 __all__ = [
     "yaml",
     "copy_config",
@@ -20,7 +23,7 @@ __all__ = [
     "KeywordAttrs",
     "Alias",
     "Ignored",
-    "register_enum",
+    "DumpEnumAsStr",
     "TypedEnumDump",
     "CorrError",
     "CorrWarning",
@@ -31,15 +34,18 @@ __all__ = [
 
 
 class MyYAML(YAML):
-    def dump(self, data, stream=None, **kw):
+    def dump(
+        self, data: Any, stream: "Union[Path, TextIO, None]" = None, **kwargs
+    ) -> Optional[str]:
         """ Allow dumping to str. """
         inefficient = False
         if stream is None:
             inefficient = True
             stream = StringIO()
-        YAML.dump(self, data, stream, **kw)
+        YAML.dump(self, data, stream, **kwargs)
         if inefficient:
-            return stream.getvalue()
+            return cast(StringIO, stream).getvalue()
+        return None
 
 
 class NoAliasRepresenter(RoundTripRepresenter):
@@ -49,7 +55,7 @@ class NoAliasRepresenter(RoundTripRepresenter):
     TODO test
     """
 
-    def ignore_aliases(self, data):
+    def ignore_aliases(self, data: Any) -> bool:
         if isinstance(data, Enum):
             return True
         return super().ignore_aliases(data)
@@ -109,7 +115,7 @@ class DumpableAttrs:
         def __init__(self, *args, **kwargs):
             pass
 
-    def __init_subclass__(cls, kw_only=False, always_dump: str = ""):
+    def __init_subclass__(cls, kw_only: bool = False, always_dump: str = ""):
         cls.__always_dump = set(always_dump.split())
         del always_dump
 
@@ -129,7 +135,7 @@ class DumpableAttrs:
                 ), f'Invalid always_dump="...{dump_field}" missing from class {cls.__name__}'
 
     # SafeRepresenter.represent_yaml_object() uses __getstate__ to dump objects.
-    def __getstate__(self):
+    def __getstate__(self) -> Dict[str, Any]:
         """ Removes all fields with default values, but not found in
         self.always_dump. """
 
@@ -157,8 +163,8 @@ class DumpableAttrs:
                 continue
             # noinspection PyTypeChecker,PyUnresolvedReferences
             if (
-                isinstance(field.default, attr.Factory)
-                and field.default.factory() == value
+                isinstance(field.default, attr.Factory)  # type: ignore
+                and field.default.factory() == value  # type: ignore
             ):
                 continue
 
@@ -167,7 +173,7 @@ class DumpableAttrs:
         return state
 
     # SafeConstructor.construct_yaml_object() uses __setstate__ to load objects.
-    def __setstate__(self, state):
+    def __setstate__(self, state: Dict[str, Any]) -> None:
         """ Redirect `Alias(key)=value` to `key=value`.
         Then call the dataclass constructor (to validate parameters). """
 
@@ -217,29 +223,30 @@ Ignored = object()
 
 
 # Setup Enum load/dump infrastructure
+SomeEnum = TypeVar("SomeEnum", bound=Enum)
 
 
-def register_enum(cls: Type):
-    cls.to_yaml = _EnumMixin.to_yaml
-    return _yaml_loadable(cls)
-
-
-class _EnumMixin:
-    @classmethod
-    def to_yaml(cls, representer: Representer, node: Enum):
-        return representer.represent_str(node._name_)
-
-
-class TypedEnumDump:
-    def __init_subclass__(cls, **kwargs):
+class DumpEnumAsStr(Enum):
+    def __init_subclass__(cls):
         _yaml_loadable(cls)
 
     @classmethod
-    def to_yaml(cls: Type[Enum], representer: Representer, node: Enum):
-        return representer.represent_scalar("!" + cls.__name__, node._name_)
+    def to_yaml(cls, representer: Representer, node: Enum) -> Any:
+        return representer.represent_str(node._name_)  # type: ignore
+
+
+class TypedEnumDump(Enum):
+    def __init_subclass__(cls):
+        _yaml_loadable(cls)
 
     @classmethod
-    def from_yaml(cls: Type[Enum], constructor: Constructor, node: Node):
+    def to_yaml(cls, representer: Representer, node: Enum) -> Any:
+        return representer.represent_scalar(
+            "!" + cls.__name__, node._name_  # type: ignore
+        )
+
+    @classmethod
+    def from_yaml(cls, constructor: Constructor, node: Node) -> Enum:
         return cls[node.value]
 
 

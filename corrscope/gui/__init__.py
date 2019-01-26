@@ -3,13 +3,14 @@ import sys
 import traceback
 from pathlib import Path
 from types import MethodType
-from typing import Type, Optional, List, Any, Tuple, Callable, Union, Dict
+from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence
 
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
 import attr
 from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
+from PyQt5.QtCore import QVariant
 from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
 from PyQt5.QtWidgets import QShortcut
 
@@ -216,7 +217,7 @@ class MainWindow(qw.QMainWindow):
             qw.QMessageBox.critical(self, "Error loading file", str(e))
             return
 
-    def load_cfg(self, cfg: Config, cfg_path: Optional[Path]):
+    def load_cfg(self, cfg: Config, cfg_path: Optional[Path]) -> None:
         self._cfg_path = cfg_path
         self._any_unsaved = False
         self.load_title()
@@ -242,11 +243,11 @@ class MainWindow(qw.QMainWindow):
 
     title_cache: str
 
-    def load_title(self):
+    def load_title(self) -> None:
         self.title_cache = self.title
         self._update_unsaved_title()
 
-    def _update_unsaved_title(self):
+    def _update_unsaved_title(self) -> None:
         if self.any_unsaved:
             undo_str = "*"
         else:
@@ -496,7 +497,9 @@ class CorrProgressDialog(qw.QProgressDialog):
 
 
 # *arg_types: type
-def run_on_ui_thread(bound_slot: MethodType, types: Tuple[type, ...]) -> Callable:
+def run_on_ui_thread(
+    bound_slot: MethodType, types: Tuple[type, ...]
+) -> Callable[..., None]:
     """ Runs an object's slot on the object's own thread.
     It's terrible code but it works (as long as the slot has no return value).
     """
@@ -565,7 +568,7 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
     return property(get, set)
 
 
-def default_property(path: str, default) -> property:
+def default_property(path: str, default: Any) -> property:
     def getter(self: "ConfigModel"):
         val = rgetattr(self.cfg, path)
         if val is None:
@@ -600,6 +603,7 @@ def color2hex_maybe_property(path: str) -> property:
         return color2hex(color_attr)
 
     def setter(self: "ConfigModel", val: str):
+        color: Optional[str]
         if val:
             color = color2hex(val)
         else:
@@ -633,7 +637,7 @@ flatten_modes = {
     Flatten.DiffAvg: "DiffAvg: (L-R)/2",
     Flatten.Stereo: "Stereo (broken)",
 }
-assert set(flatten_modes.keys()) == set(Flatten.modes)
+assert set(flatten_modes.keys()) == set(Flatten.modes)  # type: ignore
 
 flatten_symbols = list(flatten_modes.keys())
 flatten_text = list(flatten_modes.values())
@@ -641,8 +645,8 @@ flatten_text = list(flatten_modes.values())
 
 class ConfigModel(PresentationModel):
     cfg: Config
-    combo_symbols: Dict[str, List[Symbol]] = {}
-    combo_text: Dict[str, List[str]] = {}
+    combo_symbols: Dict[str, Sequence[Symbol]] = {}
+    combo_text: Dict[str, Sequence[str]] = {}
 
     master_audio = path_fix_property("master_audio")
 
@@ -751,7 +755,7 @@ class ChannelTableView(qw.QTableView):
 @attr.dataclass
 class Column:
     key: str
-    cls: Union[Type, Callable]
+    cls: Union[type, Callable[[str], Any]]
     default: Any
 
     def _display_name(self) -> str:
@@ -787,7 +791,7 @@ class ChannelModel(qc.QAbstractTableModel):
 
             cfg.trigger = trigger_dict
 
-    def triggers(self, row: int) -> dict:
+    def triggers(self, row: int) -> Dict[str, Any]:
         trigger = self.channels[row].trigger
         assert isinstance(trigger, dict)
         return trigger
@@ -803,18 +807,17 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("trigger__buffer_falloff", float, None),
     ]
 
-    @staticmethod
-    def _idx_of_key(col_data=col_data):
-        return {col.key: idx for idx, col in enumerate(col_data)}
-
-    idx_of_key = _idx_of_key.__func__()
+    idx_of_key = {}
+    for idx, col in enumerate(col_data):
+        idx_of_key[col.key] = idx
+    del idx, col
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
         return len(self.col_data)
 
     def headerData(
-        self, section: int, orientation: Qt.Orientation, role=Qt.DisplayRole
-    ):
+        self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole
+    ) -> Union[str, QVariant]:
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
                 col = section

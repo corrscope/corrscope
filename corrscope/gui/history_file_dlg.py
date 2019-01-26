@@ -19,7 +19,7 @@ class FileName:
 
 
 def _get_hist_name(
-    func: Callable,
+    func: Callable[..., Tuple[str, str]],
     history_dir: _gp.Ref[_gp.GlobalPrefs],
     parent: qw.QWidget,
     title: str,
@@ -37,7 +37,7 @@ def _get_hist_name(
     filter: str = ";;".join(filters)
 
     # Call qw.QFileDialog.getXFileName[s].
-    name, sel_filter = func(parent, title, dir_or_file, filter)  # type: str, str
+    name, sel_filter = func(parent, title, dir_or_file, filter)
     if not name:
         return None
 
