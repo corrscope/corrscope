@@ -33,7 +33,7 @@ class GlobalPrefs(DumpableAttrs, always_dump="*"):
     file_dir: str = ""
 
     @property
-    def file_dir_ref(self) -> Ref:
+    def file_dir_ref(self) -> "Ref[GlobalPrefs]":
         return Ref(self, "file_dir")
 
     # Most recent video rendered
@@ -41,7 +41,7 @@ class GlobalPrefs(DumpableAttrs, always_dump="*"):
     render_dir: str = ""  # Set to "" whenever separate_render_dir=False.
 
     @property
-    def render_dir_ref(self) -> Ref:
+    def render_dir_ref(self) -> "Ref[GlobalPrefs]":
         if self.separate_render_dir:
             return Ref(self, "render_dir")
         else:

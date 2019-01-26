@@ -50,3 +50,11 @@ def report():
 def html():
     run("coverage.cmdline:main", "html")
     webbrowser.open("htmlcov/index.html")
+
+
+"""
+export MONKEYTYPE_TRACE_MODULES=corrscope
+monkeytype run `which pytest`
+// monkeytype run -m corrscope
+monkeytype list-modules | xargs -I % -n 1 sh -c 'monkeytype apply % 2>&1 | tail -n4'
+"""

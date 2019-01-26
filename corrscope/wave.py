@@ -49,6 +49,8 @@ class Wave:
     data: "np.ndarray"
     """2-D array of shape (nsamp, nchan)"""
 
+    _flatten: Flatten
+
     @property
     def flatten(self) -> Flatten:
         """
@@ -64,7 +66,7 @@ class Wave:
     @flatten.setter
     def flatten(self, flatten: Flatten) -> None:
         # Reject invalid modes (including Mono).
-        if flatten not in Flatten.modes:
+        if flatten not in Flatten.modes:  # type: ignore
             # Flatten.Mono not in Flatten.modes.
             raise CorrError(
                 f"Wave {self.wave_path} has invalid flatten mode {flatten} "
@@ -81,7 +83,7 @@ class Wave:
         wave_path: str,
         amplification: float = 1.0,
         flatten: Flatten = Flatten.SumAvg,
-    ):
+    ) -> None:
         self.wave_path = wave_path
         self.amplification = amplification
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)
@@ -161,7 +163,7 @@ class Wave:
 
         region_len = end - begin
 
-        def constrain(idx):
+        def constrain(idx: int) -> int:
             delta = 0
             if idx < 0:
                 delta = 0 - idx  # delta > 0

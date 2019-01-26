@@ -1,5 +1,5 @@
 from os.path import abspath
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, Dict, Any
 
 import attr
 from ruamel.yaml.comments import CommentedMap
@@ -17,7 +17,7 @@ class ChannelConfig(DumpableAttrs):
     wav_path: str
 
     # Supplying a dict inherits attributes from global trigger.
-    trigger: Union[ITriggerConfig, dict, None] = attr.Factory(
+    trigger: Union[ITriggerConfig, Dict[str, Any], None] = attr.Factory(  # type: ignore
         dict
     )  # TODO test channel-specific triggers
     # Multiplies how wide the window is, in milliseconds.
@@ -48,7 +48,7 @@ class Channel:
     trigger_stride: int
     render_stride: int
 
-    def __init__(self, cfg: ChannelConfig, corr_cfg: "Config"):
+    def __init__(self, cfg: ChannelConfig, corr_cfg: "Config") -> None:
         self.cfg = cfg
 
         # Create a Wave object.
