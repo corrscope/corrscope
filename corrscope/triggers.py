@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Type, Tuple, Optional, ClassVar
 import attr
 import numpy as np
 
-import corrscope.utils.scipy_signal as signal
-import corrscope.utils.scipy_windows as windows
+import corrscope.utils.scipy.signal as signal
+import corrscope.utils.scipy.windows as windows
 from corrscope.config import KeywordAttrs, CorrError, Alias, CorrWarning
 from corrscope.util import find, obj_name
 from corrscope.utils.windows import midpad, leftpad
