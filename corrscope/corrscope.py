@@ -147,7 +147,7 @@ class Arguments:
 
 
 class CorrScope:
-    def __init__(self, cfg: Config, arg: Arguments) -> None:
+    def __init__(self, cfg: Config, arg: Arguments):
         """ cfg is mutated!
         Recording config is triggered if any FFmpegOutputConfig is found.
         Preview mode is triggered if all outputs are FFplay or others.

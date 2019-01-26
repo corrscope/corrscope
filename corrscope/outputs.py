@@ -38,7 +38,7 @@ Stop = _Stop()
 
 
 class Output(ABC):
-    def __init__(self, corr_cfg: "Config", cfg: IOutputConfig) -> None:
+    def __init__(self, corr_cfg: "Config", cfg: IOutputConfig):
         self.corr_cfg = corr_cfg
         self.cfg = cfg
 
@@ -78,7 +78,7 @@ def register_output(
 
 
 class _FFmpegProcess:
-    def __init__(self, templates: List[str], corr_cfg: "Config") -> None:
+    def __init__(self, templates: List[str], corr_cfg: "Config"):
         self.templates = templates
         self.corr_cfg = corr_cfg
 
@@ -223,7 +223,7 @@ FFMPEG = "ffmpeg"
 
 @register_output(FFmpegOutputConfig)
 class FFmpegOutput(PipeOutput):
-    def __init__(self, corr_cfg: "Config", cfg: FFmpegOutputConfig) -> None:
+    def __init__(self, corr_cfg: "Config", cfg: FFmpegOutputConfig):
         super().__init__(corr_cfg, cfg)
 
         ffmpeg = _FFmpegProcess([FFMPEG, "-y"], corr_cfg)
@@ -251,7 +251,7 @@ FFPLAY = "ffplay"
 
 @register_output(FFplayOutputConfig)
 class FFplayOutput(PipeOutput):
-    def __init__(self, corr_cfg: "Config", cfg: FFplayOutputConfig) -> None:
+    def __init__(self, corr_cfg: "Config", cfg: FFplayOutputConfig):
         super().__init__(corr_cfg, cfg)
 
         ffmpeg = _FFmpegProcess([FFMPEG, *FFMPEG_QUIET], corr_cfg)

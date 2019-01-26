@@ -92,7 +92,7 @@ class Renderer(ABC):
         lcfg: "LayoutConfig",
         nplots: int,
         channel_cfgs: Optional[List["ChannelConfig"]],
-    ) -> None:
+    ):
         self.cfg = cfg
         self.nplots = nplots
         self.layout = RendererLayout(lcfg, nplots)

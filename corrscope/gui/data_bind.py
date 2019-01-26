@@ -50,7 +50,7 @@ class PresentationModel(qc.QObject):
     combo_text: Dict[str, Sequence[str]]
     edited = qc.pyqtSignal()
 
-    def __init__(self, cfg: DumpableAttrs) -> None:
+    def __init__(self, cfg: DumpableAttrs):
         super().__init__()
         self.cfg = cfg
         self.update_widget: Dict[str, WidgetUpdater] = {}

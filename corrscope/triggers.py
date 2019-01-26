@@ -48,7 +48,7 @@ class Trigger(ABC):
 
     def __init__(
         self, wave: "Wave", cfg: ITriggerConfig, tsamp: int, stride: int, fps: float
-    ) -> None:
+    ):
         self.cfg = cfg
         self._wave = wave
 

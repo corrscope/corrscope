@@ -48,7 +48,7 @@ class Channel:
     trigger_stride: int
     render_stride: int
 
-    def __init__(self, cfg: ChannelConfig, corr_cfg: "Config") -> None:
+    def __init__(self, cfg: ChannelConfig, corr_cfg: "Config"):
         self.cfg = cfg
 
         # Create a Wave object.

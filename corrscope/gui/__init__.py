@@ -83,7 +83,7 @@ class MainWindow(qw.QMainWindow):
     - load_cfg_from_path
     """
 
-    def __init__(self, cfg_or_path: Union[Config, Path]) -> None:
+    def __init__(self, cfg_or_path: Union[Config, Path]):
         super().__init__()
 
         # Load settings.
@@ -773,7 +773,7 @@ class ChannelModel(qc.QAbstractTableModel):
     https://doc.qt.io/qt-5/model-view-programming.html#model-subclassing-reference
     """
 
-    def __init__(self, channels: List[ChannelConfig]) -> None:
+    def __init__(self, channels: List[ChannelConfig]):
         """ Mutates `channels` and `line_color` for convenience. """
         super().__init__()
         self.channels = channels

@@ -34,7 +34,7 @@ RegionFactory = Callable[[int, int], Region]  # f(row, column) -> Region
 class RendererLayout:
     VALID_ORIENTATIONS = ["h", "v"]
 
-    def __init__(self, cfg: LayoutConfig, nplots: int) -> None:
+    def __init__(self, cfg: LayoutConfig, nplots: int):
         self.cfg = cfg
         self.nplots = nplots
 
@@ -97,7 +97,7 @@ class RendererLayout:
 
 
 class EdgeFinder(Generic[Region]):
-    def __init__(self, regions2d: np.ndarray) -> None:
+    def __init__(self, regions2d: np.ndarray):
         self.tops: List[Region] = regions2d[0, :].tolist()
         self.bottoms: List[Region] = regions2d[-1, :].tolist()
         self.lefts: List[Region] = regions2d[:, 0].tolist()

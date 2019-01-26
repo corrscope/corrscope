@@ -83,7 +83,7 @@ class Wave:
         wave_path: str,
         amplification: float = 1.0,
         flatten: Flatten = Flatten.SumAvg,
-    ) -> None:
+    ):
         self.wave_path = wave_path
         self.amplification = amplification
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)
