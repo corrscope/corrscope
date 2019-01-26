@@ -26,6 +26,10 @@ if TYPE_CHECKING:
 PRINT_TIMESTAMP = True
 
 
+# Placing Enum before any other superclass results in errors.
+# Placing DumpEnumAsStr before IntEnum or (int, Enum) results in errors on Python 3.6:
+# - TypeError: object.__new__(BenchmarkMode) is not safe, use int.__new__()
+# I don't know *why* this works. It's magic.
 @unique
 class BenchmarkMode(int, DumpEnumAsStr, Enum):
     NONE = 0
