@@ -27,7 +27,7 @@ PRINT_TIMESTAMP = True
 
 
 @unique
-class BenchmarkMode(DumpEnumAsStr, int, Enum):
+class BenchmarkMode(int, DumpEnumAsStr, Enum):
     NONE = 0
     TRIGGER = 1
     RENDER = 2
