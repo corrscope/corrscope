@@ -6,7 +6,7 @@ from typing import Union, List
 
 import numpy as np
 
-import corrscope.utils.scipy_wavfile as wavfile
+import corrscope.utils.scipy.wavfile as wavfile
 from corrscope.config import CorrError, CorrWarning, TypedEnumDump
 
 FLOAT = np.single

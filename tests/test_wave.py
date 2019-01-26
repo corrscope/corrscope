@@ -1,15 +1,13 @@
 import warnings
 from typing import Sequence
 
-from hypothesis import given
-import hypothesis.strategies as hs
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 from delayed_assert import expect, assert_expectations
 
 from corrscope.config import CorrError
-from corrscope.utils.scipy_wavfile import WavFileWarning
+from corrscope.utils.scipy.wavfile import WavFileWarning
 from corrscope.wave import Wave, Flatten
 
 prefix = "tests/wav-formats/"
