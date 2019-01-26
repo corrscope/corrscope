@@ -6,7 +6,7 @@ from fractions import Fraction
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Iterator
-from typing import Optional, List, Union, TYPE_CHECKING, Callable, cast
+from typing import Optional, List, Union, Callable, cast
 
 import attr
 
@@ -18,9 +18,6 @@ from corrscope.renderer import MatplotlibRenderer, RendererConfig, Renderer
 from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave, Flatten
-
-if TYPE_CHECKING:
-    pass
 
 
 PRINT_TIMESTAMP = True
