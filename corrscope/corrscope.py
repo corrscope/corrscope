@@ -369,6 +369,6 @@ class CorrScope:
             # noinspection PyUnboundLocalVariable
             dtime = time.perf_counter() - begin
             render_fps = (end_frame - begin_frame) / dtime
-            print(f"FPS = {render_fps}")
+            print(f"{render_fps:.1f} FPS, {1000 / render_fps:.2f} ms")
 
     raise_on_teardown: Optional[Exception] = None
