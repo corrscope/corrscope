@@ -8,6 +8,7 @@ from corrscope.config import (
     Alias,
     Ignored,
     CorrError,
+    CorrWarning,
 )
 
 # YAML Idiosyncrasies: https://docs.saltstack.com/en/develop/topics/troubleshooting/yaml_idiosyncrasies.html
@@ -220,7 +221,7 @@ xx: 1
 
 
 def test_load_argument_validation():
-    """ Ensure that loading config via YAML catches missing and invalid parameters. """
+    """ Ensure that loading config via YAML catches missing parameters. """
 
     class Config(DumpableAttrs):
         a: int
@@ -235,14 +236,20 @@ def test_load_argument_validation():
     with pytest.raises(TypeError):
         yaml.load("!Config {}")
 
-    with pytest.raises(TypeError):
-        yaml.load(
-            """\
-!Config
-  a: 1
-  b: 1
+
+def test_ignore_unrecognized_fields():
+    """Ensure unrecognized fields yield warning, not exception."""
+
+    class Foo(DumpableAttrs):
+        foo: int
+
+    s = """\
+!Foo
+foo: 1
+bar: 2
 """
-        )
+    with pytest.warns(CorrWarning):
+        assert yaml.load(s) == Foo(1)
 
 
 def test_load_post_init():
