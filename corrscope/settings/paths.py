@@ -20,7 +20,7 @@ def prepend(dic: MutableMapping[str, str], _key: List[str], prefix: str) -> None
 
 
 appdata_dir = Path(user_data_dir(corrscope.app_name, appauthor=False, roaming=True))
-appdata_dir.mkdir(exist_ok=True)
+appdata_dir.mkdir(parents=True, exist_ok=True)
 
 # Add app-specific ffmpeg path.
 _path_dir = appdata_dir / "path"
