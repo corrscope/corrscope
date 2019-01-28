@@ -1,4 +1,5 @@
 import pickle
+import warnings
 from enum import Enum
 from io import StringIO, BytesIO
 from typing import *
@@ -12,6 +13,8 @@ from ruamel.yaml import (
     Constructor,
     Node,
 )
+
+from corrscope.util import obj_name
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -177,24 +180,36 @@ class DumpableAttrs:
         """ Redirect `Alias(key)=value` to `key=value`.
         Then call the dataclass constructor (to validate parameters). """
 
+        self_name = obj_name(self)
+        field_names = attr.fields_dict(type(self)).keys()
+
+        new_state = {}
         for key, value in dict(state).items():
             class_var = getattr(self, key, None)
 
             if class_var is Ignored:
-                del state[key]
+                pass
 
-            if isinstance(class_var, Alias):
+            elif isinstance(class_var, Alias):
                 target = class_var.key
                 if target in state:
                     raise CorrError(
-                        f"{type(self).__name__} received both Alias {key} and "
+                        f"{self_name} received both Alias {key} and "
                         f"equivalent {target}"
                     )
+                new_state[target] = value
 
-                state[target] = value
-                del state[key]
+            elif key not in field_names:
+                warnings.warn(
+                    f"{self_name} received unrecognized field {key}, ignoring",
+                    CorrWarning,
+                )
 
-        obj = type(self)(**state)
+            else:
+                new_state[key] = value
+
+        del state
+        obj = type(self)(**new_state)
         self.__dict__ = obj.__dict__
 
 
