@@ -46,6 +46,7 @@ class Config(
     begin_time end_time
     render_subfps trigger_subsampling render_subsampling
     trigger_stereo render_stereo
+    show_internals
     """,
 ):
     """ Default values indicate optional attributes. """
