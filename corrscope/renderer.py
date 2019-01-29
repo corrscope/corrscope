@@ -59,6 +59,9 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     bg_color: str = "#000000"
     init_line_color: str = default_color()
     grid_color: Optional[str] = None
+    midline_color: Optional[str] = None
+    v_midline: bool = False
+    h_midline: bool = False
 
     # Performance (skipped when recording to video)
     res_divisor: float = 1.0
@@ -121,6 +124,17 @@ class Renderer(ABC):
         ...
 
 
+Point = float
+px_inch = 96
+pt_inch = 72
+
+DPI = px_inch
+
+
+def pixels(px: float) -> Point:
+    return px / px_inch * pt_inch
+
+
 class MatplotlibRenderer(Renderer):
     """
     Renderer backend which takes data and produces images.
@@ -141,8 +155,6 @@ class MatplotlibRenderer(Renderer):
     - changing scan_nsamp (cannot be hotswapped, since correlation buffer is incompatible)
     So don't.
     """
-
-    DPI = 96
 
     def __init__(self, *args, **kwargs):
         Renderer.__init__(self, *args, **kwargs)
@@ -223,11 +235,11 @@ class MatplotlibRenderer(Renderer):
                 ax.set_axis_off()
 
         # Generate arrangement (using nplots, cfg.orientation)
-        self._axes = self.layout.arrange(lambda row, col: axes2d[row, col])
+        self._axes: List[Axes] = self.layout.arrange(lambda row, col: axes2d[row, col])
 
         # Setup figure geometry
-        self._fig.set_dpi(self.DPI)
-        self._fig.set_size_inches(self.cfg.width / self.DPI, self.cfg.height / self.DPI)
+        self._fig.set_dpi(DPI)
+        self._fig.set_size_inches(self.cfg.width / DPI, self.cfg.height / DPI)
 
     def render_frame(self, datas: List[np.ndarray]) -> None:
         ndata = len(datas)
@@ -238,17 +250,31 @@ class MatplotlibRenderer(Renderer):
 
         # Initialize axes and draw waveform data
         if self._lines is None:
+            cfg = self.cfg
+
             # Setup background/axes
-            self._fig.set_facecolor(self.cfg.bg_color)
+            self._fig.set_facecolor(cfg.bg_color)
             for idx, data in enumerate(datas):
                 ax = self._axes[idx]
-                ax.set_xlim(0, len(data) - 1)
+                max_x = len(data) - 1
+                ax.set_xlim(0, max_x)
                 ax.set_ylim(-1, 1)
+
+                # Setup midlines
+                midline_color = cfg.midline_color
+                midline_width = pixels(1)
+
+                # zorder=-100 still draws on top of gridlines :(
+                kw = dict(color=midline_color, linewidth=midline_width)
+                if cfg.v_midline:
+                    ax.axvline(x=max_x / 2, **kw)
+                if cfg.h_midline:
+                    ax.axhline(y=0, **kw)
 
             self._save_background()
 
             # Plot lines over background
-            line_width = self.cfg.line_width
+            line_width = cfg.line_width
             self._lines = []
 
             for idx, data in enumerate(datas):
