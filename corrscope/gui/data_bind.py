@@ -181,7 +181,10 @@ def blend_colors(
     return QColor.fromRgbF(*rgb_blend, 1.0)
 
 
-def model_setter(value_type: type) -> Callable[[Any], None]:
+# Mypy expects -> Callable[[BoundWidget, Any], None].
+# PyCharm expects -> Callable[[Any], None].
+# I give up.
+def model_setter(value_type: type) -> Callable[..., None]:
     @pyqtSlot(value_type)
     def set_model(self: BoundWidget, value):
         assert isinstance(value, value_type)
@@ -217,6 +220,20 @@ class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
     set_gui = alias("setValue")
     gui_changed = alias("valueChanged")
     set_model = model_setter(float)
+
+
+class BoundCheckBox(qw.QCheckBox, BoundWidget):
+    set_gui = alias("setChecked")
+    gui_changed = alias("stateChanged")
+
+    @pyqtSlot(int)
+    def set_model(self, value: int):
+        """Qt.PartiallyChecked probably should not happen."""
+        Qt = qc.Qt
+        assert value in [Qt.Unchecked, Qt.PartiallyChecked, Qt.Checked]
+        self.set_bool(value != Qt.Unchecked)
+
+    set_bool = model_setter(bool)
 
 
 class BoundComboBox(qw.QComboBox, BoundWidget):
