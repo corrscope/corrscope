@@ -250,8 +250,10 @@ class MatplotlibRenderer(Renderer):
 
         # Initialize axes and draw waveform data
         if self._lines is None:
+            cfg = self.cfg
+
             # Setup background/axes
-            self._fig.set_facecolor(self.cfg.bg_color)
+            self._fig.set_facecolor(cfg.bg_color)
             for idx, data in enumerate(datas):
                 ax = self._axes[idx]
                 max_x = len(data) - 1
@@ -259,20 +261,20 @@ class MatplotlibRenderer(Renderer):
                 ax.set_ylim(-1, 1)
 
                 # Setup midlines
-                midline_color = self.cfg.midline_color
+                midline_color = cfg.midline_color
                 midline_width = pixels(1)
 
                 # zorder=-100 still draws on top of gridlines :(
                 kw = dict(color=midline_color, linewidth=midline_width)
-                if self.cfg.v_midline:
+                if cfg.v_midline:
                     ax.axvline(x=max_x / 2, **kw)
-                if self.cfg.h_midline:
+                if cfg.h_midline:
                     ax.axhline(y=0, **kw)
 
             self._save_background()
 
             # Plot lines over background
-            line_width = self.cfg.line_width
+            line_width = cfg.line_width
             self._lines = []
 
             for idx, data in enumerate(datas):
