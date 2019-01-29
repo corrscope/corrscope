@@ -131,7 +131,7 @@ def default_config(**kwargs) -> Config:
         ),
         channels=[],
         layout=LayoutConfig(ncols=2),
-        render=RendererConfig(1280, 720),
+        render=RendererConfig(1280, 720, res_divisor=2.0),
     )
     return attr.evolve(cfg, **kwargs)
 
