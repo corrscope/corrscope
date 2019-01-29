@@ -163,6 +163,7 @@ class CorrelationTrigger(Trigger):
         # (const) Multiplied by each frame of input audio.
         # Zeroes out all data older than 1 frame old.
         self._data_taper = self._calc_data_taper()
+        assert self._data_taper.dtype == FLOAT
 
         # (mutable) Correlated with data (for triggering).
         # Updated with tightly windowed old data at various pitches.
@@ -174,6 +175,7 @@ class CorrelationTrigger(Trigger):
         # Left half is -edge_strength, right half is +edge_strength.
         # ASCII art: --._|‾'--
         self._windowed_step = self._calc_step()
+        assert self._windowed_step.dtype == FLOAT
 
         # Will be overwritten on the first frame.
         self._prev_period: Optional[int] = None
@@ -212,7 +214,8 @@ class CorrelationTrigger(Trigger):
 
         # Generate left half-taper to prevent correlating with 1-frame-old data.
         # Right-pad=1 taper to [t-halfN, t-halfN+N]
-        data_taper = np.ones(N)  # TODO why not extract a right-pad function?
+        # TODO why not extract a right-pad function?
+        data_taper = np.ones(N, dtype=FLOAT)
         data_taper[:halfN] = np.minimum(data_taper[:halfN], taper)
 
         return data_taper
@@ -278,7 +281,7 @@ class CorrelationTrigger(Trigger):
         - correlate(prev_buffer, data)
         - trigger = offset - peak_offset
         """
-        corr = signal.correlate(data, prev_buffer)
+        corr = signal.correlate(data, prev_buffer)  # returns double, not single/FLOAT
         assert len(corr) == 2 * N - 1
 
         # Find optimal offset (within trigger_diameter, default=±N/4)
@@ -391,11 +394,13 @@ def get_period(data: np.ndarray) -> int:
 
 def cosine_flat(n: int, diameter: int, falloff: int) -> np.ndarray:
     cosine = windows.hann(falloff * 2)
+    # assert cosine.dtype == FLOAT
     left, right = cosine[:falloff], cosine[falloff:]
 
-    window = np.concatenate([left, np.ones(diameter), right])
+    window = np.concatenate([left, np.ones(diameter, dtype=FLOAT), right])
 
     padded = midpad(window, n)
+    # assert padded.dtype == FLOAT
     return padded
 
 
@@ -455,7 +460,8 @@ class LocalPostTrigger(PostTrigger):
         self._buffer_nsamp = self._tsamp
 
         # Precompute data window... TODO Hann, or extract fancy dynamic-width from CorrelationTrigger?
-        self._data_window = windows.hann(self._buffer_nsamp).astype(FLOAT)
+        self._data_window = windows.hann(self._buffer_nsamp)
+        assert self._data_window.dtype == FLOAT
 
         # Precompute edge correlation buffer
         self._windowed_step = calc_step(self._tsamp, self.cfg.strength, 1 / 3)
