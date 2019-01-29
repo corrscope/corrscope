@@ -191,6 +191,30 @@
            <item row="4" column="1">
             <widget class="BoundLineEdit" name="render__grid_color"/>
            </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="render__midline_colorL">
+             <property name="text">
+              <string>Midline Color</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="BoundLineEdit" name="render__midline_color"/>
+           </item>
+           <item row="6" column="0">
+            <widget class="BoundCheckBox" name="render__v_midline">
+             <property name="text">
+              <string>Vertical</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="BoundCheckBox" name="render__h_midline">
+             <property name="text">
+              <string>Horizontal Midline</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </widget>
         </item>
@@ -665,6 +689,11 @@
   <customwidget>
    <class>BoundComboBox</class>
    <extends>QComboBox</extends>
+   <header>corrscope/gui/data_bind.h</header>
+  </customwidget>
+  <customwidget>
+   <class>BoundCheckBox</class>
+   <extends>QCheckBox</extends>
    <header>corrscope/gui/data_bind.h</header>
   </customwidget>
   <customwidget>
