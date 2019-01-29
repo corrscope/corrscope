@@ -1,6 +1,6 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING, Any
 
 import attr
 import matplotlib
@@ -238,21 +238,22 @@ class MatplotlibRenderer(Renderer):
 
         # Initialize axes and draw waveform data
         if self._lines is None:
+            # Setup background/axes
             self._fig.set_facecolor(self.cfg.bg_color)
-            line_width = self.cfg.line_width
-
-            self._lines = []
             for idx, data in enumerate(datas):
-                # Setup colors
-                line_param = self._line_params[idx]
-                line_color = line_param.color
-
-                # Setup axes
                 ax = self._axes[idx]
                 ax.set_xlim(0, len(data) - 1)
                 ax.set_ylim(-1, 1)
 
-                # Plot line
+            self._save_background()
+
+            # Plot lines over background
+            line_width = self.cfg.line_width
+            self._lines = []
+
+            for idx, data in enumerate(datas):
+                ax = self._axes[idx]
+                line_color = self._line_params[idx].color
                 line = ax.plot(data, color=line_color, linewidth=line_width)[0]
                 self._lines.append(line)
 
@@ -262,8 +263,36 @@ class MatplotlibRenderer(Renderer):
                 line = self._lines[idx]
                 line.set_ydata(data)
 
-        self._fig.canvas.draw()
-        self._fig.canvas.flush_events()
+        self._redraw_over_background()
+
+    bg_cache: Any  # "matplotlib.backends._backend_agg.BufferRegion"
+
+    def _save_background(self) -> None:
+        """ Draw static background. """
+        # https://stackoverflow.com/a/8956211
+        # https://matplotlib.org/api/animation_api.html#funcanimation
+        fig = self._fig
+
+        fig.canvas.draw()
+        self.bg_cache = fig.canvas.copy_from_bbox(fig.bbox)
+
+    def _redraw_over_background(self) -> None:
+        """ Redraw animated elements of the image. """
+
+        canvas: FigureCanvasAgg = self._fig.canvas
+        canvas.restore_region(self.bg_cache)
+
+        assert self._lines is not None
+        for line in self._lines:
+            line.axes.draw_artist(line)
+
+        # https://bastibe.de/2013-05-30-speeding-up-matplotlib.html
+        # thinks fig.canvas.blit(ax.bbox) leaks memory
+        # and fig.canvas.update() works.
+        # Except I found no memory leak...
+        # and update() doesn't exist in FigureCanvasBase when no GUI is present.
+
+        canvas.blit(self._fig.bbox)
 
     def get_frame(self) -> ByteBuffer:
         """ Returns ndarray of shape w,h,3. """
