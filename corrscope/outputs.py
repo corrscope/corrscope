@@ -107,7 +107,7 @@ class _FFmpegProcess:
             return subprocess.Popen(
                 args, stdin=subprocess.PIPE, bufsize=bufsize, **kwargs
             )
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             raise MissingFFmpegError()
 
     def _generate_args(self) -> List[str]:
@@ -261,7 +261,10 @@ class FFplayOutput(PipeOutput):
         p1 = ffmpeg.popen(["-"], self.bufsize, stdout=subprocess.PIPE)
 
         ffplay = shlex.split("ffplay -autoexit -") + FFMPEG_QUIET
-        p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
+        try:
+            p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
+        except FileNotFoundError:
+            raise MissingFFmpegError()
 
         p1.stdout.close()
         # assert p2.stdin is None   # True unless Popen is being mocked (test_output).

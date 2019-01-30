@@ -984,7 +984,7 @@ class DownloadFFmpegActivity:
     path_uri = qc.QUrl.fromLocalFile(paths.PATH_dir).toString()
 
     required = (
-        f"FFmpeg must be in PATH or "
+        f"FFmpeg+FFplay must be in PATH or "
         f'<a href="{path_uri}">corrscope folder</a> in order to use corrscope.<br>'
     )
 
