@@ -111,7 +111,7 @@ class MainWindow(qw.QMainWindow):
         self.actionOpen.triggered.connect(self.on_action_open)
         self.actionSave.triggered.connect(self.on_action_save)
         self.actionSaveAs.triggered.connect(self.on_action_save_as)
-        self.actionPlay.triggered.connect(self.on_action_play)
+        self.actionPreview.triggered.connect(self.on_action_preview)
         self.actionRender.triggered.connect(self.on_action_render)
         self.actionExit.triggered.connect(qw.QApplication.closeAllWindows)
 
@@ -268,7 +268,7 @@ class MainWindow(qw.QMainWindow):
     actionOpen: qw.QAction
     actionSave: qw.QAction
     actionSaveAs: qw.QAction
-    actionPlay: qw.QAction
+    actionPreview: qw.QAction
     actionRender: qw.QAction
     actionExit: qw.QAction
 
@@ -333,7 +333,7 @@ class MainWindow(qw.QMainWindow):
         else:
             return False
 
-    def on_action_play(self):
+    def on_action_preview(self):
         """ Launch CorrScope and ffplay. """
         error_msg = "Cannot play, another play/render is active"
         if self.corr_thread is not None:

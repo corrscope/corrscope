@@ -572,7 +572,7 @@
     <addaction name="actionSave"/>
     <addaction name="actionSaveAs"/>
     <addaction name="separator"/>
-    <addaction name="actionPlay"/>
+    <addaction name="actionPreview"/>
     <addaction name="actionRender"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -601,7 +601,7 @@
    <addaction name="actionSave"/>
    <addaction name="actionSaveAs"/>
    <addaction name="separator"/>
-   <addaction name="actionPlay"/>
+   <addaction name="actionPreview"/>
    <addaction name="actionRender"/>
   </widget>
   <action name="actionOpen">
@@ -644,9 +644,9 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionPlay">
+  <action name="actionPreview">
    <property name="text">
-    <string>&amp;Play</string>
+    <string>&amp;Preview</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+P</string>
