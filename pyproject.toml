@@ -31,14 +31,6 @@ mypy = "^0.660.0"
 
 [tool.poetry.scripts]
 corr = 'corrscope.cli:main'
-run = 'scripts:run'
-dcover = 'scripts:dcover'
-rcover = 'scripts:rcover'
-hcover = 'scripts:hcover'
-cover = 'scripts:cover'
-diff = 'scripts:diff'
-report = 'scripts:report'
-html = 'scripts:html'
 
 [tool.black]
 line-length = 88
