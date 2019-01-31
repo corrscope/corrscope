@@ -661,14 +661,14 @@ class ConfigModel(PresentationModel):
     render__grid_color = color2hex_maybe_property("render__grid_color")
 
     @property
-    def render_video_size(self) -> str:
+    def render_resolution(self) -> str:
         render = self.cfg.render
         w, h = render.width, render.height
         return f"{w}x{h}"
 
-    @render_video_size.setter
-    def render_video_size(self, value: str):
-        error = CorrError(f"invalid video size {value}, must be WxH")
+    @render_resolution.setter
+    def render_resolution(self, value: str):
+        error = CorrError(f"invalid resolution {value}, must be WxH")
 
         for sep in "x*,":
             width_height = value.split(sep)
