@@ -222,12 +222,20 @@ class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
     set_model = model_setter(float)
 
 
+CheckState = int
+
+
 class BoundCheckBox(qw.QCheckBox, BoundWidget):
+    # setChecked accepts (bool).
+    # setCheckState accepts (Qt.CheckState). Don't use it.
     set_gui = alias("setChecked")
+
+    # stateChanged passes (Qt.CheckState).
     gui_changed = alias("stateChanged")
 
-    @pyqtSlot(int)
-    def set_model(self, value: int):
+    # gui_changed -> set_model(Qt.CheckState).
+    @pyqtSlot(CheckState)
+    def set_model(self, value: CheckState):
         """Qt.PartiallyChecked probably should not happen."""
         Qt = qc.Qt
         assert value in [Qt.Unchecked, Qt.PartiallyChecked, Qt.Checked]
