@@ -321,7 +321,7 @@
         <item>
          <widget class="QGroupBox" name="perfAll">
           <property name="title">
-           <string>Performance</string>
+           <string>Preview and Render</string>
           </property>
           <layout class="QFormLayout" name="formLayout_5">
            <item row="0" column="0">
@@ -356,9 +356,9 @@
          </widget>
         </item>
         <item>
-         <widget class="QGroupBox" name="perfPlayback">
+         <widget class="QGroupBox" name="perfPreview">
           <property name="title">
-           <string>Playback</string>
+           <string>Preview Only</string>
           </property>
           <layout class="QFormLayout" name="formLayout_3">
            <item row="0" column="0">
