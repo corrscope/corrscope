@@ -8,6 +8,7 @@ _package = Path(__file__).parent
 
 # Version prefix
 base_version = "0.2.0"
+is_dev = "-" in base_version
 
 
 def _base_plus_metadata(build_metadata: str) -> str:
@@ -28,7 +29,6 @@ def get_version() -> str:
     Depends on pyinstaller_write_version and filesystem.
     """
     is_installer = hasattr(sys, "frozen")
-    is_dev = "-" in base_version
 
     # PyInstaller's .spec file creates _version.py and version.txt.
     if is_installer and is_dev:
@@ -47,8 +47,12 @@ def pyinstaller_write_version() -> str:
     Writes to filesystem, does NOT call get_version().
     Filesystem is ignored if version number isn't prerelease (x.y.z-pre).
     """
-    build_metadata = _calc_metadata()
-    version = _base_plus_metadata(build_metadata)
+    if is_dev:
+        build_metadata = _calc_metadata()
+        version = _base_plus_metadata(build_metadata)
+    else:
+        build_metadata = ""
+        version = base_version
 
     with version_txt.open("w") as txt:
         txt.write(version)
