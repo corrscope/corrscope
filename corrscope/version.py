@@ -7,7 +7,7 @@ _package = Path(__file__).parent
 
 
 # Version prefix
-base_version = "0.2.0-beta1"
+base_version = "0.2.0"
 
 
 def _base_plus_metadata(build_metadata: str) -> str:
