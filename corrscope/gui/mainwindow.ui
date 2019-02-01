@@ -123,14 +123,14 @@
           </property>
           <layout class="QFormLayout" name="formLayout_4">
            <item row="0" column="0">
-            <widget class="QLabel" name="render_video_sizeL">
+            <widget class="QLabel" name="render_resolutionL">
              <property name="text">
-              <string>Video Size</string>
+              <string>Resolution</string>
              </property>
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="BoundLineEdit" name="render_video_size">
+            <widget class="BoundLineEdit" name="render_resolution">
              <property name="text">
               <string>vs</string>
              </property>
@@ -321,7 +321,7 @@
         <item>
          <widget class="QGroupBox" name="perfAll">
           <property name="title">
-           <string>Performance</string>
+           <string>Preview and Render</string>
           </property>
           <layout class="QFormLayout" name="formLayout_5">
            <item row="0" column="0">
@@ -356,9 +356,9 @@
          </widget>
         </item>
         <item>
-         <widget class="QGroupBox" name="perfPlayback">
+         <widget class="QGroupBox" name="perfPreview">
           <property name="title">
-           <string>Playback</string>
+           <string>Preview Only</string>
           </property>
           <layout class="QFormLayout" name="formLayout_3">
            <item row="0" column="0">
@@ -378,7 +378,7 @@
            <item row="1" column="0">
             <widget class="QLabel" name="render__res_divisorL">
              <property name="text">
-              <string>Video Size Divisor</string>
+              <string>Resolution Divisor</string>
              </property>
             </widget>
            </item>
@@ -572,7 +572,7 @@
     <addaction name="actionSave"/>
     <addaction name="actionSaveAs"/>
     <addaction name="separator"/>
-    <addaction name="actionPlay"/>
+    <addaction name="actionPreview"/>
     <addaction name="actionRender"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -601,7 +601,7 @@
    <addaction name="actionSave"/>
    <addaction name="actionSaveAs"/>
    <addaction name="separator"/>
-   <addaction name="actionPlay"/>
+   <addaction name="actionPreview"/>
    <addaction name="actionRender"/>
   </widget>
   <action name="actionOpen">
@@ -644,9 +644,9 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionPlay">
+  <action name="actionPreview">
    <property name="text">
-    <string>&amp;Play</string>
+    <string>&amp;Preview</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+P</string>
