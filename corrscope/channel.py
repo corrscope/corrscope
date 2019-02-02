@@ -17,14 +17,15 @@ class ChannelConfig(DumpableAttrs):
     wav_path: str
 
     # Supplying a dict inherits attributes from global trigger.
-    trigger: Union[ITriggerConfig, Dict[str, Any], None] = attr.Factory(  # type: ignore
-        dict
-    )  # TODO test channel-specific triggers
+    # TODO test channel-specific triggers
+    trigger: Union[ITriggerConfig, Dict[str, Any], None] = attr.Factory(dict)
+
     # Multiplies how wide the window is, in milliseconds.
     trigger_width: int = 1
     render_width: int = 1
 
-    ampl_ratio: float = 1.0  # TODO use amplification = None instead?
+    # Overrides global amplification.
+    amplification: Optional[float] = None
 
     # Stereo config
     trigger_stereo: Optional[Flatten] = None
@@ -53,7 +54,8 @@ class Channel:
 
         # Create a Wave object.
         wave = Wave(
-            abspath(cfg.wav_path), amplification=corr_cfg.amplification * cfg.ampl_ratio
+            abspath(cfg.wav_path),
+            amplification=coalesce(cfg.amplification, corr_cfg.amplification),
         )
 
         # Flatten wave stereo for trigger and render.

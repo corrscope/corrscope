@@ -799,6 +799,7 @@ class ChannelModel(qc.QAbstractTableModel):
     # columns
     col_data = [
         Column("wav_path", path_strip_quotes, "", "WAV Path"),
+        Column("amplification", float, None, "Amplification\n(override)"),
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
         Column("line_color", str, None, "Line Color"),
