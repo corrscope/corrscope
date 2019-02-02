@@ -211,6 +211,7 @@ class MainWindow(qw.QMainWindow):
             cfg = yaml.load(cfg_path)
 
             # Raises color getter exceptions
+            # FIXME if error halfway, clear "file path" and load empty model.
             self.load_cfg(cfg, cfg_path)
 
         except Exception as e:
@@ -582,37 +583,6 @@ def default_property(path: str, default: Any) -> property:
     return property(getter, setter)
 
 
-def color2hex_property(path: str) -> property:
-    def getter(self: "ConfigModel"):
-        color_attr = rgetattr(self.cfg, path)
-        return color2hex(color_attr)
-
-    def setter(self: "ConfigModel", val: str):
-        color = color2hex(val)
-        rsetattr(self.cfg, path, color)
-
-    return property(getter, setter)
-
-
-def color2hex_maybe_property(path: str) -> property:
-    # TODO turn into class, and use __set_name__ to determine assignment LHS=path.
-    def getter(self: "ConfigModel"):
-        color_attr = rgetattr(self.cfg, path)
-        if not color_attr:
-            return ""
-        return color2hex(color_attr)
-
-    def setter(self: "ConfigModel", val: str):
-        color: Optional[str]
-        if val:
-            color = color2hex(val)
-        else:
-            color = None
-        rsetattr(self.cfg, path, color)
-
-    return property(getter, setter)
-
-
 def path_strip_quotes(path: str) -> str:
     if len(path) and path[0] == path[-1] == '"':
         return path[1:-1]
@@ -655,10 +625,6 @@ class ConfigModel(PresentationModel):
         combo_symbols[path] = flatten_symbols
         combo_text[path] = flatten_text
     del path
-
-    render__bg_color = color2hex_property("render__bg_color")
-    render__init_line_color = color2hex_property("render__init_line_color")
-    render__grid_color = color2hex_maybe_property("render__grid_color")
 
     @property
     def render_resolution(self) -> str:
