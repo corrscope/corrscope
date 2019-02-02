@@ -407,18 +407,12 @@ class ColorText(BoundLineEdit):
 
 
 class ColorButton(qw.QPushButton):
-    palette_bg = QPalette.Button
-
     def __init__(self, parent: QWidget, text: "ColorText"):
         qw.QPushButton.__init__(self, parent)
-
-        # Initialize palettes
-        default_palette: QPalette = self.palette()
-        self.default_bg = QColor(default_palette.color(self.palette_bg))
-        self.curr_color = QColor()
-
-        self.setAutoFillBackground(True)
         self.clicked.connect(self.on_clicked)
+
+        # Initialize "current color"
+        self.curr_color = QColor()
 
         # Initialize text
         self.color_text = text
@@ -437,10 +431,12 @@ class ColorButton(qw.QPushButton):
         color = QColor(hex_color)
         self.curr_color = color
 
-        pal = self.palette()
-        pal.setColor(self.palette_bg, color if color.isValid() else self.default_bg)
-        self.setPalette(pal)
-        self.update()
+        if color.isValid():
+            qss = f"ColorButton {{ background: {color.name()}; }}"
+        else:
+            qss = ""
+
+        self.setStyleSheet(qss)
 
 
 class ColorCheckBox(qw.QCheckBox):
