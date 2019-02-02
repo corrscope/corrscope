@@ -1,3 +1,5 @@
+from typing import Optional
+
 import hypothesis.strategies as hs
 import numpy as np
 import pytest
@@ -9,16 +11,21 @@ import corrscope.corrscope
 from corrscope.channel import ChannelConfig, Channel
 from corrscope.corrscope import default_config, CorrScope, BenchmarkMode, Arguments
 from corrscope.triggers import NullTriggerConfig
+from corrscope.util import coalesce
 
 
 positive = hs.integers(min_value=1, max_value=100)
+real = hs.floats(min_value=0, max_value=100)
+maybe_real = hs.one_of(hs.none(), real)
 
 
 @given(
     # Channel
+    c_amplification=maybe_real,
     c_trigger_width=positive,
     c_render_width=positive,
     # Global
+    amplification=real,
     trigger_ms=positive,
     render_ms=positive,
     tsub=positive,
@@ -26,9 +33,11 @@ positive = hs.integers(min_value=1, max_value=100)
 )
 def test_config_channel_width_stride(
     # Channel
+    c_amplification: Optional[float],
     c_trigger_width: int,
     c_render_width: int,
     # Global
+    amplification: float,
     trigger_ms: int,
     render_ms: int,
     tsub: int,
@@ -57,7 +66,10 @@ def test_config_channel_width_stride(
     wave.smp_s = 48000
 
     ccfg = ChannelConfig(
-        "tests/sine440.wav", trigger_width=c_trigger_width, render_width=c_render_width
+        "tests/sine440.wav",
+        trigger_width=c_trigger_width,
+        render_width=c_render_width,
+        amplification=c_amplification,
     )
 
     def get_cfg():
@@ -66,6 +78,7 @@ def test_config_channel_width_stride(
             render_ms=render_ms,
             trigger_subsampling=tsub,
             render_subsampling=rsub,
+            amplification=amplification,
             channels=[ccfg],
             trigger=NullTriggerConfig(),
             benchmark_mode=BenchmarkMode.OUTPUT,
@@ -94,6 +107,10 @@ def test_config_channel_width_stride(
     assert channel.trigger_stride == tsub * c_trigger_width
     assert channel.render_stride == rsub * c_render_width
 
+    # Ensure amplification override works
+    args, kwargs = Wave.call_args
+    assert kwargs["amplification"] == coalesce(c_amplification, amplification)
+
     ## Ensure trigger uses channel.window_samp and trigger_stride.
     trigger = channel.trigger
     assert trigger._tsamp == ideal_tsamp
@@ -117,4 +134,3 @@ def test_config_channel_width_stride(
 
 
 # line_color is tested in test_renderer.py
-# todo test ChannelConfig.ampl_ratio
