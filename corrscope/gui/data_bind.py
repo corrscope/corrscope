@@ -420,7 +420,12 @@ class ColorButton(qw.QPushButton):
 
     @pyqtSlot()
     def on_clicked(self):
-        color: QColor = qw.QColorDialog.getColor(initial=self.curr_color, parent=self)
+        # https://bugreports.qt.io/browse/QTBUG-38537
+        # On Windows, QSpinBox height is wrong if stylesheets are enabled.
+        # And QColorDialog(parent=self) contains QSpinBox and inherits our stylesheets.
+        # So set parent=self.window().
+
+        color: QColor = qw.QColorDialog.getColor(self.curr_color, self.window())
         if not color.isValid():
             return
 
