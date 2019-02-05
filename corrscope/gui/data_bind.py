@@ -318,16 +318,16 @@ class BoundColorWidget(BoundWidget, qw.QWidget):
         self.setLayout(layout)
 
         # Setup text field.
-        self.text = ColorText(self, self.optional)
+        self.text = _ColorText(self, self.optional)
         layout.addWidget(self.text)  # http://doc.qt.io/qt-5/qlayout.html#addItem
 
         # Setup checkbox
         if self.optional:
-            self.check = ColorCheckBox(self, self.text)
+            self.check = _ColorCheckBox(self, self.text)
             layout.addWidget(self.check)
 
         # Setup colored button.
-        self.button = ColorButton(self, self.text)
+        self.button = _ColorButton(self, self.text)
         layout.addWidget(self.button)
 
     # override BoundWidget
@@ -355,7 +355,7 @@ class OptionalColorWidget(BoundColorWidget):
     optional = True
 
 
-class ColorText(BoundLineEdit):
+class _ColorText(BoundLineEdit):
     """
     - Validates and converts colors to hex (from model AND gui)
     - If __init__ optional, special-cases missing colors.
@@ -406,8 +406,8 @@ class ColorText(BoundLineEdit):
         return self.minimumSizeHint()
 
 
-class ColorButton(qw.QPushButton):
-    def __init__(self, parent: QWidget, text: "ColorText"):
+class _ColorButton(qw.QPushButton):
+    def __init__(self, parent: QWidget, text: "_ColorText"):
         qw.QPushButton.__init__(self, parent)
         self.clicked.connect(self.on_clicked)
 
@@ -437,15 +437,15 @@ class ColorButton(qw.QPushButton):
         self.curr_color = color
 
         if color.isValid():
-            qss = f"ColorButton {{ background: {color.name()}; }}"
+            qss = f"background: {color.name()};"
         else:
             qss = ""
 
         self.setStyleSheet(qss)
 
 
-class ColorCheckBox(qw.QCheckBox):
-    def __init__(self, parent: QWidget, text: "ColorText"):
+class _ColorCheckBox(qw.QCheckBox):
+    def __init__(self, parent: QWidget, text: "_ColorText"):
         qw.QCheckBox.__init__(self, parent)
         self.stateChanged.connect(self.on_check)
 
