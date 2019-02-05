@@ -495,11 +495,13 @@ def rgetattr(obj: DumpableAttrs, dunder_delim_path: str, *default) -> Any:
     :return: obj.attr1.attr2.etc
     """
 
-    def _getattr(obj, attr):
-        return getattr(obj, attr, *default)
-
     attrs: List[Any] = dunder_delim_path.split(DUNDER)
-    return functools.reduce(_getattr, [obj] + attrs)
+    try:
+        return functools.reduce(getattr, attrs, obj)
+    except AttributeError:
+        if default:
+            return default[0]
+        raise
 
 
 def rhasattr(obj, dunder_delim_path: str):
