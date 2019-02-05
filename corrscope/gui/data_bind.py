@@ -324,10 +324,12 @@ class BoundColorWidget(BoundWidget, qw.QWidget):
         # Setup checkbox
         if self.optional:
             self.check = _ColorCheckBox(self, self.text)
+            self.check.setToolTip("Enable/Disable Color")
             layout.addWidget(self.check)
 
         # Setup colored button.
         self.button = _ColorButton(self, self.text)
+        self.button.setToolTip("Pick Color")
         layout.addWidget(self.button)
 
     # override BoundWidget
@@ -437,7 +439,8 @@ class _ColorButton(qw.QPushButton):
         self.curr_color = color
 
         if color.isValid():
-            qss = f"background: {color.name()};"
+            # Tooltips inherit our styles. Don't change their background.
+            qss = f"{obj_name(self)} {{ background: {color.name()}; }}"
         else:
             qss = ""
 
