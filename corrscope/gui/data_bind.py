@@ -18,6 +18,7 @@ from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtWidgets import QWidget
 
 from corrscope.config import CorrError, DumpableAttrs
+from corrscope.gui.util import color2hex
 from corrscope.triggers import lerp
 from corrscope.util import obj_name, perr
 
@@ -95,7 +96,12 @@ def map_gui(view: "MainWindow", model: PresentationModel) -> None:
     )  # dear pyqt, add generic mypy return types
     for widget in widgets:
         path = widget.objectName()
-        widget.bind_widget(model, path)
+
+        # Exclude nameless ColorText inside BoundColorWidget wrapper,
+        # since bind_widget(path="") will crash.
+        # BoundColorWidget.bind_widget() handles binding children.
+        if path:
+            widget.bind_widget(model, path)
 
 
 Signal = Any
@@ -108,7 +114,18 @@ class BoundWidget(QWidget):
     pmodel: PresentationModel
     path: str
 
-    def bind_widget(self, model: PresentationModel, path: str) -> None:
+    def bind_widget(
+        self, model: PresentationModel, path: str, connect_to_model=True
+    ) -> None:
+        """
+        connect_to_model=False means:
+        - self: ColorText is created and owned by BoundColorWidget wrapper.
+        - Wrapper forwards model changes to self (which updates other widgets).
+            (model.update_widget[path] != self)
+        - self.gui_changed invokes self.set_model() (which updates model
+            AND other widgets).
+        - wrapper.gui_changed signal is NEVER emitted.
+        """
         try:
             self.default_palette = self.palette()
             self.error_palette = self.calc_error_palette()
@@ -117,8 +134,9 @@ class BoundWidget(QWidget):
             self.path = path
             self.cfg2gui()
 
-            # Allow widget to be updated by other events.
-            model.update_widget[path] = self.cfg2gui
+            if connect_to_model:
+                # Allow widget to be updated by other events.
+                model.update_widget[path] = self.cfg2gui
 
             # Allow pmodel to be changed by widget.
             self.gui_changed.connect(self.set_model)
@@ -276,6 +294,181 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
     def set_model(self, combo_index: int):
         assert isinstance(combo_index, int)
         self.pmodel[self.path] = self.combo_symbols[combo_index]
+
+
+# Color-specific widgets
+
+
+class BoundColorWidget(BoundWidget, qw.QWidget):
+    """
+    - set_gui(): Model is sent to self.text, which updates all other widgets.
+    - self.text: ColorText
+    - When self.text changes, it converts to hex, then updates the pmodel
+        and sends signal `hex_color` which updates check/button.
+    - self does NOT update the pmodel. (gui_changed is never emitted.)
+    """
+
+    optional = False
+
+    def __init__(self, parent: qw.QWidget):
+        qw.QWidget.__init__(self, parent)
+
+        layout = qw.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+        # Setup text field.
+        self.text = _ColorText(self, self.optional)
+        layout.addWidget(self.text)  # http://doc.qt.io/qt-5/qlayout.html#addItem
+
+        # Setup checkbox
+        if self.optional:
+            self.check = _ColorCheckBox(self, self.text)
+            self.check.setToolTip("Enable/Disable Color")
+            layout.addWidget(self.check)
+
+        # Setup colored button.
+        self.button = _ColorButton(self, self.text)
+        self.button.setToolTip("Pick Color")
+        layout.addWidget(self.button)
+
+    # override BoundWidget
+    def bind_widget(self, model: PresentationModel, path: str) -> None:
+        super().bind_widget(model, path)
+        self.text.bind_widget(model, path, connect_to_model=False)
+
+    # impl BoundWidget
+    def set_gui(self, value: Optional[str]):
+        self.text.set_gui(value)
+
+    # impl BoundWidget
+    # Never gets emitted. self.text.set_model is responsible for updating model.
+    gui_changed = qc.pyqtSignal(str)
+
+    # impl BoundWidget
+    # Never gets called.
+    def set_model(self, value):
+        raise RuntimeError(
+            "BoundColorWidget.gui_changed -> set_model should not be called"
+        )
+
+
+class OptionalColorWidget(BoundColorWidget):
+    optional = True
+
+
+class _ColorText(BoundLineEdit):
+    """
+    - Validates and converts colors to hex (from model AND gui)
+    - If __init__ optional, special-cases missing colors.
+    """
+
+    def __init__(self, parent: QWidget, optional: bool):
+        super().__init__(parent)
+        self.optional = optional
+
+    hex_color = qc.pyqtSignal(str)
+
+    def set_gui(self, value: Optional[str]):
+        """model2gui"""
+
+        if self.optional and not value:
+            value = ""
+        else:
+            value = color2hex(value)  # raises CorrError if invalid.
+
+        # Don't write back to model immediately.
+        # Loading is a const process, only editing the GUI should change the model.
+        with qc.QSignalBlocker(self):
+            self.setText(value)
+
+        # Write to other GUI widgets immediately.
+        self.hex_color.emit(value)  # calls button.set_color()
+
+    @pyqtSlot(str)
+    def set_model(self: BoundWidget, value: str):
+        """gui2model"""
+
+        if self.optional and not value:
+            value = None
+        else:
+            try:
+                value = color2hex(value)
+            except CorrError:
+                self.setPalette(self.error_palette)
+                self.hex_color.emit("")  # calls button.set_color()
+                return
+
+        self.setPalette(self.default_palette)
+        self.hex_color.emit(value or "")  # calls button.set_color()
+        self.pmodel[self.path] = value
+
+    def sizeHint(self) -> qc.QSize:
+        """Reduce the width taken up by #rrggbb color text boxes."""
+        return self.minimumSizeHint()
+
+
+class _ColorButton(qw.QPushButton):
+    def __init__(self, parent: QWidget, text: "_ColorText"):
+        qw.QPushButton.__init__(self, parent)
+        self.clicked.connect(self.on_clicked)
+
+        # Initialize "current color"
+        self.curr_color = QColor()
+
+        # Initialize text
+        self.color_text = text
+        text.hex_color.connect(self.set_color)
+
+    @pyqtSlot()
+    def on_clicked(self):
+        # https://bugreports.qt.io/browse/QTBUG-38537
+        # On Windows, QSpinBox height is wrong if stylesheets are enabled.
+        # And QColorDialog(parent=self) contains QSpinBox and inherits our stylesheets.
+        # So set parent=self.window().
+
+        color: QColor = qw.QColorDialog.getColor(self.curr_color, self.window())
+        if not color.isValid():
+            return
+
+        self.color_text.setText(color.name())  # textChanged calls self.set_color()
+
+    @pyqtSlot(str)
+    def set_color(self, hex_color: str):
+        color = QColor(hex_color)
+        self.curr_color = color
+
+        if color.isValid():
+            # Tooltips inherit our styles. Don't change their background.
+            qss = f"{obj_name(self)} {{ background: {color.name()}; }}"
+        else:
+            qss = ""
+
+        self.setStyleSheet(qss)
+
+
+class _ColorCheckBox(qw.QCheckBox):
+    def __init__(self, parent: QWidget, text: "_ColorText"):
+        qw.QCheckBox.__init__(self, parent)
+        self.stateChanged.connect(self.on_check)
+
+        self.color_text = text
+        text.hex_color.connect(self.set_color)
+
+    @pyqtSlot(str)
+    def set_color(self, hex_color: str):
+        with qc.QSignalBlocker(self):
+            self.setChecked(bool(hex_color))
+
+    @pyqtSlot(CheckState)
+    def on_check(self, value: CheckState):
+        """Qt.PartiallyChecked probably should not happen."""
+        Qt = qc.Qt
+        assert value in [Qt.Unchecked, Qt.PartiallyChecked, Qt.Checked]
+        if value != Qt.Unchecked:
+            self.color_text.setText("#ffffff")
+        else:
+            self.color_text.setText("")
 
 
 # Unused
