@@ -274,7 +274,7 @@ class MatplotlibRenderer(Renderer):
             self._save_background()
 
             # Plot lines over background
-            line_width = cfg.line_width
+            line_width = pixels(cfg.line_width)
             self._lines = []
 
             for idx, data in enumerate(datas):
