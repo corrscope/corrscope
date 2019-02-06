@@ -130,8 +130,15 @@ def default_config(**kwargs) -> Config:
             # post=LocalPostTriggerConfig(strength=0.1),
         ),
         channels=[],
-        layout=LayoutConfig(ncols=2),
-        render=RendererConfig(1280, 720),
+        layout=LayoutConfig(orientation="v", ncols=1),
+        render=RendererConfig(
+            1280,
+            720,
+            res_divisor=4 / 3,
+            midline_color="#404040",
+            v_midline=True,
+            h_midline=True,
+        ),
     )
     return attr.evolve(cfg, **kwargs)
 
