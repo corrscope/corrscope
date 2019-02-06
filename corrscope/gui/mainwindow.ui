@@ -159,7 +159,7 @@
            <item row="3" column="0">
             <widget class="QLabel" name="render__line_widthL">
              <property name="text">
-              <string>Line Width</string>
+              <string>Line Width (px)</string>
              </property>
             </widget>
            </item>
