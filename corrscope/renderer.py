@@ -48,7 +48,7 @@ def default_color() -> str:
     # colors **= 1/3
     #
     # return matplotlib.colors.to_hex(colors, keep_alpha=False)
-    return "#8edeff"
+    return "#ffffff"
 
 
 class RendererConfig(DumpableAttrs, always_dump="*"):
