@@ -146,6 +146,8 @@ class MainWindow(qw.QMainWindow):
         self._update_unsaved_title()
 
     model: Optional["ConfigModel"] = None
+    tabWidget: qw.QTabWidget
+
     channel_model: "ChannelModel"
     channel_view: "ChannelTableView"
     channelsGroup: qw.QGroupBox
@@ -222,6 +224,7 @@ class MainWindow(qw.QMainWindow):
         self._cfg_path = cfg_path
         self._any_unsaved = False
         self.load_title()
+        self.tabWidget.setCurrentIndex(0)
 
         if self.model is None:
             self.model = ConfigModel(cfg)
