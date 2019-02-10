@@ -54,7 +54,7 @@
            <item row="1" column="0">
             <widget class="QLabel" name="trigger_msL">
              <property name="text">
-              <string>Trigger Width (ms)</string>
+              <string>Trigger Width</string>
              </property>
             </widget>
            </item>
@@ -71,7 +71,7 @@
            <item row="2" column="0">
             <widget class="QLabel" name="render_msL">
              <property name="text">
-              <string>Render Width (ms)</string>
+              <string>Render Width</string>
              </property>
             </widget>
            </item>
@@ -102,7 +102,7 @@
            <item row="4" column="0">
             <widget class="QLabel" name="begin_timeL">
              <property name="text">
-              <string>Begin Time (s)</string>
+              <string>Begin Time</string>
              </property>
             </widget>
            </item>
