@@ -10,14 +10,16 @@ from typing import (
     TYPE_CHECKING,
     Union,
     Sequence,
+    Tuple,
 )
 
+import attr
 from PyQt5 import QtWidgets as qw, QtCore as qc
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtWidgets import QWidget
 
-from corrscope.config import CorrError, DumpableAttrs
+from corrscope.config import CorrError, DumpableAttrs, get_units
 from corrscope.gui.util import color2hex
 from corrscope.triggers import lerp
 from corrscope.util import obj_name, perr
@@ -229,12 +231,25 @@ class BoundLineEdit(qw.QLineEdit, BoundWidget):
 
 
 class BoundSpinBox(qw.QSpinBox, BoundWidget):
+    def bind_widget(self, model: PresentationModel, path: str, *args, **kwargs) -> None:
+        BoundWidget.bind_widget(self, model, path, *args, **kwargs)
+        try:
+            parent, name = flatten_attr(model.cfg, path)
+        except AttributeError:
+            return
+
+        fields = attr.fields_dict(type(parent))
+        field = fields[name]
+        self.setSuffix(get_units(field))
+
     set_gui = alias("setValue")
     gui_changed = alias("valueChanged")
     set_model = model_setter(int)
 
 
 class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
+    bind_widget = BoundSpinBox.bind_widget
+
     set_gui = alias("setValue")
     gui_changed = alias("valueChanged")
     set_model = model_setter(float)
