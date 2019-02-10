@@ -512,6 +512,20 @@ def rhasattr(obj, dunder_delim_path: str):
         return False
 
 
+def flatten_attr(obj, dunder_delim_path: str) -> Tuple[Any, str]:
+    """
+    :param obj: Object
+    :param dunder_delim_path: 'attr1__attr2__etc'
+    :return: (shallow_obj, name) such that
+        getattr(shallow_obj, name) == rgetattr(obj, dunder_delim_path).
+    """
+
+    parent, _, name = dunder_delim_path.rpartition(DUNDER)
+    parent_obj = rgetattr(obj, parent) if parent else obj
+
+    return parent_obj, name
+
+
 # https://stackoverflow.com/a/31174427/2683842
 def rsetattr(obj, dunder_delim_path: str, val):
     """
@@ -519,7 +533,5 @@ def rsetattr(obj, dunder_delim_path: str, val):
     :param dunder_delim_path: 'attr1__attr2__etc'
     :param val: obj.attr1.attr2.etc = val
     """
-    parent, _, name = dunder_delim_path.rpartition(DUNDER)
-    parent_obj = rgetattr(obj, parent) if parent else obj
-
+    parent_obj, name = flatten_attr(obj, dunder_delim_path)
     return setattr(parent_obj, name, val)
