@@ -10,14 +10,16 @@ from typing import (
     TYPE_CHECKING,
     Union,
     Sequence,
+    Tuple,
 )
 
+import attr
 from PyQt5 import QtWidgets as qw, QtCore as qc
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtWidgets import QWidget
 
-from corrscope.config import CorrError, DumpableAttrs
+from corrscope.config import CorrError, DumpableAttrs, get_units
 from corrscope.gui.util import color2hex
 from corrscope.triggers import lerp
 from corrscope.util import obj_name, perr
@@ -229,12 +231,25 @@ class BoundLineEdit(qw.QLineEdit, BoundWidget):
 
 
 class BoundSpinBox(qw.QSpinBox, BoundWidget):
+    def bind_widget(self, model: PresentationModel, path: str, *args, **kwargs) -> None:
+        BoundWidget.bind_widget(self, model, path, *args, **kwargs)
+        try:
+            parent, name = flatten_attr(model.cfg, path)
+        except AttributeError:
+            return
+
+        fields = attr.fields_dict(type(parent))
+        field = fields[name]
+        self.setSuffix(get_units(field))
+
     set_gui = alias("setValue")
     gui_changed = alias("valueChanged")
     set_model = model_setter(int)
 
 
 class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
+    bind_widget = BoundSpinBox.bind_widget
+
     set_gui = alias("setValue")
     gui_changed = alias("valueChanged")
     set_model = model_setter(float)
@@ -495,11 +510,13 @@ def rgetattr(obj: DumpableAttrs, dunder_delim_path: str, *default) -> Any:
     :return: obj.attr1.attr2.etc
     """
 
-    def _getattr(obj, attr):
-        return getattr(obj, attr, *default)
-
     attrs: List[Any] = dunder_delim_path.split(DUNDER)
-    return functools.reduce(_getattr, [obj] + attrs)
+    try:
+        return functools.reduce(getattr, attrs, obj)
+    except AttributeError:
+        if default:
+            return default[0]
+        raise
 
 
 def rhasattr(obj, dunder_delim_path: str):
@@ -510,6 +527,20 @@ def rhasattr(obj, dunder_delim_path: str):
         return False
 
 
+def flatten_attr(obj, dunder_delim_path: str) -> Tuple[Any, str]:
+    """
+    :param obj: Object
+    :param dunder_delim_path: 'attr1__attr2__etc'
+    :return: (shallow_obj, name) such that
+        getattr(shallow_obj, name) == rgetattr(obj, dunder_delim_path).
+    """
+
+    parent, _, name = dunder_delim_path.rpartition(DUNDER)
+    parent_obj = rgetattr(obj, parent) if parent else obj
+
+    return parent_obj, name
+
+
 # https://stackoverflow.com/a/31174427/2683842
 def rsetattr(obj, dunder_delim_path: str, val):
     """
@@ -517,7 +548,5 @@ def rsetattr(obj, dunder_delim_path: str, val):
     :param dunder_delim_path: 'attr1__attr2__etc'
     :param val: obj.attr1.attr2.etc = val
     """
-    parent, _, name = dunder_delim_path.rpartition(DUNDER)
-    parent_obj = rgetattr(obj, parent) if parent else obj
-
+    parent_obj, name = flatten_attr(obj, dunder_delim_path)
     return setattr(parent_obj, name, val)

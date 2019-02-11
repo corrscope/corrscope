@@ -24,6 +24,8 @@ __all__ = [
     "copy_config",
     "DumpableAttrs",
     "KeywordAttrs",
+    "with_units",
+    "get_units",
     "Alias",
     "Ignored",
     "DumpEnumAsStr",
@@ -220,6 +222,18 @@ class KeywordAttrs(DumpableAttrs):
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(kw_only=True, **kwargs)
+
+
+UNIT_SUFFIX = "suffix"
+
+
+def with_units(unit, **kwargs):
+    metadata = {UNIT_SUFFIX: f" {unit}"}
+    return attr.ib(metadata=metadata, **kwargs)
+
+
+def get_units(field: attr.Attribute) -> str:
+    return field.metadata.get(UNIT_SUFFIX, "")
 
 
 @attr.dataclass

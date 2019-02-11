@@ -12,7 +12,7 @@ import attr
 
 from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig
-from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError
+from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
 from corrscope.renderer import MatplotlibRenderer, RendererConfig, Renderer
 from corrscope.triggers import (
@@ -51,13 +51,13 @@ class Config(
     """ Default values indicate optional attributes. """
 
     master_audio: Optional[str]
-    begin_time: float = 0
+    begin_time: float = with_units("s", default=0)
     end_time: Optional[float] = None
 
     fps: int
 
-    trigger_ms: int
-    render_ms: int
+    trigger_ms: int = with_units("ms")
+    render_ms: int = with_units("ms")
 
     # Performance
     trigger_subsampling: int = 1
