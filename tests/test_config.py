@@ -1,3 +1,4 @@
+import attr
 import pytest
 from ruamel.yaml import yaml_object
 
@@ -9,12 +10,13 @@ from corrscope.config import (
     Ignored,
     CorrError,
     CorrWarning,
+    with_units,
+    get_units,
 )
 
 # YAML Idiosyncrasies: https://docs.saltstack.com/en/develop/topics/troubleshooting/yaml_idiosyncrasies.html
 
 # Load/dump infrastructure testing
-import attr
 
 
 def test_dumpable_attrs():
@@ -50,6 +52,26 @@ def test_yaml_object():
 
     s = yaml.dump(Bar())
     assert s == "!Bar {}\n"
+
+
+# Test per-field unit suffixes (used by GUI)
+
+
+def test_unit_suffix():
+    class Foo(DumpableAttrs):
+        xs: int = with_units("xs")
+        ys: int = with_units("ys", default=2)
+        no_unit: int = 3
+
+    # Assert class constructor works.
+    foo = Foo(1, 2, 3)
+    foo_default = Foo(1)
+
+    # Assert units work.
+    foo_fields = attr.fields(Foo)
+    assert get_units(foo_fields.xs) == " xs"
+    assert get_units(foo_fields.ys) == " ys"
+    assert get_units(foo_fields.no_unit) == ""
 
 
 # Dataclass dump testing
