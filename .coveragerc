@@ -1,2 +1,2 @@
 [run]
-omit = *utils/scipy_*
+omit = *utils/scipy/*

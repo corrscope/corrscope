@@ -1,36 +1,39 @@
 # -*- coding: utf-8 -*-
 import time
 from contextlib import ExitStack, contextmanager
-from enum import unique, IntEnum
+from enum import unique, Enum
 from fractions import Fraction
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Optional, List, Union, TYPE_CHECKING, Callable, Type
+from typing import Optional, List, Union, Callable, cast, Type
 
 import attr
-import numpy as np
 
 from corrscope import outputs as outputs_
 from corrscope import parallelism
 from corrscope.channel import Channel, ChannelConfig
-from corrscope.config import kw_config, register_enum, CorrError
+from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
-from corrscope.parallelism import ReplyIsAborted, ParallelWorker, Worker
+from corrscope.parallelism import ReplyIsAborted, Worker
 from corrscope.renderer import MatplotlibRenderer, RendererConfig
-from corrscope.triggers import ITriggerConfig, CorrelationTriggerConfig, PerFrameCache
+from corrscope.triggers import (
+    ITriggerConfig,
+    CorrelationTriggerConfig,
+    PerFrameCache,
+    CorrelationTrigger,
+)
 from corrscope.util import pushd, coalesce
-from corrscope.wave import Wave
-
-if TYPE_CHECKING:
-    from corrscope.wave import Wave
-    from corrscope.triggers import CorrelationTrigger
+from corrscope.wave import Wave, Flatten
 
 PRINT_TIMESTAMP = True
 
 
-@register_enum
+# Placing Enum before any other superclass results in errors.
+# Placing DumpEnumAsStr before IntEnum or (int, Enum) results in errors on Python 3.6:
+# - TypeError: object.__new__(BenchmarkMode) is not safe, use int.__new__()
+# I don't know *why* this works. It's magic.
 @unique
-class BenchmarkMode(IntEnum):
+class BenchmarkMode(int, DumpEnumAsStr, Enum):
     NONE = 0
     TRIGGER = 1
     SEND_TO_WORKER = 2
@@ -38,18 +41,24 @@ class BenchmarkMode(IntEnum):
     OUTPUT = 4
 
 
-@kw_config(always_dump="render_subfps begin_time end_time subsampling")
-class Config:
+class Config(
+    KeywordAttrs,
+    always_dump="""
+    begin_time end_time
+    render_subfps trigger_subsampling render_subsampling
+    trigger_stereo render_stereo
+    """,
+):
     """ Default values indicate optional attributes. """
 
     master_audio: Optional[str]
-    begin_time: float = 0
+    begin_time: float = with_units("s", default=0)
     end_time: Optional[float] = None
 
     fps: int
 
-    trigger_ms: int
-    render_ms: int
+    trigger_ms: int = with_units("ms")
+    render_ms: int = with_units("ms")
 
     # Performance
     trigger_subsampling: int = 1
@@ -72,6 +81,10 @@ class Config:
     # End Performance
     amplification: float
 
+    # Stereo config
+    trigger_stereo: Flatten = Flatten.SumAvg
+    render_stereo: Flatten = Flatten.SumAvg
+
     trigger: ITriggerConfig  # Can be overriden per Wave
 
     # Multiplies by trigger_width, render_width. Can override trigger.
@@ -83,7 +96,7 @@ class Config:
     show_internals: List[str] = attr.Factory(list)
     benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         # Cast benchmark_mode to enum.
         try:
             if not isinstance(self.benchmark_mode, BenchmarkMode):
@@ -118,8 +131,15 @@ def default_config(**kwargs) -> Config:
             # post=LocalPostTriggerConfig(strength=0.1),
         ),
         channels=[],
-        layout=LayoutConfig(ncols=2),
-        render=RendererConfig(1280, 720),
+        layout=LayoutConfig(orientation="v", ncols=1),
+        render=RendererConfig(
+            1280,
+            720,
+            res_divisor=4 / 3,
+            midline_color="#404040",
+            v_midline=True,
+            h_midline=True,
+        ),
     )
     return attr.evolve(cfg, **kwargs)
 
@@ -180,11 +200,12 @@ class CorrScope:
         else:
             self.cfg.before_preview()
 
-    waves: List["Wave"]
+    trigger_waves: List[Wave]
+    render_waves: List[Wave]
     channels: List[Channel]
     nchan: int
 
-    def _load_channels(self):
+    def _load_channels(self) -> None:
         with pushd(self.arg.cfg_dir):
             # Tell user if master audio path is invalid.
             # (Otherwise, only ffmpeg uses the value of master_audio)
@@ -194,7 +215,8 @@ class CorrScope:
                     f'File not found: master_audio="{self.cfg.master_audio}"'
                 )
             self.channels = [Channel(ccfg, self.cfg) for ccfg in self.cfg.channels]
-            self.waves = [channel.wave for channel in self.channels]
+            self.trigger_waves = [channel.trigger_wave for channel in self.channels]
+            self.render_waves = [channel.render_wave for channel in self.channels]
             self.triggers = [channel.trigger for channel in self.channels]
             self.nchan = len(self.channels)
 
@@ -209,7 +231,7 @@ class CorrScope:
 
         begin_frame = round(fps * self.cfg.begin_time)
 
-        end_time = coalesce(self.cfg.end_time, self.waves[0].get_s())
+        end_time = coalesce(self.cfg.end_time, self.render_waves[0].get_s())
         end_frame = fps * end_time
         end_frame = int(end_frame) + 1
 
@@ -249,7 +271,7 @@ class CorrScope:
         if PRINT_TIMESTAMP:
             begin = time.perf_counter()
 
-        benchmark_mode = self.cfg.benchmark_mode
+        benchmark_mode = cast(BenchmarkMode, self.cfg.benchmark_mode)
         not_benchmarking = not benchmark_mode
 
         prev = -1
@@ -284,9 +306,9 @@ class CorrScope:
                     prev = rounded
 
                 trigger_samples: TriggerSamples = []
-                # Get data from each wave
-                for wave, channel in zip(self.waves, self.channels):
-                    sample = round(wave.smp_s * time_seconds)
+                # Get render-data from each wave.
+                for render_wave, channel in zip(self.render_waves, self.channels):
+                    sample = round(render_wave.smp_s * time_seconds)
 
                     if not_benchmarking or (
                         BenchmarkMode.TRIGGER
@@ -298,19 +320,20 @@ class CorrScope:
                     else:
                         trigger_sample = sample
                     trigger_samples.append(trigger_sample)
+                    # Get render data.
 
                 if not should_render:
                     continue
 
                 # region Display buffers, for debugging purposes.
                 if extra_outputs.window:
-                    triggers: List["CorrelationTrigger"] = self.triggers
+                    triggers = cast(List[CorrelationTrigger], self.triggers)
                     extra_outputs.window.render_frame(
                         [trigger._prev_window for trigger in triggers]
                     )
 
                 if extra_outputs.buffer:
-                    triggers: List["CorrelationTrigger"] = self.triggers
+                    triggers = cast(List[CorrelationTrigger], self.triggers)
                     extra_outputs.buffer.render_frame(
                         [trigger._buffer for trigger in triggers]
                     )
@@ -330,7 +353,7 @@ class CorrScope:
             # noinspection PyUnboundLocalVariable
             dtime = time.perf_counter() - begin
             render_fps = (end_frame - begin_frame) / dtime
-            print(f"FPS = {render_fps}")
+            print(f"{render_fps:.1f} FPS, {1000 / render_fps:.2f} ms")
 
     raise_on_teardown: Optional[Exception] = None
 
@@ -372,7 +395,7 @@ class RenderJob(parallelism.Job[TriggerSamples]):
         """ foreach frame """
         render_datas = []
         for wave, channel, trigger_sample in zip(
-            self.cs.waves, self.cs.channels, trigger_samples
+            self.cs.render_waves, self.cs.channels, trigger_samples
         ):
             # FIXME move "get render data" into Channel
             render_datas.append(

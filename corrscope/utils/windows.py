@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def leftpad(data: np.ndarray, n: int):
+def leftpad(data: np.ndarray, n: int) -> np.ndarray:
     if not n > 0:
         raise ValueError(f"leftpad(n={n}) must be > 0")
 
@@ -11,7 +11,7 @@ def leftpad(data: np.ndarray, n: int):
     return data
 
 
-def midpad(data: np.ndarray, n: int):
+def midpad(data: np.ndarray, n: int) -> np.ndarray:
     if not n > 0:
         raise ValueError(f"midpad(n={n}) must be > 0")
 

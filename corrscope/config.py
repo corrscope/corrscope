@@ -1,22 +1,35 @@
 import pickle
+import warnings
+from enum import Enum
 from io import StringIO, BytesIO
-from typing import ClassVar, TYPE_CHECKING, Type, TypeVar
+from typing import *
 
 import attr
-from ruamel.yaml import yaml_object, YAML, Representer
+from ruamel.yaml import (
+    yaml_object,
+    YAML,
+    Representer,
+    RoundTripRepresenter,
+    Constructor,
+    Node,
+)
+
+from corrscope.util import obj_name
 
 if TYPE_CHECKING:
-    from enum import Enum
-
+    from pathlib import Path
 
 __all__ = [
     "yaml",
     "copy_config",
-    "register_config",
-    "kw_config",
+    "DumpableAttrs",
+    "KeywordAttrs",
+    "with_units",
+    "get_units",
     "Alias",
     "Ignored",
-    "register_enum",
+    "DumpEnumAsStr",
+    "TypedEnumDump",
     "CorrError",
     "CorrWarning",
 ]
@@ -26,19 +39,39 @@ __all__ = [
 
 
 class MyYAML(YAML):
-    def dump(self, data, stream=None, **kw):
+    def dump(
+        self, data: Any, stream: "Union[Path, TextIO, None]" = None, **kwargs
+    ) -> Optional[str]:
+        """ Allow dumping to str. """
         inefficient = False
         if stream is None:
             inefficient = True
             stream = StringIO()
-        YAML.dump(self, data, stream, **kw)
+        YAML.dump(self, data, stream, **kwargs)
         if inefficient:
-            return stream.getvalue()
+            return cast(StringIO, stream).getvalue()
+        return None
+
+
+class NoAliasRepresenter(RoundTripRepresenter):
+    """
+    Ensure that dumping 2 identical enum values
+    doesn't produce ugly aliases.
+    TODO test
+    """
+
+    def ignore_aliases(self, data: Any) -> bool:
+        if isinstance(data, Enum):
+            return True
+        return super().ignore_aliases(data)
 
 
 # Default typ='roundtrip' creates 'ruamel.yaml.comments.CommentedMap' instead of dict.
 # Is isinstance(CommentedMap, dict)? IDK
 yaml = MyYAML()
+assert yaml.Representer == RoundTripRepresenter
+yaml.Representer = NoAliasRepresenter
+
 _yaml_loadable = yaml_object(yaml)
 
 
@@ -55,7 +88,7 @@ print(timeit.timeit(lambda: f(cfg), number=number))
 pickle_copy is fastest.
 
 According to https://stackoverflow.com/questions/1410615/ ,
-pickle is faster, but less general (works fine for @register_config objects).
+pickle is faster, but less general (works fine for DumpableAttrs objects).
 """
 
 T = TypeVar("T")
@@ -77,44 +110,41 @@ def copy_config(obj: T) -> T:
 # Setup configuration load/dump infrastructure.
 
 
-def register_config(cls=None, *, kw_only=False, always_dump: str = ""):
+class DumpableAttrs:
     """ Marks class as attrs, and enables YAML dumping (excludes default fields). """
 
-    def decorator(cls: Type):
-        cls.__getstate__ = _ConfigMixin.__getstate__
-        cls.__setstate__ = _ConfigMixin.__setstate__
-        cls.always_dump = always_dump
+    __always_dump: ClassVar[Set[str]]
 
-        # https://stackoverflow.com/a/51497219/2683842
-        # YAML().register_class(cls) works... on versions more recent than 2018-07-12.
-        return _yaml_loadable(attr.dataclass(cls, kw_only=kw_only))
+    if TYPE_CHECKING:
 
-    if cls is not None:
-        return decorator(cls)
-    else:
-        return decorator
+        def __init__(self, *args, **kwargs):
+            pass
 
+    def __init_subclass__(cls, kw_only: bool = False, always_dump: str = ""):
+        cls.__always_dump = set(always_dump.split())
+        del always_dump
 
-def kw_config(*args, **kwargs):
-    return register_config(*args, **kwargs, kw_only=True)
+        _yaml_loadable(attr.dataclass(cls, kw_only=kw_only))
 
+        dump_fields = cls.__always_dump - {"*"}  # remove "*" if exists
+        if "*" in cls.__always_dump:
+            assert (
+                not dump_fields
+            ), f"Invalid always_dump, contains * and elements {dump_fields}"
 
-@attr.dataclass()
-class _ConfigMixin:
-    """
-    Class is unused. __getstate__ and __setstate__ are assigned into other classes.
-    Ideally I'd use inheritance, but @yaml_object and @dataclass rely on decorators,
-    and I want @register_config to Just Work and not need inheritance.
-    """
-
-    always_dump: ClassVar[str]
+        else:
+            all_fields = {f.name for f in attr.fields(cls)}
+            for dump_field in dump_fields:
+                assert (
+                    dump_field in all_fields
+                ), f'Invalid always_dump="...{dump_field}" missing from class {cls.__name__}'
 
     # SafeRepresenter.represent_yaml_object() uses __getstate__ to dump objects.
-    def __getstate__(self):
+    def __getstate__(self) -> Dict[str, Any]:
         """ Removes all fields with default values, but not found in
         self.always_dump. """
 
-        always_dump = set(self.always_dump.split())
+        always_dump = self.__always_dump
         dump_all = "*" in always_dump
 
         state = {}
@@ -138,8 +168,8 @@ class _ConfigMixin:
                 continue
             # noinspection PyTypeChecker,PyUnresolvedReferences
             if (
-                isinstance(field.default, attr.Factory)
-                and field.default.factory() == value
+                isinstance(field.default, attr.Factory)  # type: ignore
+                and field.default.factory() == value  # type: ignore
             ):
                 continue
 
@@ -148,36 +178,68 @@ class _ConfigMixin:
         return state
 
     # SafeConstructor.construct_yaml_object() uses __setstate__ to load objects.
-    def __setstate__(self, state):
+    def __setstate__(self, state: Dict[str, Any]) -> None:
         """ Redirect `Alias(key)=value` to `key=value`.
         Then call the dataclass constructor (to validate parameters). """
 
+        self_name = obj_name(self)
+        field_names = attr.fields_dict(type(self)).keys()
+
+        new_state = {}
         for key, value in dict(state).items():
             class_var = getattr(self, key, None)
 
             if class_var is Ignored:
-                del state[key]
+                pass
 
-            if isinstance(class_var, Alias):
+            elif isinstance(class_var, Alias):
                 target = class_var.key
                 if target in state:
                     raise CorrError(
-                        f"{type(self).__name__} received both Alias {key} and "
+                        f"{self_name} received both Alias {key} and "
                         f"equivalent {target}"
                     )
+                new_state[target] = value
 
-                state[target] = value
-                del state[key]
+            elif key not in field_names:
+                warnings.warn(
+                    f'Unrecognized field !{self_name} "{key}", ignoring', CorrWarning
+                )
 
-        obj = type(self)(**state)
+            else:
+                new_state[key] = value
+
+        del state
+        obj = type(self)(**new_state)
         self.__dict__ = obj.__dict__
+
+
+class KeywordAttrs(DumpableAttrs):
+    if TYPE_CHECKING:
+
+        def __init__(self, **kwargs):
+            pass
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(kw_only=True, **kwargs)
+
+
+UNIT_SUFFIX = "suffix"
+
+
+def with_units(unit, **kwargs):
+    metadata = {UNIT_SUFFIX: f" {unit}"}
+    return attr.ib(metadata=metadata, **kwargs)
+
+
+def get_units(field: attr.Attribute) -> str:
+    return field.metadata.get(UNIT_SUFFIX, "")
 
 
 @attr.dataclass
 class Alias:
     """
-    @register_config
-    class Foo:
+    class Foo(DumpableAttrs):
         x: int
         xx = Alias('x')     # do not add a type hint
     """
@@ -189,17 +251,31 @@ Ignored = object()
 
 
 # Setup Enum load/dump infrastructure
+SomeEnum = TypeVar("SomeEnum", bound=Enum)
 
 
-def register_enum(cls: Type):
-    cls.to_yaml = _EnumMixin.to_yaml
-    return _yaml_loadable(cls)
+class DumpEnumAsStr(Enum):
+    def __init_subclass__(cls):
+        _yaml_loadable(cls)
 
-
-class _EnumMixin:
     @classmethod
-    def to_yaml(cls, representer: Representer, node: "Enum"):
-        return representer.represent_str(node._name_)
+    def to_yaml(cls, representer: Representer, node: Enum) -> Any:
+        return representer.represent_str(node._name_)  # type: ignore
+
+
+class TypedEnumDump(Enum):
+    def __init_subclass__(cls):
+        _yaml_loadable(cls)
+
+    @classmethod
+    def to_yaml(cls, representer: Representer, node: Enum) -> Any:
+        return representer.represent_scalar(
+            "!" + cls.__name__, node._name_  # type: ignore
+        )
+
+    @classmethod
+    def from_yaml(cls, constructor: Constructor, node: Node) -> Enum:
+        return cls[node.value]
 
 
 # Miscellaneous

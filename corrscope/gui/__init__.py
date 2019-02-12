@@ -1,22 +1,22 @@
 import functools
-import os
 import sys
 import traceback
 from pathlib import Path
 from types import MethodType
-from typing import Type, Optional, List, Any, Tuple, Callable, Union
+from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence
 
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
 import attr
 from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
+from PyQt5.QtCore import QVariant
 from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
 from PyQt5.QtWidgets import QShortcut
 
 import corrscope
-from corrscope import cli  # module wtf?
-from corrscope.settings import paths
+import corrscope.settings.global_prefs as gp
+from corrscope import cli
 from corrscope.channel import ChannelConfig
 from corrscope.config import CorrError, copy_config, yaml
 from corrscope.corrscope import CorrScope, Config, Arguments, default_config
@@ -26,19 +26,21 @@ from corrscope.gui.data_bind import (
     behead,
     rgetattr,
     rsetattr,
+    Symbol,
 )
-from corrscope.gui.util import (
-    color2hex,
-    Locked,
-    get_save_with_ext,
-    find_ranges,
-    TracebackDialog,
+from corrscope.gui.history_file_dlg import (
+    get_open_file_name,
+    get_open_file_list,
+    get_save_file_path,
 )
+from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
+from corrscope.settings import paths
 from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
 from corrscope.util import obj_name
+from corrscope.wave import Flatten
 
-FILTER_WAV_FILES = "WAV files (*.wav)"
+FILTER_WAV_FILES = ["WAV files (*.wav)"]
 
 APP_NAME = f"{corrscope.app_name} {corrscope.__version__}"
 APP_DIR = Path(__file__).parent
@@ -48,8 +50,7 @@ def res(file: str) -> str:
     return str(APP_DIR / file)
 
 
-def gui_main(cfg: Config, cfg_path: Optional[Path]):
-    # TODO read config within MainWindow, and show popup if loading fails.
+def gui_main(cfg_or_path: Union[Config, Path]):
     # qw.QApplication.setStyle('fusion')
     QApp = qw.QApplication
     QApp.setAttribute(qc.Qt.AA_EnableHighDpiScaling)
@@ -63,7 +64,7 @@ def gui_main(cfg: Config, cfg_path: Optional[Path]):
         QApp.setFont(font)
 
     app = qw.QApplication(sys.argv)
-    window = MainWindow(cfg, cfg_path)
+    window = MainWindow(cfg_or_path)
     sys.exit(app.exec_())
 
 
@@ -72,15 +73,19 @@ class MainWindow(qw.QMainWindow):
     Main window.
 
     Control flow:
-    __init__
-        load_cfg
+    __init__: either
+    - load_cfg
+    - load_cfg_from_path
 
-    # Opening a document
-    load_cfg
+    Opening a document:
+    - load_cfg_from_path
     """
 
-    def __init__(self, cfg: Config, cfg_path: Optional[Path]):
+    def __init__(self, cfg_or_path: Union[Config, Path]):
         super().__init__()
+
+        # Load settings.
+        self.pref = gp.load_prefs()
 
         # Load UI.
         uic.loadUi(res("mainwindow.ui"), self)  # sets windowTitle
@@ -97,11 +102,16 @@ class MainWindow(qw.QMainWindow):
         self.channelDelete.clicked.connect(self.on_channel_delete)
 
         # Bind actions.
+        self.action_separate_render_dir.setChecked(self.pref.separate_render_dir)
+        self.action_separate_render_dir.toggled.connect(
+            self.on_separate_render_dir_toggled
+        )
+
         self.actionNew.triggered.connect(self.on_action_new)
         self.actionOpen.triggered.connect(self.on_action_open)
         self.actionSave.triggered.connect(self.on_action_save)
         self.actionSaveAs.triggered.connect(self.on_action_save_as)
-        self.actionPlay.triggered.connect(self.on_action_play)
+        self.actionPreview.triggered.connect(self.on_action_preview)
         self.actionRender.triggered.connect(self.on_action_render)
         self.actionExit.triggered.connect(qw.QApplication.closeAllWindows)
 
@@ -109,7 +119,14 @@ class MainWindow(qw.QMainWindow):
         self.corr_thread: Optional[CorrThread] = None
 
         # Bind config to UI.
-        self.load_cfg(cfg, cfg_path)
+        if isinstance(cfg_or_path, Config):
+            self.load_cfg(cfg_or_path, None)
+        elif isinstance(cfg_or_path, Path):
+            self.load_cfg_from_path(cfg_or_path)
+        else:
+            raise TypeError(
+                f"argument cfg={cfg_or_path} has invalid type {obj_name(cfg_or_path)}"
+            )
 
         self.show()
 
@@ -129,40 +146,11 @@ class MainWindow(qw.QMainWindow):
         self._update_unsaved_title()
 
     model: Optional["ConfigModel"] = None
+    tabWidget: qw.QTabWidget
+
     channel_model: "ChannelModel"
     channel_view: "ChannelTableView"
     channelsGroup: qw.QGroupBox
-
-    def closeEvent(self, event: QCloseEvent) -> None:
-        """Called on closing window."""
-        if self.prompt_save():
-            event.accept()
-        else:
-            event.ignore()
-
-    def on_action_new(self):
-        if not self.prompt_save():
-            return
-        cfg = default_config()
-        self.load_cfg(cfg, None)
-
-    def on_action_open(self):
-        if not self.prompt_save():
-            return
-        name, file_type = qw.QFileDialog.getOpenFileName(
-            self, "Open config", self.cfg_dir, "YAML files (*.yaml)"
-        )
-        if name != "":
-            cfg_path = Path(name)
-            try:
-                # Raises YAML structural exceptions
-                cfg = yaml.load(cfg_path)
-                # Raises color getter exceptions
-                # ISSUE: catching an exception will leave UI in undefined state?
-                self.load_cfg(cfg, cfg_path)
-            except Exception as e:
-                qw.QMessageBox.critical(self, "Error loading file", str(e))
-                return
 
     def prompt_save(self) -> bool:
         """
@@ -188,10 +176,55 @@ class MainWindow(qw.QMainWindow):
         else:
             return self.on_action_save()
 
-    def load_cfg(self, cfg: Config, cfg_path: Optional[Path]):
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Called on closing window."""
+        if self.prompt_save():
+            gp.dump_prefs(self.pref)
+            event.accept()
+        else:
+            event.ignore()
+
+    def on_action_new(self):
+        if not self.prompt_save():
+            return
+        cfg = default_config()
+        self.load_cfg(cfg, None)
+
+    def on_action_open(self):
+        if not self.prompt_save():
+            return
+        name = get_open_file_name(
+            self.pref.file_dir_ref, self, "Open config", ["YAML files (*.yaml)"]
+        )
+        if name:
+            cfg_path = Path(name)
+            self.load_cfg_from_path(cfg_path)
+
+    def load_cfg_from_path(self, cfg_path: Path):
+        # Bind GUI to dummy config, in case loading cfg_path raises Exception.
+        if self.model is None:
+            self.load_cfg(default_config(), None)
+
+        assert cfg_path.is_file()
+        self.pref.file_dir = str(cfg_path.parent.resolve())
+
+        try:
+            # Raises YAML structural exceptions
+            cfg = yaml.load(cfg_path)
+
+            # Raises color getter exceptions
+            # FIXME if error halfway, clear "file path" and load empty model.
+            self.load_cfg(cfg, cfg_path)
+
+        except Exception as e:
+            qw.QMessageBox.critical(self, "Error loading file", str(e))
+            return
+
+    def load_cfg(self, cfg: Config, cfg_path: Optional[Path]) -> None:
         self._cfg_path = cfg_path
         self._any_unsaved = False
         self.load_title()
+        self.tabWidget.setCurrentIndex(0)
 
         if self.model is None:
             self.model = ConfigModel(cfg)
@@ -214,11 +247,11 @@ class MainWindow(qw.QMainWindow):
 
     title_cache: str
 
-    def load_title(self):
+    def load_title(self) -> None:
         self.title_cache = self.title
         self._update_unsaved_title()
 
-    def _update_unsaved_title(self):
+    def _update_unsaved_title(self) -> None:
         if self.any_unsaved:
             undo_str = "*"
         else:
@@ -231,30 +264,37 @@ class MainWindow(qw.QMainWindow):
     channelDelete: "ShortcutButton"
     channelUp: "ShortcutButton"
     channelDown: "ShortcutButton"
+
+    action_separate_render_dir: qw.QAction
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
     menuBar: qw.QMenuBar
     actionNew: qw.QAction
     actionOpen: qw.QAction
     actionSave: qw.QAction
     actionSaveAs: qw.QAction
-    actionPlay: qw.QAction
+    actionPreview: qw.QAction
     actionRender: qw.QAction
     actionExit: qw.QAction
 
     def on_master_audio_browse(self):
-        # TODO add default file-open dir, initialized to yaml path and remembers prev
-        # useless if people don't reopen old projects
-        name, file_type = qw.QFileDialog.getOpenFileName(
-            self, "Open master audio file", self.cfg_dir, FILTER_WAV_FILES
+        name = get_open_file_name(
+            self.pref.file_dir_ref, self, "Open master audio file", FILTER_WAV_FILES
         )
-        if name != "":
+        if name:
             master_audio = "master_audio"
             self.model[master_audio] = name
             self.model.update_widget[master_audio]()
 
+    def on_separate_render_dir_toggled(self, checked: bool):
+        self.pref.separate_render_dir = checked
+        if checked:
+            self.pref.render_dir = self.pref.file_dir
+        else:
+            self.pref.render_dir = ""
+
     def on_channel_add(self):
-        wavs, file_type = qw.QFileDialog.getOpenFileNames(
-            self, "Add audio channels", self.cfg_dir, FILTER_WAV_FILES
+        wavs = get_open_file_list(
+            self.pref.file_dir_ref, self, "Add audio channels", FILTER_WAV_FILES
         )
         if wavs:
             self.channel_view.append_channels(wavs)
@@ -278,11 +318,16 @@ class MainWindow(qw.QMainWindow):
         """
         :return: False if user cancels save action.
         """
-        cfg_path_default = os.path.join(self.cfg_dir, self.file_stem) + cli.YAML_NAME
+        cfg_path_default = self.file_stem + cli.YAML_NAME
 
         filters = ["YAML files (*.yaml)", "All files (*)"]
-        path = get_save_with_ext(
-            self, "Save As", cfg_path_default, filters, cli.YAML_NAME
+        path = get_save_file_path(
+            self.pref.file_dir_ref,
+            self,
+            "Save As",
+            cfg_path_default,
+            filters,
+            cli.YAML_NAME,
         )
         if path:
             self._cfg_path = path
@@ -292,7 +337,7 @@ class MainWindow(qw.QMainWindow):
         else:
             return False
 
-    def on_action_play(self):
+    def on_action_preview(self):
         """ Launch CorrScope and ffplay. """
         error_msg = "Cannot play, another play/render is active"
         if self.corr_thread is not None:
@@ -309,10 +354,14 @@ class MainWindow(qw.QMainWindow):
             qw.QMessageBox.critical(self, "Error", error_msg)
             return
 
-        video_path = os.path.join(self.cfg_dir, self.file_stem) + cli.VIDEO_NAME
+        video_path = self.file_stem + cli.VIDEO_NAME
         filters = ["MP4 files (*.mp4)", "All files (*)"]
-        path = get_save_with_ext(
-            self, "Render to Video", video_path, filters, cli.VIDEO_NAME
+
+        # Points to either `file_dir` or `render_dir`.
+        ref = self.pref.render_dir_ref
+
+        path = get_save_file_path(
+            ref, self, "Render to Video", video_path, filters, cli.VIDEO_NAME
         )
         if path:
             name = str(path)
@@ -361,6 +410,8 @@ class MainWindow(qw.QMainWindow):
     # File paths
     @property
     def cfg_dir(self) -> str:
+        """Only used when generating Arguments when playing corrscope.
+        Not used to determine default path of file dialogs."""
         maybe_path = self._cfg_path or self.cfg.master_audio
         if maybe_path:
             # Windows likes to raise OSError when path contains *
@@ -381,6 +432,7 @@ class MainWindow(qw.QMainWindow):
 
     @property
     def file_stem(self) -> str:
+        """ Returns a "config name" with no dots or slashes. """
         return cli.get_name(self._cfg_path or self.cfg.master_audio)
 
     @property
@@ -449,7 +501,9 @@ class CorrProgressDialog(qw.QProgressDialog):
 
 
 # *arg_types: type
-def run_on_ui_thread(bound_slot: MethodType, types: Tuple[type, ...]) -> Callable:
+def run_on_ui_thread(
+    bound_slot: MethodType, types: Tuple[type, ...]
+) -> Callable[..., None]:
     """ Runs an object's slot on the object's own thread.
     It's terrible code but it works (as long as the slot has no return value).
     """
@@ -518,7 +572,7 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
     return property(get, set)
 
 
-def default_property(path: str, default) -> property:
+def default_property(path: str, default: Any) -> property:
     def getter(self: "ConfigModel"):
         val = rgetattr(self.cfg, path)
         if val is None:
@@ -528,36 +582,6 @@ def default_property(path: str, default) -> property:
 
     def setter(self: "ConfigModel", val):
         rsetattr(self.cfg, path, val)
-
-    return property(getter, setter)
-
-
-def color2hex_property(path: str) -> property:
-    def getter(self: "ConfigModel"):
-        color_attr = rgetattr(self.cfg, path)
-        return color2hex(color_attr)
-
-    def setter(self: "ConfigModel", val: str):
-        color = color2hex(val)
-        rsetattr(self.cfg, path, color)
-
-    return property(getter, setter)
-
-
-def color2hex_maybe_property(path: str) -> property:
-    # TODO turn into class, and use __set_name__ to determine assignment LHS=path.
-    def getter(self: "ConfigModel"):
-        color_attr = rgetattr(self.cfg, path)
-        if not color_attr:
-            return ""
-        return color2hex(color_attr)
-
-    def setter(self: "ConfigModel", val: str):
-        if val:
-            color = color2hex(val)
-        else:
-            color = None
-        rsetattr(self.cfg, path, color)
 
     return property(getter, setter)
 
@@ -581,26 +605,39 @@ def path_fix_property(path: str) -> property:
     return property(getter, setter)
 
 
+flatten_modes = {
+    Flatten.SumAvg: "Average: (L+R)/2",
+    Flatten.DiffAvg: "DiffAvg: (L-R)/2",
+    Flatten.Stereo: "Stereo (broken)",
+}
+assert set(flatten_modes.keys()) == set(Flatten.modes)  # type: ignore
+
+flatten_symbols = list(flatten_modes.keys())
+flatten_text = list(flatten_modes.values())
+
+
 class ConfigModel(PresentationModel):
     cfg: Config
-    combo_symbols = {}
-    combo_text = {}
+    combo_symbols: Dict[str, Sequence[Symbol]] = {}
+    combo_text: Dict[str, Sequence[str]] = {}
 
     master_audio = path_fix_property("master_audio")
 
-    render__bg_color = color2hex_property("render__bg_color")
-    render__init_line_color = color2hex_property("render__init_line_color")
-    render__grid_color = color2hex_maybe_property("render__grid_color")
+    # Stereo flattening
+    for path in ["trigger_stereo", "render_stereo"]:
+        combo_symbols[path] = flatten_symbols
+        combo_text[path] = flatten_text
+    del path
 
     @property
-    def render_video_size(self) -> str:
+    def render_resolution(self) -> str:
         render = self.cfg.render
         w, h = render.width, render.height
         return f"{w}x{h}"
 
-    @render_video_size.setter
-    def render_video_size(self, value: str):
-        error = CorrError(f"invalid video size {value}, must be WxH")
+    @render_resolution.setter
+    def render_resolution(self, value: str):
+        error = CorrError(f"invalid resolution {value}, must be WxH")
 
         for sep in "x*,":
             width_height = value.split(sep)
@@ -687,7 +724,7 @@ class ChannelTableView(qw.QTableView):
 @attr.dataclass
 class Column:
     key: str
-    cls: Union[Type, Callable]
+    cls: Union[type, Callable[[str], Any]]
     default: Any
 
     def _display_name(self) -> str:
@@ -723,7 +760,7 @@ class ChannelModel(qc.QAbstractTableModel):
 
             cfg.trigger = trigger_dict
 
-    def triggers(self, row: int) -> dict:
+    def triggers(self, row: int) -> Dict[str, Any]:
         trigger = self.channels[row].trigger
         assert isinstance(trigger, dict)
         return trigger
@@ -731,6 +768,7 @@ class ChannelModel(qc.QAbstractTableModel):
     # columns
     col_data = [
         Column("wav_path", path_strip_quotes, "", "WAV Path"),
+        Column("amplification", float, None, "Amplification\n(override)"),
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
         Column("line_color", str, None, "Line Color"),
@@ -739,18 +777,17 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("trigger__buffer_falloff", float, None),
     ]
 
-    @staticmethod
-    def _idx_of_key(col_data=col_data):
-        return {col.key: idx for idx, col in enumerate(col_data)}
-
-    idx_of_key = _idx_of_key.__func__()
+    idx_of_key = {}
+    for idx, col in enumerate(col_data):
+        idx_of_key[col.key] = idx
+    del idx, col
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
         return len(self.col_data)
 
     def headerData(
-        self, section: int, orientation: Qt.Orientation, role=Qt.DisplayRole
-    ):
+        self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole
+    ) -> Union[str, QVariant]:
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
                 col = section
@@ -917,7 +954,7 @@ class DownloadFFmpegActivity:
     path_uri = qc.QUrl.fromLocalFile(paths.PATH_dir).toString()
 
     required = (
-        f"FFmpeg must be in PATH or "
+        f"FFmpeg+FFplay must be in PATH or "
         f'<a href="{path_uri}">corrscope folder</a> in order to use corrscope.<br>'
     )
 

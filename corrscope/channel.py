@@ -1,30 +1,36 @@
 from os.path import abspath
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, Dict, Any
 
 import attr
 from ruamel.yaml.comments import CommentedMap
 
-from corrscope.config import register_config, Alias, CorrError
+from corrscope.config import DumpableAttrs, Alias, CorrError
 from corrscope.triggers import ITriggerConfig
-from corrscope.wave import _WaveConfig, Wave
+from corrscope.util import coalesce
+from corrscope.wave import Wave, Flatten
 
 if TYPE_CHECKING:
     from corrscope.corrscope import Config
 
 
-@register_config
-class ChannelConfig:
+class ChannelConfig(DumpableAttrs):
     wav_path: str
 
     # Supplying a dict inherits attributes from global trigger.
-    trigger: Union[ITriggerConfig, dict, None] = attr.Factory(
-        dict
-    )  # TODO test channel-specific triggers
+    # TODO test channel-specific triggers
+    trigger: Union[ITriggerConfig, Dict[str, Any], None] = attr.Factory(dict)
+
     # Multiplies how wide the window is, in milliseconds.
     trigger_width: int = 1
     render_width: int = 1
 
-    ampl_ratio: float = 1.0  # TODO use amplification = None instead?
+    # Overrides global amplification.
+    amplification: Optional[float] = None
+
+    # Stereo config
+    trigger_stereo: Optional[Flatten] = None
+    render_stereo: Optional[Flatten] = None
+
     line_color: Optional[str] = None
 
     # region Legacy Fields
@@ -47,8 +53,17 @@ class Channel:
         self.cfg = cfg
 
         # Create a Wave object.
-        wcfg = _WaveConfig(amplification=corr_cfg.amplification * cfg.ampl_ratio)
-        self.wave = Wave(wcfg, abspath(cfg.wav_path))
+        wave = Wave(
+            abspath(cfg.wav_path),
+            amplification=coalesce(cfg.amplification, corr_cfg.amplification),
+        )
+
+        # Flatten wave stereo for trigger and render.
+        tflat = coalesce(cfg.trigger_stereo, corr_cfg.trigger_stereo)
+        rflat = coalesce(cfg.render_stereo, corr_cfg.render_stereo)
+
+        self.trigger_wave = wave.with_flatten(tflat)
+        self.render_wave = wave.with_flatten(rflat)
 
         # `subsampling` increases `stride` and decreases `nsamp`.
         # `width` increases `stride` without changing `nsamp`.
@@ -62,7 +77,7 @@ class Channel:
         # stride = subsampling * width
         def calculate_nsamp(width_ms, sub):
             width_s = width_ms / 1000
-            return round(width_s * self.wave.smp_s / sub)
+            return round(width_s * wave.smp_s / sub)
 
         trigger_samp = calculate_nsamp(corr_cfg.trigger_ms, tsub)
         self.render_samp = calculate_nsamp(corr_cfg.render_ms, rsub)
@@ -86,7 +101,7 @@ class Channel:
             )
 
         self.trigger = tcfg(
-            wave=self.wave,
+            wave=self.trigger_wave,
             tsamp=trigger_samp,
             stride=self.trigger_stride,
             fps=corr_cfg.fps,

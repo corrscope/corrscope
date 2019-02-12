@@ -33,10 +33,11 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import division, print_function, absolute_import
 
-import operator
-import warnings
+from typing import List, Tuple
 
 import numpy as np
+
+from corrscope.wave import FLOAT
 
 __all__ = ['boxcar', 'triang', 'parzen', 'bohman', 'blackman', 'nuttall',
            'blackmanharris', 'flattop', 'bartlett', 'hanning', 'barthann',
@@ -45,14 +46,14 @@ __all__ = ['boxcar', 'triang', 'parzen', 'bohman', 'blackman', 'nuttall',
            'exponential', 'tukey']
 
 
-def _len_guards(M):
+def _len_guards(M: int) -> bool:
     """Handle small or incorrect window lengths"""
     if int(M) != M or M < 0:
         raise ValueError('Window length M must be a non-negative integer')
     return M <= 1
 
 
-def _extend(M, sym):
+def _extend(M: int, sym: bool) -> Tuple[int, bool]:
     """Extend window by 1 sample if needed for DFT-even symmetry"""
     if not sym:
         return M + 1, True
@@ -60,7 +61,7 @@ def _extend(M, sym):
         return M, False
 
 
-def _truncate(w, needed):
+def _truncate(w: np.ndarray, needed: bool) -> np.ndarray:
     """Truncate window by 1 sample if needed for DFT-even symmetry"""
     if needed:
         return w[:-1]
@@ -68,7 +69,7 @@ def _truncate(w, needed):
         return w
 
 
-def general_cosine(M, a, sym=True):
+def general_cosine(M: int, a: List[float], sym: bool = True) -> np.ndarray:
     r"""
     Generic weighted sum of cosine terms window
 
@@ -138,11 +139,11 @@ def general_cosine(M, a, sym=True):
     >>> plt.show()
     """
     if _len_guards(M):
-        return np.ones(M)
+        return np.ones(M, dtype=FLOAT)
     M, needs_trunc = _extend(M, sym)
 
-    fac = np.linspace(-np.pi, np.pi, M)
-    w = np.zeros(M)
+    fac = np.linspace(-np.pi, np.pi, M, dtype=FLOAT)
+    w = np.zeros(M, dtype=FLOAT)
     for k in range(len(a)):
         w += a[k] * np.cos(k * fac)
 
@@ -734,7 +735,7 @@ def bartlett(M, sym=True):
     return _truncate(w, needs_trunc)
 
 
-def hann(M, sym=True):
+def hann(M: int, sym: bool = True) -> np.ndarray:
     r"""
     Return a Hann window.
 
@@ -958,7 +959,7 @@ def barthann(M, sym=True):
     return _truncate(w, needs_trunc)
 
 
-def general_hamming(M, alpha, sym=True):
+def general_hamming(M: int, alpha: float, sym: bool = True) -> np.ndarray:
     r"""Return a generalized Hamming window.
 
     The generalized Hamming window is constructed by multiplying a rectangular
@@ -1126,7 +1127,7 @@ def hamming(M, sym=True):
 # def kaiser(M, beta, sym=True):
 
 
-def gaussian(M, std, sym=True):
+def gaussian(M: int, std: float, sym: bool = True) -> np.ndarray:
     r"""Return a Gaussian window.
 
     Parameters
@@ -1179,10 +1180,10 @@ def gaussian(M, std, sym=True):
 
     """
     if _len_guards(M):
-        return np.ones(M)
+        return np.ones(M, dtype=FLOAT)
     M, needs_trunc = _extend(M, sym)
 
-    n = np.arange(0, M) - (M - 1.0) / 2.0
+    n = np.arange(0, M, dtype=FLOAT) - (M - 1.0) / 2.0
     sig2 = 2 * std * std
     w = np.exp(-n ** 2 / sig2)
 

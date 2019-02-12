@@ -1,24 +1,42 @@
 import functools
 import operator
-from typing import Optional, List, Callable, Dict, Any, ClassVar, TYPE_CHECKING
+from typing import (
+    Optional,
+    List,
+    Callable,
+    Dict,
+    Any,
+    ClassVar,
+    TYPE_CHECKING,
+    Union,
+    Sequence,
+    Tuple,
+)
 
+import attr
 from PyQt5 import QtWidgets as qw, QtCore as qc
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QPalette, QColor
 from PyQt5.QtWidgets import QWidget
 
-from corrscope.config import CorrError
+from corrscope.config import CorrError, DumpableAttrs, get_units
+from corrscope.gui.util import color2hex
 from corrscope.triggers import lerp
 from corrscope.util import obj_name, perr
 
 if TYPE_CHECKING:
     from corrscope.gui import MainWindow
+    from enum import Enum
+
+    assert Enum
 
 __all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr"]
 
 
 WidgetUpdater = Callable[[], None]
-Attrs = Any
+
+
+Symbol = Union[str, "Enum"]
 
 
 class PresentationModel(qc.QObject):
@@ -31,16 +49,16 @@ class PresentationModel(qc.QObject):
 
     # These fields are specific to each subclass, and assigned there.
     # Although less explicit, these can be assigned using __init_subclass__.
-    combo_symbols: Dict[str, List[str]]
-    combo_text: Dict[str, List[str]]
+    combo_symbols: Dict[str, Sequence[Symbol]]
+    combo_text: Dict[str, Sequence[str]]
     edited = qc.pyqtSignal()
 
-    def __init__(self, cfg: Attrs):
+    def __init__(self, cfg: DumpableAttrs):
         super().__init__()
         self.cfg = cfg
         self.update_widget: Dict[str, WidgetUpdater] = {}
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: str) -> Any:
         try:
             # Custom properties
             return getattr(self, item)
@@ -58,14 +76,14 @@ class PresentationModel(qc.QObject):
         else:
             raise AttributeError(f"cannot set attribute {key} on {obj_name(self)}()")
 
-    def set_cfg(self, cfg: Attrs):
+    def set_cfg(self, cfg: DumpableAttrs):
         self.cfg = cfg
         for updater in self.update_widget.values():
             updater()
 
 
 # TODO add tests for recursive operations
-def map_gui(view: "MainWindow", model: PresentationModel):
+def map_gui(view: "MainWindow", model: PresentationModel) -> None:
     """
     Binding:
     - .ui <widget name="layout__nrows">
@@ -80,7 +98,12 @@ def map_gui(view: "MainWindow", model: PresentationModel):
     )  # dear pyqt, add generic mypy return types
     for widget in widgets:
         path = widget.objectName()
-        widget.bind_widget(model, path)
+
+        # Exclude nameless ColorText inside BoundColorWidget wrapper,
+        # since bind_widget(path="") will crash.
+        # BoundColorWidget.bind_widget() handles binding children.
+        if path:
+            widget.bind_widget(model, path)
 
 
 Signal = Any
@@ -93,7 +116,18 @@ class BoundWidget(QWidget):
     pmodel: PresentationModel
     path: str
 
-    def bind_widget(self, model: PresentationModel, path: str) -> None:
+    def bind_widget(
+        self, model: PresentationModel, path: str, connect_to_model=True
+    ) -> None:
+        """
+        connect_to_model=False means:
+        - self: ColorText is created and owned by BoundColorWidget wrapper.
+        - Wrapper forwards model changes to self (which updates other widgets).
+            (model.update_widget[path] != self)
+        - self.gui_changed invokes self.set_model() (which updates model
+            AND other widgets).
+        - wrapper.gui_changed signal is NEVER emitted.
+        """
         try:
             self.default_palette = self.palette()
             self.error_palette = self.calc_error_palette()
@@ -102,8 +136,9 @@ class BoundWidget(QWidget):
             self.path = path
             self.cfg2gui()
 
-            # Allow widget to be updated by other events.
-            model.update_widget[path] = self.cfg2gui
+            if connect_to_model:
+                # Allow widget to be updated by other events.
+                model.update_widget[path] = self.cfg2gui
 
             # Allow pmodel to be changed by widget.
             self.gui_changed.connect(self.set_model)
@@ -128,7 +163,7 @@ class BoundWidget(QWidget):
     # PresentationModel+set_model vs. cfg2gui+set_gui vs. widget
     # Feel free to improve the naming.
 
-    def cfg2gui(self):
+    def cfg2gui(self) -> None:
         """ Update the widget without triggering signals.
 
         When the presentation pmodel updates dependent widget 1,
@@ -148,7 +183,9 @@ class BoundWidget(QWidget):
         pass
 
 
-def blend_colors(color1: QColor, color2: QColor, ratio: float, gamma=2):
+def blend_colors(
+    color1: QColor, color2: QColor, ratio: float, gamma: float = 2
+) -> QColor:
     """ Blends two colors in linear color space.
     Produces better results on both light and dark themes,
     than integer blending (which is too dark).
@@ -164,7 +201,10 @@ def blend_colors(color1: QColor, color2: QColor, ratio: float, gamma=2):
     return QColor.fromRgbF(*rgb_blend, 1.0)
 
 
-def model_setter(value_type: type) -> Callable:
+# Mypy expects -> Callable[[BoundWidget, Any], None].
+# PyCharm expects -> Callable[[Any], None].
+# I give up.
+def model_setter(value_type: type) -> Callable[..., None]:
     @pyqtSlot(value_type)
     def set_model(self: BoundWidget, value):
         assert isinstance(value, value_type)
@@ -178,7 +218,7 @@ def model_setter(value_type: type) -> Callable:
     return set_model
 
 
-def alias(name: str):
+def alias(name: str) -> property:
     return property(operator.attrgetter(name))
 
 
@@ -191,20 +231,55 @@ class BoundLineEdit(qw.QLineEdit, BoundWidget):
 
 
 class BoundSpinBox(qw.QSpinBox, BoundWidget):
+    def bind_widget(self, model: PresentationModel, path: str, *args, **kwargs) -> None:
+        BoundWidget.bind_widget(self, model, path, *args, **kwargs)
+        try:
+            parent, name = flatten_attr(model.cfg, path)
+        except AttributeError:
+            return
+
+        fields = attr.fields_dict(type(parent))
+        field = fields[name]
+        self.setSuffix(get_units(field))
+
     set_gui = alias("setValue")
     gui_changed = alias("valueChanged")
     set_model = model_setter(int)
 
 
 class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
+    bind_widget = BoundSpinBox.bind_widget
+
     set_gui = alias("setValue")
     gui_changed = alias("valueChanged")
     set_model = model_setter(float)
 
 
+CheckState = int
+
+
+class BoundCheckBox(qw.QCheckBox, BoundWidget):
+    # setChecked accepts (bool).
+    # setCheckState accepts (Qt.CheckState). Don't use it.
+    set_gui = alias("setChecked")
+
+    # stateChanged passes (Qt.CheckState).
+    gui_changed = alias("stateChanged")
+
+    # gui_changed -> set_model(Qt.CheckState).
+    @pyqtSlot(CheckState)
+    def set_model(self, value: CheckState):
+        """Qt.PartiallyChecked probably should not happen."""
+        Qt = qc.Qt
+        assert value in [Qt.Unchecked, Qt.PartiallyChecked, Qt.Checked]
+        self.set_bool(value != Qt.Unchecked)
+
+    set_bool = model_setter(bool)
+
+
 class BoundComboBox(qw.QComboBox, BoundWidget):
-    combo_symbols: List[str]
-    symbol2idx: Dict[str, int]
+    combo_symbols: Sequence[Symbol]
+    symbol2idx: Dict[Symbol, int]
 
     # noinspection PyAttributeOutsideInit
     def bind_widget(self, model: PresentationModel, path: str) -> None:
@@ -223,7 +298,7 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
         BoundWidget.bind_widget(self, model, path)
 
     # combobox.index = pmodel.attr
-    def set_gui(self, symbol: str):
+    def set_gui(self, symbol: Symbol) -> None:
         combo_index = self.symbol2idx[symbol]
         self.setCurrentIndex(combo_index)
 
@@ -234,6 +309,181 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
     def set_model(self, combo_index: int):
         assert isinstance(combo_index, int)
         self.pmodel[self.path] = self.combo_symbols[combo_index]
+
+
+# Color-specific widgets
+
+
+class BoundColorWidget(BoundWidget, qw.QWidget):
+    """
+    - set_gui(): Model is sent to self.text, which updates all other widgets.
+    - self.text: ColorText
+    - When self.text changes, it converts to hex, then updates the pmodel
+        and sends signal `hex_color` which updates check/button.
+    - self does NOT update the pmodel. (gui_changed is never emitted.)
+    """
+
+    optional = False
+
+    def __init__(self, parent: qw.QWidget):
+        qw.QWidget.__init__(self, parent)
+
+        layout = qw.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+        # Setup text field.
+        self.text = _ColorText(self, self.optional)
+        layout.addWidget(self.text)  # http://doc.qt.io/qt-5/qlayout.html#addItem
+
+        # Setup checkbox
+        if self.optional:
+            self.check = _ColorCheckBox(self, self.text)
+            self.check.setToolTip("Enable/Disable Color")
+            layout.addWidget(self.check)
+
+        # Setup colored button.
+        self.button = _ColorButton(self, self.text)
+        self.button.setToolTip("Pick Color")
+        layout.addWidget(self.button)
+
+    # override BoundWidget
+    def bind_widget(self, model: PresentationModel, path: str) -> None:
+        super().bind_widget(model, path)
+        self.text.bind_widget(model, path, connect_to_model=False)
+
+    # impl BoundWidget
+    def set_gui(self, value: Optional[str]):
+        self.text.set_gui(value)
+
+    # impl BoundWidget
+    # Never gets emitted. self.text.set_model is responsible for updating model.
+    gui_changed = qc.pyqtSignal(str)
+
+    # impl BoundWidget
+    # Never gets called.
+    def set_model(self, value):
+        raise RuntimeError(
+            "BoundColorWidget.gui_changed -> set_model should not be called"
+        )
+
+
+class OptionalColorWidget(BoundColorWidget):
+    optional = True
+
+
+class _ColorText(BoundLineEdit):
+    """
+    - Validates and converts colors to hex (from model AND gui)
+    - If __init__ optional, special-cases missing colors.
+    """
+
+    def __init__(self, parent: QWidget, optional: bool):
+        super().__init__(parent)
+        self.optional = optional
+
+    hex_color = qc.pyqtSignal(str)
+
+    def set_gui(self, value: Optional[str]):
+        """model2gui"""
+
+        if self.optional and not value:
+            value = ""
+        else:
+            value = color2hex(value)  # raises CorrError if invalid.
+
+        # Don't write back to model immediately.
+        # Loading is a const process, only editing the GUI should change the model.
+        with qc.QSignalBlocker(self):
+            self.setText(value)
+
+        # Write to other GUI widgets immediately.
+        self.hex_color.emit(value)  # calls button.set_color()
+
+    @pyqtSlot(str)
+    def set_model(self: BoundWidget, value: str):
+        """gui2model"""
+
+        if self.optional and not value:
+            value = None
+        else:
+            try:
+                value = color2hex(value)
+            except CorrError:
+                self.setPalette(self.error_palette)
+                self.hex_color.emit("")  # calls button.set_color()
+                return
+
+        self.setPalette(self.default_palette)
+        self.hex_color.emit(value or "")  # calls button.set_color()
+        self.pmodel[self.path] = value
+
+    def sizeHint(self) -> qc.QSize:
+        """Reduce the width taken up by #rrggbb color text boxes."""
+        return self.minimumSizeHint()
+
+
+class _ColorButton(qw.QPushButton):
+    def __init__(self, parent: QWidget, text: "_ColorText"):
+        qw.QPushButton.__init__(self, parent)
+        self.clicked.connect(self.on_clicked)
+
+        # Initialize "current color"
+        self.curr_color = QColor()
+
+        # Initialize text
+        self.color_text = text
+        text.hex_color.connect(self.set_color)
+
+    @pyqtSlot()
+    def on_clicked(self):
+        # https://bugreports.qt.io/browse/QTBUG-38537
+        # On Windows, QSpinBox height is wrong if stylesheets are enabled.
+        # And QColorDialog(parent=self) contains QSpinBox and inherits our stylesheets.
+        # So set parent=self.window().
+
+        color: QColor = qw.QColorDialog.getColor(self.curr_color, self.window())
+        if not color.isValid():
+            return
+
+        self.color_text.setText(color.name())  # textChanged calls self.set_color()
+
+    @pyqtSlot(str)
+    def set_color(self, hex_color: str):
+        color = QColor(hex_color)
+        self.curr_color = color
+
+        if color.isValid():
+            # Tooltips inherit our styles. Don't change their background.
+            qss = f"{obj_name(self)} {{ background: {color.name()}; }}"
+        else:
+            qss = ""
+
+        self.setStyleSheet(qss)
+
+
+class _ColorCheckBox(qw.QCheckBox):
+    def __init__(self, parent: QWidget, text: "_ColorText"):
+        qw.QCheckBox.__init__(self, parent)
+        self.stateChanged.connect(self.on_check)
+
+        self.color_text = text
+        text.hex_color.connect(self.set_color)
+
+    @pyqtSlot(str)
+    def set_color(self, hex_color: str):
+        with qc.QSignalBlocker(self):
+            self.setChecked(bool(hex_color))
+
+    @pyqtSlot(CheckState)
+    def on_check(self, value: CheckState):
+        """Qt.PartiallyChecked probably should not happen."""
+        Qt = qc.Qt
+        assert value in [Qt.Unchecked, Qt.PartiallyChecked, Qt.Checked]
+        if value != Qt.Unchecked:
+            self.color_text.setText("#ffffff")
+        else:
+            self.color_text.setText("")
 
 
 # Unused
@@ -252,7 +502,7 @@ def behead(string: str, header: str) -> str:
 DUNDER = "__"
 
 # https://gist.github.com/wonderbeyond/d293e7a2af1de4873f2d757edd580288
-def rgetattr(obj, dunder_delim_path: str, *default):
+def rgetattr(obj: DumpableAttrs, dunder_delim_path: str, *default) -> Any:
     """
     :param obj: Object
     :param dunder_delim_path: 'attr1__attr2__etc'
@@ -260,11 +510,13 @@ def rgetattr(obj, dunder_delim_path: str, *default):
     :return: obj.attr1.attr2.etc
     """
 
-    def _getattr(obj, attr):
-        return getattr(obj, attr, *default)
-
-    attrs = dunder_delim_path.split(DUNDER)
-    return functools.reduce(_getattr, [obj] + attrs)
+    attrs: List[Any] = dunder_delim_path.split(DUNDER)
+    try:
+        return functools.reduce(getattr, attrs, obj)
+    except AttributeError:
+        if default:
+            return default[0]
+        raise
 
 
 def rhasattr(obj, dunder_delim_path: str):
@@ -275,6 +527,20 @@ def rhasattr(obj, dunder_delim_path: str):
         return False
 
 
+def flatten_attr(obj, dunder_delim_path: str) -> Tuple[Any, str]:
+    """
+    :param obj: Object
+    :param dunder_delim_path: 'attr1__attr2__etc'
+    :return: (shallow_obj, name) such that
+        getattr(shallow_obj, name) == rgetattr(obj, dunder_delim_path).
+    """
+
+    parent, _, name = dunder_delim_path.rpartition(DUNDER)
+    parent_obj = rgetattr(obj, parent) if parent else obj
+
+    return parent_obj, name
+
+
 # https://stackoverflow.com/a/31174427/2683842
 def rsetattr(obj, dunder_delim_path: str, val):
     """
@@ -282,7 +548,5 @@ def rsetattr(obj, dunder_delim_path: str, val):
     :param dunder_delim_path: 'attr1__attr2__etc'
     :param val: obj.attr1.attr2.etc = val
     """
-    parent, _, name = dunder_delim_path.rpartition(DUNDER)
-    parent_obj = rgetattr(obj, parent) if parent else obj
-
+    parent_obj, name = flatten_attr(obj, dunder_delim_path)
     return setattr(parent_obj, name, val)

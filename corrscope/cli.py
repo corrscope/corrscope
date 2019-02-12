@@ -2,7 +2,7 @@ import datetime
 import sys
 from itertools import count
 from pathlib import Path
-from typing import Optional, List, Tuple, Union, Iterator
+from typing import Optional, List, Tuple, Union, Iterator, cast
 
 import click
 
@@ -83,7 +83,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.option('--profile', is_flag=True, help=
         'Debug: Write CProfiler snapshot')
 @click.version_option(corrscope.__version__)
-# fmt: on
+# fmt: on is ignored, because of https://github.com/ambv/black/issues/560
 def main(
         files: Tuple[str],
         # cfg
@@ -115,9 +115,10 @@ def main(
 
     show_gui = not any([write, play, render])
 
-    # Create cfg: Config object.
-    cfg: Optional[Config] = None
-    cfg_path: Optional[Path] = None
+    # Gather data for cfg: Config object.
+    CfgOrPath = Union[Config, Path]
+
+    cfg_or_path: Union[Config, Path, None] = None
     cfg_dir: Optional[str] = None
 
     wav_list: List[Path] = []
@@ -144,8 +145,7 @@ def main(
             if len(files) > 1:
                 raise click.ClickException(
                     f'Cannot supply multiple arguments when providing config {path}')
-            cfg = yaml.load(path)
-            cfg_path = path
+            cfg_or_path = path
             cfg_dir = str(path.parent)
             break
 
@@ -159,11 +159,11 @@ def main(
                         f'Supplied nonexistent file or wildcard: {path}')
             wav_list += matches
 
-    if not cfg:
+    if not cfg_or_path:
         # cfg and cfg_dir are always initialized together.
         channels = [ChannelConfig(str(wav_path)) for wav_path in wav_list]
 
-        cfg = default_config(
+        cfg_or_path = default_config(
             master_audio=audio,
             # fps=default,
             channels=channels,
@@ -172,10 +172,12 @@ def main(
         )
         cfg_dir = '.'
 
+    assert cfg_or_path is not None
+    assert cfg_dir is not None
     if show_gui:
         def command():
             from corrscope import gui
-            return gui.gui_main(cfg, cfg_path)
+            return gui.gui_main(cast(CfgOrPath, cfg_or_path))
 
         if profile:
             import cProfile
@@ -189,6 +191,16 @@ def main(
     else:
         if not files:
             raise click.UsageError('Must specify files or folders to play')
+
+        if isinstance(cfg_or_path, Config):
+            cfg = cfg_or_path
+            cfg_path = None
+        elif isinstance(cfg_or_path, Path):
+            cfg = yaml.load(cfg_or_path)
+            cfg_path = cfg_or_path
+        else:
+            assert False, cfg_or_path
+
         if write:
             write_path = get_path(audio, YAML_NAME)
             yaml.dump(cfg, write_path)
@@ -219,18 +231,20 @@ def main(
                 except MissingFFmpegError as e:
                     # Tell user how to install ffmpeg (__str__).
                     print(e, file=sys.stderr)
+# fmt: on
 
 
 def get_profile_dump_name(prefix: str) -> str:
-    now = datetime.datetime.now()
-    now = now.strftime('%Y-%m-%d_T%H-%M-%S')
+    now_date = datetime.datetime.now()
+    now_str = now_date.strftime("%Y-%m-%d_T%H-%M-%S")
 
-    profile_dump_name = f'{prefix}-{PROFILE_DUMP_NAME}-{now}'
+    profile_dump_name = f"{prefix}-{PROFILE_DUMP_NAME}-{now_str}"
 
     # Write stats to unused filename
     for path in add_numeric_suffixes(profile_dump_name):
         if not Path(path).exists():
             return path
+    assert False  # never happens since add_numeric_suffixes is endless.
 
 
 def add_numeric_suffixes(s: str) -> Iterator[str]:

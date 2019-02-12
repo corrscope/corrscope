@@ -3,11 +3,11 @@ import shlex
 import subprocess
 from abc import ABC, abstractmethod
 from os.path import abspath
-from typing import TYPE_CHECKING, Type, List, Union, Optional
+from typing import TYPE_CHECKING, Type, List, Union, Optional, ClassVar, Callable
 
 import numpy as np
 
-from corrscope.config import register_config
+from corrscope.config import DumpableAttrs
 from corrscope.settings.paths import MissingFFmpegError
 
 if TYPE_CHECKING:
@@ -26,10 +26,10 @@ FRAMES_TO_BUFFER = 2
 FFMPEG_QUIET = "-nostats -hide_banner -loglevel error".split()
 
 
-class IOutputConfig:
-    cls: "Type[Output]"
+class IOutputConfig(DumpableAttrs):
+    cls: "ClassVar[Type[Output]]"
 
-    def __call__(self, corr_cfg: "Config"):
+    def __call__(self, corr_cfg: "Config") -> "Output":
         return self.cls(corr_cfg, cfg=self)
 
 
@@ -67,7 +67,9 @@ class Output(ABC):
 # Glue logic
 
 
-def register_output(config_t: Type[IOutputConfig]):
+def register_output(
+    config_t: Type[IOutputConfig]
+) -> Callable[[Type[Output]], Type[Output]]:
     def inner(output_t: Type[Output]):
         config_t.cls = output_t
         return output_t
@@ -101,14 +103,14 @@ class _FFmpegProcess:
         if self.corr_cfg.master_audio:
             self.templates.append(cfg.audio_template)  # audio
 
-    def popen(self, extra_args, bufsize, **kwargs) -> subprocess.Popen:
+    def popen(self, extra_args: List[str], bufsize: int, **kwargs) -> subprocess.Popen:
         """Raises FileNotFoundError if FFmpeg missing"""
         try:
             args = self._generate_args() + extra_args
             return subprocess.Popen(
                 args, stdin=subprocess.PIPE, bufsize=bufsize, **kwargs
             )
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             raise MissingFFmpegError()
 
     def _generate_args(self) -> List[str]:
@@ -133,7 +135,7 @@ def ffmpeg_input_audio(audio_path: str) -> List[str]:
 
 
 class PipeOutput(Output):
-    def open(self, *pipeline: subprocess.Popen):
+    def open(self, *pipeline: subprocess.Popen) -> None:
         """ Called by __init__ with a Popen pipeline to ffmpeg/ffplay. """
         if len(pipeline) == 0:
             raise TypeError("must provide at least one Popen argument to popens")
@@ -143,7 +145,7 @@ class PipeOutput(Output):
         # Python documentation discourages accessing popen.stdin. It's wrong.
         # https://stackoverflow.com/a/9886747
 
-    def __enter__(self):
+    def __enter__(self) -> Output:
         return self
 
     def write_frame(self, frame: ByteBuffer) -> Optional[_Stop]:
@@ -164,7 +166,7 @@ class PipeOutput(Output):
             else:
                 raise
 
-    def close(self, wait=True) -> int:
+    def close(self, wait: bool = True) -> int:
         try:
             self._stream.close()
         # technically it should match the above exception handler,
@@ -186,7 +188,7 @@ class PipeOutput(Output):
         else:
             self.terminate()
 
-    def terminate(self):
+    def terminate(self) -> None:
         # Calling self.close() is bad.
         # If exception occurred but ffplay continues running,
         # popen.wait() will prevent stack trace from showing up.
@@ -210,7 +212,6 @@ class PipeOutput(Output):
 # FFmpegOutput
 
 
-@register_config
 class FFmpegOutputConfig(IOutputConfig):
     # path=None writes to stdout.
     path: Optional[str]
@@ -243,7 +244,6 @@ class FFmpegOutput(PipeOutput):
 # FFplayOutput
 
 
-@register_config
 class FFplayOutputConfig(IOutputConfig):
     video_template: str = "-c:v copy"
     audio_template: str = "-c:a copy"
@@ -264,7 +264,10 @@ class FFplayOutput(PipeOutput):
         p1 = ffmpeg.popen(["-"], self.bufsize, stdout=subprocess.PIPE)
 
         ffplay = shlex.split("ffplay -autoexit -") + FFMPEG_QUIET
-        p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
+        try:
+            p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
+        except FileNotFoundError:
+            raise MissingFFmpegError()
 
         p1.stdout.close()
         # assert p2.stdin is None   # True unless Popen is being mocked (test_output).

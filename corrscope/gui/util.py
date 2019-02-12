@@ -1,16 +1,15 @@
 import html
-from pathlib import Path
-from typing import TypeVar, Optional, Iterable, Generic, List, Tuple
+from typing import TypeVar, Iterable, Generic, Tuple, Any, Optional
 
 import matplotlib.colors
 import more_itertools
 from PyQt5.QtCore import QMutex
-from PyQt5.QtWidgets import QWidget, QFileDialog, QErrorMessage
+from PyQt5.QtWidgets import QErrorMessage, QWidget
 
 from corrscope.config import CorrError
 
 
-def color2hex(color):
+def color2hex(color: Any) -> str:
     try:
         return matplotlib.colors.to_hex(color, keep_alpha=False)
     except ValueError:
@@ -34,7 +33,7 @@ class Locked(Generic[T]):
         self.lock.lock()
         return self.obj
 
-    def __exit__(self, *args, **kwargs):
+    def __exit__(self, *args) -> None:
         self.lock.unlock()
 
     def set(self, value: T) -> T:
@@ -45,27 +44,6 @@ class Locked(Generic[T]):
     def get(self) -> T:
         with self:
             return self.obj
-
-
-def get_save_with_ext(
-    parent: QWidget,
-    caption: str,
-    dir_or_file: str,
-    filters: List[str],
-    default_suffix: str,
-) -> Optional[Path]:
-    """ On KDE, getSaveFileName does not append extension. This is a workaround. """
-    name, sel_filter = QFileDialog.getSaveFileName(
-        parent, caption, dir_or_file, ";;".join(filters)
-    )
-
-    if name == "":
-        return None
-
-    path = Path(name)
-    if sel_filter == filters[0] and path.suffix == "":
-        path = path.with_suffix(default_suffix)
-    return path
 
 
 class TracebackDialog(QErrorMessage):
@@ -79,11 +57,11 @@ class TracebackDialog(QErrorMessage):
     </style>
     <body>%s</body>"""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QWidget] = None):
         QErrorMessage.__init__(self, parent)
         self.resize(self.w, self.h)
 
-    def showMessage(self, message, type=None):
+    def showMessage(self, message: str, type: Any = None) -> None:
         message = self.template % (html.escape(message))
         QErrorMessage.showMessage(self, message, type)
 

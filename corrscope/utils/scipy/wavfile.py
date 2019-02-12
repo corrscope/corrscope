@@ -46,6 +46,9 @@ import numpy
 import struct
 import warnings
 
+from typing import Tuple, TYPE_CHECKING
+if TYPE_CHECKING:
+    from io import BufferedReader
 
 __all__ = [
     'WavFileWarning',
@@ -67,7 +70,9 @@ KNOWN_WAVE_FORMATS = (WAVE_FORMAT_PCM, WAVE_FORMAT_IEEE_FLOAT)
 #  after the 'fmt ' id
 
 
-def _read_fmt_chunk(fid, is_big_endian):
+def _read_fmt_chunk(
+    fid: "BufferedReader", is_big_endian: bool
+) -> Tuple[int, int, int, int, int, int, int]:
     """
     Returns
     -------
@@ -133,8 +138,10 @@ def _read_fmt_chunk(fid, is_big_endian):
 
 
 # assumes file pointer is immediately after the 'data' id
-def _read_data_chunk(fid, format_tag, channels, bit_depth, is_big_endian,
-                     mmap=False):
+def _read_data_chunk(
+    fid: "BufferedReader", format_tag: int, channels: int,
+    bit_depth: int, is_big_endian: bool, mmap: bool = False
+) -> numpy.ndarray:
     if is_big_endian:
         fmt = '>I'
     else:
@@ -169,7 +176,7 @@ def _read_data_chunk(fid, format_tag, channels, bit_depth, is_big_endian,
     return data
 
 
-def _skip_unknown_chunk(fid, is_big_endian):
+def _skip_unknown_chunk(fid: "BufferedReader", is_big_endian: bool) -> None:
     if is_big_endian:
         fmt = '>I'
     else:
@@ -185,7 +192,7 @@ def _skip_unknown_chunk(fid, is_big_endian):
         fid.seek(size, 1)
 
 
-def _read_riff_chunk(fid):
+def _read_riff_chunk(fid: "BufferedReader") -> Tuple[int, bool]:
     str1 = fid.read(4)  # File signature
     if str1 == b'RIFF':
         is_big_endian = False
@@ -208,7 +215,7 @@ def _read_riff_chunk(fid):
     return file_size, is_big_endian
 
 
-def read(filename, mmap=False):
+def read(filename: str, mmap: bool = False) -> Tuple[int, numpy.ndarray]:
     """
     Open a WAV file
 

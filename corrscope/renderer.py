@@ -1,12 +1,12 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING, Any
 
 import attr
 import matplotlib
 import numpy as np
 
-from corrscope.config import register_config
+from corrscope.config import DumpableAttrs, with_units
 from corrscope.layout import RendererLayout, LayoutConfig, EdgeFinder
 from corrscope.outputs import RGB_DEPTH, ByteBuffer
 from corrscope.util import coalesce
@@ -42,30 +42,32 @@ if TYPE_CHECKING:
     from corrscope.channel import ChannelConfig
 
 
-def default_color():
+def default_color() -> str:
     # import matplotlib.colors
     # colors = np.array([int(x, 16) for x in '1f 77 b4'.split()], dtype=float)
     # colors /= np.amax(colors)
     # colors **= 1/3
     #
     # return matplotlib.colors.to_hex(colors, keep_alpha=False)
-    return "#8edeff"
+    return "#ffffff"
 
 
-@register_config(always_dump="*")
-class RendererConfig:
+class RendererConfig(DumpableAttrs, always_dump="*"):
     width: int
     height: int
-    line_width: float = 1.5
+    line_width: float = with_units("px", default=1.5)
 
     bg_color: str = "#000000"
     init_line_color: str = default_color()
     grid_color: Optional[str] = None
+    midline_color: Optional[str] = None
+    v_midline: bool = False
+    h_midline: bool = False
 
     # Performance (skipped when recording to video)
     res_divisor: float = 1.0
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         # round(np.int32 / float) == np.float32, but we want int.
         assert isinstance(self.width, (int, float))
         assert isinstance(self.height, (int, float))
@@ -123,6 +125,17 @@ class Renderer(ABC):
         ...
 
 
+Point = float
+px_inch = 96
+pt_inch = 72
+
+DPI = px_inch
+
+
+def pixels(px: float) -> Point:
+    return px / px_inch * pt_inch
+
+
 class MatplotlibRenderer(Renderer):
     """
     Renderer backend which takes data and produces images.
@@ -143,8 +156,6 @@ class MatplotlibRenderer(Renderer):
     - changing scan_nsamp (cannot be hotswapped, since correlation buffer is incompatible)
     So don't.
     """
-
-    DPI = 96
 
     def __init__(self, *args, **kwargs):
         Renderer.__init__(self, *args, **kwargs)
@@ -225,11 +236,11 @@ class MatplotlibRenderer(Renderer):
                 ax.set_axis_off()
 
         # Generate arrangement (using nplots, cfg.orientation)
-        self._axes = self.layout.arrange(lambda row, col: axes2d[row, col])
+        self._axes: List[Axes] = self.layout.arrange(lambda row, col: axes2d[row, col])
 
         # Setup figure geometry
-        self._fig.set_dpi(self.DPI)
-        self._fig.set_size_inches(self.cfg.width / self.DPI, self.cfg.height / self.DPI)
+        self._fig.set_dpi(DPI)
+        self._fig.set_size_inches(self.cfg.width / DPI, self.cfg.height / DPI)
 
     def render_frame(self, datas: List[np.ndarray]) -> None:
         ndata = len(datas)
@@ -240,21 +251,36 @@ class MatplotlibRenderer(Renderer):
 
         # Initialize axes and draw waveform data
         if self._lines is None:
-            self._fig.set_facecolor(self.cfg.bg_color)
-            line_width = self.cfg.line_width
+            cfg = self.cfg
 
-            self._lines = []
+            # Setup background/axes
+            self._fig.set_facecolor(cfg.bg_color)
             for idx, data in enumerate(datas):
-                # Setup colors
-                line_param = self._line_params[idx]
-                line_color = line_param.color
-
-                # Setup axes
                 ax = self._axes[idx]
-                ax.set_xlim(0, len(data) - 1)
+                max_x = len(data) - 1
+                ax.set_xlim(0, max_x)
                 ax.set_ylim(-1, 1)
 
-                # Plot line
+                # Setup midlines
+                midline_color = cfg.midline_color
+                midline_width = pixels(1)
+
+                # zorder=-100 still draws on top of gridlines :(
+                kw = dict(color=midline_color, linewidth=midline_width)
+                if cfg.v_midline:
+                    ax.axvline(x=max_x / 2, **kw)
+                if cfg.h_midline:
+                    ax.axhline(y=0, **kw)
+
+            self._save_background()
+
+            # Plot lines over background
+            line_width = pixels(cfg.line_width)
+            self._lines = []
+
+            for idx, data in enumerate(datas):
+                ax = self._axes[idx]
+                line_color = self._line_params[idx].color
                 line = ax.plot(data, color=line_color, linewidth=line_width)[0]
                 self._lines.append(line)
 
@@ -264,8 +290,36 @@ class MatplotlibRenderer(Renderer):
                 line = self._lines[idx]
                 line.set_ydata(data)
 
-        self._fig.canvas.draw()
-        self._fig.canvas.flush_events()
+        self._redraw_over_background()
+
+    bg_cache: Any  # "matplotlib.backends._backend_agg.BufferRegion"
+
+    def _save_background(self) -> None:
+        """ Draw static background. """
+        # https://stackoverflow.com/a/8956211
+        # https://matplotlib.org/api/animation_api.html#funcanimation
+        fig = self._fig
+
+        fig.canvas.draw()
+        self.bg_cache = fig.canvas.copy_from_bbox(fig.bbox)
+
+    def _redraw_over_background(self) -> None:
+        """ Redraw animated elements of the image. """
+
+        canvas: FigureCanvasAgg = self._fig.canvas
+        canvas.restore_region(self.bg_cache)
+
+        assert self._lines is not None
+        for line in self._lines:
+            line.axes.draw_artist(line)
+
+        # https://bastibe.de/2013-05-30-speeding-up-matplotlib.html
+        # thinks fig.canvas.blit(ax.bbox) leaks memory
+        # and fig.canvas.update() works.
+        # Except I found no memory leak...
+        # and update() doesn't exist in FigureCanvasBase when no GUI is present.
+
+        canvas.blit(self._fig.bbox)
 
     def get_frame(self) -> ByteBuffer:
         """ Returns ndarray of shape w,h,3. """

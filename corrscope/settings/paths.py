@@ -1,7 +1,7 @@
 import os
 import platform
 import sys
-from typing import Dict, List
+from typing import MutableMapping, List
 from pathlib import Path
 
 from appdirs import user_data_dir
@@ -13,14 +13,14 @@ from corrscope.config import CorrError
 __all__ = ["appdata_dir", "PATH_dir", "get_ffmpeg_url", "MissingFFmpegError"]
 
 
-def prepend(dic: Dict[str, str], _key: List[str], prefix: str) -> None:
+def prepend(dic: MutableMapping[str, str], _key: List[str], prefix: str) -> None:
     """ Dubiously readable syntactic sugar for prepending to a string in a dict. """
     key = _key[0]
     dic[key] = prefix + dic[key]
 
 
 appdata_dir = Path(user_data_dir(corrscope.app_name, appauthor=False, roaming=True))
-appdata_dir.mkdir(exist_ok=True)
+appdata_dir.mkdir(parents=True, exist_ok=True)
 
 # Add app-specific ffmpeg path.
 _path_dir = appdata_dir / "path"
@@ -36,7 +36,7 @@ def get_ffmpeg_url() -> str:
     # is_python_64 = sys.maxsize > 2 ** 32
     is_os_64 = platform.machine().endswith("64")
 
-    def url(os_ver):
+    def url(os_ver: str) -> str:
         return f"https://ffmpeg.zeranoe.com/builds/{os_ver}/shared/ffmpeg-latest-{os_ver}-shared.zip"
 
     if sys.platform == "win32" and is_os_64:
@@ -53,12 +53,14 @@ class MissingFFmpegError(CorrError):
     ffmpeg_url = get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
-    message = f'FFmpeg must be in PATH or "{PATH_dir}" in order to use corrscope.\n'
+    message = (
+        f'FFmpeg+FFplay must be in PATH or "{PATH_dir}" in order to use corrscope.\n'
+    )
 
     if can_download:
         message += f"Download ffmpeg from {ffmpeg_url}."
     else:
         message += "Cannot download FFmpeg for your platform."
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message

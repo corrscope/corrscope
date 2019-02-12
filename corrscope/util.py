@@ -3,12 +3,12 @@ import sys
 from contextlib import contextmanager
 from itertools import chain
 from pathlib import Path
-from typing import Callable, Tuple, TypeVar, Iterator, Union, Optional
+from typing import Callable, Tuple, TypeVar, Iterator, Union, Optional, Any, cast
 
 import numpy as np
 
 
-def ceildiv(n, d):
+def ceildiv(n: int, d: int) -> int:
     return -(-n // d)
 
 
@@ -24,16 +24,16 @@ def coalesce(*args: Optional[T]) -> T:
     raise TypeError("coalesce() called with all None")
 
 
-def obj_name(obj) -> str:
+def obj_name(obj: Any) -> str:
     return type(obj).__name__
 
 
 # Adapted from https://github.com/numpy/numpy/issues/2269#issuecomment-14436725
 def find(
-    a: "np.ndarray[T]",
-    predicate: "Callable[[np.ndarray[T]], np.ndarray[bool]]",
-    chunk_size=1024,
-) -> Iterator[Tuple[Tuple[int], T]]:
+    a: "np.ndarray[float]",
+    predicate: "Callable[[np.ndarray], np.ndarray[bool]]",
+    chunk_size: int = 1024,
+) -> Iterator[Tuple[Tuple[int], float]]:
     """
     Find the indices of array elements that match the predicate.
 
@@ -88,11 +88,11 @@ def find(
         chunk = a[i0:i1]
         for idx in predicate(chunk).nonzero()[0]:
             yield (idx + i0,), chunk[idx]
-        i0 = i1
+        i0 = cast(int, i1)
 
 
 @contextmanager
-def pushd(new_dir: Union[Path, str]):
+def pushd(new_dir: Union[Path, str]) -> Iterator[None]:
     previous_dir = os.getcwd()
     os.chdir(str(new_dir))
     try:
@@ -101,5 +101,5 @@ def pushd(new_dir: Union[Path, str]):
         os.chdir(previous_dir)
 
 
-def perr(*args, **kwargs):
+def perr(*args, **kwargs) -> None:
     print(*args, file=sys.stderr, **kwargs)

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1080</width>
+    <width>1160</width>
     <height>0</height>
    </rect>
   </property>
@@ -54,7 +54,7 @@
            <item row="1" column="0">
             <widget class="QLabel" name="trigger_msL">
              <property name="text">
-              <string>Trigger Width (ms)</string>
+              <string>Trigger Width</string>
              </property>
             </widget>
            </item>
@@ -71,7 +71,7 @@
            <item row="2" column="0">
             <widget class="QLabel" name="render_msL">
              <property name="text">
-              <string>Render Width (ms)</string>
+              <string>Render Width</string>
              </property>
             </widget>
            </item>
@@ -102,7 +102,7 @@
            <item row="4" column="0">
             <widget class="QLabel" name="begin_timeL">
              <property name="text">
-              <string>Begin Time (s)</string>
+              <string>Begin Time</string>
              </property>
             </widget>
            </item>
@@ -123,41 +123,47 @@
           </property>
           <layout class="QFormLayout" name="formLayout_4">
            <item row="0" column="0">
+            <widget class="QLabel" name="render_resolutionL">
+             <property name="text">
+              <string>Resolution</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="BoundLineEdit" name="render_resolution">
+             <property name="text">
+              <string>vs</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
             <widget class="QLabel" name="render__bg_colorL">
              <property name="text">
               <string>Background</string>
              </property>
             </widget>
            </item>
-           <item row="0" column="1">
-            <widget class="BoundLineEdit" name="render__bg_color">
-             <property name="text">
-              <string>bg</string>
-             </property>
-            </widget>
+           <item row="1" column="1">
+            <widget class="BoundColorWidget" name="render__bg_color" native="true"/>
            </item>
-           <item row="1" column="0">
+           <item row="2" column="0">
             <widget class="QLabel" name="render__init_line_colorL">
              <property name="text">
               <string>Line Color</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
-            <widget class="BoundLineEdit" name="render__init_line_color">
-             <property name="text">
-              <string>fg</string>
-             </property>
-            </widget>
+           <item row="2" column="1">
+            <widget class="BoundColorWidget" name="render__init_line_color" native="true"/>
            </item>
-           <item row="2" column="0">
+           <item row="3" column="0">
             <widget class="QLabel" name="render__line_widthL">
              <property name="text">
               <string>Line Width</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
+           <item row="3" column="1">
             <widget class="BoundDoubleSpinBox" name="render__line_width">
              <property name="minimum">
               <double>0.500000000000000</double>
@@ -167,15 +173,39 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item row="4" column="0">
             <widget class="QLabel" name="render__grid_colorL">
              <property name="text">
               <string>Grid Color</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="1">
-            <widget class="BoundLineEdit" name="render__grid_color"/>
+           <item row="4" column="1">
+            <widget class="OptionalColorWidget" name="render__grid_color" native="true"/>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="render__midline_colorL">
+             <property name="text">
+              <string>Midline Color</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="OptionalColorWidget" name="render__midline_color" native="true"/>
+           </item>
+           <item row="6" column="0">
+            <widget class="BoundCheckBox" name="render__v_midline">
+             <property name="text">
+              <string>Vertical</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="BoundCheckBox" name="render__h_midline">
+             <property name="text">
+              <string>Horizontal Midline</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -228,19 +258,34 @@
              </item>
             </layout>
            </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="render_video_sizeL">
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="optionStereo">
+          <property name="title">
+           <string>Stereo Downmixing</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout_6">
+           <item row="0" column="0">
+            <widget class="QLabel" name="trigger_stereoL">
              <property name="text">
-              <string>Video Size</string>
+              <string>Trigger Stereo</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
-            <widget class="BoundLineEdit" name="render_video_size">
+           <item row="0" column="1">
+            <widget class="BoundComboBox" name="trigger_stereo"/>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="render_stereoL">
              <property name="text">
-              <string>vs</string>
+              <string>Render Stereo</string>
              </property>
             </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="BoundComboBox" name="render_stereo"/>
            </item>
           </layout>
          </widget>
@@ -268,7 +313,7 @@
         <item>
          <widget class="QGroupBox" name="perfAll">
           <property name="title">
-           <string>Performance</string>
+           <string>Preview and Render</string>
           </property>
           <layout class="QFormLayout" name="formLayout_5">
            <item row="0" column="0">
@@ -303,9 +348,9 @@
          </widget>
         </item>
         <item>
-         <widget class="QGroupBox" name="perfPlayback">
+         <widget class="QGroupBox" name="perfPreview">
           <property name="title">
-           <string>Playback</string>
+           <string>Preview Only</string>
           </property>
           <layout class="QFormLayout" name="formLayout_3">
            <item row="0" column="0">
@@ -325,7 +370,7 @@
            <item row="1" column="0">
             <widget class="QLabel" name="render__res_divisorL">
              <property name="text">
-              <string>Video Size Divisor</string>
+              <string>Resolution Divisor</string>
              </property>
             </widget>
            </item>
@@ -519,12 +564,19 @@
     <addaction name="actionSave"/>
     <addaction name="actionSaveAs"/>
     <addaction name="separator"/>
-    <addaction name="actionPlay"/>
+    <addaction name="actionPreview"/>
     <addaction name="actionRender"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>&amp;Tools</string>
+    </property>
+    <addaction name="action_separate_render_dir"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuTools"/>
   </widget>
   <widget class="QToolBar" name="toolBar">
    <property name="windowTitle">
@@ -541,7 +593,7 @@
    <addaction name="actionSave"/>
    <addaction name="actionSaveAs"/>
    <addaction name="separator"/>
-   <addaction name="actionPlay"/>
+   <addaction name="actionPreview"/>
    <addaction name="actionRender"/>
   </widget>
   <action name="actionOpen">
@@ -584,9 +636,9 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionPlay">
+  <action name="actionPreview">
    <property name="text">
-    <string>&amp;Play</string>
+    <string>&amp;Preview</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+P</string>
@@ -598,6 +650,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="action_separate_render_dir">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Separate Render Folder</string>
    </property>
   </action>
  </widget>
@@ -624,6 +684,11 @@
    <header>corrscope/gui/data_bind.h</header>
   </customwidget>
   <customwidget>
+   <class>BoundCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>corrscope/gui/data_bind.h</header>
+  </customwidget>
+  <customwidget>
    <class>ShortcutButton</class>
    <extends>QPushButton</extends>
    <header>corrscope/gui/__init__.h</header>
@@ -632,6 +697,18 @@
    <class>ChannelTableView</class>
    <extends>QTableView</extends>
    <header>corrscope/gui/__init__.h</header>
+  </customwidget>
+  <customwidget>
+   <class>BoundColorWidget</class>
+   <extends>QWidget</extends>
+   <header>corrscope/gui/data_bind.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>OptionalColorWidget</class>
+   <extends>QWidget</extends>
+   <header>corrscope/gui/data_bind.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

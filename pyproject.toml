@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "corrscope"
-version = "0.2.0-pre"
+version = "0.3.0-pre"
 description = ""
 authors = ["jimbo1qaz <jimbo1qaz@gmail.com>"]
 license = "BSD-2-Clause"
@@ -32,19 +32,11 @@ pytest-timeout = "^1.3"
 
 [tool.poetry.scripts]
 corr = 'corrscope.cli:main'
-run = 'scripts:run'
-dcover = 'scripts:dcover'
-rcover = 'scripts:rcover'
-hcover = 'scripts:hcover'
-cover = 'scripts:cover'
-diff = 'scripts:diff'
-report = 'scripts:report'
-html = 'scripts:html'
 
 [tool.black]
 line-length = 88
 py36 = true
-exclude = 'utils/scipy_'
+exclude = 'utils/scipy/'
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"

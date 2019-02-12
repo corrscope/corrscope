@@ -35,7 +35,12 @@ nplots = 2
 def test_default_colors(bg_str, fg_str, grid_str):
     """ Test the default background/foreground colors. """
     cfg = RendererConfig(
-        WIDTH, HEIGHT, bg_color=bg_str, init_line_color=fg_str, grid_color=grid_str
+        WIDTH,
+        HEIGHT,
+        bg_color=bg_str,
+        init_line_color=fg_str,
+        grid_color=grid_str,
+        line_width=2.0,
     )
     lcfg = LayoutConfig()
 
@@ -53,7 +58,12 @@ def test_default_colors(bg_str, fg_str, grid_str):
 def test_line_colors(bg_str, fg_str, grid_str):
     """ Test channel-specific line color overrides """
     cfg = RendererConfig(
-        WIDTH, HEIGHT, bg_color=bg_str, init_line_color="#888888", grid_color=grid_str
+        WIDTH,
+        HEIGHT,
+        bg_color=bg_str,
+        init_line_color="#888888",
+        grid_color=grid_str,
+        line_width=2.0,
     )
     lcfg = LayoutConfig()
 

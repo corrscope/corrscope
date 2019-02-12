@@ -1,17 +1,16 @@
 import warnings
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Type, Tuple, Optional, ClassVar
+from typing import TYPE_CHECKING, Type, Tuple, Optional, ClassVar, Callable, Union
 
-import numpy as np
-import corrscope.utils.scipy_signal as signal
-import corrscope.utils.scipy_windows as windows
 import attr
+import numpy as np
 
-from corrscope.config import kw_config, CorrError, Alias, CorrWarning
+import corrscope.utils.scipy.signal as signal
+import corrscope.utils.scipy.windows as windows
+from corrscope.config import KeywordAttrs, CorrError, Alias, CorrWarning
 from corrscope.util import find, obj_name
 from corrscope.utils.windows import midpad, leftpad
 from corrscope.wave import FLOAT
-
 
 if TYPE_CHECKING:
     from corrscope.wave import Wave
@@ -19,8 +18,7 @@ if TYPE_CHECKING:
 # Abstract classes
 
 
-@attr.dataclass
-class ITriggerConfig:
+class ITriggerConfig(KeywordAttrs):
     cls: ClassVar[Type["Trigger"]]
 
     # Optional trigger for postprocessing
@@ -30,7 +28,9 @@ class ITriggerConfig:
         return self.cls(wave, cfg=self, tsamp=tsamp, stride=stride, fps=fps)
 
 
-def register_trigger(config_t: Type[ITriggerConfig]):
+def register_trigger(
+    config_t: Type[ITriggerConfig]
+) -> "Callable[[Type[Trigger]], Type[Trigger]]":  # my god mypy-strict sucks
     """ @register_trigger(FooTriggerConfig)
     def FooTrigger(): ...
     """
@@ -71,7 +71,7 @@ class Trigger(ABC):
         else:
             self.post = None
 
-    def time2tsamp(self, time: float):
+    def time2tsamp(self, time: float) -> int:
         return round(time * self._wave.smp_s / self._stride)
 
     @abstractmethod
@@ -105,7 +105,6 @@ class PerFrameCache:
 # CorrelationTrigger
 
 
-@kw_config
 class CorrelationTriggerConfig(ITriggerConfig):
     # get_trigger
     edge_strength: float
@@ -125,7 +124,7 @@ class CorrelationTriggerConfig(ITriggerConfig):
     use_edge_trigger: bool
     # endregion
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         self._validate_param("lag_prevention", 0, 1)
         self._validate_param("responsiveness", 0, 1)
         # TODO trigger_falloff >= 0
@@ -141,7 +140,7 @@ class CorrelationTriggerConfig(ITriggerConfig):
             else:
                 self.post = ZeroCrossingTriggerConfig()
 
-    def _validate_param(self, key: str, begin, end):
+    def _validate_param(self, key: str, begin: float, end: float) -> None:
         value = getattr(self, key)
         if not begin <= value <= end:
             raise CorrError(
@@ -164,6 +163,7 @@ class CorrelationTrigger(Trigger):
         # (const) Multiplied by each frame of input audio.
         # Zeroes out all data older than 1 frame old.
         self._data_taper = self._calc_data_taper()
+        assert self._data_taper.dtype == FLOAT
 
         # (mutable) Correlated with data (for triggering).
         # Updated with tightly windowed old data at various pitches.
@@ -175,12 +175,13 @@ class CorrelationTrigger(Trigger):
         # Left half is -edge_strength, right half is +edge_strength.
         # ASCII art: --._|‾'--
         self._windowed_step = self._calc_step()
+        assert self._windowed_step.dtype == FLOAT
 
         # Will be overwritten on the first frame.
-        self._prev_period = None
-        self._prev_window = None
+        self._prev_period: Optional[int] = None
+        self._prev_window: Optional[np.ndarray] = None
 
-    def _calc_data_taper(self):
+    def _calc_data_taper(self) -> np.ndarray:
         """ Input data window. Zeroes out all data older than 1 frame old.
         See https://github.com/jimbo1qaz/corrscope/wiki/Correlation-Trigger
         """
@@ -213,12 +214,13 @@ class CorrelationTrigger(Trigger):
 
         # Generate left half-taper to prevent correlating with 1-frame-old data.
         # Right-pad=1 taper to [t-halfN, t-halfN+N]
-        data_taper = np.ones(N)  # TODO why not extract a right-pad function?
+        # TODO why not extract a right-pad function?
+        data_taper = np.ones(N, dtype=FLOAT)
         data_taper[:halfN] = np.minimum(data_taper[:halfN], taper)
 
         return data_taper
 
-    def _calc_step(self):
+    def _calc_step(self) -> np.ndarray:
         """ Step function used for approximate edge triggering. """
 
         # Increasing buffer_falloff (width of history buffer)
@@ -279,7 +281,7 @@ class CorrelationTrigger(Trigger):
         - correlate(prev_buffer, data)
         - trigger = offset - peak_offset
         """
-        corr = signal.correlate(data, prev_buffer)
+        corr = signal.correlate(data, prev_buffer)  # returns double, not single/FLOAT
         assert len(corr) == 2 * N - 1
 
         # Find optimal offset (within trigger_diameter, default=±N/4)
@@ -307,7 +309,7 @@ class CorrelationTrigger(Trigger):
 
         return trigger
 
-    def _is_window_invalid(self, period):
+    def _is_window_invalid(self, period: int) -> bool:
         """ Returns True if pitch has changed more than `recalc_semitones`. """
 
         prev = self._prev_period
@@ -357,7 +359,7 @@ class CorrelationTrigger(Trigger):
 # get_trigger()
 
 
-def calc_step(nsamp: int, peak: float, stdev: float):
+def calc_step(nsamp: int, peak: float, stdev: float) -> np.ndarray:
     """ Step function used for approximate edge triggering.
     TODO deduplicate CorrelationTrigger._calc_step() """
     N = nsamp
@@ -390,13 +392,15 @@ def get_period(data: np.ndarray) -> int:
     return int(peakX)
 
 
-def cosine_flat(n: int, diameter: int, falloff: int):
+def cosine_flat(n: int, diameter: int, falloff: int) -> np.ndarray:
     cosine = windows.hann(falloff * 2)
+    # assert cosine.dtype == FLOAT
     left, right = cosine[:falloff], cosine[falloff:]
 
-    window = np.concatenate([left, np.ones(diameter), right])
+    window = np.concatenate([left, np.ones(diameter, dtype=FLOAT), right])
 
     padded = midpad(window, n)
+    # assert padded.dtype == FLOAT
     return padded
 
 
@@ -413,7 +417,7 @@ def normalize_buffer(data: np.ndarray) -> None:
     data /= max(peak, MIN_AMPLITUDE)
 
 
-def lerp(x: np.ndarray, y: np.ndarray, a: float):
+def lerp(x: np.ndarray, y: np.ndarray, a: float) -> Union[np.ndarray, float]:
     return x * (1 - a) + y * a
 
 
@@ -443,8 +447,7 @@ class PostTrigger(Trigger, ABC):
 # Local edge-finding trigger
 
 
-@kw_config(always_dump="strength")
-class LocalPostTriggerConfig(ITriggerConfig):
+class LocalPostTriggerConfig(ITriggerConfig, always_dump="strength"):
     strength: float  # Coefficient
 
 
@@ -457,7 +460,8 @@ class LocalPostTrigger(PostTrigger):
         self._buffer_nsamp = self._tsamp
 
         # Precompute data window... TODO Hann, or extract fancy dynamic-width from CorrelationTrigger?
-        self._data_window = windows.hann(self._buffer_nsamp).astype(FLOAT)
+        self._data_window = windows.hann(self._buffer_nsamp)
+        assert self._data_window.dtype == FLOAT
 
         # Precompute edge correlation buffer
         self._windowed_step = calc_step(self._tsamp, self.cfg.strength, 1 / 3)
@@ -525,7 +529,6 @@ def seq_along(a: np.ndarray):
 # ZeroCrossingTrigger
 
 
-@kw_config
 class ZeroCrossingTriggerConfig(ITriggerConfig):
     pass
 
@@ -535,7 +538,7 @@ class ZeroCrossingTrigger(PostTrigger):
     # ZeroCrossingTrigger is only used as a postprocessing trigger.
     # stride is only passed 1, for improved precision.
 
-    def get_trigger(self, index: int, cache: "PerFrameCache"):
+    def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
         # 'cache' is unused.
         tsamp = self._tsamp
 
@@ -580,7 +583,6 @@ class ZeroCrossingTrigger(PostTrigger):
 # NullTrigger
 
 
-@kw_config
 class NullTriggerConfig(ITriggerConfig):
     pass
 

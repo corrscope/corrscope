@@ -1,17 +1,26 @@
+import attr
 import pytest
 from ruamel.yaml import yaml_object
 
-from corrscope.config import register_config, yaml, Alias, Ignored, kw_config, CorrError
+from corrscope.config import (
+    yaml,
+    DumpableAttrs,
+    KeywordAttrs,
+    Alias,
+    Ignored,
+    CorrError,
+    CorrWarning,
+    with_units,
+    get_units,
+)
 
 # YAML Idiosyncrasies: https://docs.saltstack.com/en/develop/topics/troubleshooting/yaml_idiosyncrasies.html
 
 # Load/dump infrastructure testing
-import attr
 
 
-def test_register_config():
-    @register_config
-    class Foo:
+def test_dumpable_attrs():
+    class Foo(DumpableAttrs):
         foo: int
         bar: int
 
@@ -27,8 +36,7 @@ bar: 2
 
 
 def test_kw_config():
-    @kw_config
-    class Foo:
+    class Foo(KeywordAttrs):
         foo: int = 1
         bar: int
 
@@ -46,12 +54,31 @@ def test_yaml_object():
     assert s == "!Bar {}\n"
 
 
+# Test per-field unit suffixes (used by GUI)
+
+
+def test_unit_suffix():
+    class Foo(DumpableAttrs):
+        xs: int = with_units("xs")
+        ys: int = with_units("ys", default=2)
+        no_unit: int = 3
+
+    # Assert class constructor works.
+    foo = Foo(1, 2, 3)
+    foo_default = Foo(1)
+
+    # Assert units work.
+    foo_fields = attr.fields(Foo)
+    assert get_units(foo_fields.xs) == " xs"
+    assert get_units(foo_fields.ys) == " ys"
+    assert get_units(foo_fields.no_unit) == ""
+
+
 # Dataclass dump testing
 
 
 def test_dump_defaults():
-    @register_config
-    class Config:
+    class Config(DumpableAttrs):
         a: str = "a"
         b: str = "b"
 
@@ -64,8 +91,7 @@ a: alpha
 """
     )
 
-    @register_config(always_dump="a b")
-    class Config:
+    class Config(DumpableAttrs, always_dump="a b"):
         a: str = "a"
         b: str = "b"
         c: str = "c"
@@ -80,8 +106,7 @@ b: b
 """
     )
 
-    @register_config(always_dump="*")
-    class Config:
+    class Config(DumpableAttrs, always_dump="*"):
         a: str = "a"
         b: str = "b"
 
@@ -102,8 +127,7 @@ def test_dump_default_factory():
 
     Based on `attrs.Factory`. """
 
-    @register_config
-    class Config:
+    class Config(DumpableAttrs):
         # Equivalent to attr.ib(factory=str)
         # See https://www.attrs.org/en/stable/types.html
         a: str = attr.Factory(str)
@@ -118,8 +142,7 @@ a: alpha
 """
     )
 
-    @register_config(always_dump="a b")
-    class Config:
+    class Config(DumpableAttrs, always_dump="a b"):
         a: str = attr.Factory(str)
         b: str = attr.Factory(str)
         c: str = attr.Factory(str)
@@ -134,8 +157,7 @@ b: ''
 """
     )
 
-    @register_config(always_dump="*")
-    class Config:
+    class Config(DumpableAttrs, always_dump="*"):
         a: str = attr.Factory(str)
         b: str = attr.Factory(str)
 
@@ -158,8 +180,7 @@ def test_dump_load_aliases():
     Ensure loading `{x=1, xx=1}` raises an error.
     Does not check constructor `Config(xx=1)`."""
 
-    @register_config(kw_only=False)
-    class Config:
+    class Config(DumpableAttrs, kw_only=False):
         x: int
         xx = Alias("x")
 
@@ -198,8 +219,7 @@ def test_dump_load_ignored():
     Does not check constructor `Config(xx=1)`.
     """
 
-    @register_config
-    class Config:
+    class Config(DumpableAttrs):
         xx = Ignored
 
     # Test dumping
@@ -223,10 +243,9 @@ xx: 1
 
 
 def test_load_argument_validation():
-    """ Ensure that loading config via YAML catches missing and invalid parameters. """
+    """ Ensure that loading config via YAML catches missing parameters. """
 
-    @register_config
-    class Config:
+    class Config(DumpableAttrs):
         a: int
 
     yaml.load(
@@ -239,22 +258,27 @@ def test_load_argument_validation():
     with pytest.raises(TypeError):
         yaml.load("!Config {}")
 
-    with pytest.raises(TypeError):
-        yaml.load(
-            """\
-!Config
-  a: 1
-  b: 1
+
+def test_ignore_unrecognized_fields():
+    """Ensure unrecognized fields yield warning, not exception."""
+
+    class Foo(DumpableAttrs):
+        foo: int
+
+    s = """\
+!Foo
+foo: 1
+bar: 2
 """
-        )
+    with pytest.warns(CorrWarning):
+        assert yaml.load(s) == Foo(1)
 
 
 def test_load_post_init():
     """ yaml.load() does not natively call __init__.
-    So @register_config modifies __setstate__ to call __attrs_post_init__. """
+    So DumpableAttrs modifies __setstate__ to call __attrs_post_init__. """
 
-    @register_config
-    class Foo:
+    class Foo(DumpableAttrs):
         foo: int
 
         def __attrs_post_init__(self):
@@ -267,13 +291,32 @@ foo: 0
     assert yaml.load(s) == Foo(99)
 
 
+# Test always_dump validation.
+
+
+def test_always_dump_validate():
+    # Validator not implemented.
+    # with pytest.raises(AssertionError):
+    #     class Foo(DumpableAttrs, always_dump="foo foo"):
+    #         foo: int
+
+    with pytest.raises(AssertionError):
+
+        class Foo(DumpableAttrs, always_dump="* foo"):
+            foo: int
+
+    with pytest.raises(AssertionError):
+
+        class Foo(DumpableAttrs, always_dump="bar"):
+            foo: int
+
+
 # ruamel.yaml has a unstable and shape-shifting API.
 # Test which version numbers have properties we want.
 
 
 def test_dump_dataclass_order():
-    @register_config(always_dump="*")
-    class Config:
+    class Config(DumpableAttrs, always_dump="*"):
         a: int = 1
         b: int = 1
         c: int = 1
