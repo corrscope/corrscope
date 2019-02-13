@@ -174,6 +174,7 @@ class ParallelWorker(Worker[Message]):
                 try:
                     reply = child_job.foreach(msg)
                 except BaseException:
+                    # FIXME tell parent which error occurred, then exit silently.
                     parent.send(Error.Error)
                     raise
                 else:
