@@ -43,12 +43,12 @@ import numpy as np
 __all__ = ["Message", "ReplyIsAborted", "Worker", "ParallelWorker", "SerialWorker"]
 
 
-Message = TypeVar("Message")
-MessageOrAbort = Union[Message, BaseException, None]
-
-
 class Error(Enum):
     Error = auto()
+
+
+Message = TypeVar("Message")
+MessageOrAbort = Union[Message, Error, None]
 
 
 ReplyIsAborted = bool  # Is aborted?
@@ -149,7 +149,7 @@ class ParallelWorker(Worker[Message]):
 
         # Send parent message.
         self._parent_conn.send(msg)
-        if msg is None or isinstance(msg, BaseException):
+        if msg is None or isinstance(msg, Error):
             self._child_dead = True
 
         self._not_first = True
@@ -166,10 +166,8 @@ class ParallelWorker(Worker[Message]):
                 if msg is None:
                     break  # See module docstring
 
-                elif isinstance(msg, BaseException):
-                    # Raise same exception within child.
-                    # Call child_job.__exit__() to cleanup outputs.
-                    raise msg
+                elif isinstance(msg, Error):
+                    raise SystemExit
 
                 # Reply to parent (and optionally terminate).
                 try:
@@ -185,7 +183,7 @@ class ParallelWorker(Worker[Message]):
     def __exit__(self, exc_type, exc_val: Optional[BaseException], exc_tb):
         if not self._child_dead:
             if exc_val:
-                self.parent_send(exc_val)
+                self.parent_send(Error.Error)
             else:
                 self.parent_send(None)
 
