@@ -19,15 +19,6 @@ class Ref(Generic[Attrs]):
         setattr(self.obj, self.key, value)
 
 
-def _ref(cls: Type[Attrs], key: str) -> Callable[[Attrs], Ref[Attrs]]:
-    assert cls
-
-    def _attribute(obj: Attrs) -> Ref[Attrs]:
-        return Ref(obj, key)
-
-    return _attribute
-
-
 class GlobalPrefs(DumpableAttrs, always_dump="*"):
     # Most recent YAML or audio file opened
     file_dir: str = ""
