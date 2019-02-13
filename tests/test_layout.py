@@ -1,9 +1,8 @@
-import numpy as np
 import pytest
 
-from corrscope.layout import LayoutConfig, RendererLayout, EdgeFinder
+from corrscope.layout import LayoutConfig, RendererLayout, RegionSpec
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
-from tests.test_renderer import WIDTH, HEIGHT
+from tests.test_renderer import WIDTH, HEIGHT, RENDER_Y_ZEROS
 
 
 def test_layout_config():
@@ -23,22 +22,24 @@ def test_layout_config():
 
 
 @pytest.mark.parametrize("lcfg", [LayoutConfig(ncols=2), LayoutConfig(nrows=8)])
-@pytest.mark.parametrize("region_type", [str, tuple, list])
-def test_hlayout(lcfg, region_type):
+def test_hlayout(lcfg):
     nplots = 15
-    layout = RendererLayout(lcfg, nplots)
+    layout = RendererLayout(lcfg, nplots, [1] * nplots)
 
-    assert layout.ncols == 2
-    assert layout.nrows == 8
+    assert layout.wave_ncol == 2
+    assert layout.wave_nrow == 8
 
-    regions = layout.arrange(lambda row, col: region_type((row, col)))
+    regions = layout.arrange(lambda arg: arg)
     assert len(regions) == nplots
 
-    assert regions[0] == region_type((0, 0))
-    assert regions[1] == region_type((0, 1))
-    assert regions[2] == region_type((1, 0))
+    def foo(row_col):
+        return RegionSpec(layout.wave_nrow, layout.wave_ncol, *row_col)
+
+    assert regions[0] == [foo((0, 0))]
+    assert regions[1] == [foo((0, 1))]
+    assert regions[2] == [foo((1, 0))]
     m = nplots - 1
-    assert regions[m] == region_type((m // 2, m % 2))
+    assert regions[m] == [foo((m // 2, m % 2))]
 
 
 @pytest.mark.parametrize(
@@ -48,18 +49,24 @@ def test_hlayout(lcfg, region_type):
 @pytest.mark.parametrize("region_type", [str, tuple, list])
 def test_vlayout(lcfg, region_type):
     nplots = 7
-    layout = RendererLayout(lcfg, nplots)
+    layout = RendererLayout(lcfg, nplots, [1] * nplots)
 
-    assert layout.ncols == 3
-    assert layout.nrows == 3
+    assert layout.wave_ncol == 3
+    assert layout.wave_nrow == 3
 
-    regions = layout.arrange(lambda row, col: region_type((row, col)))
+    regions = layout.arrange(lambda arg: arg)
     assert len(regions) == nplots
 
-    assert regions[0] == region_type((0, 0))
-    assert regions[2] == region_type((2, 0))
-    assert regions[3] == region_type((0, 1))
-    assert regions[6] == region_type((0, 2))
+    def foo(row_col):
+        return RegionSpec(layout.wave_nrow, layout.wave_ncol, *row_col)
+
+    assert regions[0] == [foo((0, 0))]
+    assert regions[2] == [foo((2, 0))]
+    assert regions[3] == [foo((0, 1))]
+    assert regions[6] == [foo((0, 2))]
+
+
+# FIXME test stereo layouts (h/v)
 
 
 def test_renderer_layout():
@@ -69,21 +76,9 @@ def test_renderer_layout():
     nplots = 15
 
     r = MatplotlibRenderer(cfg, lcfg, nplots, None)
+    r.render_frame([RENDER_Y_ZEROS] * nplots)
+    layout = r.layout
 
     # 2 columns, 8 rows
-    assert r.layout.ncols == 2
-    assert r.layout.nrows == 8
-
-
-# Test EdgeFinder
-
-
-def test_edge_finder():
-    regions2d = np.arange(24).reshape(3, 8)
-    edges = EdgeFinder(regions2d)
-
-    # Check borders
-    np.testing.assert_equal(edges.lefts, regions2d[:, 0])
-    np.testing.assert_equal(edges.rights, regions2d[:, -1])
-    np.testing.assert_equal(edges.tops, regions2d[0, :])
-    np.testing.assert_equal(edges.bottoms, regions2d[-1, :])
+    assert layout.wave_ncol == 2
+    assert layout.wave_nrow == 8

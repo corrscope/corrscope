@@ -78,6 +78,7 @@ def test_stereo_merge():
 AllFlattens = Flatten.__members__.values()
 
 
+# FIXME test return_channels=True
 @pytest.mark.parametrize("flatten", AllFlattens)
 @pytest.mark.parametrize(
     "path,nchan,peaks",
@@ -97,10 +98,10 @@ def test_stereo_flatten_modes(
 
     if flatten not in Flatten.modes:
         with pytest.raises(CorrError):
-            wave.with_flatten(flatten)
+            wave.with_flatten(flatten, False)
         return
     else:
-        wave = wave.with_flatten(flatten)
+        wave = wave.with_flatten(flatten, False)
 
     nsamp = wave.nsamp
     data = wave[:]

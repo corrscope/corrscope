@@ -40,7 +40,7 @@ class Wave:
     __slots__ = """
     wave_path
     amplification
-    smp_s data _flatten is_mono
+    smp_s data return_channels _flatten is_mono
     nsamp dtype
     center max_val
     """.split()
@@ -91,6 +91,7 @@ class Wave:
         assert self.data.ndim in [1, 2]
         self.is_mono = self.data.ndim == 1
         self.flatten = flatten
+        self.return_channels = False
 
         # Cast self.data to stereo (nsamp, nchan)
         if self.is_mono:
@@ -130,9 +131,10 @@ class Wave:
         else:
             raise CorrError(f"unexpected wavfile dtype {dtype}")
 
-    def with_flatten(self, flatten: Flatten) -> "Wave":
+    def with_flatten(self, flatten: Flatten, return_channels: bool) -> "Wave":
         new = copy.copy(self)
         new.flatten = flatten
+        new.return_channels = return_channels
         return new
 
     def __getitem__(self, index: Union[int, slice]) -> np.ndarray:
@@ -154,6 +156,9 @@ class Wave:
 
         data -= self.center
         data *= self.amplification / self.max_val
+
+        if self.return_channels and len(data.shape) == 1:
+            data = data.reshape(-1, 1)
         return data
 
     def _get(self, begin: int, end: int, subsampling: int) -> np.ndarray:

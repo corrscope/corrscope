@@ -12,7 +12,7 @@ from corrscope.renderer import RendererConfig, MatplotlibRenderer
 WIDTH = 640
 HEIGHT = 360
 
-ALL_ZEROS = np.array([0, 0])
+RENDER_Y_ZEROS = np.array([0, 0]).reshape(-1, 1)
 
 all_colors = pytest.mark.parametrize(
     "bg_str,fg_str,grid_str",
@@ -74,7 +74,7 @@ def test_line_colors(bg_str, fg_str, grid_str):
 
 
 def verify(r: MatplotlibRenderer, bg_str, fg_str, grid_str: Optional[str]):
-    r.render_frame([ALL_ZEROS] * nplots)
+    r.render_frame([RENDER_Y_ZEROS] * nplots)
     frame_colors: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
         (-1, RGB_DEPTH)
     )
