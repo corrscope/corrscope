@@ -96,11 +96,12 @@ class Worker(Generic[Message]):
 
 # noinspection PyAttributeOutsideInit
 class ParallelWorker(Worker[Message]):
-    _parent_conn: Connection
+    _child: Connection
 
     def __init__(self, child_job: Job[Message], profile_name: Optional[str]) -> None:
         super().__init__(child_job, profile_name)
-        self._parent_conn, child_conn = Pipe(duplex=True)
+        parent_conn, child_conn = Pipe(duplex=True)
+        self._child = parent_conn
 
         command = lambda: self._child_thread_func(child_job, child_conn)
         if profile_name:
@@ -135,7 +136,7 @@ class ParallelWorker(Worker[Message]):
 
         # Receive reply from child.
         if self._not_first:
-            is_aborted_or_error = self._parent_conn.recv()  # type: ReplyOrError
+            is_aborted_or_error = self._child.recv()  # type: ReplyOrError
             if is_aborted_or_error is not False:
                 self._child_dead = True
 
@@ -148,7 +149,7 @@ class ParallelWorker(Worker[Message]):
                 pass
 
         # Send parent message.
-        self._parent_conn.send(msg)
+        self._child.send(msg)
         if msg is None or isinstance(msg, Error):
             self._child_dead = True
 
@@ -157,12 +158,12 @@ class ParallelWorker(Worker[Message]):
         return False
 
     @staticmethod
-    def _child_thread_func(child_job: Job, child_conn: Connection):
+    def _child_thread_func(child_job: Job, parent: Connection):
         """ Must be called from thread. """
         with child_job:
             while True:
                 # Receive parent message.
-                msg: MessageOrAbort = child_conn.recv()
+                msg: MessageOrAbort = parent.recv()
                 if msg is None:
                     break  # See module docstring
 
@@ -173,10 +174,10 @@ class ParallelWorker(Worker[Message]):
                 try:
                     reply = child_job.foreach(msg)
                 except BaseException:
-                    child_conn.send(Error.Error)
+                    parent.send(Error.Error)
                     raise
                 else:
-                    child_conn.send(reply)
+                    parent.send(reply)
                     if reply:
                         break
 
@@ -189,7 +190,7 @@ class ParallelWorker(Worker[Message]):
 
         # parent_send(BaseException or None) sets _child_dead = True.
 
-        self._parent_conn.close()
+        self._child.close()
         self._child_thread.join(1)
         if self._child_thread.exitcode is None:
             self._child_thread.terminate()
