@@ -131,6 +131,9 @@ def ffmpeg_input_audio(audio_path: str) -> List[str]:
     return ["-i", audio_path]
 
 
+TIMEOUT_SECONDS = 1
+
+
 class PipeOutput(Output):
     def open(self, *pipeline: subprocess.Popen) -> None:
         """ Called by __init__ with a Popen pipeline to ffmpeg/ffplay. """
@@ -196,7 +199,7 @@ class PipeOutput(Output):
             popen.terminate()
             # https://stackoverflow.com/a/49038779/2683842
             try:
-                popen.wait(1)  # timeout=seconds
+                popen.wait(TIMEOUT_SECONDS)  # timeout=seconds
             except subprocess.TimeoutExpired as e:
                 # gee thanks Python, https://stackoverflow.com/questions/45292479/
                 exc = e

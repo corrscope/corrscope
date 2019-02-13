@@ -32,13 +32,13 @@ frame 1:
 frame:
 - parent reads and quits
 """
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from enum import Enum, auto
 from multiprocessing import Process, Pipe
 from multiprocessing.connection import Connection
 from typing import *
 
-import numpy as np
+from corrscope import outputs
 
 __all__ = ["Message", "ReplyIsAborted", "Worker", "ParallelWorker", "SerialWorker"]
 
@@ -191,10 +191,17 @@ class ParallelWorker(Worker[Message]):
         # parent_send(BaseException or None) sets _child_dead = True.
 
         self._child.close()
-        self._child_thread.join(1)
+
+        # If ffmpeg is killed after 1 second, the render thread should exit in 2.
+        thread_timeout = 2 * outputs.TIMEOUT_SECONDS
+
+        self._child_thread.join(thread_timeout)
         if self._child_thread.exitcode is None:
             self._child_thread.terminate()
-            raise ValueError("renderer thread failed to terminate after 1 second")
+            raise ValueError(
+                f"renderer process failed to terminate after {thread_timeout} seconds\n"
+                f"ffmpeg should be killed within {outputs.TIMEOUT_SECONDS}"
+            )
 
 
 class SerialWorker(Worker[Message]):
