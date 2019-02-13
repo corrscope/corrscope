@@ -14,7 +14,7 @@ from corrscope import parallelism
 from corrscope.channel import Channel, ChannelConfig
 from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
-from corrscope.parallelism import ReplyIsAborted, Worker
+from corrscope.parallelism import ReplyIsAborted, Worker, Error
 from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.triggers import (
     ITriggerConfig,
@@ -292,10 +292,7 @@ class CorrScope:
                     # Used for FPS calculation
                     end_frame = frame
 
-                    # FIXME send Abort/Error/exception, not None, to child.
-                    # child:
-                    # for output in self.outputs:
-                    #     output.terminate()
+                    render_worker.parent_send(Error.Error)
                     break
 
                 time_seconds = frame / fps
