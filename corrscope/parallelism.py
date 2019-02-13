@@ -86,9 +86,6 @@ class Worker(Generic[Message]):
     def __enter__(self) -> "Worker[Message]":
         return self
 
-    # FIXME is caller or __exit__ responsible for parent_send(None)?
-    # Especially considering parent_send(None) is a no-op for SerialWorker?
-    # This is because None is not passed to Job.
     @abstractmethod
     def parent_send(self, msg: MessageOrAbort) -> ReplyIsAborted:
         pass
@@ -152,6 +149,9 @@ class ParallelWorker(Worker[Message]):
 
         # Send parent message.
         self._parent_conn.send(msg)
+        if msg is None or isinstance(msg, BaseException):
+            self._child_dead = True
+
         self._not_first = True
 
         return False
@@ -189,7 +189,8 @@ class ParallelWorker(Worker[Message]):
             else:
                 self.parent_send(None)
 
-        self._child_dead = True
+        # parent_send(BaseException or None) sets _child_dead = True.
+
         self._parent_conn.close()
         self._child_thread.join(1)
         if self._child_thread.exitcode is None:
