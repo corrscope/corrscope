@@ -415,3 +415,16 @@ def test_output_parallel():
     arg = Arguments(".", [NULL_FFMPEG_OUTPUT], parallelism.ParallelWorker)
     corr = CorrScope(cfg, arg)
     corr.play()
+
+
+"""
+FIXME add tests... I have no confidence that parallelism works properly:
+
+- If parent raises exception, should send Error to child.
+    - if child gets Error, it should terminate.
+- If child raises exception, should send exc OR traceback to parent.
+    - if parent receives exception/traceback, should raise it (show to cli/gui).
+
+This needs 4 separate unit tests = (2 parent and 2 child) tests.
+- since pytest can't mock objects in the child process.
+"""
