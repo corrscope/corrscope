@@ -292,9 +292,10 @@ class CorrScope:
                     # Used for FPS calculation
                     end_frame = frame
 
-                    # FIXME add test for arg.is_aborted callbacks
-                    for output in self.outputs:
-                        output.terminate()
+                    # FIXME send Abort/Error/exception, not None, to child.
+                    # child:
+                    # for output in self.outputs:
+                    #     output.terminate()
                     break
 
                 time_seconds = frame / fps

@@ -40,18 +40,11 @@ from typing import *
 
 import numpy as np
 
-__all__ = [
-    "Message",
-    "MaybeMessage",
-    "ReplyIsAborted",
-    "Worker",
-    "ParallelWorker",
-    "SerialWorker",
-]
+__all__ = ["Message", "ReplyIsAborted", "Worker", "ParallelWorker", "SerialWorker"]
 
 
 Message = TypeVar("Message")
-MaybeMessage = Optional[Message]
+MessageOrAbort = Union[Message, BaseException, None]
 
 
 class Error(Enum):
@@ -97,7 +90,7 @@ class Worker(Generic[Message]):
     # Especially considering parent_send(None) is a no-op for SerialWorker?
     # This is because None is not passed to Job.
     @abstractmethod
-    def parent_send(self, msg: MaybeMessage) -> ReplyIsAborted:
+    def parent_send(self, msg: MessageOrAbort) -> ReplyIsAborted:
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -133,7 +126,7 @@ class ParallelWorker(Worker[Message]):
         self._child_dead = False
         return self
 
-    def parent_send(self, msg: MaybeMessage) -> ReplyIsAborted:
+    def parent_send(self, msg: MessageOrAbort) -> ReplyIsAborted:
         """ Checks for exceptions, then sends a message to the child process. """
         try:
             if self._child_dead:
@@ -167,18 +160,21 @@ class ParallelWorker(Worker[Message]):
     def _child_thread_func(child_job: Job, child_conn: Connection):
         """ Must be called from thread. """
         with child_job:
-            msg: Message
-
             while True:
                 # Receive parent message.
-                msg = child_conn.recv()
+                msg: MessageOrAbort = child_conn.recv()
                 if msg is None:
                     break  # See module docstring
+
+                elif isinstance(msg, BaseException):
+                    # Raise same exception within child.
+                    # Call child_job.__exit__() to cleanup outputs.
+                    raise msg
 
                 # Reply to parent (and optionally terminate).
                 try:
                     reply = child_job.foreach(msg)
-                except BaseException as e:
+                except BaseException:
                     child_conn.send(Error.Error)
                     raise
                 else:
@@ -186,9 +182,12 @@ class ParallelWorker(Worker[Message]):
                     if reply:
                         break
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val: Optional[BaseException], exc_tb):
         if not self._child_dead:
-            self.parent_send(None)
+            if exc_val:
+                self.parent_send(exc_val)
+            else:
+                self.parent_send(None)
 
         self._child_dead = True
         self._parent_conn.close()
@@ -207,7 +206,7 @@ class SerialWorker(Worker[Message]):
         self.child_job.__enter__()
         return self
 
-    def parent_send(self, msg: MaybeMessage) -> ReplyIsAborted:
+    def parent_send(self, msg: MessageOrAbort) -> ReplyIsAborted:
         if msg is None:
             return False
         return self.child_job.foreach(msg)
