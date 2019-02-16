@@ -10,14 +10,6 @@ from corrscope.config import DumpableAttrs, CorrError, DumpEnumAsStr
 from corrscope.util import ceildiv
 
 
-def within(valids: Iterable[str]) -> Callable:
-    def _within(instance, key, orientation) -> None:
-        if orientation not in valids:
-            raise CorrError(f"Invalid {key} {repr(orientation)} not in {valids}")
-
-    return _within
-
-
 class Orientation(str, DumpEnumAsStr):
     h = "h"
     v = "v"
@@ -132,7 +124,7 @@ class RendererLayout:
     def _calc_layout(self) -> None:
         """
         Inputs: self.cfg, self.stereo_nchan
-        :return: (nrows, ncols)
+        Outputs: self.wave_nrow, ncol
         """
         cfg = self.cfg
 

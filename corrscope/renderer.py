@@ -16,7 +16,6 @@ from corrscope.layout import (
     Edges,
 )
 from corrscope.outputs import RGB_DEPTH, ByteBuffer
-from corrscope.triggers import lerp
 from corrscope.util import coalesce
 
 """
@@ -68,12 +67,11 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     init_line_color: str = default_color()
 
     grid_color: Optional[str] = None
+    stereo_grid_opacity: float = 0.5
 
     midline_color: Optional[str] = None
     v_midline: bool = False
     h_midline: bool = False
-
-    stereo_grid_opacity: float = 0.5
 
     # Performance (skipped when recording to video)
     res_divisor: float = 1.0
