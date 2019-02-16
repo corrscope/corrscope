@@ -212,8 +212,14 @@ class RendererLayout:
                 if region is None or dchan.any():
                     screen_edges = Edges.at(*chans_per_screen, *chan_screen_pos)
                     wave_edges = Edges.at(*chans_per_wave, *chan_wave_pos)
+
+                    # Removing .copy() causes bugs if region_factory() holds
+                    # mutable references.
                     chan_spec = RegionSpec(
-                        chans_per_screen, chan_screen_pos, screen_edges, wave_edges
+                        chans_per_screen.copy(),
+                        chan_screen_pos.copy(),
+                        screen_edges,
+                        wave_edges,
                     )
                     region = region_factory(chan_spec)
                 region_chan.append(region)
