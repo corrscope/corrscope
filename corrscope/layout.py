@@ -174,30 +174,30 @@ class RendererLayout:
             # Chan = within Wave, generate a plot.
             # All arrays are [y, x] == [row, col].
 
-            # Waves per screen
-            waves_screen = arr(self.wave_nrow, self.wave_ncol)
-            waves_screen_pos = arr(wave_row, wave_col)
+            # Wave dim/pos (within screen)
+            waves_per_screen = arr(self.wave_nrow, self.wave_ncol)
+            wave_screen_pos = arr(wave_row, wave_col)
             del wave_row, wave_col
 
-            # Chans per wave
-            chans_wave = arr(1, 1)  # Mutated based on orientation
-            chans_wave_pos = arr(0, 0)  # Mutated in for-chan loop.
+            # Channel dim/pos (within wave)
+            chans_per_wave = arr(1, 1)  # Mutated based on orientation
+            chan_wave_pos = arr(0, 0)  # Mutated in for-chan loop.
 
             # Distance between chans
             dchan = arr(0, 0)  # Mutated based on orientation
 
             if self.stereo_orientation == V:
-                chans_wave[0] = stereo_nchan
+                chans_per_wave[0] = stereo_nchan
                 dchan[0] = 1
             elif self.stereo_orientation == H:
-                chans_wave[1] = stereo_nchan
+                chans_per_wave[1] = stereo_nchan
                 dchan[1] = 1
             else:
                 assert self.stereo_orientation == OVERLAY
 
-            # Chans per screen
-            chans_screen = chans_wave * waves_screen
-            chans_screen_pos = chans_wave * waves_screen_pos
+            # Channel dim/pos (within screen)
+            chans_per_screen = chans_per_wave * waves_per_screen
+            chan_screen_pos = chans_per_wave * wave_screen_pos
 
             # Generate plots for each channel
             region_chan: List[Region] = []
@@ -205,22 +205,22 @@ class RendererLayout:
             region = None
 
             for chan in range(stereo_nchan):
-                assert (chans_wave_pos < chans_wave).all()
-                assert (chans_screen_pos < chans_screen).all()
+                assert (chan_wave_pos < chans_per_wave).all()
+                assert (chan_screen_pos < chans_per_screen).all()
 
                 # Generate plot (channel position in screen)
                 if region is None or dchan.any():
-                    screen_edges = Edges.at(*chans_screen, *chans_screen_pos)
-                    wave_edges = Edges.at(*chans_wave, *chans_wave_pos)
+                    screen_edges = Edges.at(*chans_per_screen, *chan_screen_pos)
+                    wave_edges = Edges.at(*chans_per_wave, *chan_wave_pos)
                     chan_spec = RegionSpec(
-                        chans_screen, chans_screen_pos, screen_edges, wave_edges
+                        chans_per_screen, chan_screen_pos, screen_edges, wave_edges
                     )
                     region = region_factory(chan_spec)
                 region_chan.append(region)
 
                 # Move to next channel position
-                chans_screen_pos += dchan
-                chans_wave_pos += dchan
+                chan_screen_pos += dchan
+                chan_wave_pos += dchan
 
         assert len(region_wave_chan) == self.nwaves
         return region_wave_chan
