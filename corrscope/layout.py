@@ -58,6 +58,15 @@ class Edges(enum.Flag):
 
     @staticmethod
     def at(nrows: int, ncols: int, row: int, col: int):
+        if not nrows > 0:
+            raise ValueError(f"invalid nrows={nrows}, must be positive")
+        if not ncols > 0:
+            raise ValueError(f"invalid ncols={ncols}, must be positive")
+        if not 0 <= row < nrows:
+            raise ValueError(f"invalid row={row} not in [0 .. nrows={nrows})")
+        if not 0 <= col < ncols:
+            raise ValueError(f"invalid col={col} not in [0 .. ncols={ncols})")
+
         ret = Edges.NONE
         if row == 0:
             ret |= Edges.Top

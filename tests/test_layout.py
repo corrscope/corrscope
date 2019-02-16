@@ -1,9 +1,11 @@
 from typing import List
 
+import hypothesis.strategies as hs
 import numpy as np
 import pytest
+from hypothesis import given, settings
 
-from corrscope.layout import LayoutConfig, RendererLayout, RegionSpec
+from corrscope.layout import LayoutConfig, RendererLayout, RegionSpec, Edges
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
 from tests.test_renderer import WIDTH, HEIGHT, RENDER_Y_ZEROS
 
@@ -22,6 +24,26 @@ def test_layout_config():
     assert default.ncols == 1  # Should default to single-column layout
     assert default.nrows is None
     assert default.orientation == "h"
+
+
+# Small range to ensure many collisions.
+# max_value = 3 to allow for edge-free space in center.
+integers = hs.integers(-1, 3)
+
+
+@given(nrows=integers, ncols=integers, row=integers, col=integers)
+@settings(max_examples=500)
+def test_edges(nrows: int, ncols: int, row: int, col: int):
+    if not (nrows > 0 and ncols > 0 and 0 <= row < nrows and 0 <= col < ncols):
+        with pytest.raises(ValueError):
+            edges = Edges.at(nrows, ncols, row, col)
+        return
+
+    edges = Edges.at(nrows, ncols, row, col)
+    assert bool(edges & Edges.Left) == (col == 0)
+    assert bool(edges & Edges.Right) == (col == ncols - 1)
+    assert bool(edges & Edges.Top) == (row == 0)
+    assert bool(edges & Edges.Bottom) == (row == nrows - 1)
 
 
 @pytest.mark.parametrize("lcfg", [LayoutConfig(ncols=2), LayoutConfig(nrows=8)])
