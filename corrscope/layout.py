@@ -114,11 +114,10 @@ RegionFactory = Callable[[RegionSpec], Region]  # f(row, column) -> Region
 
 
 class RendererLayout:
-    def __init__(self, cfg: LayoutConfig, nwaves: int, wave_nchans: List[int]):
+    def __init__(self, cfg: LayoutConfig, wave_nchans: List[int]):
         self.cfg = cfg
-        self.nwaves = nwaves
+        self.nwaves = len(wave_nchans)
         self.wave_nchans = wave_nchans
-        assert len(wave_nchans) == nwaves
 
         self.orientation = cfg.orientation
         self.stereo_orientation = cfg.stereo_orientation

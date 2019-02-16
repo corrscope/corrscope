@@ -49,7 +49,7 @@ def test_edges(nrows: int, ncols: int, row: int, col: int):
 @pytest.mark.parametrize("lcfg", [LayoutConfig(ncols=2), LayoutConfig(nrows=8)])
 def test_hlayout(lcfg):
     nplots = 15
-    layout = RendererLayout(lcfg, nplots, [1] * nplots)
+    layout = RendererLayout(lcfg, [1] * nplots)
 
     assert layout.wave_ncol == 2
     assert layout.wave_nrow == 8
@@ -73,7 +73,7 @@ def test_hlayout(lcfg):
 )
 def test_vlayout(lcfg):
     nplots = 7
-    layout = RendererLayout(lcfg, nplots, [1] * nplots)
+    layout = RendererLayout(lcfg, [1] * nplots)
 
     assert layout.wave_ncol == 3
     assert layout.wave_nrow == 3

@@ -191,7 +191,7 @@ class MatplotlibRenderer(Renderer):
         Outputs: self.nrows, self.ncols, self.axes
         """
 
-        self.layout = RendererLayout(self.lcfg, self.nplots, wave_nchans)
+        self.layout = RendererLayout(self.lcfg, wave_nchans)
 
         # Create Axes
         # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplots.html
