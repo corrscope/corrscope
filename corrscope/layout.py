@@ -27,7 +27,7 @@ V = Orientation.v
 OVERLAY = StereoOrientation.overlay
 
 
-class LayoutConfig(DumpableAttrs, always_dump="orientation"):
+class LayoutConfig(DumpableAttrs, always_dump="orientation stereo_orientation"):
     orientation: Orientation = attr.ib(default="h", converter=Orientation)
     nrows: Optional[int] = None
     ncols: Optional[int] = None
