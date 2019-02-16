@@ -78,8 +78,8 @@ def test_stereo_merge():
 AllFlattens = Flatten.__members__.values()
 
 
-# FIXME test return_channels=True
 @pytest.mark.parametrize("flatten", AllFlattens)
+@pytest.mark.parametrize("return_channels", [False, True])
 @pytest.mark.parametrize(
     "path,nchan,peaks",
     [
@@ -89,19 +89,30 @@ AllFlattens = Flatten.__members__.values()
     ],
 )
 def test_stereo_flatten_modes(
-    flatten: Flatten, path: str, nchan: int, peaks: Sequence[float]
+    flatten: Flatten,
+    return_channels: bool,
+    path: str,
+    nchan: int,
+    peaks: Sequence[float],
 ):
     """Ensures all Flatten modes are handled properly
     for stereo and mono signals."""
+
+    # return_channels=False <-> triggering.
+    # flatten=stereo -> rendering.
+    # These conditions do not currently coexist.
+    # if not return_channels and flatten == Flatten.Stereo:
+    #     return
+
     assert nchan == len(peaks)
     wave = Wave(path)
 
     if flatten not in Flatten.modes:
         with pytest.raises(CorrError):
-            wave.with_flatten(flatten, False)
+            wave.with_flatten(flatten, return_channels)
         return
     else:
-        wave = wave.with_flatten(flatten, False)
+        wave = wave.with_flatten(flatten, return_channels)
 
     nsamp = wave.nsamp
     data = wave[:]
@@ -112,7 +123,10 @@ def test_stereo_flatten_modes(
         for chan_data, peak in zip(data.T, peaks):
             assert_full_scale(chan_data, peak)
     else:
-        assert data.shape == (nsamp,)
+        if return_channels:
+            assert data.shape == (nsamp, 1)
+        else:
+            assert data.shape == (nsamp,)
 
         # If DiffAvg and in-phase, L-R=0.
         if flatten == Flatten.DiffAvg:
