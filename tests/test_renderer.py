@@ -9,8 +9,8 @@ from corrscope.layout import LayoutConfig
 from corrscope.outputs import RGB_DEPTH
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
 
-WIDTH = 640
-HEIGHT = 360
+WIDTH = 64
+HEIGHT = 64
 
 RENDER_Y_ZEROS = np.array([0, 0]).reshape(-1, 1)
 
