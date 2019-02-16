@@ -63,6 +63,8 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     v_midline: bool = False
     h_midline: bool = False
 
+    antialiasing: bool = True
+
     # Performance (skipped when recording to video)
     res_divisor: float = 1.0
 
@@ -158,6 +160,10 @@ class MatplotlibRenderer(Renderer):
 
     def __init__(self, *args, **kwargs):
         Renderer.__init__(self, *args, **kwargs)
+
+        dict.__setitem__(
+            matplotlib.rcParams, "lines.antialiased", self.cfg.antialiasing
+        )
 
         # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
         self._fig: "Figure"
