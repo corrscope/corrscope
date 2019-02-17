@@ -41,6 +41,7 @@ def test_default_colors(bg_str, fg_str, grid_str):
         init_line_color=fg_str,
         grid_color=grid_str,
         line_width=2.0,
+        antialiasing=False,
     )
     lcfg = LayoutConfig()
 
@@ -64,6 +65,7 @@ def test_line_colors(bg_str, fg_str, grid_str):
         init_line_color="#888888",
         grid_color=grid_str,
         line_width=2.0,
+        antialiasing=False,
     )
     lcfg = LayoutConfig()
 
