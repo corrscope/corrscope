@@ -207,9 +207,12 @@ class MatplotlibRenderer(Renderer):
         def axes_factory(r: RegionSpec) -> "Axes":
             width = 1 / r.ncol
             left = r.col / r.ncol
+            assert 0 <= left < 1
 
             height = 1 / r.nrow
             bottom = (r.nrow - r.row - 1) / r.nrow
+            assert 0 <= bottom < 1
+
             # Disabling xticks/yticks is unnecessary, since we hide Axises.
             ax = self._fig.add_axes([left, bottom, width, height], xticks=[], yticks=[])
 
