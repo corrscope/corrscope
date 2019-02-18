@@ -23,6 +23,7 @@ from corrscope.outputs import (
     Stop,
 )
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
+from corrscope.settings.paths import MissingFFmpegError
 from tests.test_renderer import ALL_ZEROS
 
 WIDTH = 192
@@ -35,7 +36,11 @@ if TYPE_CHECKING:
 
 # Global setup
 if not shutil.which("ffmpeg"):
-    pytestmark = pytest.mark.skip("Missing ffmpeg, skipping output tests")
+    pytestmark = pytest.mark.xfail(
+        reason="Missing ffmpeg, ignoring failed output tests",
+        raises=FileNotFoundError,  # includes MissingFFmpegError
+        strict=False,
+    )
 
 
 def exception_Popen(mocker: "pytest_mock.MockFixture", exc: Exception) -> "MagicMock":
