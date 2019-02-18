@@ -23,11 +23,8 @@ from corrscope.outputs import (
     Stop,
 )
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
-from corrscope.settings.paths import MissingFFmpegError
-from tests.test_renderer import RENDER_Y_ZEROS
+from tests.test_renderer import RENDER_Y_ZEROS, WIDTH, HEIGHT
 
-WIDTH = 192
-HEIGHT = 108
 
 if TYPE_CHECKING:
     import pytest_mock
