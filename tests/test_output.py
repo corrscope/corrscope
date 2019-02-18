@@ -23,11 +23,8 @@ from corrscope.outputs import (
     Stop,
 )
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
-from corrscope.settings.paths import MissingFFmpegError
-from tests.test_renderer import ALL_ZEROS
+from tests.test_renderer import RENDER_Y_ZEROS, WIDTH, HEIGHT
 
-WIDTH = 192
-HEIGHT = 108
 
 if TYPE_CHECKING:
     import pytest_mock
@@ -90,7 +87,7 @@ def test_render_output():
     renderer = MatplotlibRenderer(CFG.render, CFG.layout, nplots=1, channel_cfgs=None)
     out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG)
 
-    renderer.render_frame([ALL_ZEROS])
+    renderer.render_frame([RENDER_Y_ZEROS])
     out.write_frame(renderer.get_frame())
 
     assert out.close() == 0
