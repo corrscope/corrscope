@@ -274,10 +274,9 @@ class MatplotlibRenderer(Renderer):
 
             return ax
 
+        # Generate arrangement (using self.lcfg, wave_nchans)
         # _axes2d[wave][chan] = Axes
         self._axes2d = self.layout.arrange(axes_factory)
-
-        # Generate arrangement (using nwaves, cfg.orientation)
 
         # Setup figure geometry
         self._fig.set_dpi(DPI)

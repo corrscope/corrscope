@@ -251,7 +251,6 @@ def unique_by_id(items: Iterable[T]) -> List[T]:
     seen = collections.OrderedDict()
 
     for item in items:
-        # eliminate this check if you want the last item
         if id(item) not in seen:
             seen[id(item)] = item
 
