@@ -62,8 +62,8 @@ class Channel:
         tflat = coalesce(cfg.trigger_stereo, corr_cfg.trigger_stereo)
         rflat = coalesce(cfg.render_stereo, corr_cfg.render_stereo)
 
-        self.trigger_wave = wave.with_flatten(tflat)
-        self.render_wave = wave.with_flatten(rflat)
+        self.trigger_wave = wave.with_flatten(tflat, return_channels=False)
+        self.render_wave = wave.with_flatten(rflat, return_channels=True)
 
         # `subsampling` increases `stride` and decreases `nsamp`.
         # `width` increases `stride` without changing `nsamp`.

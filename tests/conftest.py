@@ -1,6 +1,7 @@
 """
 Integration tests found in:
 - test_cli.py
+- test_renderer.py
 - test_output.py
 """
 
