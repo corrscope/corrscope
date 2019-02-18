@@ -46,6 +46,7 @@ def test_default_colors(bg_str, fg_str, grid_str, data):
         grid_color=grid_str,
         stereo_grid_opacity=OPACITY,
         line_width=2.0,
+        antialiasing=False,
     )
     lcfg = LayoutConfig()
 
@@ -70,6 +71,7 @@ def test_line_colors(bg_str, fg_str, grid_str, data):
         grid_color=grid_str,
         stereo_grid_opacity=OPACITY,
         line_width=2.0,
+        antialiasing=False,
     )
     lcfg = LayoutConfig()
 
