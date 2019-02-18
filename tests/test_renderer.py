@@ -1,13 +1,19 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import matplotlib.colors
 import numpy as np
 import pytest
 
 from corrscope.channel import ChannelConfig
+from corrscope.corrscope import CorrScope, default_config, Arguments
 from corrscope.layout import LayoutConfig
-from corrscope.outputs import RGB_DEPTH
+from corrscope.outputs import RGB_DEPTH, FFmpegOutputConfig
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
+from corrscope.wave import Flatten
+from tests.test_output import NULL_FFMPEG_OUTPUT, render_cfg
+
+if TYPE_CHECKING:
+    import pytest_mock
 
 WIDTH = 64
 HEIGHT = 64
@@ -134,3 +140,23 @@ def verify(
 def to_rgb(c) -> np.ndarray:
     to_rgb = matplotlib.colors.to_rgb
     return np.array([round(c * 255) for c in to_rgb(c)], dtype=int)
+
+
+# Stereo integration tests
+def test_stereo_render_integration(mocker: "pytest_mock.MockFixture"):
+    """Ensure corrscope plays/renders in stereo, without crashing."""
+
+    # Stub out FFmpeg output.
+    FFmpegOutput = mocker.patch.object(FFmpegOutputConfig, "cls")
+
+    # Render in stereo.
+    cfg = default_config(
+        channels=[ChannelConfig("tests/stereo in-phase.wav")],
+        render_stereo=Flatten.Stereo,
+        end_time=0.5,  # Reduce test duration
+        render=render_cfg,
+    )
+
+    # Make sure it doesn't crash.
+    corr = CorrScope(cfg, Arguments(".", [NULL_FFMPEG_OUTPUT]))
+    corr.play()
