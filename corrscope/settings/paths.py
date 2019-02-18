@@ -49,7 +49,7 @@ def get_ffmpeg_url() -> str:
         return ""
 
 
-class MissingFFmpegError(CorrError):
+class MissingFFmpegError(CorrError, FileNotFoundError):
     ffmpeg_url = get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
