@@ -1,6 +1,7 @@
 import functools
 import sys
 import traceback
+from collections import OrderedDict
 from pathlib import Path
 from types import MethodType
 from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence
@@ -34,6 +35,7 @@ from corrscope.gui.history_file_dlg import (
     get_save_file_path,
 )
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
+from corrscope.layout import Orientation, StereoOrientation
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from corrscope.settings import paths
 from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
@@ -607,15 +609,12 @@ def path_fix_property(path: str) -> property:
     return property(getter, setter)
 
 
-flatten_modes = {
+flatten_no_stereo = {
     Flatten.SumAvg: "Average: (L+R)/2",
     Flatten.DiffAvg: "DiffAvg: (L-R)/2",
-    Flatten.Stereo: "Stereo (broken)",
 }
+flatten_modes = {**flatten_no_stereo, Flatten.Stereo: "Stereo"}
 assert set(flatten_modes.keys()) == set(Flatten.modes)  # type: ignore
-
-flatten_symbols = list(flatten_modes.keys())
-flatten_text = list(flatten_modes.values())
 
 
 class ConfigModel(PresentationModel):
@@ -626,10 +625,13 @@ class ConfigModel(PresentationModel):
     master_audio = path_fix_property("master_audio")
 
     # Stereo flattening
-    for path in ["trigger_stereo", "render_stereo"]:
-        combo_symbols[path] = flatten_symbols
-        combo_text[path] = flatten_text
-    del path
+    for path, symbol_map in [
+        ["trigger_stereo", flatten_no_stereo],
+        ["render_stereo", flatten_modes],
+    ]:
+        combo_symbols[path] = list(symbol_map.keys())
+        combo_text[path] = list(symbol_map.values())
+    del path, symbol_map
 
     @property
     def render_resolution(self) -> str:
@@ -658,8 +660,19 @@ class ConfigModel(PresentationModel):
 
     layout__nrows = nrow_ncol_property("nrows", unaltered="ncols")
     layout__ncols = nrow_ncol_property("ncols", unaltered="nrows")
-    combo_symbols["layout__orientation"] = ["h", "v"]
-    combo_text["layout__orientation"] = ["Horizontal", "Vertical"]
+
+    _orientations = [["h", "Horizontal"], ["v", "Vertical"]]
+    _stereo_orientations = _orientations + [["overlay", "Overlay"]]
+
+    for path, cls, symbol_map in [
+        ["layout__orientation", Orientation, _orientations],
+        ["layout__stereo_orientation", StereoOrientation, _stereo_orientations],
+    ]:
+        symbol_map = OrderedDict(symbol_map)
+        # comprehensions fail in class scope
+        combo_symbols[path] = list(map(cls, symbol_map.keys()))
+        combo_text[path] = list(symbol_map.values())
+    del path, cls, symbol_map
 
     render__line_width = default_property("render__line_width", 1.5)
 

@@ -266,7 +266,7 @@
           <property name="title">
            <string>Stereo Downmixing</string>
           </property>
-          <layout class="QFormLayout" name="formLayout_6">
+          <layout class="QFormLayout" name="formLayout_8">
            <item row="0" column="0">
             <widget class="QLabel" name="trigger_stereoL">
              <property name="text">
@@ -595,6 +595,45 @@
    <addaction name="separator"/>
    <addaction name="actionPreview"/>
    <addaction name="actionRender"/>
+  </widget>
+  <widget class="QDockWidget" name="dockStereo">
+   <property name="windowTitle">
+    <string>&amp;Stereo Render Options</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents">
+    <layout class="QFormLayout" name="formLayout_6">
+     <item row="0" column="0">
+      <widget class="QLabel" name="layout__stereo_orientationL">
+       <property name="text">
+        <string>Stereo Orientation</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="BoundComboBox" name="layout__stereo_orientation"/>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="render__stereo_grid_opacityL">
+       <property name="text">
+        <string>Grid Opacity</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QDoubleSpinBox" name="render__stereo_grid_opacity">
+       <property name="maximum">
+        <double>1.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.250000000000000</double>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
   </widget>
   <action name="actionOpen">
    <property name="text">
