@@ -130,7 +130,6 @@ class MainWindow(qw.QMainWindow):
 
         self.show()
 
-    # Config models
     _cfg_path: Optional[Path]
 
     # Whether document is dirty, changed, has unsaved changes
@@ -145,8 +144,11 @@ class MainWindow(qw.QMainWindow):
         self._any_unsaved = value
         self._update_unsaved_title()
 
-    model: Optional["ConfigModel"] = None
+    # GUI layout widgets
     tabWidget: qw.QTabWidget
+
+    # Config models
+    model: Optional["ConfigModel"] = None
 
     channel_model: "ChannelModel"
     channel_view: "ChannelTableView"
