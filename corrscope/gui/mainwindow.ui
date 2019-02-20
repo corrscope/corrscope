@@ -268,9 +268,29 @@
          </widget>
         </item>
         <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tabStereo">
+       <attribute name="title">
+        <string>&amp;Stereo</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
          <widget class="QGroupBox" name="optionStereo">
           <property name="title">
-           <string>Stereo Downmixing</string>
+           <string>Stereo Enable</string>
           </property>
           <layout class="QFormLayout" name="formLayout_8">
            <item row="0" column="0">
@@ -297,7 +317,43 @@
          </widget>
         </item>
         <item>
-         <spacer name="verticalSpacer_2">
+         <widget class="QGroupBox" name="dockStereo_2">
+          <property name="title">
+           <string>Stereo Appearance</string>
+          </property>
+          <layout class="QFormLayout" name="formLayout_7">
+           <item row="0" column="0">
+            <widget class="QLabel" name="layout__stereo_orientationL">
+             <property name="text">
+              <string>Stereo Orientation</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="BoundComboBox" name="layout__stereo_orientation"/>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="render__stereo_grid_opacityL">
+             <property name="text">
+              <string>Grid Opacity</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QDoubleSpinBox" name="render__stereo_grid_opacity">
+             <property name="maximum">
+              <double>1.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.250000000000000</double>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_3">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
           </property>
@@ -601,51 +657,6 @@
    <addaction name="separator"/>
    <addaction name="actionPreview"/>
    <addaction name="actionRender"/>
-  </widget>
-  <widget class="QDockWidget" name="dockStereo">
-   <property name="windowTitle">
-    <string>&amp;Stereo Render Options</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-   <widget class="QWidget" name="dockWidgetContents">
-    <property name="sizePolicy">
-     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-      <horstretch>0</horstretch>
-      <verstretch>0</verstretch>
-     </sizepolicy>
-    </property>
-    <layout class="QFormLayout" name="formLayout_6">
-     <item row="0" column="0">
-      <widget class="QLabel" name="layout__stereo_orientationL">
-       <property name="text">
-        <string>Stereo Orientation</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="BoundComboBox" name="layout__stereo_orientation"/>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="render__stereo_grid_opacityL">
-       <property name="text">
-        <string>Grid Opacity</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QDoubleSpinBox" name="render__stereo_grid_opacity">
-       <property name="maximum">
-        <double>1.000000000000000</double>
-       </property>
-       <property name="singleStep">
-        <double>0.250000000000000</double>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
   </widget>
   <action name="actionOpen">
    <property name="text">
