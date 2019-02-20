@@ -414,7 +414,7 @@ def test_output_parallel():
     but spying on the Connection call arguments is hard.
     """
     cfg = sine440_config()
-    arg = Arguments(".", [NULL_FFMPEG_OUTPUT], parallelism.ParallelWorker)
+    arg = Arguments(".", [NULL_FFMPEG_OUTPUT], worker=parallelism.ParallelWorker)
     corr = CorrScope(cfg, arg)
     corr.play()
 

@@ -277,7 +277,7 @@ class CorrScope:
         prev = -1
         with self.arg.worker(
             RenderJob(self, benchmark_mode, not_benchmarking),
-            f"{self.arg.profile_name}_render" if self.arg.profile_name else None,
+            self.arg.profile_name + "_render" if self.arg.profile_name else None,
         ) as render_worker:  # type: Worker[TriggerSamples]
             self.render_worker = render_worker  # For unit tests
             # When subsampling FPS, render frames from the future to alleviate lag.
