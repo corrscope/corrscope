@@ -32,6 +32,7 @@ frame 1:
 frame:
 - parent reads and quits
 """
+import functools
 from abc import abstractmethod
 from enum import Enum, auto
 from multiprocessing import Process, Pipe
@@ -103,13 +104,14 @@ class ParallelWorker(Worker[Message]):
         parent_conn, child_conn = Pipe(duplex=True)
         self._child = parent_conn
 
-        command = lambda: self._child_thread_func(child_job, child_conn)
+        command = functools.partial(self._child_thread_func, child_job, child_conn)
         if profile_name:
             import cProfile
 
+            # Does it work? On Windows?
             g = globals()
             l = locals()
-            target = lambda: cProfile.runctx("command()", g, l, profile_name)
+            target = functools.partial(cProfile.runctx, "command()", g, l, profile_name)
 
         else:
             target = command
