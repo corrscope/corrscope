@@ -155,7 +155,7 @@ class Arguments:
     outputs: List[outputs_.IOutputConfig]
     profile_name: Optional[str] = None
 
-    worker: Type[parallelism.Worker] = parallelism.ParallelWorker
+    worker: Type[parallelism.Worker] = parallelism.SerialWorker
 
     on_begin: BeginFunc = lambda begin_time, end_time: None
     progress: ProgressFunc = print
