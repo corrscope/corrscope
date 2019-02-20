@@ -109,9 +109,11 @@ class ParallelWorker(Worker[Message]):
             import cProfile
 
             # Does it work? On Windows?
-            g = globals()
+            g = {}
             l = locals()
-            target = functools.partial(cProfile.runctx, "command()", g, l, profile_name)
+            target = functools.partial(
+                cProfile.runctx, "command()", g, l, filename=profile_name
+            )
 
         else:
             target = command
