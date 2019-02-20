@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from fractions import Fraction
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import pytest
 
@@ -24,12 +24,14 @@ from corrscope.outputs import (
     Stop,
 )
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
+from corrscope.util import pushd
 from tests.test_renderer import RENDER_Y_ZEROS, WIDTH, HEIGHT
 
 
 if TYPE_CHECKING:
     import pytest_mock
     from unittest.mock import MagicMock
+    import py
 
 
 # Global setup
@@ -71,10 +73,13 @@ render_cfg = RendererConfig(WIDTH, HEIGHT)
 CFG = default_config(render=render_cfg)
 
 
+sine440_wav = os.path.abspath("tests/sine440.wav")
+
+
 def sine440_config():
     cfg = default_config(
-        channels=[ChannelConfig("tests/sine440.wav")],
-        master_audio="tests/sine440.wav",
+        channels=[ChannelConfig(sine440_wav)],
+        master_audio=sine440_wav,
         end_time=0.5,  # Reduce test duration
         render=render_cfg,
     )
@@ -408,15 +413,22 @@ def test_record_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
 # Integration test: Output and ParallelWorker
 @pytest.mark.timeout(3)
 # @pytest.mark.usefixtures("Popen")  # may/not break ParallelWorker?
-def test_output_parallel():
+@pytest.mark.parametrize("profile_name", [None, "test_output_parallel--profile"])
+def test_output_parallel(profile_name: Optional[str], tmpdir: "py.path.local"):
     """ Ensure output doesn't deadlock/etc.
     Ideally I'd make assertions on the communication protocol,
     but spying on the Connection call arguments is hard.
     """
-    cfg = sine440_config()
-    arg = Arguments(".", [NULL_FFMPEG_OUTPUT], worker=parallelism.ParallelWorker)
-    corr = CorrScope(cfg, arg)
-    corr.play()
+    with pushd(tmpdir):  # converted to str(tmpdir)
+        cfg = sine440_config()
+        arg = Arguments(
+            ".",
+            [NULL_FFMPEG_OUTPUT],
+            profile_name=profile_name,
+            worker=parallelism.ParallelWorker,
+        )
+        corr = CorrScope(cfg, arg)
+        corr.play()
 
 
 """
