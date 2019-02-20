@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 import time
 from contextlib import ExitStack, contextmanager
 from enum import unique, Enum
@@ -360,7 +361,16 @@ class RenderJob(parallelism.Job[TriggerSamples]):
     def __init__(
         self, cs: CorrScope, benchmark_mode: BenchmarkMode, not_benchmarking: bool
     ):
-        self.cs = cs
+        self.cs = copy.copy(cs)
+
+        # Remove all callbacks from self.cs.arg,
+        # to allow pickling and sending to subprocess on Windows.
+        callbacks = {}
+        for key, value in attr.asdict(self.cs.arg).items():
+            if callable(value):
+                callbacks[key] = None
+        self.cs.arg = attr.evolve(self.cs.arg, **callbacks)
+
         self.benchmark_mode = benchmark_mode
         self.not_benchmarking = not_benchmarking
 
