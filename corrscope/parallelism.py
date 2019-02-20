@@ -110,7 +110,7 @@ class ParallelWorker(Worker[Message]):
 
             # Does it work? On Windows?
             g = {}
-            l = locals()
+            l = {"command": command}
             target = functools.partial(
                 cProfile.runctx, "command()", g, l, filename=profile_name
             )
