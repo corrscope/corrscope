@@ -4,10 +4,17 @@ from typing import Optional, List, TYPE_CHECKING, Any
 
 import attr
 import matplotlib
+import matplotlib.colors
 import numpy as np
 
 from corrscope.config import DumpableAttrs, with_units
-from corrscope.layout import RendererLayout, LayoutConfig, EdgeFinder
+from corrscope.layout import (
+    RendererLayout,
+    LayoutConfig,
+    unique_by_id,
+    RegionSpec,
+    Edges,
+)
 from corrscope.outputs import RGB_DEPTH, ByteBuffer
 from corrscope.util import coalesce
 
@@ -58,10 +65,15 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
 
     bg_color: str = "#000000"
     init_line_color: str = default_color()
+
     grid_color: Optional[str] = None
+    stereo_grid_opacity: float = 0.5
+
     midline_color: Optional[str] = None
     v_midline: bool = False
     h_midline: bool = False
+
+    antialiasing: bool = True
 
     # Performance (skipped when recording to video)
     res_divisor: float = 1.0
@@ -97,8 +109,8 @@ class Renderer(ABC):
         channel_cfgs: Optional[List["ChannelConfig"]],
     ):
         self.cfg = cfg
+        self.lcfg = lcfg
         self.nplots = nplots
-        self.layout = RendererLayout(lcfg, nplots)
 
         # Load line colors.
         if channel_cfgs is not None:
@@ -159,16 +171,24 @@ class MatplotlibRenderer(Renderer):
     def __init__(self, *args, **kwargs):
         Renderer.__init__(self, *args, **kwargs)
 
-        # Flat array of nrows*ncols elements, ordered by cfg.rows_first.
-        self._fig: "Figure"
-        self._axes: List["Axes"]  # set by set_layout()
-        self._lines: Optional[List["Line2D"]] = None  # set by render_frame() first call
+        dict.__setitem__(
+            matplotlib.rcParams, "lines.antialiased", self.cfg.antialiasing
+        )
 
-        self._set_layout()  # mutates self
+        self._fig: "Figure"
+
+        # _axes2d[wave][chan] = Axes
+        self._axes2d: List[List["Axes"]]  # set by set_layout()
+
+        # _lines2d[wave][chan] = Line2D
+        self._lines2d: List[List[Line2D]] = []
+        self._lines_flat: List["Line2D"] = []
 
     transparent = "#00000000"
 
-    def _set_layout(self) -> None:
+    layout: RendererLayout
+
+    def _set_layout(self, wave_nchans: List[int]) -> None:
         """
         Creates a flat array of Matplotlib Axes, with the new layout.
         Opens a window showing the Figure (and Axes).
@@ -177,6 +197,8 @@ class MatplotlibRenderer(Renderer):
         Outputs: self.nrows, self.ncols, self.axes
         """
 
+        self.layout = RendererLayout(self.lcfg, wave_nchans)
+
         # Create Axes
         # https://matplotlib.org/api/_as_gen/matplotlib.pyplot.subplots.html
         if hasattr(self, "_fig"):
@@ -184,24 +206,24 @@ class MatplotlibRenderer(Renderer):
             # plt.close(self.fig)
 
         grid_color = self.cfg.grid_color
-        axes2d: np.ndarray["Axes"]
         self._fig = Figure()
         FigureCanvasAgg(self._fig)
 
-        axes2d = self._fig.subplots(
-            self.layout.nrows,
-            self.layout.ncols,
-            squeeze=False,
-            # Remove axis ticks (which slow down rendering)
-            subplot_kw=dict(xticks=[], yticks=[]),
-            # Remove gaps between Axes TODO borders shouldn't be half-visible
-            gridspec_kw=dict(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0),
-        )
+        # RegionFactory
+        def axes_factory(r: RegionSpec) -> "Axes":
+            width = 1 / r.ncol
+            left = r.col / r.ncol
+            assert 0 <= left < 1
 
-        ax: "Axes"
-        if grid_color:
-            # Initialize borders
-            for ax in axes2d.flatten():
+            height = 1 / r.nrow
+            bottom = (r.nrow - r.row - 1) / r.nrow
+            assert 0 <= bottom < 1
+
+            # Disabling xticks/yticks is unnecessary, since we hide Axises.
+            ax = self._fig.add_axes([left, bottom, width, height], xticks=[], yticks=[])
+
+            if grid_color:
+                # Initialize borders
                 # Hide Axises
                 # (drawing them is very slow, and we disable ticks+labels anyway)
                 ax.get_xaxis().set_visible(False)
@@ -217,25 +239,44 @@ class MatplotlibRenderer(Renderer):
                 for spine in ax.spines.values():
                     spine.set_color(grid_color)
 
-                # gridspec_kw indexes from bottom-left corner.
-                # Only show bottom-left borders (x=0, y=0)
-                ax.spines["top"].set_visible(False)
-                ax.spines["right"].set_visible(False)
+                def hide(key: str):
+                    ax.spines[key].set_visible(False)
 
-            # Hide bottom-left edges for speed.
-            edge_axes: EdgeFinder["Axes"] = EdgeFinder(axes2d)
-            for ax in edge_axes.bottoms:
-                ax.spines["bottom"].set_visible(False)
-            for ax in edge_axes.lefts:
-                ax.spines["left"].set_visible(False)
+                # Hide all axes except bottom-right.
+                hide("top")
+                hide("left")
 
-        else:
-            # Remove Axis from Axes
-            for ax in axes2d.flatten():
+                # If bottom of screen, hide bottom. If right of screen, hide right.
+                if r.screen_edges & Edges.Bottom:
+                    hide("bottom")
+                if r.screen_edges & Edges.Right:
+                    hide("right")
+
+                # Dim stereo gridlines
+                if self.cfg.stereo_grid_opacity > 0:
+                    dim_color = matplotlib.colors.to_rgba_array(grid_color)[0]
+                    dim_color[-1] = self.cfg.stereo_grid_opacity
+
+                    def dim(key: str):
+                        ax.spines[key].set_color(dim_color)
+
+                else:
+                    dim = hide
+
+                # If not bottom of wave, dim bottom. If not right of wave, dim right.
+                if not r.wave_edges & Edges.Bottom:
+                    dim("bottom")
+                if not r.wave_edges & Edges.Right:
+                    dim("right")
+
+            else:
                 ax.set_axis_off()
 
-        # Generate arrangement (using nplots, cfg.orientation)
-        self._axes: List[Axes] = self.layout.arrange(lambda row, col: axes2d[row, col])
+            return ax
+
+        # Generate arrangement (using self.lcfg, wave_nchans)
+        # _axes2d[wave][chan] = Axes
+        self._axes2d = self.layout.arrange(axes_factory)
 
         # Setup figure geometry
         self._fig.set_dpi(DPI)
@@ -249,45 +290,66 @@ class MatplotlibRenderer(Renderer):
             )
 
         # Initialize axes and draw waveform data
-        if self._lines is None:
+        if not self._lines2d:
+            assert len(datas[0].shape) == 2, datas[0].shape
+
+            wave_nchans = [data.shape[1] for data in datas]
+            self._set_layout(wave_nchans)
+
             cfg = self.cfg
 
             # Setup background/axes
             self._fig.set_facecolor(cfg.bg_color)
-            for idx, data in enumerate(datas):
-                ax = self._axes[idx]
-                max_x = len(data) - 1
-                ax.set_xlim(0, max_x)
-                ax.set_ylim(-1, 1)
+            for idx, wave_data in enumerate(datas):
+                wave_axes = self._axes2d[idx]
+                for ax in unique_by_id(wave_axes):
+                    max_x = len(wave_data) - 1
+                    ax.set_xlim(0, max_x)
+                    ax.set_ylim(-1, 1)
 
-                # Setup midlines
-                midline_color = cfg.midline_color
-                midline_width = pixels(1)
+                    # Setup midlines (depends on max_x and wave_data)
+                    midline_color = cfg.midline_color
+                    midline_width = pixels(1)
 
-                # zorder=-100 still draws on top of gridlines :(
-                kw = dict(color=midline_color, linewidth=midline_width)
-                if cfg.v_midline:
-                    ax.axvline(x=max_x / 2, **kw)
-                if cfg.h_midline:
-                    ax.axhline(y=0, **kw)
+                    # zorder=-100 still draws on top of gridlines :(
+                    kw = dict(color=midline_color, linewidth=midline_width)
+                    if cfg.v_midline:
+                        ax.axvline(x=max_x / 2, **kw)
+                    if cfg.h_midline:
+                        ax.axhline(y=0, **kw)
 
             self._save_background()
 
             # Plot lines over background
             line_width = pixels(cfg.line_width)
-            self._lines = []
 
-            for idx, data in enumerate(datas):
-                ax = self._axes[idx]
-                line_color = self._line_params[idx].color
-                line = ax.plot(data, color=line_color, linewidth=line_width)[0]
-                self._lines.append(line)
+            # Foreach wave
+            for wave_idx, wave_data in enumerate(datas):
+                wave_axes = self._axes2d[wave_idx]
+                wave_lines = []
+
+                # Foreach chan
+                for chan_idx, chan_data in enumerate(wave_data.T):
+                    ax = wave_axes[chan_idx]
+                    line_color = self._line_params[wave_idx].color
+                    chan_line: Line2D = ax.plot(
+                        chan_data, color=line_color, linewidth=line_width
+                    )[0]
+                    wave_lines.append(chan_line)
+
+                self._lines2d.append(wave_lines)
+                self._lines_flat.extend(wave_lines)
 
         # Draw waveform data
         else:
-            for idx, data in enumerate(datas):
-                line = self._lines[idx]
-                line.set_ydata(data)
+            # Foreach wave
+            for wave_idx, wave_data in enumerate(datas):
+                wave_lines = self._lines2d[wave_idx]
+
+                # Foreach chan
+                for chan_idx, chan_data in enumerate(wave_data.T):
+                    chan_line = wave_lines[chan_idx]
+                    chan_line.set_ydata(chan_data)
 
         self._redraw_over_background()
 
@@ -308,8 +370,7 @@ class MatplotlibRenderer(Renderer):
         canvas: FigureCanvasAgg = self._fig.canvas
         canvas.restore_region(self.bg_cache)
 
-        assert self._lines is not None
-        for line in self._lines:
+        for line in self._lines_flat:
             line.axes.draw_artist(line)
 
         # https://bastibe.de/2013-05-30-speeding-up-matplotlib.html

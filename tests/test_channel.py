@@ -19,6 +19,7 @@ from corrscope.corrscope import (
 )
 from corrscope.triggers import NullTriggerConfig
 from corrscope.util import coalesce
+from corrscope.wave import Flatten
 
 
 positive = hs.integers(min_value=1, max_value=100)
@@ -143,3 +144,34 @@ def test_config_channel_width_stride(
 
 
 # line_color is tested in test_renderer.py
+
+
+@pytest.mark.parametrize("filename", ["tests/sine440.wav", "tests/stereo in-phase.wav"])
+@pytest.mark.parametrize(
+    ("global_stereo", "chan_stereo"),
+    [
+        [Flatten.SumAvg, None],
+        [Flatten.Stereo, None],
+        [Flatten.SumAvg, Flatten.Stereo],
+        [Flatten.Stereo, Flatten.SumAvg],
+    ],
+)
+def test_per_channel_stereo(
+    filename: str, global_stereo: Flatten, chan_stereo: Optional[Flatten]
+):
+    """Ensure you can enable/disable stereo on a per-channel basis."""
+    stereo = coalesce(chan_stereo, global_stereo)
+
+    # Test render wave.
+    cfg = default_config(render_stereo=global_stereo)
+    ccfg = ChannelConfig("tests/stereo in-phase.wav", render_stereo=chan_stereo)
+    channel = Channel(ccfg, cfg)
+
+    # Render wave *must* return stereo.
+    assert channel.render_wave[0:1].ndim == 2
+    data = channel.render_wave.get_around(0, return_nsamp=4, stride=1)
+    assert data.ndim == 2
+
+    if "stereo" in filename:
+        assert channel.render_wave._flatten == stereo
+        assert data.shape[1] == (2 if stereo is Flatten.Stereo else 1)

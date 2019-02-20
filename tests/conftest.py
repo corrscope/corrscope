@@ -1,17 +1,24 @@
 """
 Integration tests found in:
 - test_cli.py
+- test_renderer.py
 - test_output.py
 """
 
 import os
 import subprocess
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 
 if TYPE_CHECKING:
     import pytest_mock
+
+
+# Pycharm sets cwd to /tests/.
+# To ensure tests can find WAV files (based on /), jump from /tests/conftest.py to /.
+os.chdir(Path(__file__).parent.parent)
 
 
 # TODO patch outputs.Popen to avoid breaking multiprocessing
