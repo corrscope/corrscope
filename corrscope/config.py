@@ -66,9 +66,11 @@ class NoAliasRepresenter(RoundTripRepresenter):
         return super().ignore_aliases(data)
 
 
+yaml = MyYAML()
+yaml.width = float("inf")
+
 # Default typ='roundtrip' creates 'ruamel.yaml.comments.CommentedMap' instead of dict.
 # Is isinstance(CommentedMap, dict)? IDK
-yaml = MyYAML()
 assert yaml.Representer == RoundTripRepresenter
 yaml.Representer = NoAliasRepresenter
 
