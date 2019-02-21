@@ -30,15 +30,15 @@ if TYPE_CHECKING:
 
     assert Enum
 
-__all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr"]
+__all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr", "Symbol"]
 
 
+Signal = Any
 WidgetUpdater = Callable[[], None]
-
-
 Symbol = Union[str, "Enum"]
 
 
+# Data binding presentation-model
 class PresentationModel(qc.QObject):
     """ Key-value MVP presentation-model.
 
@@ -82,7 +82,6 @@ class PresentationModel(qc.QObject):
             updater()
 
 
-# TODO add tests for recursive operations
 def map_gui(view: "MainWindow", model: PresentationModel) -> None:
     """
     Binding:
@@ -106,9 +105,7 @@ def map_gui(view: "MainWindow", model: PresentationModel) -> None:
             widget.bind_widget(model, path)
 
 
-Signal = Any
-
-
+# Bound widgets
 class BoundWidget(QWidget):
     default_palette: QPalette
     error_palette: QPalette
