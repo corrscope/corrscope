@@ -86,7 +86,7 @@ class Config(
     trigger_stereo: Flatten = Flatten.SumAvg
     render_stereo: Flatten = Flatten.SumAvg
 
-    trigger: ITriggerConfig  # Can be overriden per Wave
+    trigger: CorrelationTriggerConfig  # Can be overriden per Wave
 
     # Multiplies by trigger_width, render_width. Can override trigger.
     channels: List[ChannelConfig]

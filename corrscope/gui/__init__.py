@@ -38,7 +38,7 @@ from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.layout import Orientation, StereoOrientation
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from corrscope.settings import paths
-from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
+from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig, SpectrumConfig
 from corrscope.util import obj_name
 from corrscope.wave import Flatten
 
@@ -675,6 +675,17 @@ class ConfigModel(PresentationModel):
     del path, cls, symbol_map
 
     render__line_width = default_property("render__line_width", 1.5)
+
+    @property
+    def trigger__pitch_invariance(self) -> bool:
+        scfg = self.cfg.trigger.pitch_invariance
+        gui = scfg is not None
+        return gui
+
+    @trigger__pitch_invariance.setter
+    def trigger__pitch_invariance(self, gui: bool):
+        scfg = SpectrumConfig() if gui else None
+        self.cfg.trigger.pitch_invariance = scfg
 
 
 # End ConfigModel
