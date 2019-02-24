@@ -311,6 +311,19 @@ def test_always_dump_validate():
             foo: int
 
 
+# Test properties of our ruamel.yaml instance.
+def test_dump_no_line_break():
+    """Ensure long paths are not split into multiple lines, at whitespace.
+    yaml.width = float("inf")"""
+
+    class Foo(DumpableAttrs):
+        long_str: str
+
+    long_str = "x x" * 500
+    s = yaml.dump(Foo(long_str))
+    assert long_str in s
+
+
 # ruamel.yaml has a unstable and shape-shifting API.
 # Test which version numbers have properties we want.
 
