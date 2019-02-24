@@ -256,6 +256,20 @@ Ignored = object()
 SomeEnum = TypeVar("SomeEnum", bound=Enum)
 
 
+@classmethod
+def _by_name(cls: Type[SomeEnum], enum_or_name: Union[SomeEnum, str]) -> SomeEnum:
+    if isinstance(enum_or_name, cls):
+        return enum_or_name
+    else:
+        try:
+            return cls[enum_or_name]
+        except KeyError:
+            raise CorrError(
+                f"invalid {cls.__name__} '{enum_or_name}' not in "
+                f"{[el.name for el in cls]}"
+            )
+
+
 class DumpEnumAsStr(Enum):
     def __init_subclass__(cls):
         _yaml_loadable(cls)
@@ -263,6 +277,8 @@ class DumpEnumAsStr(Enum):
     @classmethod
     def to_yaml(cls, representer: Representer, node: Enum) -> Any:
         return representer.represent_str(node._name_)  # type: ignore
+
+    by_name = _by_name
 
 
 class TypedEnumDump(Enum):
@@ -278,6 +294,8 @@ class TypedEnumDump(Enum):
     @classmethod
     def from_yaml(cls, constructor: Constructor, node: Node) -> Enum:
         return cls[node.value]
+
+    by_name = _by_name
 
 
 # Miscellaneous

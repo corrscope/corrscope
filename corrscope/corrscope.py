@@ -33,7 +33,7 @@ PRINT_TIMESTAMP = True
 # - TypeError: object.__new__(BenchmarkMode) is not safe, use int.__new__()
 # I don't know *why* this works. It's magic.
 @unique
-class BenchmarkMode(int, DumpEnumAsStr, Enum):
+class BenchmarkMode(int, DumpEnumAsStr):
     NONE = 0
     TRIGGER = 1
     RENDER = 2
@@ -94,18 +94,9 @@ class Config(
     render: RendererConfig
 
     show_internals: List[str] = attr.Factory(list)
-    benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
-
-    def __attrs_post_init__(self) -> None:
-        # Cast benchmark_mode to enum.
-        try:
-            if not isinstance(self.benchmark_mode, BenchmarkMode):
-                self.benchmark_mode = BenchmarkMode[self.benchmark_mode]
-        except KeyError:
-            raise CorrError(
-                f"invalid benchmark_mode mode {self.benchmark_mode} not in "
-                f"{[el.name for el in BenchmarkMode]}"
-            )
+    benchmark_mode: BenchmarkMode = attr.ib(
+        BenchmarkMode.NONE, converter=BenchmarkMode.by_name
+    )
 
 
 _FPS = 60  # f_s
@@ -284,7 +275,7 @@ class CorrScope:
         if PRINT_TIMESTAMP:
             begin = time.perf_counter()
 
-        benchmark_mode = cast(BenchmarkMode, self.cfg.benchmark_mode)
+        benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
         with self._load_outputs():
