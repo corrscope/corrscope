@@ -13,7 +13,7 @@ FLOAT = np.single
 
 
 @enum.unique
-class Flatten(TypedEnumDump, enum.Enum):
+class Flatten(TypedEnumDump):
     """ How to flatten a stereo signal. (Channels beyond first 2 are ignored.)
 
     Flatten(0) == Flatten.Stereo == Flatten['Stereo']
