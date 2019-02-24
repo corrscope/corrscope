@@ -33,7 +33,7 @@ PRINT_TIMESTAMP = True
 # - TypeError: object.__new__(BenchmarkMode) is not safe, use int.__new__()
 # I don't know *why* this works. It's magic.
 @unique
-class BenchmarkMode(int, DumpEnumAsStr, Enum):
+class BenchmarkMode(int, DumpEnumAsStr):
     NONE = 0
     TRIGGER = 1
     RENDER = 2
