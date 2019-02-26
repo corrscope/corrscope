@@ -1,8 +1,10 @@
 import attr
 import matplotlib.pyplot as plt
+import numpy as np
 import pytest
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from pytest_cases import pytest_fixture_plus
 
 from corrscope import triggers
 from corrscope.triggers import (
@@ -11,6 +13,7 @@ from corrscope.triggers import (
     PerFrameCache,
     ZeroCrossingTriggerConfig,
     LocalPostTriggerConfig,
+    SpectrumConfig,
 )
 from corrscope.wave import Wave
 
@@ -25,10 +28,16 @@ def cfg_template(**kwargs) -> CorrelationTriggerConfig:
     return attr.evolve(cfg, **kwargs)
 
 
-@pytest.fixture(scope="session", params=[False, True])
-def cfg(request):
-    use_edge_trigger = request.param
-    return cfg_template(use_edge_trigger=use_edge_trigger)
+@pytest_fixture_plus
+@pytest.mark.parametrize("use_edge_trigger", [False, True])
+@pytest.mark.parametrize("trigger_diameter", [None, 0.5])
+@pytest.mark.parametrize("pitch_invariance", [None, SpectrumConfig()])
+def cfg(use_edge_trigger, trigger_diameter, pitch_invariance):
+    return cfg_template(
+        use_edge_trigger=use_edge_trigger,
+        trigger_diameter=trigger_diameter,
+        pitch_invariance=pitch_invariance,
+    )
 
 
 @pytest.fixture(
@@ -175,6 +184,43 @@ def test_trigger_should_recalc_window():
     assert not trigger._is_window_invalid(x), x
     for x in [1, 100]:
         assert trigger._is_window_invalid(x), x
+
+
+# Test pitch-invariant triggering using spectrum
+def test_correlate_offset():
+    """
+    Catches bug where writing N instead of Ncorr
+    prevented function from returning positive numbers.
+    """
+
+    np.random.seed(31337)
+    correlate_offset = CorrelationTrigger.correlate_offset
+
+    # Ensure autocorrelation on random data returns peak at 0.
+    N = 100
+    spectrum = np.random.random(N)
+    assert correlate_offset(spectrum, spectrum, 12) == 0
+
+    # Ensure cross-correlation of time-shifted impulses works.
+    # Assume wave where y=[i==99].
+    wave = np.eye(N)[::-1]
+    # Taking a slice beginning at index i will produce an impulse at 99-i.
+    left = wave[30]
+    right = wave[40]
+
+    # We need to slide `left` to the right by 10 samples, and vice versa.
+    for radius in [None, 12]:
+        assert correlate_offset(data=left, prev_buffer=right, radius=radius) == 10
+        assert correlate_offset(data=right, prev_buffer=left, radius=radius) == -10
+
+    # The correlation peak at zero-offset is small enough for boost_x to be returned.
+    boost_y = 1.5
+    ones = np.ones(N)
+    for boost_x in [6, -6]:
+        assert (
+            correlate_offset(ones, ones, radius=9, boost_x=boost_x, boost_y=boost_y)
+            == boost_x
+        )
 
 
 # Test the ability to load legacy TriggerConfig

@@ -20,6 +20,7 @@ from corrscope.triggers import (
     CorrelationTriggerConfig,
     PerFrameCache,
     CorrelationTrigger,
+    SpectrumConfig,
 )
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave, Flatten
@@ -118,6 +119,7 @@ def default_config(**kwargs) -> Config:
             responsiveness=0.5,
             buffer_falloff=0.5,
             use_edge_trigger=False,
+            pitch_invariance=SpectrumConfig()
             # Removed due to speed hit.
             # post=LocalPostTriggerConfig(strength=0.1),
         ),
