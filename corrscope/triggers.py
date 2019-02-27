@@ -145,7 +145,6 @@ class SpectrumConfig(KeywordAttrs):
 
     # Spectral alignment and resampling
     pitch_estimate_boost: float = 1.2
-    add_current_to_history: float = 0.1  # FIXME why does this exist?
     max_octaves_to_resample: float = 1.0
 
     @property
@@ -528,7 +527,6 @@ class CorrelationTrigger(Trigger):
 
         # Don't normalize self._spectrum. It was already normalized when being assigned.
         prev_spectrum = self._spectrum_calc.calc_spectrum(self.history.peek())
-        prev_spectrum += scfg.add_current_to_history * spectrum
 
         # rewrite spectrum
         self._spectrum = spectrum
