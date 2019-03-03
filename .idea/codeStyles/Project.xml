@@ -9,6 +9,10 @@
       <option name="FROM_IMPORT_PARENTHESES_FORCE_IF_MULTILINE" value="true" />
       <option name="FROM_IMPORT_TRAILING_COMMA_IF_MULTILINE" value="true" />
     </Python>
+    <yaml>
+      <option name="SEQUENCE_ON_NEW_LINE" value="true" />
+      <option name="BLOCK_MAPPING_ON_NEW_LINE" value="true" />
+    </yaml>
     <codeStyleSettings language="Python">
       <indentOptions>
         <option name="CONTINUATION_INDENT_SIZE" value="4" />
