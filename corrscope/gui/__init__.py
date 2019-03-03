@@ -677,15 +677,15 @@ class ConfigModel(PresentationModel):
     render__line_width = default_property("render__line_width", 1.5)
 
     @property
-    def trigger__pitch_invariance(self) -> bool:
-        scfg = self.cfg.trigger.pitch_invariance
+    def trigger__pitch_tracking(self) -> bool:
+        scfg = self.cfg.trigger.pitch_tracking
         gui = scfg is not None
         return gui
 
-    @trigger__pitch_invariance.setter
-    def trigger__pitch_invariance(self, gui: bool):
+    @trigger__pitch_tracking.setter
+    def trigger__pitch_tracking(self, gui: bool):
         scfg = SpectrumConfig() if gui else None
-        self.cfg.trigger.pitch_invariance = scfg
+        self.cfg.trigger.pitch_tracking = scfg
 
 
 # End ConfigModel

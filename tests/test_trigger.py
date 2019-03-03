@@ -31,12 +31,12 @@ def cfg_template(**kwargs) -> CorrelationTriggerConfig:
 @pytest_fixture_plus
 @pytest.mark.parametrize("use_edge_trigger", [False, True])
 @pytest.mark.parametrize("trigger_diameter", [None, 0.5])
-@pytest.mark.parametrize("pitch_invariance", [None, SpectrumConfig()])
-def cfg(use_edge_trigger, trigger_diameter, pitch_invariance):
+@pytest.mark.parametrize("pitch_tracking", [None, SpectrumConfig()])
+def cfg(use_edge_trigger, trigger_diameter, pitch_tracking):
     return cfg_template(
         use_edge_trigger=use_edge_trigger,
         trigger_diameter=trigger_diameter,
-        pitch_invariance=pitch_invariance,
+        pitch_tracking=pitch_tracking,
     )
 
 

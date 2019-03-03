@@ -290,7 +290,7 @@ class CircularArray:
         return self.buf[self.index]
 
 
-class CorrelationTriggerConfig(ITriggerConfig, always_dump="pitch_invariance"):
+class CorrelationTriggerConfig(ITriggerConfig, always_dump="pitch_tracking"):
     # get_trigger
     edge_strength: float
     trigger_diameter: Optional[float] = None
@@ -303,8 +303,8 @@ class CorrelationTriggerConfig(ITriggerConfig, always_dump="pitch_invariance"):
     responsiveness: float
     buffer_falloff: float  # Gaussian std = wave_period * buffer_falloff
 
-    # Pitch invariance = compute spectrum.
-    pitch_invariance: Optional["SpectrumConfig"] = None
+    # Pitch tracking = compute spectrum.
+    pitch_tracking: Optional["SpectrumConfig"] = None
 
     # region Legacy Aliases
     trigger_strength = Alias("edge_strength")
@@ -342,7 +342,7 @@ class CorrelationTrigger(Trigger):
 
     @property
     def scfg(self) -> SpectrumConfig:
-        return self.cfg.pitch_invariance
+        return self.cfg.pitch_tracking
 
     def __init__(self, *args, **kwargs):
         """
@@ -471,7 +471,7 @@ class CorrelationTrigger(Trigger):
             falloff_window = cosine_flat(N, diameter, falloff)
             window = np.minimum(falloff_window, self._data_taper)
 
-            # If pitch invariance enabled, rescale buffer to match data's pitch.
+            # If pitch tracking enabled, rescale buffer to match data's pitch.
             if self.scfg and (data != 0).any():
                 if isinstance(semitones, float):
                     peak_semitones = semitones
