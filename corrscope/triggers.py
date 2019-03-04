@@ -26,15 +26,18 @@ from corrscope.wave import FLOAT
 if TYPE_CHECKING:
     from corrscope.wave import Wave
 
+
 # Abstract classes
 
 
-class ITriggerConfig(KeywordAttrs):
+class ITriggerConfig(KeywordAttrs, always_dump="edge_direction"):
     cls: ClassVar[Type["Trigger"]]
+
+    edge_direction: int = 1  # Must be 1 or -1
 
     # Optional trigger for postprocessing
     post: Optional["ITriggerConfig"] = None
-    post_radius: Optional[int] = 3
+    post_radius: Optional[int] = None
 
     @property
     def post_nsamp(self) -> Optional[int]:
@@ -44,11 +47,16 @@ class ITriggerConfig(KeywordAttrs):
             return None
 
     def __attrs_post_init__(self):
-        if self.post and (self.post_radius is None):
-            name = obj_name(self)
-            raise CorrError(
-                f"Cannot supply {name}.post without supplying {name}.post_radius"
-            )
+        if self.edge_direction not in [-1, 1]:
+            raise CorrError(f"{obj_name(self)}.edge_direction must be {{-1, 1}}")
+
+        if self.post:
+            self.post.edge_direction = self.edge_direction
+            if self.post_radius is None:
+                name = obj_name(self)
+                raise CorrError(
+                    f"Cannot supply {name}.post without supplying {name}.post_radius"
+                )
 
     def __call__(self, wave: "Wave", tsamp: int, stride: int, fps: float) -> "Trigger":
         return self.cls(wave, cfg=self, tsamp=tsamp, stride=stride, fps=fps)
@@ -441,7 +449,9 @@ class CorrelationTrigger(Trigger):
         # causes buffer to affect triggering, more than the step function.
         # So we multiply edge_strength (step function height) by buffer_falloff.
 
-        edge_strength = self.cfg.edge_strength * self.cfg.buffer_falloff
+        edge_strength = (
+            self.cfg.edge_direction * self.cfg.edge_strength * self.cfg.buffer_falloff
+        )
         N = self._buffer_nsamp
         halfN = N // 2
 
@@ -748,13 +758,7 @@ class PostTrigger(Trigger, ABC):
 
 
 class ZeroCrossingTriggerConfig(ITriggerConfig):
-    sign: int = 1
-
-    def __attrs_post_init__(self):
-        ITriggerConfig.__attrs_post_init__(self)
-
-        if self.sign not in [-1, 1]:
-            raise CorrError("ZeroCrossingTriggerConfig.sign must be {-1, 1}")
+    pass
 
 
 @register_trigger(ZeroCrossingTriggerConfig)
@@ -771,11 +775,11 @@ class ZeroCrossingTrigger(PostTrigger):
             return index
 
         if self._wave[index] < 0:
-            direction = self.cfg.sign
+            direction = self.cfg.edge_direction
             test = lambda a: a >= 0
 
         elif self._wave[index] > 0:
-            direction = -self.cfg.sign
+            direction = -self.cfg.edge_direction
             test = lambda a: a <= 0
 
         else:  # self._wave[sample] == 0
