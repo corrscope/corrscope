@@ -33,7 +33,15 @@ class ITriggerConfig(KeywordAttrs):
     cls: ClassVar[Type["Trigger"]]
 
     # Optional trigger for postprocessing
+    post_nsamp: Optional[int] = 7
     post: Optional["ITriggerConfig"] = None
+
+    def __attrs_post_init__(self):
+        if self.post and (self.post_nsamp is None):
+            name = obj_name(self)
+            raise CorrError(
+                f"Cannot supply {name}.post without supplying {name}.post_nsamp"
+            )
 
     def __call__(self, wave: "Wave", tsamp: int, stride: int, fps: float) -> "Trigger":
         return self.cls(wave, cfg=self, tsamp=tsamp, stride=stride, fps=fps)
@@ -54,7 +62,6 @@ def register_trigger(
 
 
 class Trigger(ABC):
-    POST_PROCESSING_NSAMP = 256
     post: Optional["Trigger"]
 
     def __init__(
@@ -78,7 +85,7 @@ class Trigger(ABC):
         if cfg.post:
             # Create a post-processing trigger, with narrow nsamp and stride=1.
             # This improves speed and precision.
-            self.post = cfg.post(wave, self.POST_PROCESSING_NSAMP, 1, fps)
+            self.post = cfg.post(wave, cfg.post_nsamp, 1, fps)
         else:
             self.post = None
 
@@ -810,13 +817,18 @@ class LocalPostTrigger(PostTrigger):
 
 
 class ZeroCrossingTriggerConfig(ITriggerConfig):
-    pass
+    sign: int = 1
+
+    def __attrs_post_init__(self):
+        if self.sign not in [-1, 1]:
+            raise CorrError("ZeroCrossingTriggerConfig.sign must be {-1, 1}")
 
 
 @register_trigger(ZeroCrossingTriggerConfig)
 class ZeroCrossingTrigger(PostTrigger):
     # ZeroCrossingTrigger is only used as a postprocessing trigger.
     # stride is only passed 1, for improved precision.
+    cfg: ZeroCrossingTriggerConfig
 
     def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
         # 'cache' is unused.
@@ -826,11 +838,11 @@ class ZeroCrossingTrigger(PostTrigger):
             return index
 
         if self._wave[index] < 0:
-            direction = 1
+            direction = self.cfg.sign
             test = lambda a: a >= 0
 
         elif self._wave[index] > 0:
-            direction = -1
+            direction = -self.cfg.sign
             test = lambda a: a <= 0
 
         else:  # self._wave[sample] == 0
@@ -843,7 +855,7 @@ class ZeroCrossingTrigger(PostTrigger):
             return index + (delta * direction) + int(value <= 0)
 
         except StopIteration:  # No zero-intercepts
-            return index
+            return index + (direction * tsamp)
 
         # noinspection PyUnreachableCode
         """
