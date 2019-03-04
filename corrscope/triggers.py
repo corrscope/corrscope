@@ -33,14 +33,21 @@ class ITriggerConfig(KeywordAttrs):
     cls: ClassVar[Type["Trigger"]]
 
     # Optional trigger for postprocessing
-    post_nsamp: Optional[int] = 7
     post: Optional["ITriggerConfig"] = None
+    post_radius: Optional[int] = 3
+
+    @property
+    def post_nsamp(self) -> Optional[int]:
+        if self.post_radius is not None:
+            return 2 * self.post_radius + 1
+        else:
+            return None
 
     def __attrs_post_init__(self):
-        if self.post and (self.post_nsamp is None):
+        if self.post and (self.post_radius is None):
             name = obj_name(self)
             raise CorrError(
-                f"Cannot supply {name}.post without supplying {name}.post_nsamp"
+                f"Cannot supply {name}.post without supplying {name}.post_radius"
             )
 
     def __call__(self, wave: "Wave", tsamp: int, stride: int, fps: float) -> "Trigger":
