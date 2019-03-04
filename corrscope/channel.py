@@ -42,8 +42,6 @@ class ChannelConfig(DumpableAttrs):
 class Channel:
     # trigger_samp is unneeded, since __init__ (not CorrScope) constructs triggers.
     render_samp: int
-    # TODO add a "get_around" method for rendering (also helps test_channel_subsampling)
-    # Currently CorrScope peeks at Channel.render_samp and render_stride (bad).
 
     # Product of corr_cfg.trigger/render_subsampling and trigger/render_width.
     trigger_stride: int
@@ -108,4 +106,9 @@ class Channel:
             tsamp=trigger_samp,
             stride=self.trigger_stride,
             fps=corr_cfg.fps,
+        )
+
+    def get_render_around(self, trigger_sample: int):
+        return self.render_wave.get_around(
+            trigger_sample, self.render_samp, self.render_stride
         )
