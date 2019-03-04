@@ -818,10 +818,6 @@ class LocalPostTrigger(PostTrigger):
         return trigger
 
 
-def seq_along(a: np.ndarray):
-    return np.arange(len(a))
-
-
 # ZeroCrossingTrigger
 
 
