@@ -41,11 +41,11 @@ class ChannelConfig(DumpableAttrs):
 
 class Channel:
     # trigger_samp is unneeded, since __init__ (not CorrScope) constructs triggers.
-    render_samp: int
+    _render_samp: int
 
     # Product of corr_cfg.trigger/render_subsampling and trigger/render_width.
-    trigger_stride: int
-    render_stride: int
+    _trigger_stride: int
+    _render_stride: int
 
     def __init__(self, cfg: ChannelConfig, corr_cfg: "Config"):
         self.cfg = cfg
@@ -78,10 +78,10 @@ class Channel:
             return round(width_s * wave.smp_s / sub)
 
         trigger_samp = calculate_nsamp(corr_cfg.trigger_ms, tsub)
-        self.render_samp = calculate_nsamp(corr_cfg.render_ms, rsub)
+        self._render_samp = calculate_nsamp(corr_cfg.render_ms, rsub)
 
-        self.trigger_stride = tsub * tw
-        self.render_stride = rsub * rw
+        self._trigger_stride = tsub * tw
+        self._render_stride = rsub * rw
 
         # Create a Trigger object.
         if isinstance(cfg.trigger, MainTriggerConfig):
@@ -104,11 +104,11 @@ class Channel:
         self.trigger = tcfg(
             wave=self.trigger_wave,
             tsamp=trigger_samp,
-            stride=self.trigger_stride,
+            stride=self._trigger_stride,
             fps=corr_cfg.fps,
         )
 
     def get_render_around(self, trigger_sample: int):
         return self.render_wave.get_around(
-            trigger_sample, self.render_samp, self.render_stride
+            trigger_sample, self._render_samp, self._render_stride
         )
