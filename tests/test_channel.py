@@ -122,7 +122,7 @@ def test_config_channel_width_stride(
     renderer = mocker.patch.object(CorrScope, "_load_renderer").return_value
     corr.play()
 
-    # Only render (not NullTrigger) calls wave.get_around().
+    # Only Channel.get_render_around() (not NullTrigger) calls wave.get_around().
     (_sample, _return_nsamp, _subsampling), kwargs = wave.get_around.call_args
     assert _return_nsamp == channel.render_samp
     assert _subsampling == channel.render_stride

@@ -320,13 +320,7 @@ class CorrScope:
 
                     # Get render data.
                     if should_render:
-                        render_datas.append(
-                            render_wave.get_around(
-                                trigger_sample,
-                                channel.render_samp,
-                                channel.render_stride,
-                            )
-                        )
+                        render_datas.append(channel.get_render_around(trigger_sample))
 
                 if not should_render:
                     continue
