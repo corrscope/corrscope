@@ -38,7 +38,11 @@ from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.layout import Orientation, StereoOrientation
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from corrscope.settings import paths
-from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig, SpectrumConfig
+from corrscope.triggers import (
+    CorrelationTriggerConfig,
+    MainTriggerConfig,
+    SpectrumConfig,
+)
 from corrscope.util import obj_name
 from corrscope.wave import Flatten
 
@@ -782,7 +786,7 @@ class ChannelModel(qc.QAbstractTableModel):
 
         for cfg in self.channels:
             t = cfg.trigger
-            if isinstance(t, ITriggerConfig):
+            if isinstance(t, MainTriggerConfig):
                 if not isinstance(t, CorrelationTriggerConfig):
                     raise CorrError(f"Loading per-channel {obj_name(t)} not supported")
                 trigger_dict = attr.asdict(t)

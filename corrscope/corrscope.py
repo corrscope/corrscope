@@ -16,7 +16,7 @@ from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
 from corrscope.renderer import MatplotlibRenderer, RendererConfig, Renderer
 from corrscope.triggers import (
-    ITriggerConfig,
+    MainTriggerConfig,
     CorrelationTriggerConfig,
     PerFrameCache,
     CorrelationTrigger,

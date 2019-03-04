@@ -30,13 +30,19 @@ if TYPE_CHECKING:
 # Abstract classes
 
 
-class ITriggerConfig(KeywordAttrs, always_dump="edge_direction"):
-    cls: ClassVar[Type["Trigger"]]
+class _TriggerConfig:
+    cls: ClassVar[Type["_Trigger"]]
 
+    def __call__(self, wave: "Wave", tsamp: int, stride: int, fps: float) -> "_Trigger":
+        return self.cls(wave, cfg=self, tsamp=tsamp, stride=stride, fps=fps)
+
+
+class MainTriggerConfig(_TriggerConfig, KeywordAttrs, always_dump="edge_direction"):
     edge_direction: int = 1  # Must be 1 or -1
 
     # Optional trigger for postprocessing
-    post: Optional["ITriggerConfig"] = None
+    # TODO rename to post_trigger
+    post: Optional["PostTriggerConfig"] = None
     post_radius: Optional[int] = None
 
     @property
@@ -51,36 +57,36 @@ class ITriggerConfig(KeywordAttrs, always_dump="edge_direction"):
             raise CorrError(f"{obj_name(self)}.edge_direction must be {{-1, 1}}")
 
         if self.post:
-            self.post.edge_direction = self.edge_direction
+            self.post.parent = self
             if self.post_radius is None:
                 name = obj_name(self)
                 raise CorrError(
                     f"Cannot supply {name}.post without supplying {name}.post_radius"
                 )
 
-    def __call__(self, wave: "Wave", tsamp: int, stride: int, fps: float) -> "Trigger":
-        return self.cls(wave, cfg=self, tsamp=tsamp, stride=stride, fps=fps)
+
+class PostTriggerConfig(_TriggerConfig, KeywordAttrs):
+    parent: MainTriggerConfig = attr.ib(init=False)
+    pass
 
 
 def register_trigger(
-    config_t: Type[ITriggerConfig]
-) -> "Callable[[Type[Trigger]], Type[Trigger]]":  # my god mypy-strict sucks
+    config_t: Type[_TriggerConfig]
+) -> "Callable[[Type[_Trigger]], Type[_Trigger]]":  # my god mypy-strict sucks
     """ @register_trigger(FooTriggerConfig)
     def FooTrigger(): ...
     """
 
-    def inner(trigger_t: Type[Trigger]):
+    def inner(trigger_t: Type[_Trigger]):
         config_t.cls = trigger_t
         return trigger_t
 
     return inner
 
 
-class Trigger(ABC):
-    post: Optional["Trigger"]
-
+class _Trigger(ABC):
     def __init__(
-        self, wave: "Wave", cfg: ITriggerConfig, tsamp: int, stride: int, fps: float
+        self, wave: "Wave", cfg: _TriggerConfig, tsamp: int, stride: int, fps: float
     ):
         self.cfg = cfg
         self._wave = wave
@@ -96,14 +102,6 @@ class Trigger(ABC):
         # Samples per frame
         self._real_samp_frame = round(frame_dur * self._wave.smp_s)
 
-        # TODO rename to post_trigger
-        if cfg.post:
-            # Create a post-processing trigger, with narrow nsamp and stride=1.
-            # This improves speed and precision.
-            self.post = cfg.post(wave, cfg.post_nsamp, 1, fps)
-        else:
-            self.post = None
-
     def time2tsamp(self, time: float) -> int:
         return round(time * self._wave.smp_s / self._stride)
 
@@ -116,6 +114,46 @@ class Trigger(ABC):
         :return: new sample index, corresponding to rising edge
         """
         ...
+
+    @abstractmethod
+    def do_not_inherit__Trigger_directly(self):
+        pass
+
+
+class MainTrigger(_Trigger, ABC):
+    cfg: MainTriggerConfig
+    post: Optional["PostTrigger"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        cfg = self.cfg
+        if cfg.post:
+            # Create a post-processing trigger, with narrow nsamp and stride=1.
+            # This improves speed and precision.
+            self.post = cfg.post(self._wave, cfg.post_nsamp, 1, self._fps)
+        else:
+            self.post = None
+
+    def do_not_inherit__Trigger_directly(self):
+        pass
+
+
+class PostTrigger(_Trigger, ABC):
+    """ A post-processing trigger should have stride=1,
+     and no more post triggers. This is subject to change. """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self._stride != 1:
+            raise CorrError(
+                f"{obj_name(self)} with stride != 1 is not allowed "
+                f"(supplied {self._stride})"
+            )
+
+    def do_not_inherit__Trigger_directly(self):
+        pass
 
 
 @attr.dataclass
@@ -311,7 +349,7 @@ class CircularArray:
         return self.buf[self.index]
 
 
-class CorrelationTriggerConfig(ITriggerConfig, always_dump="pitch_tracking"):
+class CorrelationTriggerConfig(MainTriggerConfig, always_dump="pitch_tracking"):
     # get_trigger
     edge_strength: float
     trigger_diameter: Optional[float] = None
@@ -333,7 +371,7 @@ class CorrelationTriggerConfig(ITriggerConfig, always_dump="pitch_tracking"):
     # endregion
 
     def __attrs_post_init__(self) -> None:
-        ITriggerConfig.__attrs_post_init__(self)
+        MainTriggerConfig.__attrs_post_init__(self)
 
         self._validate_param("lag_prevention", 0, 1)
         self._validate_param("responsiveness", 0, 1)
@@ -349,7 +387,7 @@ class CorrelationTriggerConfig(ITriggerConfig, always_dump="pitch_tracking"):
 
 
 @register_trigger(CorrelationTriggerConfig)
-class CorrelationTrigger(Trigger):
+class CorrelationTrigger(MainTrigger):
     cfg: CorrelationTriggerConfig
 
     @property
@@ -361,7 +399,7 @@ class CorrelationTrigger(Trigger):
         Correlation-based trigger which looks at a window of `trigger_tsamp` samples.
         it's complicated
         """
-        Trigger.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._buffer_nsamp = self._tsamp
 
         # (const) Multiplied by each frame of input audio.
@@ -732,32 +770,10 @@ def lerp(x: np.ndarray, y: np.ndarray, a: float) -> Union[np.ndarray, float]:
 
 
 #### Post-processing triggers
-
-
-class PostTrigger(Trigger, ABC):
-    """ A post-processing trigger should have stride=1,
-     and no more post triggers. This is subject to change. """
-
-    def __init__(self, *args, **kwargs):
-        Trigger.__init__(self, *args, **kwargs)
-
-        if self._stride != 1:
-            raise CorrError(
-                f"{obj_name(self)} with stride != 1 is not allowed "
-                f"(supplied {self._stride})"
-            )
-
-        if self.post:
-            raise CorrError(
-                f"Passing {obj_name(self)} a post_trigger is not allowed "
-                f"({obj_name(self.post)})"
-            )
-
-
 # ZeroCrossingTrigger
 
 
-class ZeroCrossingTriggerConfig(ITriggerConfig):
+class ZeroCrossingTriggerConfig(PostTriggerConfig):
     pass
 
 
@@ -774,12 +790,13 @@ class ZeroCrossingTrigger(PostTrigger):
         if not 0 <= index < self._wave.nsamp:
             return index
 
+        parent_cfg = self.cfg.parent
         if self._wave[index] < 0:
-            direction = self.cfg.edge_direction
+            direction = parent_cfg.edge_direction
             test = lambda a: a >= 0
 
         elif self._wave[index] > 0:
-            direction = -self.cfg.edge_direction
+            direction = -parent_cfg.edge_direction
             test = lambda a: a <= 0
 
         else:  # self._wave[sample] == 0
@@ -812,11 +829,11 @@ class ZeroCrossingTrigger(PostTrigger):
 # NullTrigger
 
 
-class NullTriggerConfig(ITriggerConfig):
+class NullTriggerConfig(MainTriggerConfig):
     pass
 
 
 @register_trigger(NullTriggerConfig)
-class NullTrigger(Trigger):
+class NullTrigger(MainTrigger):
     def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
         return index

@@ -79,7 +79,7 @@ def test_trigger(cfg: CorrelationTriggerConfig):
         plt.show()
 
 
-def test_post_trigger_stride(post_cfg: CorrelationTriggerConfig):
+def test_post_stride(post_cfg: CorrelationTriggerConfig):
     cfg = post_cfg
 
     wave = Wave("tests/sine440.wav")
