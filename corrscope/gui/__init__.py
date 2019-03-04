@@ -645,6 +645,22 @@ class ConfigModel(PresentationModel):
         combo_text[path] = list(symbol_map.values())
     del path, symbol_map
 
+    # Trigger
+    @property
+    def trigger__pitch_tracking(self) -> bool:
+        scfg = self.cfg.trigger.pitch_tracking
+        gui = scfg is not None
+        return gui
+
+    @trigger__pitch_tracking.setter
+    def trigger__pitch_tracking(self, gui: bool):
+        scfg = SpectrumConfig() if gui else None
+        self.cfg.trigger.pitch_tracking = scfg
+
+    combo_symbols["trigger__edge_direction"] = [1, -1]
+    combo_text["trigger__edge_direction"] = ["Rising (+1)", "Falling (-1)"]
+
+    # Render
     @property
     def render_resolution(self) -> str:
         render = self.cfg.render
@@ -670,6 +686,9 @@ class ConfigModel(PresentationModel):
         except ValueError:
             raise error
 
+    render__line_width = default_property("render__line_width", 1.5)
+
+    # Layout
     layout__nrows = nrow_ncol_property("nrows", unaltered="ncols")
     layout__ncols = nrow_ncol_property("ncols", unaltered="nrows")
 
@@ -685,19 +704,6 @@ class ConfigModel(PresentationModel):
         combo_symbols[path] = list(map(cls, symbol_map.keys()))
         combo_text[path] = list(symbol_map.values())
     del path, cls, symbol_map
-
-    render__line_width = default_property("render__line_width", 1.5)
-
-    @property
-    def trigger__pitch_tracking(self) -> bool:
-        scfg = self.cfg.trigger.pitch_tracking
-        gui = scfg is not None
-        return gui
-
-    @trigger__pitch_tracking.setter
-    def trigger__pitch_tracking(self, gui: bool):
-        scfg = SpectrumConfig() if gui else None
-        self.cfg.trigger.pitch_tracking = scfg
 
 
 # End ConfigModel

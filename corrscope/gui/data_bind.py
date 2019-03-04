@@ -11,6 +11,7 @@ from typing import (
     Union,
     Sequence,
     Tuple,
+    NewType,
 )
 
 import attr
@@ -35,7 +36,7 @@ __all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr", "Sy
 
 Signal = Any
 WidgetUpdater = Callable[[], None]
-Symbol = Union[str, "Enum"]
+Symbol = NewType("Symbol", Any)
 
 
 # Data binding presentation-model
