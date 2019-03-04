@@ -103,35 +103,35 @@ def test_config_channel_width_stride(
 
     ideal_tsamp = ideal_samp(cfg.trigger_ms, tsub)
     ideal_rsamp = ideal_samp(cfg.render_ms, rsub)
-    assert channel.render_samp == ideal_rsamp
+    assert channel._render_samp == ideal_rsamp
 
-    assert channel.trigger_stride == tsub * c_trigger_width
-    assert channel.render_stride == rsub * c_render_width
+    assert channel._trigger_stride == tsub * c_trigger_width
+    assert channel._render_stride == rsub * c_render_width
 
     # Ensure amplification override works
     args, kwargs = Wave.call_args
     assert kwargs["amplification"] == coalesce(c_amplification, amplification)
 
-    ## Ensure trigger uses channel.window_samp and trigger_stride.
+    ## Ensure trigger uses channel.window_samp and _trigger_stride.
     trigger = channel.trigger
     assert trigger._tsamp == ideal_tsamp
-    assert trigger._stride == channel.trigger_stride
+    assert trigger._stride == channel._trigger_stride
 
-    ## Ensure corrscope calls render using channel.render_samp and render_stride.
+    ## Ensure corrscope calls render using channel._render_samp and _render_stride.
     corr = CorrScope(cfg, Arguments(cfg_dir=".", outputs=[]))
     renderer = mocker.patch.object(CorrScope, "_load_renderer").return_value
     corr.play()
 
     # Only Channel.get_render_around() (not NullTrigger) calls wave.get_around().
     (_sample, _return_nsamp, _subsampling), kwargs = wave.get_around.call_args
-    assert _return_nsamp == channel.render_samp
-    assert _subsampling == channel.render_stride
+    assert _return_nsamp == channel._render_samp
+    assert _subsampling == channel._render_stride
 
     # Inspect arguments to renderer.render_frame()
     # datas: List[np.ndarray]
     (datas,), kwargs = renderer.render_frame.call_args
     render_data = datas[0]
-    assert len(render_data) == channel.render_samp
+    assert len(render_data) == channel._render_samp
 
 
 # line_color is tested in test_renderer.py
