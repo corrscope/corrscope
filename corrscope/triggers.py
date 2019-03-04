@@ -1,4 +1,3 @@
-import warnings
 from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
@@ -19,7 +18,7 @@ import numpy as np
 
 import corrscope.utils.scipy.signal as signal
 import corrscope.utils.scipy.windows as windows
-from corrscope.config import KeywordAttrs, CorrError, Alias, CorrWarning
+from corrscope.config import KeywordAttrs, CorrError, Alias
 from corrscope.util import find, obj_name
 from corrscope.utils.windows import midpad, leftpad
 from corrscope.wave import FLOAT
@@ -309,7 +308,6 @@ class CorrelationTriggerConfig(ITriggerConfig, always_dump="pitch_tracking"):
     # region Legacy Aliases
     trigger_strength = Alias("edge_strength")
     falloff_width = Alias("buffer_falloff")
-    use_edge_trigger: bool
     # endregion
 
     def __attrs_post_init__(self) -> None:
@@ -317,16 +315,6 @@ class CorrelationTriggerConfig(ITriggerConfig, always_dump="pitch_tracking"):
         self._validate_param("responsiveness", 0, 1)
         # TODO trigger_falloff >= 0
         self._validate_param("buffer_falloff", 0, np.inf)
-
-        if self.use_edge_trigger:
-            if self.post:
-                warnings.warn(
-                    "Ignoring old `CorrelationTriggerConfig.use_edge_trigger` flag, "
-                    "overriden by newer `post` flag.",
-                    CorrWarning,
-                )
-            else:
-                self.post = ZeroCrossingTriggerConfig()
 
     def _validate_param(self, key: str, begin: float, end: float) -> None:
         value = getattr(self, key)
