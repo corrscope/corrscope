@@ -12,7 +12,6 @@ from corrscope.triggers import (
     CorrelationTrigger,
     PerFrameCache,
     ZeroCrossingTriggerConfig,
-    LocalPostTriggerConfig,
     SpectrumConfig,
 )
 from corrscope.wave import Wave
@@ -37,10 +36,7 @@ def cfg(trigger_diameter, pitch_tracking):
     )
 
 
-@pytest.fixture(
-    scope="session",
-    params=[None, ZeroCrossingTriggerConfig(), LocalPostTriggerConfig(strength=1)],
-)
+@pytest.fixture(scope="session", params=[None, ZeroCrossingTriggerConfig()])
 def post_cfg(request):
     post = request.param
     return cfg_template(post=post)
