@@ -318,6 +318,8 @@ class CorrelationTriggerConfig(ITriggerConfig, always_dump="pitch_tracking"):
     # endregion
 
     def __attrs_post_init__(self) -> None:
+        ITriggerConfig.__attrs_post_init__(self)
+
         self._validate_param("lag_prevention", 0, 1)
         self._validate_param("responsiveness", 0, 1)
         # TODO trigger_falloff >= 0
@@ -820,6 +822,8 @@ class ZeroCrossingTriggerConfig(ITriggerConfig):
     sign: int = 1
 
     def __attrs_post_init__(self):
+        ITriggerConfig.__attrs_post_init__(self)
+
         if self.sign not in [-1, 1]:
             raise CorrError("ZeroCrossingTriggerConfig.sign must be {-1, 1}")
 
