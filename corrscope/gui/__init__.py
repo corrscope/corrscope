@@ -377,26 +377,29 @@ class MainWindow(qw.QMainWindow):
     def play_thread(
         self, outputs: List[IOutputConfig], dlg: Optional["CorrProgressDialog"]
     ):
-        assert self.model
+        try:
+            assert self.model
 
-        arg = self._get_args(outputs)
-        cfg = copy_config(self.model.cfg)
-        t = self.corr_thread = CorrThread(cfg, arg)
+            arg = self._get_args(outputs)
+            cfg = copy_config(self.model.cfg)
+            t = self.corr_thread = CorrThread(cfg, arg)
 
-        if dlg:
-            dlg.canceled.connect(t.abort)
-            t.arg = attr.evolve(
-                arg,
-                on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
-                progress=run_on_ui_thread(dlg.setValue, (int,)),
-                is_aborted=t.is_aborted.get,
-                on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
-            )
+            if dlg:
+                dlg.canceled.connect(t.abort)
+                t.arg = attr.evolve(
+                    arg,
+                    on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
+                    progress=run_on_ui_thread(dlg.setValue, (int,)),
+                    is_aborted=t.is_aborted.get,
+                    on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
+                )
 
-        t.finished.connect(self.on_play_thread_finished)
-        t.error.connect(self.on_play_thread_error)
-        t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
-        t.start()
+            t.finished.connect(self.on_play_thread_finished)
+            t.error.connect(self.on_play_thread_error)
+            t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
+            t.start()
+        except Exception as e:
+            TracebackDialog(self).showMessage(format_stack_trace(e))
 
     def _get_args(self, outputs: List[IOutputConfig]):
         arg = Arguments(cfg_dir=self.cfg_dir, outputs=outputs)
@@ -444,6 +447,14 @@ class MainWindow(qw.QMainWindow):
         return self.model.cfg
 
 
+def format_stack_trace(e):
+    if isinstance(e, CorrError):
+        stack_trace = traceback.format_exc(limit=0)
+    else:
+        stack_trace = traceback.format_exc()
+    return stack_trace
+
+
 class CorrThread(qc.QThread):
     is_aborted: Locked[bool]
 
@@ -472,10 +483,7 @@ class CorrThread(qc.QThread):
 
         except Exception as e:
             arg.on_end()
-            if isinstance(e, CorrError):
-                stack_trace = traceback.format_exc(limit=0)
-            else:
-                stack_trace = traceback.format_exc()
+            stack_trace = format_stack_trace(e)
             self.error.emit(stack_trace)
 
         else:
