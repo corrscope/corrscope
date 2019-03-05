@@ -291,6 +291,36 @@ foo: 0
     assert yaml.load(s) == Foo(99)
 
 
+# Test handling of _prefix fields, or init=False
+
+
+@pytest.mark.filterwarnings("ignore:")
+def test_skip_dump_load():
+    """Ensure _fields or init=False are not dumped,
+    and don't crash on loading.
+    """
+
+    class Foo(DumpableAttrs):
+        _underscore: int
+        init_false: int = attr.ib(init=False)
+
+        def __attrs_post_init__(self):
+            self.init_false = 1
+
+    # Ensure fields are not dumped.
+    foo = Foo(underscore=1)
+    assert yaml.dump(foo).strip() == "!Foo {}"
+
+    # Ensure init=False fields don't crash on loading.
+    evil = """\
+!Foo
+underscore: 1
+_underscore: 2
+init_false: 3
+"""
+    assert yaml.load(evil)._underscore == 1
+
+
 # Test always_dump validation.
 
 
