@@ -153,11 +153,15 @@ class DumpableAttrs:
         cls = type(self)
 
         for field in attr.fields(cls):
-            # Skip deprecated fields with leading underscores.
-            # They have already been baked into other config fields.
-
+            """
+            Skip fields which cannot be passed into __init__().
+            - init=False
+            - leading underscores: deprecated fields.
+                - They have already been baked into other config fields.
+                - Even if you want to keep them, __init__(field) removes underscore.
+            """
             name = field.name
-            if name[0] == "_":
+            if name[0] == "_" or not field.init:
                 continue
 
             value = getattr(self, name)
@@ -184,12 +188,16 @@ class DumpableAttrs:
         """ Redirect `Alias(key)=value` to `key=value`.
         Then call the dataclass constructor (to validate parameters). """
 
-        self_name = obj_name(self)
-        field_names = attr.fields_dict(type(self)).keys()
+        cls = type(self)
+        cls_name = cls.__name__
+        fields = attr.fields_dict(cls)
+
+        # All names which can be passed into __init__()
+        field_names = {name.lstrip("_") for name, field in fields.items() if field.init}
 
         new_state = {}
         for key, value in dict(state).items():
-            class_var = getattr(self, key, None)
+            class_var = getattr(cls, key, None)
 
             if class_var is Ignored:
                 pass
@@ -198,21 +206,21 @@ class DumpableAttrs:
                 target = class_var.key
                 if target in state:
                     raise CorrError(
-                        f"{self_name} received both Alias {key} and "
+                        f"{cls_name} received both Alias {key} and "
                         f"equivalent {target}"
                     )
                 new_state[target] = value
 
             elif key not in field_names:
                 warnings.warn(
-                    f'Unrecognized field "{key}" in !{self_name}, ignoring', CorrWarning
+                    f'Unrecognized field "{key}" in !{cls_name}, ignoring', CorrWarning
                 )
 
             else:
                 new_state[key] = value
 
         del state
-        obj = type(self)(**new_state)
+        obj = cls(**new_state)
         self.__dict__ = obj.__dict__
 
 
