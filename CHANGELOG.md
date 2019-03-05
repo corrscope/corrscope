@@ -1,3 +1,14 @@
+## 0.4.0-pre
+
+### Breaking Changes
+...
+
+### Features
+...
+
+### Changelog
+...
+
 ## 0.3.0
 
 ### Breaking Changes
