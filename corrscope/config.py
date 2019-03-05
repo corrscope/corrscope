@@ -205,7 +205,7 @@ class DumpableAttrs:
 
             elif key not in field_names:
                 warnings.warn(
-                    f'Unrecognized field !{self_name} "{key}", ignoring', CorrWarning
+                    f'Unrecognized field "{key}" in !{self_name}, ignoring', CorrWarning
                 )
 
             else:
