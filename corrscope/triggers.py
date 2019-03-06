@@ -38,7 +38,10 @@ class _TriggerConfig:
 
 
 class MainTriggerConfig(_TriggerConfig, KeywordAttrs, always_dump="edge_direction"):
-    edge_direction: int = 1  # Must be 1 or -1
+    # Must be 1 or -1.
+    # MainTrigger.__init__() multiplies `wave.amplification *= edge_direction`.
+    # get_trigger() should ignore `edge_direction` and look for rising edges.
+    edge_direction: int = 1
 
     # Optional trigger for postprocessing
     # TODO rename to post_trigger
@@ -126,6 +129,7 @@ class MainTrigger(_Trigger, ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._wave.amplification *= self.cfg.edge_direction
 
         cfg = self.cfg
         if cfg.post:
@@ -487,9 +491,7 @@ class CorrelationTrigger(MainTrigger):
         # causes buffer to affect triggering, more than the step function.
         # So we multiply edge_strength (step function height) by buffer_falloff.
 
-        edge_strength = (
-            self.cfg.edge_direction * self.cfg.edge_strength * self.cfg.buffer_falloff
-        )
+        edge_strength = self.cfg.edge_strength * self.cfg.buffer_falloff
         N = self._buffer_nsamp
         halfN = N // 2
 
@@ -777,6 +779,7 @@ class ZeroCrossingTriggerConfig(PostTriggerConfig):
     pass
 
 
+# Edge finding trigger
 @register_trigger(ZeroCrossingTriggerConfig)
 class ZeroCrossingTrigger(PostTrigger):
     # ZeroCrossingTrigger is only used as a postprocessing trigger.
@@ -792,17 +795,18 @@ class ZeroCrossingTrigger(PostTrigger):
 
         parent_cfg = self.cfg.parent
         if self._wave[index] < 0:
-            direction = parent_cfg.edge_direction
+            direction = 1
             test = lambda a: a >= 0
 
         elif self._wave[index] > 0:
-            direction = -parent_cfg.edge_direction
+            direction = -1
             test = lambda a: a <= 0
 
         else:  # self._wave[sample] == 0
             return index + 1
 
         data = self._wave[index : index + (direction * tsamp) : direction]
+        # TODO remove unnecessary complexity, since diameter is probably under 10.
         intercepts = find(data, test)
         try:
             (delta,), value = next(intercepts)
