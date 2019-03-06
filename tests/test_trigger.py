@@ -16,6 +16,9 @@ from corrscope.triggers import (
 )
 from corrscope.wave import Wave
 
+parametrize = pytest.mark.parametrize
+
+
 triggers.SHOW_TRIGGER = False
 
 
@@ -28,18 +31,12 @@ def cfg_template(**kwargs) -> CorrelationTriggerConfig:
 
 
 @pytest_fixture_plus
-@pytest.mark.parametrize("trigger_diameter", [None, 0.5])
-@pytest.mark.parametrize("pitch_tracking", [None, SpectrumConfig()])
+@parametrize("trigger_diameter", [None, 0.5])
+@parametrize("pitch_tracking", [None, SpectrumConfig()])
 def cfg(trigger_diameter, pitch_tracking):
     return cfg_template(
         trigger_diameter=trigger_diameter, pitch_tracking=pitch_tracking
     )
-
-
-@pytest.fixture(scope="session", params=[None, ZeroCrossingTriggerConfig()])
-def post_cfg(request):
-    post = request.param
-    return cfg_template(post=post)
 
 
 # I regret adding the nsamp_frame parameter. It makes unit tests hard.
@@ -79,8 +76,9 @@ def test_trigger(cfg: CorrelationTriggerConfig):
         plt.show()
 
 
-def test_post_stride(post_cfg: CorrelationTriggerConfig):
-    cfg = post_cfg
+@parametrize("post", [None, ZeroCrossingTriggerConfig()])
+def test_post_stride(post):
+    cfg = cfg_template(post=post)
 
     wave = Wave("tests/sine440.wav")
     iters = 5
@@ -100,6 +98,33 @@ def test_post_stride(post_cfg: CorrelationTriggerConfig):
             # If assertion fails, remove it.
             assert (offset - x0) % stride != 0, f"iteration {i}"
             assert abs(offset - x0) <= 2, f"iteration {i}"
+
+
+@parametrize("post", [None, ZeroCrossingTriggerConfig()])
+@parametrize("double_negate", [False, True])
+def test_trigger_direction(post, double_negate):
+    """
+    Right now, MainTrigger is responsible for negating wave.amplification
+    if edge_direction == -1.
+    And triggers should not actually access edge_direction.
+    """
+
+    index = 2400
+    wave = Wave("tests/step2400.wav")
+
+    if double_negate:
+        wave.amplification = -1
+        cfg = cfg_template(post=post, edge_direction=-1)
+    else:
+        cfg = cfg_template(post=post)
+
+    trigger = cfg(wave, 100, 1, FPS)
+    cfg.edge_direction = None
+    assert trigger._wave.amplification == 1
+
+    cache = PerFrameCache()
+    for dx in [-10, 10, 0]:
+        assert trigger.get_trigger(index + dx, cache) == index
 
 
 def test_trigger_stride_edges(cfg: CorrelationTriggerConfig):
