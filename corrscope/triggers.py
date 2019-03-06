@@ -43,7 +43,7 @@ class MainTriggerConfig(_TriggerConfig, KeywordAttrs, always_dump="edge_directio
     # Optional trigger for postprocessing
     # TODO rename to post_trigger
     post: Optional["PostTriggerConfig"] = None
-    post_radius: Optional[int] = None
+    post_radius: Optional[int] = 3
 
     @property
     def post_nsamp(self) -> Optional[int]:
