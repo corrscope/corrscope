@@ -115,7 +115,8 @@ def copy_config(obj: T) -> T:
 class DumpableAttrs:
     """ Marks class as attrs, and enables YAML dumping (excludes default fields). """
 
-    __always_dump: ClassVar[Set[str]]
+    # Private variable, to avoid clashing with subclass attributes.
+    __always_dump: ClassVar[FrozenSet[str]] = frozenset()
 
     if TYPE_CHECKING:
 
@@ -123,10 +124,14 @@ class DumpableAttrs:
             pass
 
     def __init_subclass__(cls, kw_only: bool = False, always_dump: str = ""):
-        cls.__always_dump = set(always_dump.split())
-        del always_dump
-
         _yaml_loadable(attr.dataclass(cls, kw_only=kw_only))
+
+        # Merge always_dump with superclass's __always_dump.
+        super_always_dump = cls.__always_dump
+        assert type(super_always_dump) == frozenset
+
+        cls.__always_dump = super_always_dump | frozenset(always_dump.split())
+        del super_always_dump, always_dump
 
         dump_fields = cls.__always_dump - {"*"}  # remove "*" if exists
         if "*" in cls.__always_dump:
