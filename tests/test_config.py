@@ -172,6 +172,26 @@ b: ''
     )
 
 
+def test_always_dump_inheritance():
+    class Config(DumpableAttrs, always_dump="a"):
+        a: int = 1
+        b: int = 2
+
+    class Special(Config, always_dump="c"):
+        c: int = 3
+        d: int = 4
+
+    s = yaml.dump(Special())
+    assert (
+        s
+        == """\
+!Special
+a: 1
+c: 3
+"""
+    )
+
+
 # Dataclass load testing
 
 
