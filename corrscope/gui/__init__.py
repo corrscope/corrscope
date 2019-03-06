@@ -777,6 +777,13 @@ class Column:
     display_name: str = attr.Factory(_display_name, takes_self=True)
 
 
+def plus_minus_one(value: str) -> int:
+    if int(value) >= 0:
+        return 1
+    else:
+        return -1
+
+
 class ChannelModel(qc.QAbstractTableModel):
     """ Design based off
     https://doc.qt.io/qt-5/model-view-programming.html#a-read-only-example-model and
@@ -816,6 +823,7 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
         Column("line_color", str, None, "Line Color"),
+        Column("trigger__edge_direction", plus_minus_one, None),
         Column("trigger__edge_strength", float, None),
         Column("trigger__responsiveness", float, None),
         Column("trigger__buffer_falloff", float, None),
