@@ -12,10 +12,12 @@ from corrscope.triggers import (
     CorrelationTrigger,
     PerFrameCache,
     ZeroCrossingTriggerConfig,
-    LocalPostTriggerConfig,
     SpectrumConfig,
 )
 from corrscope.wave import Wave
+
+parametrize = pytest.mark.parametrize
+
 
 triggers.SHOW_TRIGGER = False
 
@@ -23,30 +25,18 @@ triggers.SHOW_TRIGGER = False
 def cfg_template(**kwargs) -> CorrelationTriggerConfig:
     """ Not identical to default_config() template. """
     cfg = CorrelationTriggerConfig(
-        edge_strength=2, responsiveness=1, buffer_falloff=0.5, use_edge_trigger=False
+        edge_strength=2, responsiveness=1, buffer_falloff=0.5
     )
     return attr.evolve(cfg, **kwargs)
 
 
 @pytest_fixture_plus
-@pytest.mark.parametrize("use_edge_trigger", [False, True])
-@pytest.mark.parametrize("trigger_diameter", [None, 0.5])
-@pytest.mark.parametrize("pitch_tracking", [None, SpectrumConfig()])
-def cfg(use_edge_trigger, trigger_diameter, pitch_tracking):
+@parametrize("trigger_diameter", [None, 0.5])
+@parametrize("pitch_tracking", [None, SpectrumConfig()])
+def cfg(trigger_diameter, pitch_tracking):
     return cfg_template(
-        use_edge_trigger=use_edge_trigger,
-        trigger_diameter=trigger_diameter,
-        pitch_tracking=pitch_tracking,
+        trigger_diameter=trigger_diameter, pitch_tracking=pitch_tracking
     )
-
-
-@pytest.fixture(
-    scope="session",
-    params=[None, ZeroCrossingTriggerConfig(), LocalPostTriggerConfig(strength=1)],
-)
-def post_cfg(request):
-    post = request.param
-    return cfg_template(post=post)
 
 
 # I regret adding the nsamp_frame parameter. It makes unit tests hard.
@@ -86,48 +76,9 @@ def test_trigger(cfg: CorrelationTriggerConfig):
         plt.show()
 
 
-def test_trigger_stride(cfg: CorrelationTriggerConfig):
-    wave = Wave("tests/sine440.wav")
-    # period = 48000 / 440 = 109.(09)*
-
-    iters = 5
-    x0 = 24000
-    stride = 4
-    trigger = cfg(wave, tsamp=100, stride=stride, fps=FPS)
-    # real window_samp = window_samp*stride
-    # period = 109
-
-    cache = PerFrameCache()
-
-    for i in range(1, iters):
-        offset = trigger.get_trigger(x0, cache)
-
-        # Debugging CorrelationTrigger.get_trigger:
-        # from matplotlib import pyplot as plt
-        # plt.plot(data)
-        # plt.plot(prev_buffer)
-        # plt.plot(corr)
-
-        # When i=0, the data has 3 peaks, the rightmost taller than the center. The
-        # *tips* of the outer peaks are truncated between `left` and `right`.
-        # After truncation, corr[mid+1] is almost identical to corr[mid], for
-        # reasons I don't understand (mid+1 > mid because dithering?).
-        if not cfg.use_edge_trigger:
-            assert (offset - x0) % stride == 0, f"iteration {i}"
-            assert abs(offset - x0) < 10, f"iteration {i}"
-
-        # The edge trigger activates at x0+1=24001. Likely related: it triggers
-        # when moving from <=0 to >0. This is a necessary evil, in order to
-        # recognize 0-to-positive edges while testing tests/impulse24000.wav .
-
-        else:
-            # If assertion fails, remove it.
-            assert (offset - x0) % stride != 0, f"iteration {i}"
-            assert abs(offset - x0) <= 2, f"iteration {i}"
-
-
-def test_post_trigger_stride(post_cfg: CorrelationTriggerConfig):
-    cfg = post_cfg
+@parametrize("post", [None, ZeroCrossingTriggerConfig()])
+def test_post_stride(post):
+    cfg = cfg_template(post=post)
 
     wave = Wave("tests/sine440.wav")
     iters = 5
@@ -147,6 +98,33 @@ def test_post_trigger_stride(post_cfg: CorrelationTriggerConfig):
             # If assertion fails, remove it.
             assert (offset - x0) % stride != 0, f"iteration {i}"
             assert abs(offset - x0) <= 2, f"iteration {i}"
+
+
+@parametrize("post", [None, ZeroCrossingTriggerConfig()])
+@parametrize("double_negate", [False, True])
+def test_trigger_direction(post, double_negate):
+    """
+    Right now, MainTrigger is responsible for negating wave.amplification
+    if edge_direction == -1.
+    And triggers should not actually access edge_direction.
+    """
+
+    index = 2400
+    wave = Wave("tests/step2400.wav")
+
+    if double_negate:
+        wave.amplification = -1
+        cfg = cfg_template(post=post, edge_direction=-1)
+    else:
+        cfg = cfg_template(post=post)
+
+    trigger = cfg(wave, 100, 1, FPS)
+    cfg.edge_direction = None
+    assert trigger._wave.amplification == 1
+
+    cache = PerFrameCache()
+    for dx in [-10, 10, 0]:
+        assert trigger.get_trigger(index + dx, cache) == index
 
 
 def test_trigger_stride_edges(cfg: CorrelationTriggerConfig):
@@ -234,7 +212,6 @@ def test_load_trigger_config():
         """\
 !CorrelationTriggerConfig
   trigger_strength: 3
-  use_edge_trigger: false
   responsiveness: 0.2
   falloff_width: 2
 """

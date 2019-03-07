@@ -5,7 +5,7 @@ import attr
 from ruamel.yaml.comments import CommentedMap
 
 from corrscope.config import DumpableAttrs, Alias, CorrError
-from corrscope.triggers import ITriggerConfig
+from corrscope.triggers import MainTriggerConfig
 from corrscope.util import coalesce
 from corrscope.wave import Wave, Flatten
 
@@ -18,7 +18,7 @@ class ChannelConfig(DumpableAttrs):
 
     # Supplying a dict inherits attributes from global trigger.
     # TODO test channel-specific triggers
-    trigger: Union[ITriggerConfig, Dict[str, Any], None] = attr.Factory(dict)
+    trigger: Union[MainTriggerConfig, Dict[str, Any], None] = attr.Factory(dict)
 
     # Multiplies how wide the window is, in milliseconds.
     trigger_width: int = 1
@@ -86,7 +86,7 @@ class Channel:
         self.render_stride = rsub * rw
 
         # Create a Trigger object.
-        if isinstance(cfg.trigger, ITriggerConfig):
+        if isinstance(cfg.trigger, MainTriggerConfig):
             tcfg = cfg.trigger
         elif isinstance(
             cfg.trigger, (CommentedMap, dict)
