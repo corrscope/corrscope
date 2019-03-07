@@ -24,7 +24,7 @@ __all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr", "Sy
 
 Signal = Any
 WidgetUpdater = Callable[[], None]
-Symbol = NewType("Symbol", Hashable)
+Symbol = Hashable
 
 
 # Data binding presentation-model
@@ -268,7 +268,7 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
     symbol2idx: Dict[Symbol, int]
 
     # noinspection PyAttributeOutsideInit
-    def bind_widget(self, model: PresentationModel, path: str) -> None:
+    def bind_widget(self, model: PresentationModel, path: str, *args, **kwargs) -> None:
         # Effectively enum values.
         self.combo_symbols = model.combo_symbols[path]
 
@@ -281,7 +281,7 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
             self.symbol2idx[symbol] = i
             self.addItem(combo_text[i])
 
-        BoundWidget.bind_widget(self, model, path)
+        BoundWidget.bind_widget(self, model, path, *args, **kwargs)
 
     # combobox.index = pmodel.attr
     def set_gui(self, symbol: Symbol) -> None:
@@ -334,8 +334,8 @@ class BoundColorWidget(BoundWidget, qw.QWidget):
         layout.addWidget(self.button)
 
     # override BoundWidget
-    def bind_widget(self, model: PresentationModel, path: str) -> None:
-        super().bind_widget(model, path)
+    def bind_widget(self, model: PresentationModel, path: str, *args, **kwargs) -> None:
+        super().bind_widget(model, path, *args, **kwargs)
         self.text.bind_widget(model, path, connect_to_model=False)
 
     # impl BoundWidget
