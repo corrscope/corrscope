@@ -516,7 +516,6 @@ class CorrProgressDialog(qw.QProgressDialog):
         # self.setValue is called by CorrScope, on the first frame.
 
 
-# *arg_types: type
 def run_on_ui_thread(
     bound_slot: MethodType, types: Tuple[type, ...]
 ) -> Callable[..., None]:
@@ -718,7 +717,10 @@ class ChannelTableView(qw.QTableView):
 
         col = model.idx_of_key["wav_path"]
 
+        # Insert N empty rows into model (mutates cfg.channels).
         model.insertRows(begin_row, count_rows)
+
+        # Fill N empty rows with wav_path.
         for row, wav_path in enumerate(wavs, begin_row):
             index = model.index(row, col)
             model.setData(index, wav_path)
@@ -782,6 +784,9 @@ def plus_minus_one(value: str) -> int:
         return 1
     else:
         return -1
+
+
+nope = qc.QVariant()
 
 
 class ChannelModel(qc.QAbstractTableModel):
@@ -992,9 +997,6 @@ class ChannelModel(qc.QAbstractTableModel):
             | Qt.ItemIsEditable
             | Qt.ItemNeverHasChildren
         )
-
-
-nope = qc.QVariant()
 
 
 class DownloadFFmpegActivity:
