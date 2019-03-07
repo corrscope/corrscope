@@ -38,7 +38,11 @@ from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.layout import Orientation, StereoOrientation
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from corrscope.settings import paths
-from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig, SpectrumConfig
+from corrscope.triggers import (
+    CorrelationTriggerConfig,
+    MainTriggerConfig,
+    SpectrumConfig,
+)
 from corrscope.util import obj_name
 from corrscope.wave import Flatten
 
@@ -641,6 +645,22 @@ class ConfigModel(PresentationModel):
         combo_text[path] = list(symbol_map.values())
     del path, symbol_map
 
+    # Trigger
+    @property
+    def trigger__pitch_tracking(self) -> bool:
+        scfg = self.cfg.trigger.pitch_tracking
+        gui = scfg is not None
+        return gui
+
+    @trigger__pitch_tracking.setter
+    def trigger__pitch_tracking(self, gui: bool):
+        scfg = SpectrumConfig() if gui else None
+        self.cfg.trigger.pitch_tracking = scfg
+
+    combo_symbols["trigger__edge_direction"] = [1, -1]
+    combo_text["trigger__edge_direction"] = ["Rising (+1)", "Falling (-1)"]
+
+    # Render
     @property
     def render_resolution(self) -> str:
         render = self.cfg.render
@@ -666,6 +686,9 @@ class ConfigModel(PresentationModel):
         except ValueError:
             raise error
 
+    render__line_width = default_property("render__line_width", 1.5)
+
+    # Layout
     layout__nrows = nrow_ncol_property("nrows", unaltered="ncols")
     layout__ncols = nrow_ncol_property("ncols", unaltered="nrows")
 
@@ -681,19 +704,6 @@ class ConfigModel(PresentationModel):
         combo_symbols[path] = list(map(cls, symbol_map.keys()))
         combo_text[path] = list(symbol_map.values())
     del path, cls, symbol_map
-
-    render__line_width = default_property("render__line_width", 1.5)
-
-    @property
-    def trigger__pitch_tracking(self) -> bool:
-        scfg = self.cfg.trigger.pitch_tracking
-        gui = scfg is not None
-        return gui
-
-    @trigger__pitch_tracking.setter
-    def trigger__pitch_tracking(self, gui: bool):
-        scfg = SpectrumConfig() if gui else None
-        self.cfg.trigger.pitch_tracking = scfg
 
 
 # End ConfigModel
@@ -767,6 +777,13 @@ class Column:
     display_name: str = attr.Factory(_display_name, takes_self=True)
 
 
+def plus_minus_one(value: str) -> int:
+    if int(value) >= 0:  # Raises ValueError
+        return 1
+    else:
+        return -1
+
+
 class ChannelModel(qc.QAbstractTableModel):
     """ Design based off
     https://doc.qt.io/qt-5/model-view-programming.html#a-read-only-example-model and
@@ -782,7 +799,7 @@ class ChannelModel(qc.QAbstractTableModel):
 
         for cfg in self.channels:
             t = cfg.trigger
-            if isinstance(t, ITriggerConfig):
+            if isinstance(t, MainTriggerConfig):
                 if not isinstance(t, CorrelationTriggerConfig):
                     raise CorrError(f"Loading per-channel {obj_name(t)} not supported")
                 trigger_dict = attr.asdict(t)
@@ -806,6 +823,7 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
         Column("line_color", str, None, "Line Color"),
+        Column("trigger__edge_direction", plus_minus_one, None),
         Column("trigger__edge_strength", float, None),
         Column("trigger__responsiveness", float, None),
         Column("trigger__buffer_falloff", float, None),

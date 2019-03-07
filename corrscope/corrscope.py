@@ -16,7 +16,7 @@ from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
 from corrscope.renderer import MatplotlibRenderer, RendererConfig, Renderer
 from corrscope.triggers import (
-    ITriggerConfig,
+    MainTriggerConfig,
     CorrelationTriggerConfig,
     PerFrameCache,
     CorrelationTrigger,
@@ -118,7 +118,6 @@ def default_config(**kwargs) -> Config:
             edge_strength=2,
             responsiveness=0.5,
             buffer_falloff=0.5,
-            use_edge_trigger=False,
             pitch_tracking=SpectrumConfig()
             # Removed due to speed hit.
             # post=LocalPostTriggerConfig(strength=0.1),

@@ -1,17 +1,6 @@
 import functools
 import operator
-from typing import (
-    Optional,
-    List,
-    Callable,
-    Dict,
-    Any,
-    ClassVar,
-    TYPE_CHECKING,
-    Union,
-    Sequence,
-    Tuple,
-)
+from typing import *
 
 import attr
 from PyQt5 import QtWidgets as qw, QtCore as qc
@@ -35,7 +24,7 @@ __all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr", "Sy
 
 Signal = Any
 WidgetUpdater = Callable[[], None]
-Symbol = Union[str, "Enum"]
+Symbol = NewType("Symbol", Hashable)
 
 
 # Data binding presentation-model
