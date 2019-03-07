@@ -71,6 +71,9 @@ class PresentationModel(qc.QObject):
             updater()
 
 
+SKIP_BINDING = "skip"
+
+
 def map_gui(view: "MainWindow", model: PresentationModel) -> None:
     """
     Binding:
@@ -90,7 +93,8 @@ def map_gui(view: "MainWindow", model: PresentationModel) -> None:
         # Exclude nameless ColorText inside BoundColorWidget wrapper,
         # since bind_widget(path="") will crash.
         # BoundColorWidget.bind_widget() handles binding children.
-        if path:
+        if path != SKIP_BINDING:
+            assert path != ""
             widget.bind_widget(model, path)
 
 
@@ -366,6 +370,7 @@ class _ColorText(BoundLineEdit):
 
     def __init__(self, parent: QWidget, optional: bool):
         super().__init__(parent)
+        self.setObjectName(SKIP_BINDING)
         self.optional = optional
 
     hex_color = qc.pyqtSignal(str)
