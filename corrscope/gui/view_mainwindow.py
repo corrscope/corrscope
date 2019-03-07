@@ -3,7 +3,7 @@
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
-from corrscope.gui.layout_stack import (
+from corrscope.gui.view_stack import (
     LayoutStack,
     set_layout,
     central_widget,
@@ -35,7 +35,6 @@ class MainWindow(QWidget):
         return QCoreApplication.translate("MainWindow", *args, **kwargs)
 
     def setupUi(self, MainWindow: QMainWindow):
-
         MainWindow.resize(1160, 0)
 
         s = LayoutStack(MainWindow)
@@ -323,14 +322,6 @@ class MainWindow(QWidget):
 
         MainWindow.setWindowTitle(tr("MainWindow"))
 
-        # self.left_tabs.setTabText(
-        #     self.left_tabs.indexOf(self.tabGeneral), tr("&General")
-        # )
-        # self.left_tabs.setTabText(self.left_tabs.indexOf(self.tabStereo), )
-        # self.left_tabs.setTabText(
-        #     self.left_tabs.indexOf(self.tabPerf), tr("&Performance")
-        # )
-
         self.optionGlobal.setTitle(tr("Global"))
         self.fpsL.setText(tr("FPS"))
         self.trigger_msL.setText(tr("Trigger Width"))
@@ -400,7 +391,7 @@ class MainWindow(QWidget):
 
 
 from corrscope.gui.__init__ import ChannelTableView, ShortcutButton
-from corrscope.gui.data_bind import (
+from corrscope.gui.model_bind import (
     BoundCheckBox,
     BoundColorWidget,
     BoundComboBox,
