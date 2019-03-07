@@ -793,7 +793,6 @@ class ZeroCrossingTrigger(PostTrigger):
         if not 0 <= index < self._wave.nsamp:
             return index
 
-        parent_cfg = self.cfg.parent
         if self._wave[index] < 0:
             direction = 1
             test = lambda a: a >= 0

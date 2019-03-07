@@ -778,7 +778,7 @@ class Column:
 
 
 def plus_minus_one(value: str) -> int:
-    if int(value) >= 0:
+    if int(value) >= 0:  # Raises ValueError
         return 1
     else:
         return -1
