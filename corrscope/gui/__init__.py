@@ -20,7 +20,7 @@ from corrscope import cli
 from corrscope.channel import ChannelConfig
 from corrscope.config import CorrError, copy_config, yaml
 from corrscope.corrscope import CorrScope, Config, Arguments, default_config
-from corrscope.gui.data_bind import (
+from corrscope.gui.model_bind import (
     PresentationModel,
     map_gui,
     behead,
@@ -33,7 +33,7 @@ from corrscope.gui.history_file_dlg import (
     get_open_file_list,
     get_save_file_path,
 )
-from corrscope.gui.ui_mainwindow import MainWindow as Ui_MainWindow
+from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.layout import Orientation, StereoOrientation
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
