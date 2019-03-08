@@ -225,7 +225,7 @@ class MainWindow(qw.QMainWindow):
             self.load_cfg(cfg, cfg_path)
 
         except Exception as e:
-            qw.QMessageBox.critical(self, "Error loading file", str(e))
+            TracebackDialog(self).showMessage(format_stack_trace(e))
             return
 
     def load_cfg(self, cfg: Config, cfg_path: Optional[Path]) -> None:
