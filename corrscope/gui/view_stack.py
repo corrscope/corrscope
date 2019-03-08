@@ -42,7 +42,7 @@ class LayoutStack:
     @contextmanager
     def push(self, item: T) -> ctx[T]:
         if isinstance(item, StackFrame):
-            frame = item
+            frame = item  # this branch never happens
         elif isinstance(item, QWidget):
             frame = StackFrame(item)
         elif isinstance(item, QLayout):
@@ -82,24 +82,24 @@ def assert_peek(stack: LayoutStack, cls):
 def central_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget):
     assert_peek(stack, QMainWindow)
     # do NOT orphan=True
-    return _add_widget(stack, widget_type, exit_action="setCentralWidget")
+    return _new_widget(stack, widget_type, exit_action="setCentralWidget")
 
 
 def orphan_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget):
-    return _add_widget(stack, widget_type, orphan=True)
+    return _new_widget(stack, widget_type, orphan=True)
 
 
 @contextmanager
 def append_widget(
     stack: LayoutStack, item_type: Type[WidgetOrLayout]
 ) -> ctx[WidgetOrLayout]:
-    with _add_widget(stack, item_type) as item:
+    with _new_widget(stack, item_type) as item:
         yield item
-    add_widget_or_layout(stack.layout, item)
+    _insert_widget_or_layout(stack.layout, item)
 
 
 # noinspection PyArgumentList
-def add_widget_or_layout(layout: QLayout, item: WidgetOrLayout, *args, **kwargs):
+def _insert_widget_or_layout(layout: QLayout, item: WidgetOrLayout, *args, **kwargs):
     if isinstance(item, QWidget):
         layout.addWidget(item, *args, **kwargs)
     elif isinstance(item, QLayout):
@@ -115,13 +115,13 @@ def add_widget_or_layout(layout: QLayout, item: WidgetOrLayout, *args, **kwargs)
 
 def set_menu_bar(stack: LayoutStack):
     assert_peek(stack, QMainWindow)
-    return _add_widget(stack, QMenuBar, exit_action="setMenuBar")
+    return _new_widget(stack, QMenuBar, exit_action="setMenuBar")
 
 
 # won't bother adding type hints that pycharm is too dumb to understand
 def append_menu(stack: LayoutStack):
     assert_peek(stack, QMenuBar)
-    return _add_widget(stack, QMenu, exit_action="addMenu")
+    return _new_widget(stack, QMenu, exit_action="addMenu")
 
 
 def add_toolbar(stack: LayoutStack, area=Qt.TopToolBarArea):
@@ -130,14 +130,14 @@ def add_toolbar(stack: LayoutStack, area=Qt.TopToolBarArea):
     def _add_toolbar(parent: QMainWindow, toolbar):
         parent.addToolBar(area, toolbar)
 
-    return _add_widget(stack, QToolBar, exit_action=_add_toolbar)
+    return _new_widget(stack, QToolBar, exit_action=_add_toolbar)
 
 
 # Implementation
 
 
 @contextmanager
-def _add_widget(
+def _new_widget(
     stack: LayoutStack,
     item_type: Type[WidgetOrLayout],
     orphan=False,
@@ -235,11 +235,11 @@ def _add_grid_col(layout: QGridLayout, up, down):
     """
     if down is Both:
         shape = lambda: [0, col, -1, 1]
-        add_widget_or_layout(layout, up, *shape())
+        _insert_widget_or_layout(layout, up, *shape())
     else:
         shape = lambda row: [row, col]
-        add_widget_or_layout(layout, up, *shape(0))
-        add_widget_or_layout(layout, down, *shape(1))
+        _insert_widget_or_layout(layout, up, *shape(0))
+        _insert_widget_or_layout(layout, down, *shape(1))
 
 
 add_grid_col = widget_pair_inserter(_add_grid_col)
