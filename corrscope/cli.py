@@ -240,9 +240,10 @@ def get_profile_dump_name(prefix: str) -> str:
     profile_dump_name = f"{prefix}-{PROFILE_DUMP_NAME}-{now_str}"
 
     # Write stats to unused filename
-    for path in add_numeric_suffixes(profile_dump_name):
-        if not Path(path).exists():
-            return path
+    for name in add_numeric_suffixes(profile_dump_name):
+        abs_path = Path(name).resolve()
+        if not abs_path.exists():
+            return str(abs_path)
     assert False  # never happens since add_numeric_suffixes is endless.
 
 
