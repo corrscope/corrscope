@@ -9,7 +9,6 @@ from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
 import attr
-from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtCore import QVariant
 from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
@@ -21,7 +20,7 @@ from corrscope import cli
 from corrscope.channel import ChannelConfig
 from corrscope.config import CorrError, copy_config, yaml
 from corrscope.corrscope import CorrScope, Config, Arguments, default_config
-from corrscope.gui.data_bind import (
+from corrscope.gui.model_bind import (
     PresentationModel,
     map_gui,
     behead,
@@ -34,6 +33,7 @@ from corrscope.gui.history_file_dlg import (
     get_open_file_list,
     get_save_file_path,
 )
+from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.layout import Orientation, StereoOrientation
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
@@ -74,7 +74,7 @@ def gui_main(cfg_or_path: Union[Config, Path]):
     sys.exit(app.exec_())
 
 
-class MainWindow(qw.QMainWindow):
+class MainWindow(qw.QMainWindow, Ui_MainWindow):
     """
     Main window.
 
@@ -94,7 +94,7 @@ class MainWindow(qw.QMainWindow):
         self.pref = gp.load_prefs()
 
         # Load UI.
-        uic.loadUi(res("mainwindow.ui"), self)  # sets windowTitle
+        self.setupUi(self)  # sets windowTitle
 
         # Bind UI buttons, etc. Functions block main thread, avoiding race conditions.
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
@@ -151,7 +151,7 @@ class MainWindow(qw.QMainWindow):
         self._update_unsaved_title()
 
     # GUI layout widgets
-    tabWidget: qw.QTabWidget
+    left_tabs: qw.QTabWidget
 
     # Config models
     model: Optional["ConfigModel"] = None
@@ -232,7 +232,7 @@ class MainWindow(qw.QMainWindow):
         self._cfg_path = cfg_path
         self._any_unsaved = False
         self.load_title()
-        self.tabWidget.setCurrentIndex(0)
+        self.left_tabs.setCurrentIndex(0)
 
         if self.model is None:
             self.model = ConfigModel(cfg)
