@@ -30,8 +30,8 @@ from corrscope.gui.model_bind import (
     behead,
     rgetattr,
     rsetattr,
-    Symbol,
-    SymbolStr,
+    Value,
+    ValueText,
 )
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
@@ -630,13 +630,13 @@ assert set(flatten_modes.keys()) == set(Flatten.modes)  # type: ignore
 
 class ConfigModel(PresentationModel):
     cfg: Config
-    combo_object_str: Dict[str, Sequence[SymbolStr]] = {}
+    combo_value_text: Dict[str, Sequence[ValueText]] = {}
 
     master_audio = path_fix_property("master_audio")
 
     # Stereo flattening
-    combo_object_str["trigger_stereo"] = list(flatten_no_stereo.items())
-    combo_object_str["render_stereo"] = list(flatten_modes.items())
+    combo_value_text["trigger_stereo"] = list(flatten_no_stereo.items())
+    combo_value_text["render_stereo"] = list(flatten_modes.items())
 
     # Trigger
     @property
@@ -650,7 +650,7 @@ class ConfigModel(PresentationModel):
         scfg = SpectrumConfig() if gui else None
         self.cfg.trigger.pitch_tracking = scfg
 
-    combo_object_str["trigger__edge_direction"] = [
+    combo_value_text["trigger__edge_direction"] = [
         (1, "Rising (+1)"),
         (-1, "Falling (-1)"),
     ]
@@ -690,10 +690,10 @@ class ConfigModel(PresentationModel):
     _orientations = [["h", "Horizontal"], ["v", "Vertical"]]
     _stereo_orientations = _orientations + [["overlay", "Overlay"]]
 
-    combo_object_str["layout__orientation"] = [
+    combo_value_text["layout__orientation"] = [
         (Orientation(key), name) for key, name in _orientations
     ]
-    combo_object_str["layout__stereo_orientation"] = [
+    combo_value_text["layout__stereo_orientation"] = [
         (StereoOrientation(key), name) for key, name in _stereo_orientations
     ]
 
