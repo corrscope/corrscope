@@ -27,6 +27,8 @@ WidgetUpdater = Callable[[], None]
 Symbol = Hashable
 
 
+SymbolStr = Tuple[Symbol, str]
+
 # Data binding presentation-model
 class PresentationModel(qc.QObject):
     """ Key-value MVP presentation-model.
@@ -38,8 +40,7 @@ class PresentationModel(qc.QObject):
 
     # These fields are specific to each subclass, and assigned there.
     # Although less explicit, these can be assigned using __init_subclass__.
-    combo_symbols: Dict[str, Sequence[Symbol]]
-    combo_text: Dict[str, Sequence[str]]
+    combo_object_str: Dict[str, Sequence[SymbolStr]]
     edited = qc.pyqtSignal()
 
     def __init__(self, cfg: DumpableAttrs):
@@ -268,22 +269,21 @@ class BoundCheckBox(qw.QCheckBox, BoundWidget):
 
 
 class BoundComboBox(qw.QComboBox, BoundWidget):
-    combo_symbols: Sequence[Symbol]
+    combo_object_str: Sequence[SymbolStr]
     symbol2idx: Dict[Symbol, int]
 
     # noinspection PyAttributeOutsideInit
     def bind_widget(self, model: PresentationModel, path: str, *args, **kwargs) -> None:
         # Effectively enum values.
-        self.combo_symbols = model.combo_symbols[path]
+        self.combo_object_str = model.combo_object_str[path]
 
         # symbol2idx[str] = int
         self.symbol2idx = {}
 
         # Pretty-printed text
-        combo_text = model.combo_text[path]
-        for i, symbol in enumerate(self.combo_symbols):
-            self.symbol2idx[symbol] = i
-            self.addItem(combo_text[i])
+        for i, (obj, text) in enumerate(self.combo_object_str):
+            self.symbol2idx[obj] = i
+            self.addItem(text)
 
         BoundWidget.bind_widget(self, model, path, *args, **kwargs)
 
@@ -298,7 +298,8 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
     @pyqtSlot(int)
     def set_model(self, combo_index: int):
         assert isinstance(combo_index, int)
-        self.pmodel[self.path] = self.combo_symbols[combo_index]
+        symbol, string = self.combo_object_str[combo_index]
+        self.pmodel[self.path] = symbol
 
 
 # Color-specific widgets
