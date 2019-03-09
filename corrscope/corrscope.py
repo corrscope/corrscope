@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import time
 from contextlib import ExitStack, contextmanager
-from enum import unique, Enum
+from enum import unique
 from fractions import Fraction
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Iterator
-from typing import Optional, List, Union, Callable, cast
+from typing import Optional, List, Callable, cast
 
 import attr
 
@@ -16,7 +16,6 @@ from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
 from corrscope.renderer import MatplotlibRenderer, RendererConfig, Renderer
 from corrscope.triggers import (
-    MainTriggerConfig,
     CorrelationTriggerConfig,
     PerFrameCache,
     CorrelationTrigger,
@@ -118,9 +117,8 @@ def default_config(**kwargs) -> Config:
             edge_strength=2,
             responsiveness=0.5,
             buffer_falloff=0.5,
-            pitch_tracking=SpectrumConfig()
-            # Removed due to speed hit.
-            # post=LocalPostTriggerConfig(strength=0.1),
+            pitch_tracking=SpectrumConfig(),
+            # post_trigger=ZeroCrossingTriggerConfig(),
         ),
         channels=[],
         layout=LayoutConfig(orientation="v", ncols=1),

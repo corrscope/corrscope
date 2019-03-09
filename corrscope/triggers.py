@@ -44,8 +44,7 @@ class MainTriggerConfig(_TriggerConfig, KeywordAttrs, always_dump="edge_directio
     edge_direction: int = 1
 
     # Optional trigger for postprocessing
-    # TODO rename to post_trigger
-    post: Optional["PostTriggerConfig"] = None
+    post_trigger: Optional["PostTriggerConfig"] = None
     post_radius: Optional[int] = 3
 
     @property
@@ -59,17 +58,17 @@ class MainTriggerConfig(_TriggerConfig, KeywordAttrs, always_dump="edge_directio
         if self.edge_direction not in [-1, 1]:
             raise CorrError(f"{obj_name(self)}.edge_direction must be {{-1, 1}}")
 
-        if self.post:
-            self.post.parent = self
+        if self.post_trigger:
+            self.post_trigger.parent = self
             if self.post_radius is None:
                 name = obj_name(self)
                 raise CorrError(
-                    f"Cannot supply {name}.post without supplying {name}.post_radius"
+                    f"Cannot supply {name}.post_trigger without supplying {name}.post_radius"
                 )
 
 
 class PostTriggerConfig(_TriggerConfig, KeywordAttrs):
-    parent: MainTriggerConfig = attr.ib(init=False)
+    parent: MainTriggerConfig = attr.ib(init=False)  # TODO Unused
     pass
 
 
@@ -132,10 +131,10 @@ class MainTrigger(_Trigger, ABC):
         self._wave.amplification *= self.cfg.edge_direction
 
         cfg = self.cfg
-        if cfg.post:
+        if cfg.post_trigger:
             # Create a post-processing trigger, with narrow nsamp and stride=1.
             # This improves speed and precision.
-            self.post = cfg.post(self._wave, cfg.post_nsamp, 1, self._fps)
+            self.post = cfg.post_trigger(self._wave, cfg.post_nsamp, 1, self._fps)
         else:
             self.post = None
 
