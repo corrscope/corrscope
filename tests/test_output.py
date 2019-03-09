@@ -36,11 +36,14 @@ if TYPE_CHECKING:
 
 # Global setup
 if not shutil.which("ffmpeg"):
+    missing_ffmpeg = True
     pytestmark = pytest.mark.xfail(
         reason="Missing ffmpeg, ignoring failed output tests",
         raises=FileNotFoundError,  # includes MissingFFmpegError
         strict=False,
     )
+else:
+    missing_ffmpeg = False
 
 
 def exception_Popen(mocker: "pytest_mock.MockFixture", exc: Exception) -> "MagicMock":
@@ -412,7 +415,7 @@ def test_record_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
 
 # Integration test: Output and ParallelWorker
 @pytest.mark.timeout(3)
-# @pytest.mark.usefixtures("Popen")  # may/not break ParallelWorker?
+@pytest.mark.xfail(condition=missing_ffmpeg, raises=SystemExit)
 @pytest.mark.parametrize("profile_name", [None, "test_output_parallel--profile"])
 def test_output_parallel(profile_name: Optional[str], tmpdir: "py.path.local"):
     """ Ensure output doesn't deadlock/etc.
