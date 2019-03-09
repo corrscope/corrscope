@@ -76,9 +76,9 @@ def test_trigger(cfg: CorrelationTriggerConfig):
         plt.show()
 
 
-@parametrize("post", [None, ZeroCrossingTriggerConfig()])
-def test_post_stride(post):
-    cfg = cfg_template(post=post)
+@parametrize("post_trigger", [None, ZeroCrossingTriggerConfig()])
+def test_post_stride(post_trigger):
+    cfg = cfg_template(post_trigger=post_trigger)
 
     wave = Wave("tests/sine440.wav")
     iters = 5
@@ -90,7 +90,7 @@ def test_post_stride(post):
     for i in range(1, iters):
         offset = trigger.get_trigger(x0, cache)
 
-        if not cfg.post:
+        if not cfg.post_trigger:
             assert (offset - x0) % stride == 0, f"iteration {i}"
             assert abs(offset - x0) < 10, f"iteration {i}"
 
@@ -100,9 +100,9 @@ def test_post_stride(post):
             assert abs(offset - x0) <= 2, f"iteration {i}"
 
 
-@parametrize("post", [None, ZeroCrossingTriggerConfig()])
+@parametrize("post_trigger", [None, ZeroCrossingTriggerConfig()])
 @parametrize("double_negate", [False, True])
-def test_trigger_direction(post, double_negate):
+def test_trigger_direction(post_trigger, double_negate):
     """
     Right now, MainTrigger is responsible for negating wave.amplification
     if edge_direction == -1.
@@ -114,9 +114,9 @@ def test_trigger_direction(post, double_negate):
 
     if double_negate:
         wave.amplification = -1
-        cfg = cfg_template(post=post, edge_direction=-1)
+        cfg = cfg_template(post_trigger=post_trigger, edge_direction=-1)
     else:
-        cfg = cfg_template(post=post)
+        cfg = cfg_template(post_trigger=post_trigger)
 
     trigger = cfg(wave, 100, 1, FPS)
     cfg.edge_direction = None
