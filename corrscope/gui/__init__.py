@@ -1,7 +1,6 @@
 import functools
 import sys
 import traceback
-from collections import OrderedDict
 from pathlib import Path
 from types import MethodType
 from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence
@@ -31,7 +30,8 @@ from corrscope.gui.model_bind import (
     behead,
     rgetattr,
     rsetattr,
-    Symbol,
+    Value,
+    ValueText,
 )
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
@@ -630,19 +630,13 @@ assert set(flatten_modes.keys()) == set(Flatten.modes)  # type: ignore
 
 class ConfigModel(PresentationModel):
     cfg: Config
-    combo_symbols: Dict[str, Sequence[Symbol]] = {}
-    combo_text: Dict[str, Sequence[str]] = {}
+    combo_value_text: Dict[str, Sequence[ValueText]] = {}
 
     master_audio = path_fix_property("master_audio")
 
     # Stereo flattening
-    for path, symbol_map in [
-        ["trigger_stereo", flatten_no_stereo],
-        ["render_stereo", flatten_modes],
-    ]:
-        combo_symbols[path] = list(symbol_map.keys())
-        combo_text[path] = list(symbol_map.values())
-    del path, symbol_map
+    combo_value_text["trigger_stereo"] = list(flatten_no_stereo.items())
+    combo_value_text["render_stereo"] = list(flatten_modes.items())
 
     # Trigger
     @property
@@ -656,8 +650,10 @@ class ConfigModel(PresentationModel):
         scfg = SpectrumConfig() if gui else None
         self.cfg.trigger.pitch_tracking = scfg
 
-    combo_symbols["trigger__edge_direction"] = [1, -1]
-    combo_text["trigger__edge_direction"] = ["Rising (+1)", "Falling (-1)"]
+    combo_value_text["trigger__edge_direction"] = [
+        (1, "Rising (+1)"),
+        (-1, "Falling (-1)"),
+    ]
 
     # Render
     @property
@@ -694,15 +690,12 @@ class ConfigModel(PresentationModel):
     _orientations = [["h", "Horizontal"], ["v", "Vertical"]]
     _stereo_orientations = _orientations + [["overlay", "Overlay"]]
 
-    for path, cls, symbol_map in [
-        ["layout__orientation", Orientation, _orientations],
-        ["layout__stereo_orientation", StereoOrientation, _stereo_orientations],
-    ]:
-        symbol_map = OrderedDict(symbol_map)
-        # comprehensions fail in class scope
-        combo_symbols[path] = list(map(cls, symbol_map.keys()))
-        combo_text[path] = list(symbol_map.values())
-    del path, cls, symbol_map
+    combo_value_text["layout__orientation"] = [
+        (Orientation(key), name) for key, name in _orientations
+    ]
+    combo_value_text["layout__stereo_orientation"] = [
+        (StereoOrientation(key), name) for key, name in _stereo_orientations
+    ]
 
 
 # End ConfigModel

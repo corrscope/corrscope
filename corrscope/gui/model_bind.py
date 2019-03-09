@@ -19,13 +19,23 @@ if TYPE_CHECKING:
 
     assert Enum
 
-__all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr", "Symbol"]
+__all__ = [
+    "PresentationModel",
+    "map_gui",
+    "behead",
+    "rgetattr",
+    "rsetattr",
+    "Value",
+    "ValueText",
+]
 
 
 Signal = Any
 WidgetUpdater = Callable[[], None]
-Symbol = Hashable
+Value = Hashable
 
+
+ValueText = Tuple[Value, str]
 
 # Data binding presentation-model
 class PresentationModel(qc.QObject):
@@ -38,8 +48,7 @@ class PresentationModel(qc.QObject):
 
     # These fields are specific to each subclass, and assigned there.
     # Although less explicit, these can be assigned using __init_subclass__.
-    combo_symbols: Dict[str, Sequence[Symbol]]
-    combo_text: Dict[str, Sequence[str]]
+    combo_value_text: Dict[str, Sequence[ValueText]]
     edited = qc.pyqtSignal()
 
     def __init__(self, cfg: DumpableAttrs):
@@ -268,28 +277,27 @@ class BoundCheckBox(qw.QCheckBox, BoundWidget):
 
 
 class BoundComboBox(qw.QComboBox, BoundWidget):
-    combo_symbols: Sequence[Symbol]
-    symbol2idx: Dict[Symbol, int]
+    combo_value_text: Sequence[ValueText]
+    value2idx: Dict[Value, int]
 
     # noinspection PyAttributeOutsideInit
     def bind_widget(self, model: PresentationModel, path: str, *args, **kwargs) -> None:
         # Effectively enum values.
-        self.combo_symbols = model.combo_symbols[path]
+        self.combo_value_text = model.combo_value_text[path]
 
-        # symbol2idx[str] = int
-        self.symbol2idx = {}
+        # value2idx[enum] = combo-box index
+        self.value2idx = {}
 
-        # Pretty-printed text
-        combo_text = model.combo_text[path]
-        for i, symbol in enumerate(self.combo_symbols):
-            self.symbol2idx[symbol] = i
-            self.addItem(combo_text[i])
+        for i, (value, text) in enumerate(self.combo_value_text):
+            self.value2idx[value] = i
+            # Pretty-printed text
+            self.addItem(text)
 
         BoundWidget.bind_widget(self, model, path, *args, **kwargs)
 
     # combobox.index = pmodel.attr
-    def set_gui(self, symbol: Symbol) -> None:
-        combo_index = self.symbol2idx[symbol]
+    def set_gui(self, value: Value) -> None:
+        combo_index = self.value2idx[value]
         self.setCurrentIndex(combo_index)
 
     gui_changed = alias("currentIndexChanged")
@@ -298,7 +306,8 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
     @pyqtSlot(int)
     def set_model(self, combo_index: int):
         assert isinstance(combo_index, int)
-        self.pmodel[self.path] = self.combo_symbols[combo_index]
+        value, _ = self.combo_value_text[combo_index]
+        self.pmodel[self.path] = value
 
 
 # Color-specific widgets
