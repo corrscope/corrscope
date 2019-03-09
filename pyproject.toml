@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "corrscope"
-version = "0.3.0-pre"
+version = "0.4.0-pre"
 description = ""
 authors = ["jimbo1qaz <jimbo1qaz@gmail.com>"]
 license = "BSD-2-Clause"
@@ -31,6 +31,7 @@ pywin32-ctypes = {version = "^0.2.0",platform = "win32"}
 coverage = "^4.5"
 pytest-cov = "^2.6"
 codecov = "^2.0"
+pytest_cases = "^1.2"
 pytest-timeout = "^1.3"
 
 [tool.poetry.scripts]

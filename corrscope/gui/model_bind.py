@@ -1,17 +1,6 @@
 import functools
 import operator
-from typing import (
-    Optional,
-    List,
-    Callable,
-    Dict,
-    Any,
-    ClassVar,
-    TYPE_CHECKING,
-    Union,
-    Sequence,
-    Tuple,
-)
+from typing import *
 
 import attr
 from PyQt5 import QtWidgets as qw, QtCore as qc
@@ -30,15 +19,15 @@ if TYPE_CHECKING:
 
     assert Enum
 
-__all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr"]
+__all__ = ["PresentationModel", "map_gui", "behead", "rgetattr", "rsetattr", "Symbol"]
 
 
+Signal = Any
 WidgetUpdater = Callable[[], None]
+Symbol = Hashable
 
 
-Symbol = Union[str, "Enum"]
-
-
+# Data binding presentation-model
 class PresentationModel(qc.QObject):
     """ Key-value MVP presentation-model.
 
@@ -82,7 +71,9 @@ class PresentationModel(qc.QObject):
             updater()
 
 
-# TODO add tests for recursive operations
+SKIP_BINDING = "skip"
+
+
 def map_gui(view: "MainWindow", model: PresentationModel) -> None:
     """
     Binding:
@@ -102,13 +93,12 @@ def map_gui(view: "MainWindow", model: PresentationModel) -> None:
         # Exclude nameless ColorText inside BoundColorWidget wrapper,
         # since bind_widget(path="") will crash.
         # BoundColorWidget.bind_widget() handles binding children.
-        if path:
+        if path != SKIP_BINDING:
+            assert path != ""
             widget.bind_widget(model, path)
 
 
-Signal = Any
-
-
+# Bound widgets
 class BoundWidget(QWidget):
     default_palette: QPalette
     error_palette: QPalette
@@ -282,7 +272,7 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
     symbol2idx: Dict[Symbol, int]
 
     # noinspection PyAttributeOutsideInit
-    def bind_widget(self, model: PresentationModel, path: str) -> None:
+    def bind_widget(self, model: PresentationModel, path: str, *args, **kwargs) -> None:
         # Effectively enum values.
         self.combo_symbols = model.combo_symbols[path]
 
@@ -295,7 +285,7 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
             self.symbol2idx[symbol] = i
             self.addItem(combo_text[i])
 
-        BoundWidget.bind_widget(self, model, path)
+        BoundWidget.bind_widget(self, model, path, *args, **kwargs)
 
     # combobox.index = pmodel.attr
     def set_gui(self, symbol: Symbol) -> None:
@@ -348,8 +338,8 @@ class BoundColorWidget(BoundWidget, qw.QWidget):
         layout.addWidget(self.button)
 
     # override BoundWidget
-    def bind_widget(self, model: PresentationModel, path: str) -> None:
-        super().bind_widget(model, path)
+    def bind_widget(self, model: PresentationModel, path: str, *args, **kwargs) -> None:
+        super().bind_widget(model, path, *args, **kwargs)
         self.text.bind_widget(model, path, connect_to_model=False)
 
     # impl BoundWidget
@@ -380,6 +370,7 @@ class _ColorText(BoundLineEdit):
 
     def __init__(self, parent: QWidget, optional: bool):
         super().__init__(parent)
+        self.setObjectName(SKIP_BINDING)
         self.optional = optional
 
     hex_color = qc.pyqtSignal(str)

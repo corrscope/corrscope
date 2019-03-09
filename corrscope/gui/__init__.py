@@ -1,6 +1,7 @@
 import functools
 import sys
 import traceback
+from collections import OrderedDict
 from pathlib import Path
 from types import MethodType
 from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence
@@ -8,7 +9,6 @@ from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
 import attr
-from PyQt5 import uic
 from PyQt5.QtCore import QModelIndex, Qt
 from PyQt5.QtCore import QVariant
 from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
@@ -20,7 +20,7 @@ from corrscope import cli
 from corrscope.channel import ChannelConfig
 from corrscope.config import CorrError, copy_config, yaml
 from corrscope.corrscope import CorrScope, Config, Arguments, default_config
-from corrscope.gui.data_bind import (
+from corrscope.gui.model_bind import (
     PresentationModel,
     map_gui,
     behead,
@@ -33,10 +33,16 @@ from corrscope.gui.history_file_dlg import (
     get_open_file_list,
     get_save_file_path,
 )
+from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
+from corrscope.layout import Orientation, StereoOrientation
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from corrscope.settings import paths
-from corrscope.triggers import CorrelationTriggerConfig, ITriggerConfig
+from corrscope.triggers import (
+    CorrelationTriggerConfig,
+    MainTriggerConfig,
+    SpectrumConfig,
+)
 from corrscope.util import obj_name
 from corrscope.wave import Flatten
 
@@ -68,7 +74,7 @@ def gui_main(cfg_or_path: Union[Config, Path]):
     sys.exit(app.exec_())
 
 
-class MainWindow(qw.QMainWindow):
+class MainWindow(qw.QMainWindow, Ui_MainWindow):
     """
     Main window.
 
@@ -88,7 +94,7 @@ class MainWindow(qw.QMainWindow):
         self.pref = gp.load_prefs()
 
         # Load UI.
-        uic.loadUi(res("mainwindow.ui"), self)  # sets windowTitle
+        self.setupUi(self)  # sets windowTitle
 
         # Bind UI buttons, etc. Functions block main thread, avoiding race conditions.
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
@@ -145,7 +151,7 @@ class MainWindow(qw.QMainWindow):
         self._update_unsaved_title()
 
     # GUI layout widgets
-    tabWidget: qw.QTabWidget
+    left_tabs: qw.QTabWidget
 
     # Config models
     model: Optional["ConfigModel"] = None
@@ -226,7 +232,7 @@ class MainWindow(qw.QMainWindow):
         self._cfg_path = cfg_path
         self._any_unsaved = False
         self.load_title()
-        self.tabWidget.setCurrentIndex(0)
+        self.left_tabs.setCurrentIndex(0)
 
         if self.model is None:
             self.model = ConfigModel(cfg)
@@ -375,26 +381,29 @@ class MainWindow(qw.QMainWindow):
     def play_thread(
         self, outputs: List[IOutputConfig], dlg: Optional["CorrProgressDialog"]
     ):
-        assert self.model
+        try:
+            assert self.model
 
-        arg = self._get_args(outputs)
-        cfg = copy_config(self.model.cfg)
-        t = self.corr_thread = CorrThread(cfg, arg)
+            arg = self._get_args(outputs)
+            cfg = copy_config(self.model.cfg)
+            t = self.corr_thread = CorrThread(cfg, arg)
 
-        if dlg:
-            dlg.canceled.connect(t.abort)
-            t.arg = attr.evolve(
-                arg,
-                on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
-                progress=run_on_ui_thread(dlg.setValue, (int,)),
-                is_aborted=t.is_aborted.get,
-                on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
-            )
+            if dlg:
+                dlg.canceled.connect(t.abort)
+                t.arg = attr.evolve(
+                    arg,
+                    on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
+                    progress=run_on_ui_thread(dlg.setValue, (int,)),
+                    is_aborted=t.is_aborted.get,
+                    on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
+                )
 
-        t.finished.connect(self.on_play_thread_finished)
-        t.error.connect(self.on_play_thread_error)
-        t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
-        t.start()
+            t.finished.connect(self.on_play_thread_finished)
+            t.error.connect(self.on_play_thread_error)
+            t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
+            t.start()
+        except Exception as e:
+            TracebackDialog(self).showMessage(format_stack_trace(e))
 
     def _get_args(self, outputs: List[IOutputConfig]):
         arg = Arguments(cfg_dir=self.cfg_dir, outputs=outputs)
@@ -442,6 +451,14 @@ class MainWindow(qw.QMainWindow):
         return self.model.cfg
 
 
+def format_stack_trace(e):
+    if isinstance(e, CorrError):
+        stack_trace = traceback.format_exc(limit=0)
+    else:
+        stack_trace = traceback.format_exc()
+    return stack_trace
+
+
 class CorrThread(qc.QThread):
     is_aborted: Locked[bool]
 
@@ -470,10 +487,7 @@ class CorrThread(qc.QThread):
 
         except Exception as e:
             arg.on_end()
-            if isinstance(e, CorrError):
-                stack_trace = traceback.format_exc(limit=0)
-            else:
-                stack_trace = traceback.format_exc()
+            stack_trace = format_stack_trace(e)
             self.error.emit(stack_trace)
 
         else:
@@ -502,7 +516,6 @@ class CorrProgressDialog(qw.QProgressDialog):
         # self.setValue is called by CorrScope, on the first frame.
 
 
-# *arg_types: type
 def run_on_ui_thread(
     bound_slot: MethodType, types: Tuple[type, ...]
 ) -> Callable[..., None]:
@@ -607,15 +620,12 @@ def path_fix_property(path: str) -> property:
     return property(getter, setter)
 
 
-flatten_modes = {
+flatten_no_stereo = {
     Flatten.SumAvg: "Average: (L+R)/2",
     Flatten.DiffAvg: "DiffAvg: (L-R)/2",
-    Flatten.Stereo: "Stereo (broken)",
 }
+flatten_modes = {**flatten_no_stereo, Flatten.Stereo: "Stereo"}
 assert set(flatten_modes.keys()) == set(Flatten.modes)  # type: ignore
-
-flatten_symbols = list(flatten_modes.keys())
-flatten_text = list(flatten_modes.values())
 
 
 class ConfigModel(PresentationModel):
@@ -626,11 +636,30 @@ class ConfigModel(PresentationModel):
     master_audio = path_fix_property("master_audio")
 
     # Stereo flattening
-    for path in ["trigger_stereo", "render_stereo"]:
-        combo_symbols[path] = flatten_symbols
-        combo_text[path] = flatten_text
-    del path
+    for path, symbol_map in [
+        ["trigger_stereo", flatten_no_stereo],
+        ["render_stereo", flatten_modes],
+    ]:
+        combo_symbols[path] = list(symbol_map.keys())
+        combo_text[path] = list(symbol_map.values())
+    del path, symbol_map
 
+    # Trigger
+    @property
+    def trigger__pitch_tracking(self) -> bool:
+        scfg = self.cfg.trigger.pitch_tracking
+        gui = scfg is not None
+        return gui
+
+    @trigger__pitch_tracking.setter
+    def trigger__pitch_tracking(self, gui: bool):
+        scfg = SpectrumConfig() if gui else None
+        self.cfg.trigger.pitch_tracking = scfg
+
+    combo_symbols["trigger__edge_direction"] = [1, -1]
+    combo_text["trigger__edge_direction"] = ["Rising (+1)", "Falling (-1)"]
+
+    # Render
     @property
     def render_resolution(self) -> str:
         render = self.cfg.render
@@ -656,12 +685,24 @@ class ConfigModel(PresentationModel):
         except ValueError:
             raise error
 
+    render__line_width = default_property("render__line_width", 1.5)
+
+    # Layout
     layout__nrows = nrow_ncol_property("nrows", unaltered="ncols")
     layout__ncols = nrow_ncol_property("ncols", unaltered="nrows")
-    combo_symbols["layout__orientation"] = ["h", "v"]
-    combo_text["layout__orientation"] = ["Horizontal", "Vertical"]
 
-    render__line_width = default_property("render__line_width", 1.5)
+    _orientations = [["h", "Horizontal"], ["v", "Vertical"]]
+    _stereo_orientations = _orientations + [["overlay", "Overlay"]]
+
+    for path, cls, symbol_map in [
+        ["layout__orientation", Orientation, _orientations],
+        ["layout__stereo_orientation", StereoOrientation, _stereo_orientations],
+    ]:
+        symbol_map = OrderedDict(symbol_map)
+        # comprehensions fail in class scope
+        combo_symbols[path] = list(map(cls, symbol_map.keys()))
+        combo_text[path] = list(symbol_map.values())
+    del path, cls, symbol_map
 
 
 # End ConfigModel
@@ -676,7 +717,10 @@ class ChannelTableView(qw.QTableView):
 
         col = model.idx_of_key["wav_path"]
 
+        # Insert N empty rows into model (mutates cfg.channels).
         model.insertRows(begin_row, count_rows)
+
+        # Fill N empty rows with wav_path.
         for row, wav_path in enumerate(wavs, begin_row):
             index = model.index(row, col)
             model.setData(index, wav_path)
@@ -735,6 +779,16 @@ class Column:
     display_name: str = attr.Factory(_display_name, takes_self=True)
 
 
+def plus_minus_one(value: str) -> int:
+    if int(value) >= 0:  # Raises ValueError
+        return 1
+    else:
+        return -1
+
+
+nope = qc.QVariant()
+
+
 class ChannelModel(qc.QAbstractTableModel):
     """ Design based off
     https://doc.qt.io/qt-5/model-view-programming.html#a-read-only-example-model and
@@ -750,7 +804,7 @@ class ChannelModel(qc.QAbstractTableModel):
 
         for cfg in self.channels:
             t = cfg.trigger
-            if isinstance(t, ITriggerConfig):
+            if isinstance(t, MainTriggerConfig):
                 if not isinstance(t, CorrelationTriggerConfig):
                     raise CorrError(f"Loading per-channel {obj_name(t)} not supported")
                 trigger_dict = attr.asdict(t)
@@ -774,6 +828,7 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
         Column("line_color", str, None, "Line Color"),
+        Column("trigger__edge_direction", plus_minus_one, None),
         Column("trigger__edge_strength", float, None),
         Column("trigger__responsiveness", float, None),
         Column("trigger__buffer_falloff", float, None),
@@ -942,9 +997,6 @@ class ChannelModel(qc.QAbstractTableModel):
             | Qt.ItemIsEditable
             | Qt.ItemNeverHasChildren
         )
-
-
-nope = qc.QVariant()
 
 
 class DownloadFFmpegActivity:

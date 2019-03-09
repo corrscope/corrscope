@@ -1,6 +1,6 @@
 import pytest
 
-from corrscope.gui.data_bind import rgetattr, rsetattr, rhasattr, flatten_attr
+from corrscope.gui.model_bind import rgetattr, rsetattr, rhasattr, flatten_attr
 
 
 class Person(object):

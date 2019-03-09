@@ -172,6 +172,26 @@ b: ''
     )
 
 
+def test_always_dump_inheritance():
+    class Config(DumpableAttrs, always_dump="a"):
+        a: int = 1
+        b: int = 2
+
+    class Special(Config, always_dump="c"):
+        c: int = 3
+        d: int = 4
+
+    s = yaml.dump(Special())
+    assert (
+        s
+        == """\
+!Special
+a: 1
+c: 3
+"""
+    )
+
+
 # Dataclass load testing
 
 
@@ -291,6 +311,36 @@ foo: 0
     assert yaml.load(s) == Foo(99)
 
 
+# Test handling of _prefix fields, or init=False
+
+
+@pytest.mark.filterwarnings("ignore:")
+def test_skip_dump_load():
+    """Ensure _fields or init=False are not dumped,
+    and don't crash on loading.
+    """
+
+    class Foo(DumpableAttrs):
+        _underscore: int
+        init_false: int = attr.ib(init=False)
+
+        def __attrs_post_init__(self):
+            self.init_false = 1
+
+    # Ensure fields are not dumped.
+    foo = Foo(underscore=1)
+    assert yaml.dump(foo).strip() == "!Foo {}"
+
+    # Ensure init=False fields don't crash on loading.
+    evil = """\
+!Foo
+underscore: 1
+_underscore: 2
+init_false: 3
+"""
+    assert yaml.load(evil)._underscore == 1
+
+
 # Test always_dump validation.
 
 
@@ -309,6 +359,19 @@ def test_always_dump_validate():
 
         class Foo(DumpableAttrs, always_dump="bar"):
             foo: int
+
+
+# Test properties of our ruamel.yaml instance.
+def test_dump_no_line_break():
+    """Ensure long paths are not split into multiple lines, at whitespace.
+    yaml.width = float("inf")"""
+
+    class Foo(DumpableAttrs):
+        long_str: str
+
+    long_str = "x x" * 500
+    s = yaml.dump(Foo(long_str))
+    assert long_str in s
 
 
 # ruamel.yaml has a unstable and shape-shifting API.

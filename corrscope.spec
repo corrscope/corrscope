@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from typing import List, Tuple
 
 from PyInstaller.building.api import PYZ, EXE, COLLECT
 from PyInstaller.building.build_main import Analysis
@@ -19,10 +20,12 @@ def keep(dir, wildcard):
     return [(include, dir) for include in includes]
 
 
-datas = keep("corrscope/gui", "*.ui")
+InFile = str
+OutFolder = str
+datas: List[Tuple[InFile, OutFolder]] = []
 
 version = v.pyinstaller_write_version()
-datas.append((v.version_txt, "."))
+datas += [(str(v.version_txt), ".")]
 
 app_name = "corrscope"
 app_name_version = f"{app_name}-{version}"

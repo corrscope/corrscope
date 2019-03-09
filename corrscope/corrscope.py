@@ -18,10 +18,11 @@ from corrscope.layout import LayoutConfig
 from corrscope.parallelism import ReplyIsAborted, Worker, Error
 from corrscope.renderer import MatplotlibRenderer, RendererConfig
 from corrscope.triggers import (
-    ITriggerConfig,
+    MainTriggerConfig,
     CorrelationTriggerConfig,
     PerFrameCache,
     CorrelationTrigger,
+    SpectrumConfig,
 )
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave, Flatten
@@ -34,7 +35,7 @@ PRINT_TIMESTAMP = True
 # - TypeError: object.__new__(BenchmarkMode) is not safe, use int.__new__()
 # I don't know *why* this works. It's magic.
 @unique
-class BenchmarkMode(int, DumpEnumAsStr, Enum):
+class BenchmarkMode(int, DumpEnumAsStr):
     NONE = 0
     TRIGGER = 1
     SEND_TO_WORKER = 2
@@ -48,6 +49,7 @@ class Config(
     begin_time end_time
     render_subfps trigger_subsampling render_subsampling
     trigger_stereo render_stereo
+    show_internals
     """,
 ):
     """ Default values indicate optional attributes. """
@@ -86,7 +88,7 @@ class Config(
     trigger_stereo: Flatten = Flatten.SumAvg
     render_stereo: Flatten = Flatten.SumAvg
 
-    trigger: ITriggerConfig  # Can be overriden per Wave
+    trigger: CorrelationTriggerConfig  # Can be overriden per Wave
 
     # Multiplies by trigger_width, render_width. Can override trigger.
     channels: List[ChannelConfig]
@@ -95,18 +97,9 @@ class Config(
     render: RendererConfig
 
     show_internals: List[str] = attr.Factory(list)
-    benchmark_mode: Union[str, BenchmarkMode] = BenchmarkMode.NONE
-
-    def __attrs_post_init__(self) -> None:
-        # Cast benchmark_mode to enum.
-        try:
-            if not isinstance(self.benchmark_mode, BenchmarkMode):
-                self.benchmark_mode = BenchmarkMode[self.benchmark_mode]
-        except KeyError:
-            raise CorrError(
-                f"invalid benchmark_mode mode {self.benchmark_mode} not in "
-                f"{[el.name for el in BenchmarkMode]}"
-            )
+    benchmark_mode: BenchmarkMode = attr.ib(
+        BenchmarkMode.NONE, converter=BenchmarkMode.by_name
+    )
 
 
 _FPS = 60  # f_s
@@ -127,7 +120,7 @@ def default_config(**kwargs) -> Config:
             edge_strength=2,
             responsiveness=0.5,
             buffer_falloff=0.5,
-            use_edge_trigger=False,
+            pitch_tracking=SpectrumConfig()
             # Removed due to speed hit.
             # post=LocalPostTriggerConfig(strength=0.1),
         ),
@@ -260,19 +253,15 @@ class CorrScope:
                     self.renderer.render_frame(datas)
                     self.output.write_frame(self.renderer.get_frame())
 
-        extra_outputs.window = None
-        if "window" in internals:
-            extra_outputs.window = RenderOutput()
-
-        extra_outputs.buffer = None
-        if "buffer" in internals:
-            extra_outputs.buffer = RenderOutput()
+        extra_outputs.window = RenderOutput() if "window" in internals else None
+        extra_outputs.buffer = RenderOutput() if "buffer" in internals else None
+        extra_outputs.spectrum = RenderOutput() if "spectrum" in internals else None
         # endregion
 
         if PRINT_TIMESTAMP:
             begin = time.perf_counter()
 
-        benchmark_mode = cast(BenchmarkMode, self.cfg.benchmark_mode)
+        benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
         prev = -1
@@ -325,17 +314,22 @@ class CorrScope:
                     continue
 
                 # region Display buffers, for debugging purposes.
+                triggers = cast(List[CorrelationTrigger], self.triggers)
                 if extra_outputs.window:
-                    triggers = cast(List[CorrelationTrigger], self.triggers)
                     extra_outputs.window.render_frame(
                         [trigger._prev_window for trigger in triggers]
                     )
 
                 if extra_outputs.buffer:
-                    triggers = cast(List[CorrelationTrigger], self.triggers)
                     extra_outputs.buffer.render_frame(
                         [trigger._buffer for trigger in triggers]
                     )
+
+                if extra_outputs.spectrum:
+                    extra_outputs.spectrum.render_frame(
+                        [trigger._spectrum - 0.99 for trigger in triggers]
+                    )
+
                 # endregion
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.SEND_TO_WORKER:

@@ -66,9 +66,11 @@ class NoAliasRepresenter(RoundTripRepresenter):
         return super().ignore_aliases(data)
 
 
+yaml = MyYAML()
+yaml.width = float("inf")
+
 # Default typ='roundtrip' creates 'ruamel.yaml.comments.CommentedMap' instead of dict.
 # Is isinstance(CommentedMap, dict)? IDK
-yaml = MyYAML()
 assert yaml.Representer == RoundTripRepresenter
 yaml.Representer = NoAliasRepresenter
 
@@ -113,7 +115,8 @@ def copy_config(obj: T) -> T:
 class DumpableAttrs:
     """ Marks class as attrs, and enables YAML dumping (excludes default fields). """
 
-    __always_dump: ClassVar[Set[str]]
+    # Private variable, to avoid clashing with subclass attributes.
+    __always_dump: ClassVar[FrozenSet[str]] = frozenset()
 
     if TYPE_CHECKING:
 
@@ -121,10 +124,14 @@ class DumpableAttrs:
             pass
 
     def __init_subclass__(cls, kw_only: bool = False, always_dump: str = ""):
-        cls.__always_dump = set(always_dump.split())
-        del always_dump
-
         _yaml_loadable(attr.dataclass(cls, kw_only=kw_only))
+
+        # Merge always_dump with superclass's __always_dump.
+        super_always_dump = cls.__always_dump
+        assert type(super_always_dump) == frozenset
+
+        cls.__always_dump = super_always_dump | frozenset(always_dump.split())
+        del super_always_dump, always_dump
 
         dump_fields = cls.__always_dump - {"*"}  # remove "*" if exists
         if "*" in cls.__always_dump:
@@ -151,11 +158,15 @@ class DumpableAttrs:
         cls = type(self)
 
         for field in attr.fields(cls):
-            # Skip deprecated fields with leading underscores.
-            # They have already been baked into other config fields.
-
+            """
+            Skip fields which cannot be passed into __init__().
+            - init=False
+            - leading underscores: deprecated fields.
+                - They have already been baked into other config fields.
+                - Even if you want to keep them, __init__(field) removes underscore.
+            """
             name = field.name
-            if name[0] == "_":
+            if name[0] == "_" or not field.init:
                 continue
 
             value = getattr(self, name)
@@ -182,12 +193,16 @@ class DumpableAttrs:
         """ Redirect `Alias(key)=value` to `key=value`.
         Then call the dataclass constructor (to validate parameters). """
 
-        self_name = obj_name(self)
-        field_names = attr.fields_dict(type(self)).keys()
+        cls = type(self)
+        cls_name = cls.__name__
+        fields = attr.fields_dict(cls)
+
+        # All names which can be passed into __init__()
+        field_names = {name.lstrip("_") for name, field in fields.items() if field.init}
 
         new_state = {}
         for key, value in dict(state).items():
-            class_var = getattr(self, key, None)
+            class_var = getattr(cls, key, None)
 
             if class_var is Ignored:
                 pass
@@ -196,21 +211,21 @@ class DumpableAttrs:
                 target = class_var.key
                 if target in state:
                     raise CorrError(
-                        f"{self_name} received both Alias {key} and "
+                        f"{cls_name} received both Alias {key} and "
                         f"equivalent {target}"
                     )
                 new_state[target] = value
 
             elif key not in field_names:
                 warnings.warn(
-                    f'Unrecognized field !{self_name} "{key}", ignoring', CorrWarning
+                    f'Unrecognized field "{key}" in !{cls_name}, ignoring', CorrWarning
                 )
 
             else:
                 new_state[key] = value
 
         del state
-        obj = type(self)(**new_state)
+        obj = cls(**new_state)
         self.__dict__ = obj.__dict__
 
 
@@ -254,6 +269,20 @@ Ignored = object()
 SomeEnum = TypeVar("SomeEnum", bound=Enum)
 
 
+@classmethod
+def _by_name(cls: Type[SomeEnum], enum_or_name: Union[SomeEnum, str]) -> SomeEnum:
+    if isinstance(enum_or_name, cls):
+        return enum_or_name
+    else:
+        try:
+            return cls[enum_or_name]
+        except KeyError:
+            raise CorrError(
+                f"invalid {cls.__name__} '{enum_or_name}' not in "
+                f"{[el.name for el in cls]}"
+            )
+
+
 class DumpEnumAsStr(Enum):
     def __init_subclass__(cls):
         _yaml_loadable(cls)
@@ -261,6 +290,8 @@ class DumpEnumAsStr(Enum):
     @classmethod
     def to_yaml(cls, representer: Representer, node: Enum) -> Any:
         return representer.represent_str(node._name_)  # type: ignore
+
+    by_name = _by_name
 
 
 class TypedEnumDump(Enum):
@@ -276,6 +307,8 @@ class TypedEnumDump(Enum):
     @classmethod
     def from_yaml(cls, constructor: Constructor, node: Node) -> Enum:
         return cls[node.value]
+
+    by_name = _by_name
 
 
 # Miscellaneous
