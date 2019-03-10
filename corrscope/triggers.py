@@ -355,7 +355,7 @@ class CircularArray:
 class CorrelationTriggerConfig(MainTriggerConfig, always_dump="pitch_tracking"):
     # get_trigger
     edge_strength: float
-    trigger_diameter: Optional[float] = None
+    trigger_diameter: Optional[float] = 0.5
 
     trigger_falloff: Tuple[float, float] = (4.0, 1.0)
     recalc_semitones: float = 1.0
