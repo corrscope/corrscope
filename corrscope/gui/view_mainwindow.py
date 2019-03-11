@@ -228,8 +228,12 @@ class MainWindow(QWidget):
         tr = self.tr
         with append_widget(s, QHBoxLayout):
             # Master audio
-            with append_widget(s, QGroupBox) as self.masterAudioGroup:
+            with append_widget(
+                s, QGroupBox, layout_args=[0, Qt.AlignTop]
+            ) as self.masterAudioGroup:
                 set_layout(s, QHBoxLayout)
+                s.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
                 with append_widget(s, BoundLineEdit) as self.master_audio:
                     pass
                 with append_widget(s, QPushButton) as self.master_audio_browse:

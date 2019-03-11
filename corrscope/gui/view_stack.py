@@ -101,11 +101,11 @@ def orphan_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget):
 
 @contextmanager
 def append_widget(
-    stack: LayoutStack, item_type: Type[WidgetOrLayout]
+    stack: LayoutStack, item_type: Type[WidgetOrLayout], layout_args: list = []
 ) -> ctx[WidgetOrLayout]:
     with _new_widget(stack, item_type) as item:
         yield item
-    _insert_widget_or_layout(stack.layout, item)
+    _insert_widget_or_layout(stack.layout, item, *layout_args)
 
 
 # noinspection PyArgumentList
