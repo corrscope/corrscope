@@ -211,6 +211,7 @@ class MainWindow(QWidget):
         return add_tab(s, QWidget, label)
 
     def add_top_bar(self, s):
+        tr = self.tr
         with append_widget(s, QHBoxLayout):
             # Master audio
             with append_widget(s, QGroupBox) as self.masterAudioGroup:
@@ -258,16 +259,19 @@ class MainWindow(QWidget):
                         assert isinstance(self.trigger__pitch_tracking, QWidget)
 
                     with add_grid_col(
-                        s, "", TypeComboBox
+                        s, tr("Post Trigger"), TypeComboBox
                     ) as self.trigger__post_trigger:
                         pass
 
-                    with add_grid_col(s, BoundSpinBox) as self.trigger__post_radius:
+                    with add_grid_col(
+                        s, tr("Post Trigger Radius"), BoundSpinBox
+                    ) as self.trigger__post_radius:
                         pass
                         # self.trigger__post_radius: BoundSpinBox
                         # self.trigger__post_radius.setMinimum(0)
 
     def add_channels_list(self, s):
+        tr = self.tr
         with append_widget(s, QGroupBox) as group:
             set_layout(s, QVBoxLayout)
 
@@ -291,6 +295,7 @@ class MainWindow(QWidget):
         return group
 
     def add_actions(self, s: LayoutStack, MainWindow):
+        tr = self.tr
         # Setup actions
         self.actionOpen = QAction(MainWindow)
         self.actionSave = QAction(MainWindow)

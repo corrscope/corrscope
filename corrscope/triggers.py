@@ -18,7 +18,7 @@ import numpy as np
 
 import corrscope.utils.scipy.signal as signal
 import corrscope.utils.scipy.windows as windows
-from corrscope.config import KeywordAttrs, CorrError, Alias
+from corrscope.config import KeywordAttrs, CorrError, Alias, with_units
 from corrscope.util import find, obj_name
 from corrscope.utils.windows import midpad, leftpad
 from corrscope.wave import FLOAT
@@ -45,7 +45,7 @@ class MainTriggerConfig(_TriggerConfig, KeywordAttrs, always_dump="edge_directio
 
     # Optional trigger for postprocessing
     post_trigger: Optional["PostTriggerConfig"] = None
-    post_radius: Optional[int] = 3
+    post_radius: Optional[int] = with_units("smp", default=3)
 
     @property
     def post_nsamp(self) -> Optional[int]:
