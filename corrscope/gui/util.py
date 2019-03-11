@@ -1,8 +1,9 @@
 import html
+from itertools import groupby
+from operator import itemgetter
 from typing import TypeVar, Iterable, Generic, Tuple, Any, Optional
 
 import matplotlib.colors
-import more_itertools
 from PyQt5.QtCore import QMutex
 from PyQt5.QtWidgets import QErrorMessage, QWidget
 
@@ -72,6 +73,42 @@ def find_ranges(iterable: Iterable[T]) -> Iterable[Tuple[T, int]]:
     :param iterable: List of items.
     :return: Iterable of (first elem, length).
     """
-    for group in more_itertools.consecutive_groups(iterable):
+    for group in consecutive_groups(iterable):
         group = list(group)
         yield group[0], len(group)
+
+
+# Taken from more-itertools 4.3.0
+def consecutive_groups(iterable, ordering=lambda x: x):
+    """Yield groups of consecutive items using :func:`itertools.groupby`.
+    The *ordering* function determines whether two items are adjacent by
+    returning their position.
+
+    By default, the ordering function is the identity function. This is
+    suitable for finding runs of numbers:
+
+        >>> iterable = [1, 10, 11, 12, 20, 30, 31, 32, 33, 40]
+        >>> for group in consecutive_groups(iterable):
+        ...     print(list(group))
+        [1]
+        [10, 11, 12]
+        [20]
+        [30, 31, 32, 33]
+        [40]
+
+    For finding runs of adjacent letters, try using the :meth:`index` method
+    of a string of letters:
+
+        >>> from string import ascii_lowercase
+        >>> iterable = 'abcdfgilmnop'
+        >>> ordering = ascii_lowercase.index
+        >>> for group in consecutive_groups(iterable, ordering):
+        ...     print(list(group))
+        ['a', 'b', 'c', 'd']
+        ['f', 'g']
+        ['i']
+        ['l', 'm', 'n', 'o', 'p']
+
+    """
+    for k, g in groupby(enumerate(iterable), key=lambda x: x[0] - ordering(x[1])):
+        yield map(itemgetter(1), g)
