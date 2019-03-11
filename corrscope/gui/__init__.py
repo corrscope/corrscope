@@ -151,9 +151,6 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self._any_unsaved = value
         self._update_unsaved_title()
 
-    # GUI layout widgets
-    left_tabs: qw.QTabWidget
-
     # Config models
     model: Optional["ConfigModel"] = None
 
@@ -234,6 +231,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self._any_unsaved = False
         self.load_title()
         self.left_tabs.setCurrentIndex(0)
+        self.channel_tabs.setCurrentIndex(0)
 
         if self.model is None:
             self.model = ConfigModel(cfg)

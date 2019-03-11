@@ -48,6 +48,8 @@ class MainWindow(QWidget):
         # noinspection PyCallByClass,PyTypeChecker
         return QCoreApplication.translate("MainWindow", *args, **kwargs)
 
+    left_tabs: QTabWidget
+
     def setupUi(self, MainWindow: QMainWindow):
         MainWindow.resize(1160, 0)
 
@@ -82,7 +84,6 @@ class MainWindow(QWidget):
 
         # Initializes labels by reference
         self.retranslateUi(MainWindow)
-        self.left_tabs.setCurrentIndex(0)
 
         # Depends on objectName
         QMetaObject.connectSlotsByName(MainWindow)
@@ -291,29 +292,47 @@ class MainWindow(QWidget):
                         # self.trigger__post_radius: BoundSpinBox
                         # self.trigger__post_radius.setMinimum(0)
 
+    channel_tabs: QTabWidget
+
     def add_channels_list(self, s):
         tr = self.tr
-        with append_widget(s, QGroupBox) as group:
-            set_layout(s, QVBoxLayout)
+        with append_widget(s, QTabWidget) as out:
+            self.channel_tabs = out
 
-            # Button toolbar
-            with append_widget(s, QHBoxLayout) as self.channelBar:
-                append_stretch(s)
+            # Channels list
+            with self._add_tab(s, tr("Oscilloscope Channels")):
+                set_layout(s, QVBoxLayout)
 
-                with append_widget(s, ShortcutButton) as self.channelAdd:
-                    pass
-                with append_widget(s, ShortcutButton) as self.channelDelete:
-                    pass
-                with append_widget(s, ShortcutButton) as self.channelUp:
-                    pass
-                with append_widget(s, ShortcutButton) as self.channelDown:
+                # Button toolbar
+                with append_widget(s, QHBoxLayout) as self.channelBar:
+                    append_stretch(s)
+
+                    with append_widget(s, ShortcutButton) as self.channelAdd:
+                        pass
+                    with append_widget(s, ShortcutButton) as self.channelDelete:
+                        pass
+                    with append_widget(s, ShortcutButton) as self.channelUp:
+                        pass
+                    with append_widget(s, ShortcutButton) as self.channelDown:
+                        pass
+
+                # Spreadsheet grid
+                with append_widget(s, ChannelTableView) as self.channel_view:
                     pass
 
-            # Spreadsheet grid
-            with append_widget(s, ChannelTableView) as self.channel_view:
-                pass
+            # FFmpeg output config
+            with self._add_tab(s, tr("FFmpeg encoding flags")):
+                set_layout(s, QFormLayout)
+                with add_row(
+                    s, tr("Video Template"), BoundLineEdit
+                ) as self.ffmpeg_cli__video_template:
+                    pass
+                with add_row(
+                    s, tr("Audio Template"), BoundLineEdit
+                ) as self.ffmpeg_cli__audio_template:
+                    pass
 
-        return group
+        return out
 
     def add_actions(self, s: LayoutStack, MainWindow):
         tr = self.tr
@@ -403,7 +422,7 @@ class MainWindow(QWidget):
         self.trigger__pitch_tracking.setText(tr("Pitch Tracking"))
         self.trigger__edge_directionL.setText(tr("Edge Direction"))
 
-        self.channelsGroup.setTitle(tr("Oscilloscope Channels"))
+        # self.channelsGroup.setTitle()
         self.channelAdd.setText(tr("&Add..."))
         self.channelDelete.setText(tr("&Delete"))
         self.channelUp.setText(tr("Up"))
@@ -439,3 +458,6 @@ from corrscope.gui.model_bind import (
     BoundColorWidget,
     OptionalColorWidget,
 )
+
+# Delete unbound widgets, so they cannot accidentally be used.
+del QLineEdit, QSpinBox, QDoubleSpinBox, QCheckBox, QComboBox
