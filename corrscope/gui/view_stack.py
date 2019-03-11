@@ -41,7 +41,7 @@ class StackFrame:
 class LayoutStack:
     def __init__(self, root: Optional[QWidget]):
         self._items = [StackFrame(root)]
-        self.widget_to_label: Dict[QWidget, QLabel] = {}
+        self._widget_to_label: Dict[QWidget, QLabel] = {}
 
     @contextmanager
     def push(self, item: T) -> ctx[T]:
@@ -203,7 +203,7 @@ def widget_pair_inserter(append_widgets: Callable):
         append_widgets(stack.layout, left, right)
         if left_is_label:
             assert isinstance(left, QLabel)
-            stack.widget_to_label[right] = left
+            stack._widget_to_label[right] = left
 
     return add_row_col
 
@@ -263,7 +263,7 @@ def set_attr_objectName(ui, stack: LayoutStack):
         if $label was generated but not yielded
         setattr(ui.$name + "L" = $label)
     """
-    widget_to_label = stack.widget_to_label
+    widget_to_label = stack._widget_to_label
 
     for name, obj in dict(ui.__dict__).items():
         if not isinstance(obj, QObject):
