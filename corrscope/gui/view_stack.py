@@ -33,6 +33,7 @@ def new_widget_or_layout(
 class StackFrame:
     widget: Optional[QWidget]
     layout: Optional[QLayout] = None
+    parent: Optional["StackFrame"] = None
 
     def with_layout(self, layout: Optional[QLayout]):
         return attr.evolve(self, layout=layout)
@@ -54,6 +55,7 @@ class LayoutStack:
         else:
             raise TypeError(obj_name(item))
 
+        frame.parent = self.peek()
         self._items.append(frame)
 
         try:
@@ -71,6 +73,10 @@ class LayoutStack:
     @property
     def layout(self):
         return self.peek().layout
+
+    @property
+    def parent(self):
+        return self.peek().parent
 
 
 def set_layout(stack: LayoutStack, layout_type: Type[QLayout]) -> QLayout:
