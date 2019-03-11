@@ -14,15 +14,19 @@ WidgetOrLayout = TypeVar("WidgetOrLayout", bound=Union[QWidget, QLayout])
 
 
 def new_widget_or_layout(
-    item_type: Type[WidgetOrLayout], parent: QWidget
+    item_type: Union[Type[WidgetOrLayout], str], parent: QWidget
 ) -> WidgetOrLayout:
     """Creates a widget or layout, for insertion into an existing layout.
     Do NOT use for filling a widget with a layout!"""
-    if issubclass(item_type, QWidget):
-        right = item_type(parent)
+    if isinstance(item_type, str):
+        return QLabel(item_type, parent)
+    elif issubclass(item_type, QWidget):
+        return item_type(parent)
     else:
-        right = item_type(None)
-    return right
+        assert issubclass(item_type, QLayout)
+        # new_widget_or_layout is used to add sublayouts, which do NOT have a parent.
+        # Only widgets' root layouts have parents.
+        return item_type(None)
 
 
 @attr.dataclass
@@ -176,18 +180,10 @@ Both = object()
 
 def widget_pair_inserter(append_widgets: Callable):
     @contextmanager
-    def add_row_col(stack: LayoutStack, arg1, arg2=None):
-        left_type: Type[Left]
-        right_type: Type[Right]
-        if arg2 is None:
-            left_type, right_type = QLabel, arg1
-            auto_left_label = True
-        else:
-            left_type, right_type = arg1, arg2
-            auto_left_label = False
-
+    def add_row_col(stack: LayoutStack, left_type, right_type, *, name=None):
         parent = stack.widget
-        left = new_widget_or_layout(left_type, parent)  # TODO support str
+        left = new_widget_or_layout(left_type, parent)
+        left_is_label = isinstance(left, QLabel)
 
         if right_type is Both:
             right = Both
@@ -199,13 +195,13 @@ def widget_pair_inserter(append_widgets: Callable):
         with stack.push(push):
             if right is Both:
                 yield left
-            elif auto_left_label:
+            elif left_is_label:
                 yield right
             else:
                 yield left, right
 
         append_widgets(stack.layout, left, right)
-        if auto_left_label:
+        if left_is_label:
             assert isinstance(left, QLabel)
             stack.widget_to_label[right] = left
 
