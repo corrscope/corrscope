@@ -37,7 +37,9 @@ class _TriggerConfig:
         return self.cls(wave, cfg=self, tsamp=tsamp, stride=stride, fps=fps)
 
 
-class MainTriggerConfig(_TriggerConfig, KeywordAttrs, always_dump="edge_direction"):
+class MainTriggerConfig(
+    _TriggerConfig, KeywordAttrs, always_dump="edge_direction post_trigger post_radius"
+):
     # Must be 1 or -1.
     # MainTrigger.__init__() multiplies `wave.amplification *= edge_direction`.
     # get_trigger() should ignore `edge_direction` and look for rising edges.
