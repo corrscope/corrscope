@@ -22,6 +22,20 @@ from corrscope.gui.view_stack import (
 NBSP = "\xa0"
 
 
+class HLine(QFrame):
+    def __init__(self, parent):
+        super(HLine, self).__init__(parent)
+        self.setFrameShape(QFrame.HLine)
+        self.setFrameShadow(QFrame.Sunken)
+
+
+class VLine(QFrame):
+    def __init__(self, parent):
+        super(VLine, self).__init__(parent)
+        self.setFrameShape(QFrame.VLine)
+        self.setFrameShadow(QFrame.Sunken)
+
+
 def fixed_size_policy():
     return QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
@@ -250,6 +264,9 @@ class MainWindow(QWidget):
                         self.trigger__buffer_falloff
                     ):
                         self.trigger__buffer_falloff.setSingleStep(0.5)
+
+                with append_widget(s, HLine):
+                    pass
 
                 # Bottom row
                 with append_widget(s, QGridLayout):
