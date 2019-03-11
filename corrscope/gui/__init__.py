@@ -42,6 +42,7 @@ from corrscope.triggers import (
     CorrelationTriggerConfig,
     MainTriggerConfig,
     SpectrumConfig,
+    ZeroCrossingTriggerConfig,
 )
 from corrscope.util import obj_name
 from corrscope.wave import Flatten
@@ -653,6 +654,11 @@ class ConfigModel(PresentationModel):
     combo_symbol_text["trigger__edge_direction"] = [
         (1, "Rising (+1)"),
         (-1, "Falling (-1)"),
+    ]
+
+    combo_symbol_text["trigger__post_trigger"] = [
+        (type(None), "Disabled"),
+        (ZeroCrossingTriggerConfig, "Zero Crossing"),
     ]
 
     # Render

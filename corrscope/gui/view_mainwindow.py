@@ -224,35 +224,49 @@ class MainWindow(QWidget):
                     pass
 
             # Trigger config
-            with append_widget(s, QGroupBox) as self.optionAudio:
+            with append_widget(s, QGroupBox) as self.optionTrigger:
                 # Prevent expansion (does nothing even if removed :| )
-                self.optionAudio.setSizePolicy(fixed_size_policy())
+                self.optionTrigger.setSizePolicy(fixed_size_policy())
 
-                set_layout(s, QGridLayout)
+                set_layout(s, QVBoxLayout)
 
-                with add_grid_col(s, BoundComboBox) as (self.trigger__edge_direction):
-                    pass
+                # Top row
+                with append_widget(s, QGridLayout):
+                    with add_grid_col(s, BoundComboBox) as (
+                        self.trigger__edge_direction
+                    ):
+                        pass
 
-                with add_grid_col(s, BoundDoubleSpinBox) as (
-                    self.trigger__edge_strength
-                ):
-                    self.trigger__edge_strength.setMinimum(0.0)
+                    with add_grid_col(s, BoundDoubleSpinBox) as (
+                        self.trigger__edge_strength
+                    ):
+                        self.trigger__edge_strength.setMinimum(0.0)
 
-                with add_grid_col(s, BoundDoubleSpinBox) as (
-                    self.trigger__responsiveness
-                ):
-                    self.trigger__responsiveness.setMaximum(1.0)
-                    self.trigger__responsiveness.setSingleStep(0.1)
+                    with add_grid_col(s, BoundDoubleSpinBox) as (
+                        self.trigger__responsiveness
+                    ):
+                        self.trigger__responsiveness.setMaximum(1.0)
+                        self.trigger__responsiveness.setSingleStep(0.1)
 
-                with add_grid_col(s, BoundDoubleSpinBox) as (
-                    self.trigger__buffer_falloff
-                ):
-                    self.trigger__buffer_falloff.setSingleStep(0.5)
+                    with add_grid_col(s, BoundDoubleSpinBox) as (
+                        self.trigger__buffer_falloff
+                    ):
+                        self.trigger__buffer_falloff.setSingleStep(0.5)
 
-                with add_grid_col(s, BoundCheckBox, Both) as (
-                    self.trigger__pitch_tracking
-                ):
-                    assert isinstance(self.trigger__pitch_tracking, QWidget)
+                # Bottom row
+                with append_widget(s, QGridLayout):
+                    with add_grid_col(s, BoundCheckBox, Both) as (
+                        self.trigger__pitch_tracking
+                    ):
+                        assert isinstance(self.trigger__pitch_tracking, QWidget)
+
+                    with add_grid_col(s, TypeComboBox) as self.trigger__post_trigger:
+                        pass
+
+                    with add_grid_col(s, BoundSpinBox) as self.trigger__post_radius:
+                        pass
+                        # self.trigger__post_radius: BoundSpinBox
+                        # self.trigger__post_radius.setMinimum(0)
 
     def add_channels_list(self, s):
         with append_widget(s, QGroupBox) as group:
@@ -358,7 +372,7 @@ class MainWindow(QWidget):
         self.masterAudioGroup.setTitle(tr("Master Audio"))
         self.master_audio.setText(tr("/"))
         self.master_audio_browse.setText(tr("&Browse..."))
-        self.optionAudio.setTitle(tr("Trigger"))
+        self.optionTrigger.setTitle(tr("Trigger"))
         self.trigger__edge_strengthL.setText(tr("Edge Strength"))
         self.trigger__responsivenessL.setText(tr("Responsiveness"))
         self.trigger__buffer_falloffL.setText(tr("Buffer Falloff"))
@@ -392,11 +406,12 @@ class MainWindow(QWidget):
 
 from corrscope.gui.__init__ import ChannelTableView, ShortcutButton
 from corrscope.gui.model_bind import (
-    BoundCheckBox,
-    BoundColorWidget,
-    BoundComboBox,
-    BoundDoubleSpinBox,
     BoundLineEdit,
     BoundSpinBox,
+    BoundDoubleSpinBox,
+    BoundCheckBox,
+    BoundComboBox,
+    TypeComboBox,
+    BoundColorWidget,
     OptionalColorWidget,
 )
