@@ -94,8 +94,6 @@ class _Trigger(ABC):
         frame_dur = 1 / fps
         # Subsamples per frame
         self._tsamp_frame = self.time2tsamp(frame_dur)
-        # Samples per frame
-        self._real_samp_frame = round(frame_dur * self._wave.smp_s)
 
     def time2tsamp(self, time: float) -> int:
         return round(time * self._wave.smp_s / self._stride)
@@ -459,13 +457,13 @@ class CorrelationTrigger(MainTrigger):
         # - Place in left half of N-sample buffer.
 
         # To avoid cutting off data, use a narrow transition zone (invariant to stride).
-        # _real_samp_frame (unit=subsample) == stride * frame.
-        transition_nsamp = round(self._real_samp_frame * self.cfg.lag_prevention)
         tsamp_frame = self._tsamp_frame
+        transition_nsamp = round(tsamp_frame * self.cfg.lag_prevention)
 
         # Left half of a Hann cosine taper
-        # Width (type=subsample) = min(stride*frame * lag_prevention, 1 frame)
-        width = min(transition_nsamp, tsamp_frame)
+        # Width (type=subsample) = min(frame * lag_prevention, 1 frame)
+        assert transition_nsamp <= tsamp_frame
+        width = transition_nsamp
         taper = windows.hann(width * 2)[:width]
 
         # Right-pad=1 taper to 1 frame long [t-1f, t]
