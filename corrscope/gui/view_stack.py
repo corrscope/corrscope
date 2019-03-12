@@ -181,7 +181,12 @@ Left = TypeVar("Left", bound=QWidget)
 Right = TypeVar("Right", bound=Union[QWidget, QLayout])  # same as WidgetOrLayout
 
 
-Both = object()
+class _Both:
+    def __bool__(self):
+        return False
+
+
+Both = _Both()
 
 
 def widget_pair_inserter(append_widgets: Callable):
@@ -197,6 +202,9 @@ def widget_pair_inserter(append_widgets: Callable):
         else:
             right = new_widget_or_layout(right_type, parent)
             push = right
+
+        if name:
+            (right or left).setObjectName(name)
 
         with stack.push(push):
             if right is Both:
