@@ -14,21 +14,26 @@ WidgetOrLayout = TypeVar("WidgetOrLayout", bound=Union[QWidget, QLayout])
 
 
 def new_widget_or_layout(
-    item_type: Type[WidgetOrLayout], parent: QWidget
+    item_type: Union[Type[WidgetOrLayout], str], parent: QWidget
 ) -> WidgetOrLayout:
     """Creates a widget or layout, for insertion into an existing layout.
     Do NOT use for filling a widget with a layout!"""
-    if issubclass(item_type, QWidget):
-        right = item_type(parent)
+    if isinstance(item_type, str):
+        return QLabel(item_type, parent)
+    elif issubclass(item_type, QWidget):
+        return item_type(parent)
     else:
-        right = item_type(None)
-    return right
+        assert issubclass(item_type, QLayout)
+        # new_widget_or_layout is used to add sublayouts, which do NOT have a parent.
+        # Only widgets' root layouts have parents.
+        return item_type(None)
 
 
 @attr.dataclass
 class StackFrame:
     widget: Optional[QWidget]
     layout: Optional[QLayout] = None
+    parent: Optional["StackFrame"] = None
 
     def with_layout(self, layout: Optional[QLayout]):
         return attr.evolve(self, layout=layout)
@@ -37,7 +42,7 @@ class StackFrame:
 class LayoutStack:
     def __init__(self, root: Optional[QWidget]):
         self._items = [StackFrame(root)]
-        self.widget_to_label: Dict[QWidget, QLabel] = {}
+        self._widget_to_label: Dict[QWidget, QLabel] = {}
 
     @contextmanager
     def push(self, item: T) -> ctx[T]:
@@ -50,6 +55,7 @@ class LayoutStack:
         else:
             raise TypeError(obj_name(item))
 
+        frame.parent = self.peek()
         self._items.append(frame)
 
         try:
@@ -67,6 +73,10 @@ class LayoutStack:
     @property
     def layout(self):
         return self.peek().layout
+
+    @property
+    def parent(self):
+        return self.peek().parent
 
 
 def set_layout(stack: LayoutStack, layout_type: Type[QLayout]) -> QLayout:
@@ -91,11 +101,11 @@ def orphan_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget):
 
 @contextmanager
 def append_widget(
-    stack: LayoutStack, item_type: Type[WidgetOrLayout]
+    stack: LayoutStack, item_type: Type[WidgetOrLayout], layout_args: list = []
 ) -> ctx[WidgetOrLayout]:
     with _new_widget(stack, item_type) as item:
         yield item
-    _insert_widget_or_layout(stack.layout, item)
+    _insert_widget_or_layout(stack.layout, item, *layout_args)
 
 
 # noinspection PyArgumentList
@@ -176,18 +186,10 @@ Both = object()
 
 def widget_pair_inserter(append_widgets: Callable):
     @contextmanager
-    def add_row_col(stack: LayoutStack, arg1, arg2=None):
-        left_type: Type[Left]
-        right_type: Type[Right]
-        if arg2 is None:
-            left_type, right_type = QLabel, arg1
-            auto_left_label = True
-        else:
-            left_type, right_type = arg1, arg2
-            auto_left_label = False
-
+    def add_row_col(stack: LayoutStack, left_type, right_type, *, name=None):
         parent = stack.widget
-        left = new_widget_or_layout(left_type, parent)  # TODO support str
+        left = new_widget_or_layout(left_type, parent)
+        left_is_label = isinstance(left, QLabel)
 
         if right_type is Both:
             right = Both
@@ -199,15 +201,15 @@ def widget_pair_inserter(append_widgets: Callable):
         with stack.push(push):
             if right is Both:
                 yield left
-            elif auto_left_label:
+            elif left_is_label:
                 yield right
             else:
                 yield left, right
 
         append_widgets(stack.layout, left, right)
-        if auto_left_label:
+        if left_is_label:
             assert isinstance(left, QLabel)
-            stack.widget_to_label[right] = left
+            stack._widget_to_label[right] = left
 
     return add_row_col
 
@@ -267,7 +269,7 @@ def set_attr_objectName(ui, stack: LayoutStack):
         if $label was generated but not yielded
         setattr(ui.$name + "L" = $label)
     """
-    widget_to_label = stack.widget_to_label
+    widget_to_label = stack._widget_to_label
 
     for name, obj in dict(ui.__dict__).items():
         if not isinstance(obj, QObject):
