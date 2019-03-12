@@ -3,9 +3,26 @@ import sys
 from contextlib import contextmanager
 from itertools import chain
 from pathlib import Path
-from typing import Callable, Tuple, TypeVar, Iterator, Union, Optional, Any, cast
+from typing import (
+    Callable,
+    Tuple,
+    TypeVar,
+    Iterator,
+    Union,
+    Optional,
+    Any,
+    cast,
+    SupportsRound,
+)
 
 import numpy as np
+
+
+def iround(x: SupportsRound) -> int:
+    """Rounds x and converts to int.
+    Because round(np.float32) returns np.float32 instead of int.
+    """
+    return int(round(x))
 
 
 def ceildiv(n: int, d: int) -> int:
