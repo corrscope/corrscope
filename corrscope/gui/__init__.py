@@ -44,7 +44,7 @@ from corrscope.triggers import (
     SpectrumConfig,
     ZeroCrossingTriggerConfig,
 )
-from corrscope.util import obj_name
+from corrscope.util import obj_name, iround
 from corrscope.wave import Flatten
 
 FILTER_WAV_FILES = ["WAV files (*.wav)"]
@@ -514,7 +514,7 @@ class CorrProgressDialog(qw.QProgressDialog):
 
     @qc.pyqtSlot(float, float)
     def on_begin(self, begin_time, end_time):
-        self.setRange(int(round(begin_time)), int(round(end_time)))
+        self.setRange(iround(begin_time), iround(end_time))
         # self.setValue is called by CorrScope, on the first frame.
 
 

@@ -19,7 +19,7 @@ import numpy as np
 import corrscope.utils.scipy.signal as signal
 import corrscope.utils.scipy.windows as windows
 from corrscope.config import KeywordAttrs, CorrError, Alias, with_units
-from corrscope.util import find, obj_name
+from corrscope.util import find, obj_name, iround
 from corrscope.utils.windows import midpad, leftpad
 from corrscope.wave import FLOAT
 
@@ -599,7 +599,7 @@ class CorrelationTrigger(MainTrigger):
         # Find spectral correlation peak,
         # but prioritize "changing pitch by ???".
         if peak_semitones is not None:
-            boost_x = int(round(peak_semitones / 12 * scfg.notes_per_octave))
+            boost_x = iround(peak_semitones / 12 * scfg.notes_per_octave)
             boost_y: float = scfg.pitch_estimate_boost
         else:
             boost_x = 0
@@ -615,7 +615,7 @@ class CorrelationTrigger(MainTrigger):
         )
         if resample_notes != 0:
             # we must divide sampling rate by 2.
-            new_len = int(round(N / 2 ** (resample_notes / scfg.notes_per_octave)))
+            new_len = iround(N / 2 ** (resample_notes / scfg.notes_per_octave))
 
             # Copy+resample self._buffer.
             self._buffer = np.interp(
