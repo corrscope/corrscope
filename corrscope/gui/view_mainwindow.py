@@ -22,6 +22,20 @@ from corrscope.gui.view_stack import (
 NBSP = "\xa0"
 
 
+class HLine(QFrame):
+    def __init__(self, parent):
+        super(HLine, self).__init__(parent)
+        self.setFrameShape(QFrame.HLine)
+        self.setFrameShadow(QFrame.Sunken)
+
+
+class VLine(QFrame):
+    def __init__(self, parent):
+        super(VLine, self).__init__(parent)
+        self.setFrameShape(QFrame.VLine)
+        self.setFrameShadow(QFrame.Sunken)
+
+
 def fixed_size_policy():
     return QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
@@ -82,45 +96,45 @@ class MainWindow(QWidget):
             with append_widget(s, QGroupBox) as self.optionGlobal:
                 set_layout(s, QFormLayout)
 
-                with add_row(s, BoundSpinBox) as self.fps:
+                with add_row(s, "", BoundSpinBox) as self.fps:
                     self.fps.setMinimum(1)
                     self.fps.setMaximum(999)
                     self.fps.setSingleStep(10)
 
-                with add_row(s, BoundSpinBox) as self.trigger_ms:
+                with add_row(s, "", BoundSpinBox) as self.trigger_ms:
                     self.trigger_ms.setMinimum(5)
                     self.trigger_ms.setSingleStep(5)
 
-                with add_row(s, BoundSpinBox) as self.render_ms:
+                with add_row(s, "", BoundSpinBox) as self.render_ms:
                     self.render_ms.setMinimum(5)
                     self.render_ms.setSingleStep(5)
 
-                with add_row(s, BoundDoubleSpinBox) as self.amplification:
+                with add_row(s, "", BoundDoubleSpinBox) as self.amplification:
                     self.amplification.setSingleStep(0.1)
 
-                with add_row(s, BoundDoubleSpinBox) as self.begin_time:
+                with add_row(s, "", BoundDoubleSpinBox) as self.begin_time:
                     self.begin_time.setMaximum(9999.0)
 
             with append_widget(s, QGroupBox) as self.optionAppearance:
                 set_layout(s, QFormLayout)
 
-                with add_row(s, BoundLineEdit) as self.render_resolution:
+                with add_row(s, "", BoundLineEdit) as self.render_resolution:
                     pass
 
-                with add_row(s, BoundColorWidget) as self.render__bg_color:
+                with add_row(s, "", BoundColorWidget) as self.render__bg_color:
                     pass
 
-                with add_row(s, BoundColorWidget) as self.render__init_line_color:
+                with add_row(s, "", BoundColorWidget) as self.render__init_line_color:
                     pass
 
-                with add_row(s, BoundDoubleSpinBox) as self.render__line_width:
+                with add_row(s, "", BoundDoubleSpinBox) as self.render__line_width:
                     self.render__line_width.setMinimum(0.5)
                     self.render__line_width.setSingleStep(0.5)
 
-                with add_row(s, OptionalColorWidget) as self.render__grid_color:
+                with add_row(s, "", OptionalColorWidget) as self.render__grid_color:
                     pass
 
-                with add_row(s, OptionalColorWidget) as self.render__midline_color:
+                with add_row(s, "", OptionalColorWidget) as self.render__midline_color:
                     pass
 
                 with add_row(s, BoundCheckBox, BoundCheckBox) as (
@@ -132,13 +146,10 @@ class MainWindow(QWidget):
             with append_widget(s, QGroupBox) as self.optionLayout:
                 set_layout(s, QFormLayout)
 
-                with add_row(s, BoundComboBox) as self.layout__orientation:
+                with add_row(s, "", BoundComboBox) as self.layout__orientation:
                     pass
 
-                with add_row(s, QLabel, QHBoxLayout) as (
-                    self.layout__ncolsL,
-                    self.layoutDims,
-                ):
+                with add_row(s, tr("Columns"), QHBoxLayout) as self.layoutDims:
                     with append_widget(s, BoundSpinBox) as self.layout__ncols:
                         self.layout__ncols.setSpecialValueText(NBSP)
 
@@ -159,19 +170,19 @@ class MainWindow(QWidget):
 
             with append_widget(s, QGroupBox) as self.optionStereo:
                 set_layout(s, QFormLayout)
-                with add_row(s, BoundComboBox) as self.trigger_stereo:
+                with add_row(s, "", BoundComboBox) as self.trigger_stereo:
                     pass
 
-                with add_row(s, BoundComboBox) as self.render_stereo:
+                with add_row(s, "", BoundComboBox) as self.render_stereo:
                     pass
 
             with append_widget(s, QGroupBox) as self.dockStereo_2:
                 set_layout(s, QFormLayout)
 
-                with add_row(s, BoundComboBox) as self.layout__stereo_orientation:
+                with add_row(s, "", BoundComboBox) as self.layout__stereo_orientation:
                     pass
 
-                with add_row(s, BoundDoubleSpinBox) as (
+                with add_row(s, "", BoundDoubleSpinBox) as (
                     self.render__stereo_grid_opacity
                 ):
                     self.render__stereo_grid_opacity.setMaximum(1.0)
@@ -189,19 +200,19 @@ class MainWindow(QWidget):
             with append_widget(s, QGroupBox) as self.perfAll:
                 set_layout(s, QFormLayout)
 
-                with add_row(s, BoundSpinBox) as self.trigger_subsampling:
+                with add_row(s, "", BoundSpinBox) as self.trigger_subsampling:
                     self.trigger_subsampling.setMinimum(1)
 
-                with add_row(s, BoundSpinBox) as self.render_subsampling:
+                with add_row(s, "", BoundSpinBox) as self.render_subsampling:
                     self.render_subsampling.setMinimum(1)
 
             with append_widget(s, QGroupBox) as self.perfPreview:
                 set_layout(s, QFormLayout)
 
-                with add_row(s, BoundSpinBox) as self.render_subfps:
+                with add_row(s, "", BoundSpinBox) as self.render_subfps:
                     self.render_subfps.setMinimum(1)
 
-                with add_row(s, BoundDoubleSpinBox) as self.render__res_divisor:
+                with add_row(s, "", BoundDoubleSpinBox) as self.render__res_divisor:
                     self.render__res_divisor.setMinimum(1.0)
                     self.render__res_divisor.setSingleStep(0.5)
 
@@ -214,47 +225,74 @@ class MainWindow(QWidget):
         return add_tab(s, QWidget, label)
 
     def add_top_bar(self, s):
+        tr = self.tr
         with append_widget(s, QHBoxLayout):
             # Master audio
-            with append_widget(s, QGroupBox) as self.masterAudioGroup:
+            with append_widget(
+                s, QGroupBox, layout_args=[0, Qt.AlignTop]
+            ) as self.masterAudioGroup:
                 set_layout(s, QHBoxLayout)
+                s.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
                 with append_widget(s, BoundLineEdit) as self.master_audio:
                     pass
                 with append_widget(s, QPushButton) as self.master_audio_browse:
                     pass
 
             # Trigger config
-            with append_widget(s, QGroupBox) as self.optionAudio:
+            with append_widget(s, QGroupBox) as self.optionTrigger:
                 # Prevent expansion (does nothing even if removed :| )
-                self.optionAudio.setSizePolicy(fixed_size_policy())
+                self.optionTrigger.setSizePolicy(fixed_size_policy())
 
-                set_layout(s, QGridLayout)
+                set_layout(s, QVBoxLayout)
 
-                with add_grid_col(s, BoundComboBox) as (self.trigger__edge_direction):
+                # Top row
+                with append_widget(s, QGridLayout):
+                    with add_grid_col(s, "", BoundComboBox) as (
+                        self.trigger__edge_direction
+                    ):
+                        pass
+
+                    with add_grid_col(s, "", BoundDoubleSpinBox) as (
+                        self.trigger__edge_strength
+                    ):
+                        self.trigger__edge_strength.setMinimum(0.0)
+
+                    with add_grid_col(s, "", BoundDoubleSpinBox) as (
+                        self.trigger__responsiveness
+                    ):
+                        self.trigger__responsiveness.setMaximum(1.0)
+                        self.trigger__responsiveness.setSingleStep(0.1)
+
+                    with add_grid_col(s, "", BoundDoubleSpinBox) as (
+                        self.trigger__buffer_falloff
+                    ):
+                        self.trigger__buffer_falloff.setSingleStep(0.5)
+
+                with append_widget(s, HLine):
                     pass
 
-                with add_grid_col(s, BoundDoubleSpinBox) as (
-                    self.trigger__edge_strength
-                ):
-                    self.trigger__edge_strength.setMinimum(0.0)
+                # Bottom row
+                with append_widget(s, QGridLayout):
+                    with add_grid_col(s, BoundCheckBox, Both) as (
+                        self.trigger__pitch_tracking
+                    ):
+                        assert isinstance(self.trigger__pitch_tracking, QWidget)
 
-                with add_grid_col(s, BoundDoubleSpinBox) as (
-                    self.trigger__responsiveness
-                ):
-                    self.trigger__responsiveness.setMaximum(1.0)
-                    self.trigger__responsiveness.setSingleStep(0.1)
+                    with add_grid_col(
+                        s, tr("Post Trigger"), TypeComboBox
+                    ) as self.trigger__post_trigger:
+                        pass
 
-                with add_grid_col(s, BoundDoubleSpinBox) as (
-                    self.trigger__buffer_falloff
-                ):
-                    self.trigger__buffer_falloff.setSingleStep(0.5)
-
-                with add_grid_col(s, BoundCheckBox, Both) as (
-                    self.trigger__pitch_tracking
-                ):
-                    assert isinstance(self.trigger__pitch_tracking, QWidget)
+                    with add_grid_col(
+                        s, tr("Post Trigger Radius"), BoundSpinBox
+                    ) as self.trigger__post_radius:
+                        pass
+                        # self.trigger__post_radius: BoundSpinBox
+                        # self.trigger__post_radius.setMinimum(0)
 
     def add_channels_list(self, s):
+        tr = self.tr
         with append_widget(s, QGroupBox) as group:
             set_layout(s, QVBoxLayout)
 
@@ -278,6 +316,7 @@ class MainWindow(QWidget):
         return group
 
     def add_actions(self, s: LayoutStack, MainWindow):
+        tr = self.tr
         # Setup actions
         self.actionOpen = QAction(MainWindow)
         self.actionSave = QAction(MainWindow)
@@ -340,7 +379,6 @@ class MainWindow(QWidget):
         self.render__h_midline.setText(tr("Horizontal Midline"))
         self.optionLayout.setTitle(tr("Layout"))
         self.layout__orientationL.setText(tr("Orientation"))
-        self.layout__ncolsL.setText(tr("Columns"))
         self.layout__nrowsL.setText(tr("Rows"))
         self.optionStereo.setTitle(tr("Stereo Enable"))
         self.trigger_stereoL.setText(tr("Trigger Stereo"))
@@ -358,7 +396,7 @@ class MainWindow(QWidget):
         self.masterAudioGroup.setTitle(tr("Master Audio"))
         self.master_audio.setText(tr("/"))
         self.master_audio_browse.setText(tr("&Browse..."))
-        self.optionAudio.setTitle(tr("Trigger"))
+        self.optionTrigger.setTitle(tr("Trigger"))
         self.trigger__edge_strengthL.setText(tr("Edge Strength"))
         self.trigger__responsivenessL.setText(tr("Responsiveness"))
         self.trigger__buffer_falloffL.setText(tr("Buffer Falloff"))
@@ -392,11 +430,12 @@ class MainWindow(QWidget):
 
 from corrscope.gui.__init__ import ChannelTableView, ShortcutButton
 from corrscope.gui.model_bind import (
-    BoundCheckBox,
-    BoundColorWidget,
-    BoundComboBox,
-    BoundDoubleSpinBox,
     BoundLineEdit,
     BoundSpinBox,
+    BoundDoubleSpinBox,
+    BoundCheckBox,
+    BoundComboBox,
+    TypeComboBox,
+    BoundColorWidget,
     OptionalColorWidget,
 )

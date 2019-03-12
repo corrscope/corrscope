@@ -30,8 +30,8 @@ from corrscope.gui.model_bind import (
     behead,
     rgetattr,
     rsetattr,
-    Value,
-    ValueText,
+    Symbol,
+    SymbolText,
 )
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
@@ -42,6 +42,7 @@ from corrscope.triggers import (
     CorrelationTriggerConfig,
     MainTriggerConfig,
     SpectrumConfig,
+    ZeroCrossingTriggerConfig,
 )
 from corrscope.util import obj_name
 from corrscope.wave import Flatten
@@ -630,13 +631,13 @@ assert set(flatten_modes.keys()) == set(Flatten.modes)  # type: ignore
 
 class ConfigModel(PresentationModel):
     cfg: Config
-    combo_value_text: Dict[str, Sequence[ValueText]] = {}
+    combo_symbol_text: Dict[str, Sequence[SymbolText]] = {}
 
     master_audio = path_fix_property("master_audio")
 
     # Stereo flattening
-    combo_value_text["trigger_stereo"] = list(flatten_no_stereo.items())
-    combo_value_text["render_stereo"] = list(flatten_modes.items())
+    combo_symbol_text["trigger_stereo"] = list(flatten_no_stereo.items())
+    combo_symbol_text["render_stereo"] = list(flatten_modes.items())
 
     # Trigger
     @property
@@ -650,9 +651,14 @@ class ConfigModel(PresentationModel):
         scfg = SpectrumConfig() if gui else None
         self.cfg.trigger.pitch_tracking = scfg
 
-    combo_value_text["trigger__edge_direction"] = [
+    combo_symbol_text["trigger__edge_direction"] = [
         (1, "Rising (+1)"),
         (-1, "Falling (-1)"),
+    ]
+
+    combo_symbol_text["trigger__post_trigger"] = [
+        (type(None), "Disabled"),
+        (ZeroCrossingTriggerConfig, "Zero Crossing"),
     ]
 
     # Render
@@ -690,10 +696,10 @@ class ConfigModel(PresentationModel):
     _orientations = [["h", "Horizontal"], ["v", "Vertical"]]
     _stereo_orientations = _orientations + [["overlay", "Overlay"]]
 
-    combo_value_text["layout__orientation"] = [
+    combo_symbol_text["layout__orientation"] = [
         (Orientation(key), name) for key, name in _orientations
     ]
-    combo_value_text["layout__stereo_orientation"] = [
+    combo_symbol_text["layout__stereo_orientation"] = [
         (StereoOrientation(key), name) for key, name in _stereo_orientations
     ]
 
