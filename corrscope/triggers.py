@@ -407,8 +407,8 @@ class CorrelationTrigger(MainTrigger):
 
         # (const) Multiplied by each frame of input audio.
         # Zeroes out all data older than 1 frame old.
-        self._data_taper = self._calc_data_taper()
-        assert self._data_taper.dtype == FLOAT
+        self._lag_prevention_window = self._calc_lag_prevention()
+        assert self._lag_prevention_window.dtype == FLOAT
 
         # (mutable) Correlated with data (for triggering).
         # Updated with tightly windowed old data at various pitches.
@@ -419,8 +419,8 @@ class CorrelationTrigger(MainTrigger):
         # (const) Added to self._buffer. Nonzero if edge triggering is nonzero.
         # Left half is -edge_strength, right half is +edge_strength.
         # ASCII art: --._|‾'--
-        self._windowed_step = self._calc_step()
-        assert self._windowed_step.dtype == FLOAT
+        self._edge_finder = self._calc_step()
+        assert self._edge_finder.dtype == FLOAT
 
         # Will be overwritten on the first frame.
         self._prev_period: Optional[int] = None
@@ -445,7 +445,7 @@ class CorrelationTrigger(MainTrigger):
             self._spectrum = np.array([0])
             self.history = CircularArray(0, self._buffer_nsamp)
 
-    def _calc_data_taper(self) -> np.ndarray:
+    def _calc_lag_prevention(self) -> np.ndarray:
         """ Input data window. Zeroes out all data older than 1 frame old.
         See https://github.com/nyanpasu64/corrscope/wiki/Correlation-Trigger
         """
@@ -522,8 +522,14 @@ class CorrelationTrigger(MainTrigger):
         # If pitch changed...
         if semitones:
             diameter, falloff = [round(period * x) for x in cfg.trigger_falloff]
-            falloff_window = cosine_flat(N, diameter, falloff)
-            window = np.minimum(falloff_window, self._data_taper)
+            # 4 periods + left/right falloff.
+            period_symmetric_window = cosine_flat(N, diameter, falloff)
+
+            # Left-sided falloff
+            lag_prevention_window = self._lag_prevention_window
+
+            # Both combined.
+            window = np.minimum(period_symmetric_window, lag_prevention_window)
 
             # If pitch tracking enabled, rescale buffer to match data's pitch.
             if self.scfg and (data != 0).any():
@@ -542,7 +548,7 @@ class CorrelationTrigger(MainTrigger):
         data *= window
 
         prev_buffer: np.ndarray = self._buffer.copy()
-        prev_buffer += self._windowed_step
+        prev_buffer += self._edge_finder
 
         # Calculate correlation
         if self.cfg.trigger_diameter is not None:
