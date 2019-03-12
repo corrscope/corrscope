@@ -3,6 +3,7 @@
 ### Breaking Changes
 
 - Remove buffer falloff from GUI (defaults to 0.5)
+- Lag prevention is no longer increased, when trigger subsampling or trigger width × are >1
 
 ### Features
 
