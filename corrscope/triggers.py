@@ -356,7 +356,7 @@ class CorrelationTriggerConfig(MainTriggerConfig, always_dump="pitch_tracking"):
 
     # _update_buffer
     responsiveness: float
-    buffer_falloff: float  # Gaussian std = wave_period * buffer_falloff
+    buffer_falloff: float = 0.5  # Gaussian std = wave_period * buffer_falloff
 
     # Pitch tracking = compute spectrum.
     pitch_tracking: Optional["SpectrumConfig"] = None

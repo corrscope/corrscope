@@ -121,7 +121,6 @@ def default_config(**kwargs) -> Config:
         trigger=CorrelationTriggerConfig(
             edge_strength=2,
             responsiveness=0.5,
-            buffer_falloff=0.5,
             pitch_tracking=SpectrumConfig(),
             # post_trigger=ZeroCrossingTriggerConfig(),
         ),
