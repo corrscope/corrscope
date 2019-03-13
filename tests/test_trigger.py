@@ -39,11 +39,12 @@ def cfg(trigger_diameter, pitch_tracking):
     )
 
 
-# I regret adding the nsamp_frame parameter. It makes unit tests hard.
-
 FPS = 60
 
 is_odd = parametrize("is_odd", [False, True])
+
+
+# CorrelationTrigger overall tests
 
 
 @is_odd
@@ -84,6 +85,10 @@ def test_trigger(cfg: CorrelationTriggerConfig, is_odd: bool):
 
 @parametrize("post_trigger", [None, ZeroCrossingTriggerConfig()])
 def test_post_stride(post_trigger):
+    """
+    Test that stride is respected when post_trigger is disabled,
+    and ignored when post_trigger is enabled.
+    """
     cfg = cfg_template(post_trigger=post_trigger)
 
     wave = Wave("tests/sine440.wav")
@@ -133,7 +138,9 @@ def test_trigger_direction(post_trigger, double_negate):
         assert trigger.get_trigger(index + dx, cache) == index
 
 
-def test_trigger_stride_edges(cfg: CorrelationTriggerConfig):
+def test_trigger_out_of_bounds(cfg: CorrelationTriggerConfig):
+    """Ensure out-of-bounds triggering with stride does not crash.
+    (why does stride matter? IDK.)"""
     wave = Wave("tests/sine440.wav")
     # period = 48000 / 440 = 109.(09)*
 
@@ -147,7 +154,7 @@ def test_trigger_stride_edges(cfg: CorrelationTriggerConfig):
     trigger.get_trigger(50000, PerFrameCache())
 
 
-def test_trigger_should_recalc_window():
+def test_when_does_trigger_recalc_window():
     cfg = cfg_template(recalc_semitones=1.0)
     wave = Wave("tests/sine440.wav")
     trigger: CorrelationTrigger = cfg(wave, tsamp=1000, stride=1, fps=FPS)
@@ -170,7 +177,9 @@ def test_trigger_should_recalc_window():
         assert trigger._is_window_invalid(x), x
 
 
-# Test pitch-invariant triggering using spectrum
+# Test pitch-tracking (spectrum)
+
+
 def test_correlate_offset():
     """
     Catches bug where writing N instead of Ncorr
