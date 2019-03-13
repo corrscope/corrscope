@@ -1,6 +1,8 @@
-[build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+#https://github.com/sdispater/poetry/issues/826
+#> "conflict with the backend dependencies" with pip 19
+#[build-system]
+#requires = ["poetry>=0.12"]
+#build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "corrscope"
