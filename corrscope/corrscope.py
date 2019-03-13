@@ -14,6 +14,7 @@ from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig
 from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
+from corrscope.outputs import FFmpegOutputConfig
 from corrscope.renderer import MatplotlibRenderer, RendererConfig, Renderer
 from corrscope.triggers import (
     CorrelationTriggerConfig,
@@ -92,6 +93,10 @@ class Config(
 
     layout: LayoutConfig
     render: RendererConfig
+    ffmpeg_cli: FFmpegOutputConfig = attr.ib(factory=lambda: FFmpegOutputConfig(None))
+
+    def get_ffmpeg_cfg(self, video_path: str) -> FFmpegOutputConfig:
+        return attr.evolve(self.ffmpeg_cli, path=video_path)
 
     show_internals: List[str] = attr.Factory(list)
     benchmark_mode: BenchmarkMode = attr.ib(
