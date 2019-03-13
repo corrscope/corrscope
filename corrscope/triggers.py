@@ -809,7 +809,7 @@ class ZeroCrossingTrigger(PostTrigger):
         else:  # self._wave[sample] == 0
             return index + 1
 
-        data = self._wave[index : index + (direction * radius) : direction]
+        data = self._wave[index : index + direction * (radius + 1) : direction]
         # TODO remove unnecessary complexity, since diameter is probably under 10.
         intercepts = find(data, test)
         try:
