@@ -1,5 +1,8 @@
 import numpy as np
 
+from corrscope.utils.scipy import windows
+from corrscope.wave import FLOAT
+
 
 def leftpad(data: np.ndarray, n: int) -> np.ndarray:
     if not n > 0:
@@ -28,3 +31,15 @@ def midpad(data: np.ndarray, n: int) -> np.ndarray:
         return data
 
     return data
+
+
+def cosine_flat(n: int, diameter: int, falloff: int) -> np.ndarray:
+    cosine = windows.hann(falloff * 2)
+    # assert cosine.dtype == FLOAT
+    left, right = cosine[:falloff], cosine[falloff:]
+
+    window = np.concatenate([left, np.ones(diameter, dtype=FLOAT), right])
+
+    padded = midpad(window, n)
+    # assert padded.dtype == FLOAT
+    return padded
