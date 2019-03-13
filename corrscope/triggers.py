@@ -49,13 +49,6 @@ class MainTriggerConfig(
     post_trigger: Optional["PostTriggerConfig"] = None
     post_radius: Optional[int] = with_units("smp", default=3)
 
-    @property
-    def post_nsamp(self) -> Optional[int]:
-        if self.post_radius is not None:
-            return 2 * self.post_radius + 1
-        else:
-            return None
-
     def __attrs_post_init__(self):
         if self.edge_direction not in [-1, 1]:
             raise CorrError(f"{obj_name(self)}.edge_direction must be {{-1, 1}}")
@@ -74,9 +67,7 @@ class PostTriggerConfig(_TriggerConfig, KeywordAttrs):
     pass
 
 
-def register_trigger(
-    config_t: Type[_TriggerConfig]
-) -> "Callable[[Type[_Trigger]], Type[_Trigger]]":  # my god mypy-strict sucks
+def register_trigger(config_t: Type[_TriggerConfig]):
     """ @register_trigger(FooTriggerConfig)
     def FooTrigger(): ...
     """
@@ -136,7 +127,7 @@ class MainTrigger(_Trigger, ABC):
         if cfg.post_trigger:
             # Create a post-processing trigger, with narrow nsamp and stride=1.
             # This improves speed and precision.
-            self.post = cfg.post_trigger(self._wave, cfg.post_nsamp, 1, self._fps)
+            self.post = cfg.post_trigger(self._wave, cfg.post_radius, 1, self._fps)
         else:
             self.post = None
 
@@ -802,7 +793,7 @@ class ZeroCrossingTrigger(PostTrigger):
 
     def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
         # 'cache' is unused.
-        tsamp = self._tsamp
+        radius = self._tsamp
 
         if not 0 <= index < self._wave.nsamp:
             return index
@@ -818,7 +809,7 @@ class ZeroCrossingTrigger(PostTrigger):
         else:  # self._wave[sample] == 0
             return index + 1
 
-        data = self._wave[index : index + (direction * tsamp) : direction]
+        data = self._wave[index : index + (direction * radius) : direction]
         # TODO remove unnecessary complexity, since diameter is probably under 10.
         intercepts = find(data, test)
         try:
@@ -826,7 +817,7 @@ class ZeroCrossingTrigger(PostTrigger):
             return index + (delta * direction) + int(value <= 0)
 
         except StopIteration:  # No zero-intercepts
-            return index + (direction * tsamp)
+            return index + (direction * radius)
 
         # noinspection PyUnreachableCode
         """
