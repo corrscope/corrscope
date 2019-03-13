@@ -299,39 +299,30 @@ class MainWindow(QWidget):
                         # self.trigger__post_radius: BoundSpinBox
                         # self.trigger__post_radius.setMinimum(0)
 
-    channel_tabs: QTabWidget
-
     def add_channels_list(self, s):
         tr = self.tr
-        with append_widget(s, QTabWidget) as out:
-            self.channel_tabs = out
+        with append_widget(s, QGroupBox) as group:
+            s.widget.setTitle(tr("Oscilloscope Channels"))
+            set_layout(s, QVBoxLayout)
 
-            # Channels list
-            with self._add_tab(s, tr("Oscilloscope Channels")):
-                set_layout(s, QVBoxLayout)
+            # Button toolbar
+            with append_widget(s, QHBoxLayout) as self.channelBar:
+                append_stretch(s)
 
-                # Button toolbar
-                with append_widget(s, QHBoxLayout) as self.channelBar:
-                    append_stretch(s)
-
-                    with append_widget(s, ShortcutButton) as self.channelAdd:
-                        pass
-                    with append_widget(s, ShortcutButton) as self.channelDelete:
-                        pass
-                    with append_widget(s, ShortcutButton) as self.channelUp:
-                        pass
-                    with append_widget(s, ShortcutButton) as self.channelDown:
-                        pass
-
-                # Spreadsheet grid
-                with append_widget(s, ChannelTableView) as self.channel_view:
+                with append_widget(s, ShortcutButton) as self.channelAdd:
+                    pass
+                with append_widget(s, ShortcutButton) as self.channelDelete:
+                    pass
+                with append_widget(s, ShortcutButton) as self.channelUp:
+                    pass
+                with append_widget(s, ShortcutButton) as self.channelDown:
                     pass
 
-            # FFmpeg output config
-            with self._add_tab(s, tr("FFmpeg encoding flags")):
+            # Spreadsheet grid
+            with append_widget(s, ChannelTableView) as self.channel_view:
                 pass
 
-        return out
+        return group
 
     def add_actions(self, s: LayoutStack, MainWindow):
         tr = self.tr
@@ -420,7 +411,6 @@ class MainWindow(QWidget):
         self.trigger__pitch_tracking.setText(tr("Pitch Tracking"))
         self.trigger__edge_directionL.setText(tr("Edge Direction"))
 
-        # self.channelsGroup.setTitle()
         self.channelAdd.setText(tr("&Add..."))
         self.channelDelete.setText(tr("&Delete"))
         self.channelUp.setText(tr("Up"))

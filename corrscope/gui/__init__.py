@@ -231,7 +231,6 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self._any_unsaved = False
         self.load_title()
         self.left_tabs.setCurrentIndex(0)
-        self.channel_tabs.setCurrentIndex(0)
 
         if self.model is None:
             self.model = ConfigModel(cfg)
