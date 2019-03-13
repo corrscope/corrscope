@@ -2,7 +2,7 @@
 
 ### Breaking Changes
 
-...
+- Remove buffer falloff from GUI (defaults to 0.5)
 
 ### Features
 

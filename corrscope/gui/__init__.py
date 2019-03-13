@@ -831,7 +831,6 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("trigger__edge_direction", plus_minus_one, None),
         Column("trigger__edge_strength", float, None),
         Column("trigger__responsiveness", float, None),
-        Column("trigger__buffer_falloff", float, None),
     ]
 
     idx_of_key = {}
