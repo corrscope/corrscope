@@ -181,6 +181,7 @@ class CircularArray:
 
 class CorrelationTriggerConfig(MainTriggerConfig, always_dump="pitch_tracking"):
     # get_trigger
+    mean_responsiveness: float = 0.05
     edge_strength: float
     trigger_diameter: Optional[float] = 0.5
 
@@ -205,6 +206,7 @@ class CorrelationTriggerConfig(MainTriggerConfig, always_dump="pitch_tracking"):
 
         self._validate_param("lag_prevention", 0, 1)
         self._validate_param("responsiveness", 0, 1)
+        self._validate_param("mean_responsiveness", 0, 1)
         # TODO trigger_falloff >= 0
         self._validate_param("buffer_falloff", 0, np.inf)
 
@@ -261,6 +263,8 @@ class CorrelationTrigger(MainTrigger):
         # Will be overwritten on the first frame.
         self._prev_period: Optional[int] = None
         self._prev_window: Optional[np.ndarray] = None
+
+        self._prev_mean: float = 0.0
         self._prev_trigger: int = 0
 
         # (mutable) Log-scaled spectrum
@@ -289,7 +293,6 @@ class CorrelationTrigger(MainTrigger):
         halfN = N // 2
 
         # - Create a cosine taper of `width` <= 1 frame
-        # - Right-pad(value=1, len=1 frame)
         # - Place in left half of N-sample buffer.
 
         # To avoid cutting off data, use a narrow transition zone (invariant to stride).
@@ -348,7 +351,12 @@ class CorrelationTrigger(MainTrigger):
         stride = self._stride
         data = self._wave.get_around(index, N, stride)
         cache.sum = np.add.reduce(data)
-        cache.mean = cache.sum / N
+
+        # Update data-mean estimate
+        raw_mean = cache.sum / N
+        self._prev_mean = cache.mean = lerp(
+            self._prev_mean, raw_mean, cfg.mean_responsiveness
+        )
         data -= cache.mean
 
         # Window data
