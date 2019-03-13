@@ -179,6 +179,31 @@ def test_when_does_trigger_recalc_window():
         assert trigger._is_window_invalid(x), x
 
 
+# Test post triggering by itself
+
+
+def test_post_trigger_radius():
+    """
+    Ensure ZeroCrossingTrigger has no off-by-1 errors when locating edges,
+    and slides at a fixed rate if no edge is found.
+    """
+    wave = Wave("tests/step2400.wav")
+    center = 2400
+    radius = 5
+
+    cfg = ZeroCrossingTriggerConfig()
+    post = cfg(wave, radius, 1, FPS)
+
+    cache = PerFrameCache(mean=0)
+
+    for offset in range(-radius, radius + 1):
+        assert post.get_trigger(center + offset, cache) == center, offset
+
+    for offset in [radius + 1, radius + 2, 100]:
+        assert post.get_trigger(center - offset, cache) == center - offset + radius
+        assert post.get_trigger(center + offset, cache) == center + offset - radius
+
+
 # Test pitch-tracking (spectrum)
 
 
