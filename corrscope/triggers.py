@@ -427,6 +427,7 @@ class CorrelationTrigger(MainTrigger):
         # Will be overwritten on the first frame.
         self._prev_period: Optional[int] = None
         self._prev_window: Optional[np.ndarray] = None
+        self._prev_trigger: int = 0
 
         # (mutable) Log-scaled spectrum
         self.frames_since_spectrum = 0
@@ -557,6 +558,9 @@ class CorrelationTrigger(MainTrigger):
         # Apply post trigger (before updating correlation buffer)
         if self.post:
             trigger = self.post.get_trigger(trigger, cache)
+
+        # Avoid time traveling backwards.
+        self._prev_trigger = trigger = max(trigger, self._prev_trigger)
 
         # Update correlation buffer (distinct from visible area)
         aligned = self._wave.get_around(trigger, self._buffer_nsamp, stride)
