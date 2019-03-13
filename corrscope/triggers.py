@@ -393,6 +393,15 @@ class CorrelationTriggerConfig(MainTriggerConfig, always_dump="pitch_tracking"):
 
 @register_trigger(CorrelationTriggerConfig)
 class CorrelationTrigger(MainTrigger):
+    """
+    Assume that if get_trigger(x) == x, then data[[x-1, x]] == [<0, >0].
+    - edge detectors [halfN = N//2] > 0.
+    - So wave.get_around(x)[N//2] > 0.
+    - So wave.get_around(x) = [x - N//2 : ...]
+
+    test_trigger() checks that get_around() works properly, for even/odd N.
+    """
+
     cfg: CorrelationTriggerConfig
 
     @property

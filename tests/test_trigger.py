@@ -43,15 +43,21 @@ def cfg(trigger_diameter, pitch_tracking):
 
 FPS = 60
 
+is_odd = parametrize("is_odd", [False, True])
 
-def test_trigger(cfg: CorrelationTriggerConfig):
-    wave = Wave("tests/impulse24000.wav")
+
+@is_odd
+def test_trigger(cfg: CorrelationTriggerConfig, is_odd: bool):
+    """Ensures that trigger can locate
+    the first positive sample of a -+ step exactly,
+    without off-by-1 errors."""
+    wave = Wave("tests/step2400.wav")
 
     iters = 5
     plot = False
-    x0 = 24000
-    x = x0 - 500
-    trigger: CorrelationTrigger = cfg(wave, 4000, stride=1, fps=FPS)
+    x0 = 2400
+    x = x0 - 50
+    trigger: CorrelationTrigger = cfg(wave, 400 + int(is_odd), stride=1, fps=FPS)
 
     if plot:
         BIG = 0.95

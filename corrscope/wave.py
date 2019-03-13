@@ -203,8 +203,8 @@ class Wave:
 
         Copies self.data[...] """
         distance = return_nsamp * stride
-        end = sample + distance // 2
-        begin = end - distance
+        begin = sample - distance // 2
+        end = begin + distance
         return self._get(begin, end, stride)
 
     def get_s(self) -> float:
