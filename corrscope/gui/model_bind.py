@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QWidget
 
 from corrscope.config import CorrError, DumpableAttrs, get_units
 from corrscope.gui.util import color2hex
-from corrscope.triggers import lerp
+from corrscope.utils.trigger_util import lerp
 from corrscope.util import obj_name, perr
 
 if TYPE_CHECKING:
