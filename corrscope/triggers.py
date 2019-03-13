@@ -568,24 +568,25 @@ class ZeroCrossingTrigger(PostTrigger):
     cfg: ZeroCrossingTriggerConfig
 
     def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
-        # 'cache' is unused.
         radius = self._tsamp
 
-        if not 0 <= index < self._wave.nsamp:
+        wave = self._wave.with_offset(-cache.mean)
+
+        if not 0 <= index < wave.nsamp:
             return index
 
-        if self._wave[index] < 0:
+        if wave[index] < 0:
             direction = 1
             test = lambda a: a >= 0
 
-        elif self._wave[index] > 0:
+        elif wave[index] > 0:
             direction = -1
             test = lambda a: a <= 0
 
         else:  # self._wave[sample] == 0
             return index + 1
 
-        data = self._wave[index : index + direction * (radius + 1) : direction]
+        data = wave[index : index + direction * (radius + 1) : direction]
         # TODO remove unnecessary complexity, since diameter is probably under 10.
         intercepts = find(data, test)
         try:
