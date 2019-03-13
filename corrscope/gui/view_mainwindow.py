@@ -229,16 +229,27 @@ class MainWindow(QWidget):
         tr = self.tr
         with append_widget(s, QHBoxLayout):
             # Master audio
-            with append_widget(
-                s, QGroupBox, layout_args=[0, Qt.AlignTop]
-            ) as self.masterAudioGroup:
-                set_layout(s, QHBoxLayout)
-                s.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            with append_widget(s, QGroupBox, layout_args=[0, Qt.AlignTop]):
+                s.widget.setTitle(tr("Master Audio"))
+                set_layout(s, QVBoxLayout)
 
-                with append_widget(s, BoundLineEdit) as self.master_audio:
-                    pass
-                with append_widget(s, QPushButton) as self.master_audio_browse:
-                    pass
+                with append_widget(s, QHBoxLayout):
+                    s.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+                    with append_widget(s, BoundLineEdit) as self.master_audio:
+                        pass
+                    with append_widget(s, QPushButton) as self.master_audio_browse:
+                        pass
+
+                with append_widget(s, QFormLayout):
+                    with add_row(
+                        s, tr("Video Template"), BoundLineEdit
+                    ) as self.ffmpeg_cli__video_template:
+                        pass
+                    with add_row(
+                        s, tr("Audio Template"), BoundLineEdit
+                    ) as self.ffmpeg_cli__audio_template:
+                        pass
 
             # Trigger config
             with append_widget(s, QGroupBox) as self.optionTrigger:
@@ -322,15 +333,7 @@ class MainWindow(QWidget):
 
             # FFmpeg output config
             with self._add_tab(s, tr("FFmpeg encoding flags")):
-                set_layout(s, QFormLayout)
-                with add_row(
-                    s, tr("Video Template"), BoundLineEdit
-                ) as self.ffmpeg_cli__video_template:
-                    pass
-                with add_row(
-                    s, tr("Audio Template"), BoundLineEdit
-                ) as self.ffmpeg_cli__audio_template:
-                    pass
+                pass
 
         return out
 
@@ -412,7 +415,6 @@ class MainWindow(QWidget):
         self.perfPreview.setTitle(tr("Preview Only"))
         self.render_subfpsL.setText(tr("Render FPS Divisor"))
         self.render__res_divisorL.setText(tr("Resolution Divisor"))
-        self.masterAudioGroup.setTitle(tr("Master Audio"))
         self.master_audio.setText(tr("/"))
         self.master_audio_browse.setText(tr("&Browse..."))
         self.optionTrigger.setTitle(tr("Trigger"))
