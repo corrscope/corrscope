@@ -230,21 +230,17 @@ class MainWindow(QWidget):
         with append_widget(s, QHBoxLayout):
             with append_widget(s, QVBoxLayout):
 
-                # Master audio
                 with append_widget(s, QGroupBox):
-                    s.widget.setTitle(tr("Master Audio"))
-                    set_layout(s, QHBoxLayout)
-
-                    s.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-                    with append_widget(s, BoundLineEdit) as self.master_audio:
-                        pass
-                    with append_widget(s, QPushButton) as self.master_audio_browse:
-                        pass
-
-                with append_widget(s, QGroupBox):
-                    s.widget.setTitle(tr("meow =^_^="))
+                    s.widget.setTitle(tr("FFmpeg Options"))
                     set_layout(s, QFormLayout)
+
+                    # Master audio
+                    with add_row(s, tr("Master Audio"), QHBoxLayout):
+                        with append_widget(s, BoundLineEdit) as self.master_audio:
+                            pass
+                        with append_widget(s, QPushButton) as self.master_audio_browse:
+                            pass
+
                     with add_row(
                         s, tr("Video Template"), BoundLineEdit
                     ) as self.ffmpeg_cli__video_template:
