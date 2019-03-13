@@ -1,13 +1,13 @@
-## 0.4.0-pre
+## 0.3.1
 
 ### Breaking Changes
-...
-
-### Features
-...
+- Fix time-traveling bug by reverting "Increase trigger diameter to improve bass stability" from 0.3.0
 
 ### Changelog
-...
+
+- Rebuild UI in Python, not .ui XML
+- Show stack trace dialog when loading config fails
+- Show stack trace dialog if exceptions raised before playback begins
 
 ## 0.3.0
 
