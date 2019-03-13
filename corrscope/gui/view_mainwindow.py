@@ -272,11 +272,6 @@ class MainWindow(QWidget):
                         self.trigger__responsiveness.setMaximum(1.0)
                         self.trigger__responsiveness.setSingleStep(0.1)
 
-                    with add_grid_col(s, "", BoundDoubleSpinBox) as (
-                        self.trigger__buffer_falloff
-                    ):
-                        self.trigger__buffer_falloff.setSingleStep(0.5)
-
                 with append_widget(s, HLine):
                     pass
 
@@ -407,7 +402,6 @@ class MainWindow(QWidget):
         self.optionTrigger.setTitle(tr("Trigger"))
         self.trigger__edge_strengthL.setText(tr("Edge Strength"))
         self.trigger__responsivenessL.setText(tr("Responsiveness"))
-        self.trigger__buffer_falloffL.setText(tr("Buffer Falloff"))
         self.trigger__pitch_tracking.setText(tr("Pitch Tracking"))
         self.trigger__edge_directionL.setText(tr("Edge Direction"))
 
