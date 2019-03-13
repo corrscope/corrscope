@@ -1,13 +1,16 @@
 ## 0.4.0-pre
 
 ### Breaking Changes
+
 ...
 
 ### Features
-...
+
+- Add post-triggering for finding zero-crossing edges
 
 ### Changelog
-...
+
+- Remove dependency on more_itertools
 
 ## 0.3.1
 
