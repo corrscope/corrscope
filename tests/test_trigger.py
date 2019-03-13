@@ -39,19 +39,28 @@ def cfg(trigger_diameter, pitch_tracking):
     )
 
 
-# I regret adding the nsamp_frame parameter. It makes unit tests hard.
-
 FPS = 60
 
+is_odd = parametrize("is_odd", [False, True])
 
-def test_trigger(cfg: CorrelationTriggerConfig):
-    wave = Wave("tests/impulse24000.wav")
+
+# CorrelationTrigger overall tests
+
+
+@is_odd
+@parametrize("post_trigger", [None, ZeroCrossingTriggerConfig()])
+def test_trigger(cfg: CorrelationTriggerConfig, is_odd: bool, post_trigger):
+    """Ensures that trigger can locate
+    the first positive sample of a -+ step exactly,
+    without off-by-1 errors."""
+    wave = Wave("tests/step2400.wav")
+    cfg = attr.evolve(cfg, post_trigger=post_trigger)
 
     iters = 5
     plot = False
-    x0 = 24000
-    x = x0 - 500
-    trigger: CorrelationTrigger = cfg(wave, 4000, stride=1, fps=FPS)
+    x0 = 2400
+    x = x0 - 50
+    trigger: CorrelationTrigger = cfg(wave, 400 + int(is_odd), stride=1, fps=FPS)
 
     if plot:
         BIG = 0.95
@@ -78,6 +87,10 @@ def test_trigger(cfg: CorrelationTriggerConfig):
 
 @parametrize("post_trigger", [None, ZeroCrossingTriggerConfig()])
 def test_post_stride(post_trigger):
+    """
+    Test that stride is respected when post_trigger is disabled,
+    and ignored when post_trigger is enabled.
+    """
     cfg = cfg_template(post_trigger=post_trigger)
 
     wave = Wave("tests/sine440.wav")
@@ -127,7 +140,9 @@ def test_trigger_direction(post_trigger, double_negate):
         assert trigger.get_trigger(index + dx, cache) == index
 
 
-def test_trigger_stride_edges(cfg: CorrelationTriggerConfig):
+def test_trigger_out_of_bounds(cfg: CorrelationTriggerConfig):
+    """Ensure out-of-bounds triggering with stride does not crash.
+    (why does stride matter? IDK.)"""
     wave = Wave("tests/sine440.wav")
     # period = 48000 / 440 = 109.(09)*
 
@@ -141,7 +156,7 @@ def test_trigger_stride_edges(cfg: CorrelationTriggerConfig):
     trigger.get_trigger(50000, PerFrameCache())
 
 
-def test_trigger_should_recalc_window():
+def test_when_does_trigger_recalc_window():
     cfg = cfg_template(recalc_semitones=1.0)
     wave = Wave("tests/sine440.wav")
     trigger: CorrelationTrigger = cfg(wave, tsamp=1000, stride=1, fps=FPS)
@@ -164,7 +179,34 @@ def test_trigger_should_recalc_window():
         assert trigger._is_window_invalid(x), x
 
 
-# Test pitch-invariant triggering using spectrum
+# Test post triggering by itself
+
+
+def test_post_trigger_radius():
+    """
+    Ensure ZeroCrossingTrigger has no off-by-1 errors when locating edges,
+    and slides at a fixed rate if no edge is found.
+    """
+    wave = Wave("tests/step2400.wav")
+    center = 2400
+    radius = 5
+
+    cfg = ZeroCrossingTriggerConfig()
+    post = cfg(wave, radius, 1, FPS)
+
+    cache = PerFrameCache(mean=0)
+
+    for offset in range(-radius, radius + 1):
+        assert post.get_trigger(center + offset, cache) == center, offset
+
+    for offset in [radius + 1, radius + 2, 100]:
+        assert post.get_trigger(center - offset, cache) == center - offset + radius
+        assert post.get_trigger(center + offset, cache) == center + offset - radius
+
+
+# Test pitch-tracking (spectrum)
+
+
 def test_correlate_offset():
     """
     Catches bug where writing N instead of Ncorr
