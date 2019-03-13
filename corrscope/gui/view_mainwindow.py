@@ -48,6 +48,8 @@ class MainWindow(QWidget):
         # noinspection PyCallByClass,PyTypeChecker
         return QCoreApplication.translate("MainWindow", *args, **kwargs)
 
+    left_tabs: QTabWidget
+
     def setupUi(self, MainWindow: QMainWindow):
         MainWindow.resize(1160, 0)
 
@@ -82,7 +84,6 @@ class MainWindow(QWidget):
 
         # Initializes labels by reference
         self.retranslateUi(MainWindow)
-        self.left_tabs.setCurrentIndex(0)
 
         # Depends on objectName
         QMetaObject.connectSlotsByName(MainWindow)
@@ -227,23 +228,30 @@ class MainWindow(QWidget):
     def add_top_bar(self, s):
         tr = self.tr
         with append_widget(s, QHBoxLayout):
-            # Master audio
-            with append_widget(
-                s, QGroupBox, layout_args=[0, Qt.AlignTop]
-            ) as self.masterAudioGroup:
-                set_layout(s, QHBoxLayout)
-                s.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            with append_widget(s, QVBoxLayout):
 
-                with append_widget(s, BoundLineEdit) as self.master_audio:
-                    pass
-                with append_widget(s, QPushButton) as self.master_audio_browse:
-                    pass
+                with append_widget(s, QGroupBox):
+                    s.widget.setTitle(tr("FFmpeg Options"))
+                    set_layout(s, QFormLayout)
+
+                    # Master audio
+                    with add_row(s, tr("Master Audio"), QHBoxLayout):
+                        with append_widget(s, BoundLineEdit) as self.master_audio:
+                            pass
+                        with append_widget(s, QPushButton) as self.master_audio_browse:
+                            pass
+
+                    with add_row(
+                        s, tr("Video Template"), BoundLineEdit
+                    ) as self.ffmpeg_cli__video_template:
+                        pass
+                    with add_row(
+                        s, tr("Audio Template"), BoundLineEdit
+                    ) as self.ffmpeg_cli__audio_template:
+                        pass
 
             # Trigger config
             with append_widget(s, QGroupBox) as self.optionTrigger:
-                # Prevent expansion (does nothing even if removed :| )
-                self.optionTrigger.setSizePolicy(fixed_size_policy())
-
                 set_layout(s, QVBoxLayout)
 
                 # Top row
@@ -294,6 +302,7 @@ class MainWindow(QWidget):
     def add_channels_list(self, s):
         tr = self.tr
         with append_widget(s, QGroupBox) as group:
+            s.widget.setTitle(tr("Oscilloscope Channels"))
             set_layout(s, QVBoxLayout)
 
             # Button toolbar
@@ -393,7 +402,6 @@ class MainWindow(QWidget):
         self.perfPreview.setTitle(tr("Preview Only"))
         self.render_subfpsL.setText(tr("Render FPS Divisor"))
         self.render__res_divisorL.setText(tr("Resolution Divisor"))
-        self.masterAudioGroup.setTitle(tr("Master Audio"))
         self.master_audio.setText(tr("/"))
         self.master_audio_browse.setText(tr("&Browse..."))
         self.optionTrigger.setTitle(tr("Trigger"))
@@ -403,7 +411,6 @@ class MainWindow(QWidget):
         self.trigger__pitch_tracking.setText(tr("Pitch Tracking"))
         self.trigger__edge_directionL.setText(tr("Edge Direction"))
 
-        self.channelsGroup.setTitle(tr("Oscilloscope Channels"))
         self.channelAdd.setText(tr("&Add..."))
         self.channelDelete.setText(tr("&Delete"))
         self.channelUp.setText(tr("Up"))
@@ -439,3 +446,6 @@ from corrscope.gui.model_bind import (
     BoundColorWidget,
     OptionalColorWidget,
 )
+
+# Delete unbound widgets, so they cannot accidentally be used.
+del QLineEdit, QSpinBox, QDoubleSpinBox, QCheckBox, QComboBox

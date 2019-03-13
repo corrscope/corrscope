@@ -212,7 +212,7 @@ def main(
 
         if render:
             video_path = get_path(cfg_path or audio, VIDEO_NAME)
-            outputs.append(FFmpegOutputConfig(video_path))
+            outputs.append(cfg.get_ffmpeg_cfg(str(video_path)))
 
         if outputs:
             arg = Arguments(cfg_dir=cfg_dir, outputs=outputs)

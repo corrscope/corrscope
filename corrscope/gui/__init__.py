@@ -151,9 +151,6 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self._any_unsaved = value
         self._update_unsaved_title()
 
-    # GUI layout widgets
-    left_tabs: qw.QTabWidget
-
     # Config models
     model: Optional["ConfigModel"] = None
 
@@ -376,7 +373,11 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             name = str(path)
             dlg = CorrProgressDialog(self, "Rendering video")
 
-            outputs = [FFmpegOutputConfig(name)]
+            # FFmpegOutputConfig contains only hashable/immutable strs,
+            # so get_ffmpeg_cfg() can be shared across threads without copying.
+            # Optionally copy_config() first.
+
+            outputs = [self.cfg.get_ffmpeg_cfg(name)]
             self.play_thread(outputs, dlg)
 
     def play_thread(
