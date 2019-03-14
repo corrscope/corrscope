@@ -437,7 +437,7 @@ class CorrelationTrigger(MainTrigger):
     def _find_area(data: np.ndarray, cache: PerFrameCache) -> np.ndarray:
         """
         Input: length N
-        Output: length N, output[i] = -input[:i] + input[i:]
+        Output: length N, output[i] = (-input[:i] + input[i:]) / 2
         - mid = N//2
         - result[mid=N//2] == self[sample]
         - Note that correlate() is length 2N-1, which is different.
@@ -454,8 +454,8 @@ class CorrelationTrigger(MainTrigger):
 
         cumsum = np.cumsum(data)
 
-        edge_area = np.full(cumsum.shape, cache.sum, FLOAT)
-        edge_area[1:] -= 2 * cumsum[:-1]
+        edge_area = np.full(cumsum.shape, cache.sum / 2, FLOAT)
+        edge_area[1:] -= cumsum[:-1]
 
         # Increasing buffer_falloff (width of history buffer)
         # causes buffer to affect triggering, more than the step function.
