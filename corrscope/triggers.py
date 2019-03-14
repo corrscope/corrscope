@@ -323,6 +323,7 @@ class CorrelationTrigger(MainTrigger):
         halfN = N // 2
 
         # - Create a cosine taper of `width` <= 1 frame
+        # - Right-pad(value=1, len=1 frame)
         # - Place in left half of N-sample buffer.
 
         # To avoid cutting off data, use a narrow transition zone (invariant to stride).
