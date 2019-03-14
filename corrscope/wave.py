@@ -4,6 +4,7 @@ import warnings
 from enum import auto
 from typing import Union, List
 
+import attr
 import numpy as np
 
 import corrscope.utils.scipy.wavfile as wavfile
@@ -197,19 +198,31 @@ class Wave:
 
         return out
 
-    def get_around(self, sample: int, return_nsamp: int, stride: int) -> np.ndarray:
-        """ Returns `return_nsamp` samples, centered around `sample`,
-        sampled with spacing `stride`.
-        result[N//2] == self[sample]. See CorrelationTrigger docstring.
+    def get_around(
+        self, sample: int, return_nsamp: int, stride: int, return_center: bool = False
+    ) -> Union[np.ndarray, "CenteredBuffer"]:
+        """ Returns `return_nsamp` samples, where result[N//2] == self[sample],
+        sampled with spacing `stride`. Copies self.data[...].
 
-        Copies self.data[...]. """
-        distance = return_nsamp * stride
-        begin = sample - distance // 2
-        end = begin + distance
-        return self._get(begin, end, stride)
+        See CorrelationTrigger docstring.
+        """
+        left = -(return_nsamp // 2)
+        right = left + return_nsamp
+
+        data = self._get(sample + left * stride, sample + right * stride, stride)
+        if return_center:
+            return CenteredBuffer(data, -left)
+        else:
+            return data
 
     def get_s(self) -> float:
         """
         :return: time (seconds)
         """
         return self.nsamp / self.smp_s
+
+
+@attr.dataclass(slots=True)
+class CenteredBuffer:
+    data: np.ndarray
+    center: int

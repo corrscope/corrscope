@@ -8,7 +8,7 @@ from delayed_assert import expect, assert_expectations
 
 from corrscope.config import CorrError
 from corrscope.utils.scipy.wavfile import WavFileWarning
-from corrscope.wave import Wave, Flatten
+from corrscope.wave import Wave, Flatten, CenteredBuffer
 
 prefix = "tests/wav-formats/"
 wave_paths = [
@@ -154,19 +154,35 @@ def test_stereo_mmap():
 # Miscellaneous tests
 
 
-def test_wave_subsampling():
+def test_wave_stride():
     wave = Wave("tests/sine440.wav")
-    # period = 48000 / 440 = 109.(09)*
 
-    wave.get_around(1000, return_nsamp=501, stride=4)
-    # len([:region_len:subsampling]) == ceil(region_len / subsampling)
-    # If region_len % subsampling != 0, len() != region_len // subsampling.
+    for N in range(498, 502 + 1):
+        for stride in range(1, 4 + 1):
+            data = wave.get_around(1000, return_nsamp=N, stride=stride)
+            assert len(data) == N
 
     stride = 4
     region = 100  # diameter = region * stride
     for i in [-1000, 50000]:
         data = wave.get_around(i, region, stride)
         assert (data == 0).all()
+
+
+def test_wave_return_center():
+    wave = Wave("tests/step2400.wav")
+    x0 = 2400
+
+    for N in range(498, 502 + 1):
+        for stride in range(1, 4 + 1):
+            buf: CenteredBuffer = wave.get_around(
+                x0, return_nsamp=N, stride=stride, return_center=True
+            )
+            assert len(buf.data) == N
+            assert buf.center == N // 2
+
+            assert buf.data[buf.center] > 0
+            assert buf.data[buf.center - 1] < 0
 
 
 def test_stereo_doesnt_overflow():
