@@ -266,6 +266,25 @@ class MainWindow(QWidget):
                     ):
                         self.trigger__edge_strength.setMinimum(0.0)
 
+                    with add_grid_col(
+                        s,
+                        tr("Slope Strength"),
+                        BoundDoubleSpinBox,
+                        name="trigger__slope_strength",
+                    ):
+                        s.widget.setSingleStep(10)
+                        s.widget.setMaximum(200)
+
+                    with add_grid_col(
+                        s,
+                        tr("Slope Width"),
+                        BoundDoubleSpinBox,
+                        name="trigger__slope_width",
+                    ):
+                        s.widget.setMinimum(0)
+                        s.widget.setMaximum(0.5)
+                        s.widget.setSingleStep(0.02)
+
                     with add_grid_col(s, "", BoundDoubleSpinBox) as (
                         self.trigger__responsiveness
                     ):

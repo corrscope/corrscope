@@ -10,7 +10,7 @@ from corrscope.config import KeywordAttrs, CorrError, Alias, with_units
 from corrscope.spectrum import SpectrumConfig, DummySpectrum, LogFreqSpectrum
 from corrscope.util import find, obj_name, iround
 from corrscope.utils.trigger_util import get_period, normalize_buffer, lerp
-from corrscope.utils.windows import midpad, leftpad, cosine_flat
+from corrscope.utils.windows import leftpad, midpad, rightpad, cosine_flat
 from corrscope.wave import FLOAT
 
 if TYPE_CHECKING:
@@ -179,15 +179,43 @@ class CircularArray:
         return self.buf[self.index]
 
 
-class CorrelationTriggerConfig(MainTriggerConfig, always_dump="pitch_tracking"):
-    # get_trigger
+class LagPrevention(KeywordAttrs):
+    max_frames: float = 1
+    transition_frames: float = 0.25
+
+    def __attrs_post_init__(self):
+        validate_param(self, "max_frames", 0, 1)
+        validate_param(self, "transition_frames", 0, self.max_frames)
+
+
+class CorrelationTriggerConfig(
+    MainTriggerConfig,
+    always_dump="""
+    pitch_tracking
+    slope_strength slope_width
+    """
+    # deprecated
+    " buffer_falloff ",
+):
+    # get_trigger()
     mean_responsiveness: float = 0.05
+
+    # Edge/area finding
     edge_strength: float
+
+    # Slope detection
+    slope_strength: float = 0
+    slope_width: float = with_units("period", default=0.07)
+
+    # Correlation detection (meow~ =^_^=)
+    buffer_strength: float = 1
+
+    # Maximum distance to move
     trigger_diameter: Optional[float] = 0.5
 
     trigger_falloff: Tuple[float, float] = (4.0, 1.0)
     recalc_semitones: float = 1.0
-    lag_prevention: float = 0.25
+    lag_prevention: LagPrevention = attr.ib(factory=LagPrevention)
 
     # _update_buffer
     responsiveness: float
@@ -204,18 +232,18 @@ class CorrelationTriggerConfig(MainTriggerConfig, always_dump="pitch_tracking"):
     def __attrs_post_init__(self) -> None:
         MainTriggerConfig.__attrs_post_init__(self)
 
-        self._validate_param("lag_prevention", 0, 1)
-        self._validate_param("responsiveness", 0, 1)
-        self._validate_param("mean_responsiveness", 0, 1)
-        # TODO trigger_falloff >= 0
-        self._validate_param("buffer_falloff", 0, np.inf)
+        validate_param(self, "slope_width", 0, 0.5)
 
-    def _validate_param(self, key: str, begin: float, end: float) -> None:
-        value = getattr(self, key)
-        if not begin <= value <= end:
-            raise CorrError(
-                f"Invalid {key}={value} (should be within [{begin}, {end}])"
-            )
+        validate_param(self, "responsiveness", 0, 1)
+        validate_param(self, "mean_responsiveness", 0, 1)
+        # TODO trigger_falloff >= 0
+        validate_param(self, "buffer_falloff", 0, np.inf)
+
+
+def validate_param(self, key: str, begin: float, end: float) -> None:
+    value = getattr(self, key)
+    if not begin <= value <= end:
+        raise CorrError(f"Invalid {key}={value} (should be within [{begin}, {end}])")
 
 
 @register_trigger(CorrelationTriggerConfig)
@@ -263,6 +291,7 @@ class CorrelationTrigger(MainTrigger):
         # Will be overwritten on the first frame.
         self._prev_period: Optional[int] = None
         self._prev_window: Optional[np.ndarray] = None
+        self._prev_slope_finder: Optional[np.ndarray] = None
 
         self._prev_mean: float = 0.0
         self._prev_trigger: int = 0
@@ -286,7 +315,8 @@ class CorrelationTrigger(MainTrigger):
             self.history = CircularArray(0, self._buffer_nsamp)
 
     def _calc_lag_prevention(self) -> np.ndarray:
-        """ Input data window. Zeroes out all data older than 1 frame old.
+        """ Returns input-data window,
+        which zeroes out all data older than 1-ish frame old.
         See https://github.com/jimbo1qaz/corrscope/wiki/Correlation-Trigger
         """
         N = self._buffer_nsamp
@@ -296,8 +326,9 @@ class CorrelationTrigger(MainTrigger):
         # - Place in left half of N-sample buffer.
 
         # To avoid cutting off data, use a narrow transition zone (invariant to stride).
+        lag_prevention = self.cfg.lag_prevention
         tsamp_frame = self._tsamp_frame
-        transition_nsamp = round(tsamp_frame * self.cfg.lag_prevention)
+        transition_nsamp = round(tsamp_frame * lag_prevention.transition_frames)
 
         # Left half of a Hann cosine taper
         # Width (type=subsample) = min(frame * lag_prevention, 1 frame)
@@ -305,19 +336,15 @@ class CorrelationTrigger(MainTrigger):
         width = transition_nsamp
         taper = windows.hann(width * 2)[:width]
 
-        # Right-pad=1 taper to 1 frame long [t-1f, t]
-        if width < tsamp_frame:
-            taper = np.pad(
-                taper, (0, tsamp_frame - width), "constant", constant_values=1
-            )
-        assert len(taper) == tsamp_frame
+        # Right-pad=1 taper to lag_prevention.max_frames long [t-#*f, t]
+        taper = rightpad(taper, iround(tsamp_frame * lag_prevention.max_frames))
 
         # Left-pad=0 taper to left `halfN` of data_taper [t-halfN, t]
         taper = leftpad(taper, halfN)
 
         # Generate left half-taper to prevent correlating with 1-frame-old data.
         # Right-pad=1 taper to [t-halfN, t-halfN+N]
-        # TODO why not extract a right-pad function?
+        # TODO switch to rightpad()? Does it return FLOAT or not?
         data_taper = np.ones(N, dtype=FLOAT)
         data_taper[:halfN] = np.minimum(data_taper[:halfN], taper)
 
@@ -330,7 +357,9 @@ class CorrelationTrigger(MainTrigger):
         # causes buffer to affect triggering, more than the step function.
         # So we multiply edge_strength (step function height) by buffer_falloff.
 
-        edge_strength = self.cfg.edge_strength * self.cfg.buffer_falloff
+        cfg = self.cfg
+        edge_strength = cfg.edge_strength * cfg.buffer_falloff
+
         N = self._buffer_nsamp
         halfN = N // 2
 
@@ -339,6 +368,23 @@ class CorrelationTrigger(MainTrigger):
         step[halfN:] = edge_strength / 2
         step *= windows.gaussian(N, std=halfN / 3)
         return step
+
+    def _calc_slope_finder(self, period: float) -> np.ndarray:
+        """ Called whenever period changes substantially.
+        Returns a kernel to be correlated with input data,
+        to find positive slopes."""
+
+        N = self._buffer_nsamp
+        halfN = N // 2
+        slope_finder = np.zeros(N)
+
+        cfg = self.cfg
+        slope_width = max(iround(cfg.slope_width * period), 1)
+        slope_strength = cfg.slope_strength * cfg.buffer_falloff
+
+        slope_finder[halfN - slope_width : halfN] = -slope_strength
+        slope_finder[halfN : halfN + slope_width] = slope_strength
+        return slope_finder
 
     # end setup
 
@@ -376,6 +422,9 @@ class CorrelationTrigger(MainTrigger):
             # Both combined.
             window = np.minimum(period_symmetric_window, lag_prevention_window)
 
+            # Slope finder
+            slope_finder = self._calc_slope_finder(period)
+
             # If pitch tracking enabled, rescale buffer to match data's pitch.
             if self.scfg and (data != 0).any():
                 if isinstance(semitones, float):
@@ -386,14 +435,16 @@ class CorrelationTrigger(MainTrigger):
 
             self._prev_period = period
             self._prev_window = window
+            self._prev_slope_finder = slope_finder
         else:
             window = self._prev_window
+            slope_finder = self._prev_slope_finder
 
         self.history.push(data)
         data *= window
 
-        prev_buffer: np.ndarray = self._buffer.copy()
-        prev_buffer += self._edge_finder
+        prev_buffer: np.ndarray = self._buffer * self.cfg.buffer_strength
+        prev_buffer += self._edge_finder + slope_finder
 
         # Calculate correlation
         if self.cfg.trigger_diameter is not None:

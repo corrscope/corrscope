@@ -33,9 +33,13 @@ def cfg_template(**kwargs) -> CorrelationTriggerConfig:
 @pytest_fixture_plus
 @parametrize("trigger_diameter", [None, 0.5])
 @parametrize("pitch_tracking", [None, SpectrumConfig()])
-def cfg(trigger_diameter, pitch_tracking):
+@parametrize("slope_strength", [0, 100])
+def cfg(trigger_diameter, pitch_tracking, slope_strength):
     return cfg_template(
-        trigger_diameter=trigger_diameter, pitch_tracking=pitch_tracking
+        trigger_diameter=trigger_diameter,
+        pitch_tracking=pitch_tracking,
+        slope_strength=slope_strength,
+        slope_width=0.14,
     )
 
 

@@ -33,6 +33,18 @@ def midpad(data: np.ndarray, n: int) -> np.ndarray:
     return data
 
 
+def rightpad(data: np.ndarray, n: int, constant_values=1) -> np.ndarray:
+    if not n > 0:
+        raise ValueError(f"rightpad(n={n}) must be > 0")
+
+    data = data[:n]
+
+    # _validate_lengths() raises error on negative values.
+    data = np.pad(data, (0, n - len(data)), "constant", constant_values=constant_values)
+
+    return data
+
+
 def cosine_flat(n: int, diameter: int, falloff: int) -> np.ndarray:
     cosine = windows.hann(falloff * 2)
     # assert cosine.dtype == FLOAT
