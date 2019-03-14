@@ -830,6 +830,8 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("line_color", str, None, "Line Color"),
         Column("trigger__edge_direction", plus_minus_one, None),
         Column("trigger__edge_strength", float, None),
+        Column("trigger__slope_strength", float, None),
+        Column("trigger__slope_width", float, None),
         Column("trigger__responsiveness", float, None),
     ]
 
