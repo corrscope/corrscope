@@ -198,6 +198,7 @@ class CorrelationTriggerConfig(
     " buffer_falloff ",
 ):
     # get_trigger()
+    mean_responsiveness: float = 0.05
 
     # Edge/area finding
     edge_strength: float
@@ -234,6 +235,7 @@ class CorrelationTriggerConfig(
         validate_param(self, "slope_width", 0, 0.5)
 
         validate_param(self, "responsiveness", 0, 1)
+        validate_param(self, "mean_responsiveness", 0, 1)
         # TODO trigger_falloff >= 0
         validate_param(self, "buffer_falloff", 0, np.inf)
 
@@ -290,6 +292,8 @@ class CorrelationTrigger(MainTrigger):
         self._prev_period: Optional[int] = None
         self._prev_window: Optional[np.ndarray] = None
         self._prev_slope_finder: Optional[np.ndarray] = None
+
+        self._prev_mean: float = 0.0
         self._prev_trigger: int = 0
 
         # (mutable) Log-scaled spectrum
@@ -394,7 +398,12 @@ class CorrelationTrigger(MainTrigger):
         stride = self._stride
         data = self._wave.get_around(index, N, stride)
         cache.sum = np.add.reduce(data)
-        cache.mean = cache.sum / N
+
+        # Update data-mean estimate
+        raw_mean = cache.sum / N
+        self._prev_mean = cache.mean = lerp(
+            self._prev_mean, raw_mean, cfg.mean_responsiveness
+        )
         data -= cache.mean
 
         # Window data
@@ -619,24 +628,25 @@ class ZeroCrossingTrigger(PostTrigger):
     cfg: ZeroCrossingTriggerConfig
 
     def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
-        # 'cache' is unused.
         radius = self._tsamp
 
-        if not 0 <= index < self._wave.nsamp:
+        wave = self._wave.with_offset(-cache.mean)
+
+        if not 0 <= index < wave.nsamp:
             return index
 
-        if self._wave[index] < 0:
+        if wave[index] < 0:
             direction = 1
             test = lambda a: a >= 0
 
-        elif self._wave[index] > 0:
+        elif wave[index] > 0:
             direction = -1
             test = lambda a: a <= 0
 
         else:  # self._wave[sample] == 0
             return index + 1
 
-        data = self._wave[index : index + direction * (radius + 1) : direction]
+        data = wave[index : index + direction * (radius + 1) : direction]
         # TODO remove unnecessary complexity, since diameter is probably under 10.
         intercepts = find(data, test)
         try:

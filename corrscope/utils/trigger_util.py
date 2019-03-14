@@ -38,5 +38,8 @@ def normalize_buffer(data: np.ndarray) -> None:
     data /= max(peak, MIN_AMPLITUDE)
 
 
-def lerp(x: np.ndarray, y: np.ndarray, a: float) -> Union[np.ndarray, float]:
+Arithmetic = Union[np.ndarray, float]
+
+
+def lerp(x: Arithmetic, y: Arithmetic, a: float) -> Arithmetic:
     return x * (1 - a) + y * a

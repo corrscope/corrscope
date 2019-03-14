@@ -39,7 +39,7 @@ Flatten.modes = [f for f in Flatten.__members__.values() if f not in _rejected_m
 class Wave:
     __slots__ = """
     wave_path
-    amplification
+    amplification offset
     smp_s data return_channels _flatten is_mono
     nsamp dtype
     center max_val
@@ -86,6 +86,7 @@ class Wave:
     ):
         self.wave_path = wave_path
         self.amplification = amplification
+        self.offset = 0
         self.smp_s, self.data = wavfile.read(wave_path, mmap=True)
 
         assert self.data.ndim in [1, 2]
@@ -137,6 +138,14 @@ class Wave:
         new.return_channels = return_channels
         return new
 
+    def with_offset(self, offset: float):
+        """offset is applied *after* amplification,
+        and corresponds directly to the output signal."""
+
+        new = copy.copy(self)
+        new.offset = offset
+        return new
+
     def __getitem__(self, index: Union[int, slice]) -> np.ndarray:
         """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
         # subok=False converts data from memmap (slow) to ndarray (faster).
@@ -156,6 +165,7 @@ class Wave:
 
         data -= self.center
         data *= self.amplification / self.max_val
+        data += self.offset
 
         if self.return_channels and len(data.shape) == 1:
             data = data.reshape(-1, 1)
