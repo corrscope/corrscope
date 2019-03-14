@@ -408,6 +408,41 @@ class CorrelationTrigger(MainTrigger):
 
         return trigger
 
+    def _find_area(self, data: np.ndarray, cache: PerFrameCache) -> np.ndarray:
+        """
+        Input: length N
+        Output: length N
+        - Note that correlate() is length 2N-1, which is different.
+
+        # Implementation details
+
+        np.cumsum[x] = sum[0, x+1)
+
+        To maximize area[x]:
+        = -sum[0, x) + sum[x, N)
+        = sum[0, N) - 2 * sum[0, x)
+        = sum[0, N) - 2 * np.cumsum[x-1]
+        """
+
+        cumsum = np.cumsum(data)
+
+        edge_area = np.full(cumsum.shape, cache.sum, FLOAT)
+        edge_area[1:] -= 2 * cumsum[:-1]
+
+        # Increasing buffer_falloff (width of history buffer)
+        # causes buffer to affect triggering, more than the step function.
+        # So we multiply edge_strength (step function height) by buffer_falloff.
+
+        edge_strength = self.cfg.edge_strength * self.cfg.buffer_falloff
+        N = self._buffer_nsamp
+        halfN = N // 2
+
+        step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
+        step[:halfN] = -edge_strength / 2
+        step[halfN:] = edge_strength / 2
+        step *= windows.gaussian(N, std=halfN / 3)
+        return step
+
     def spectrum_rescale_buffer(
         self, data: np.ndarray, peak_semitones: Optional[float]
     ) -> None:
