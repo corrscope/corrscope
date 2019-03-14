@@ -8,6 +8,8 @@
 ### Features
 
 - Add post-triggering for finding zero-crossing edges
+- Add optional slope-based triggering
+    - Previous edge-triggering was area-based and located zero crossings
 
 ### Changelog
 
