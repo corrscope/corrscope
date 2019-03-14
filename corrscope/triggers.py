@@ -140,7 +140,7 @@ class PostTrigger(_Trigger, ABC):
         pass
 
 
-@attr.dataclass
+@attr.dataclass(slots=True)
 class PerFrameCache:
     """
     The estimated period of a wave region (Wave.get_around())
@@ -154,6 +154,7 @@ class PerFrameCache:
     # NOTE: period is a *non-subsampled* period.
     # The period of subsampled data must be multiplied by stride.
     period: Optional[int] = None
+    sum: Optional[float] = None  # Only used in branch 'rewrite-area-trigger'
     mean: Optional[float] = None
 
 
@@ -343,10 +344,11 @@ class CorrelationTrigger(MainTrigger):
         N = self._buffer_nsamp
         cfg = self.cfg
 
-        # Get data
+        # Get data (1D, downmixed to mono)
         stride = self._stride
         data = self._wave.get_around(index, N, stride)
-        cache.mean = np.mean(data)
+        cache.sum = np.add.reduce(data)
+        cache.mean = cache.sum / N
         data -= cache.mean
 
         # Window data
