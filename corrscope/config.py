@@ -23,6 +23,7 @@ __all__ = [
     "yaml",
     "copy_config",
     "DumpableAttrs",
+    "evolve_compat",
     "KeywordAttrs",
     "with_units",
     "get_units",
@@ -190,10 +191,14 @@ class DumpableAttrs:
 
     # SafeConstructor.construct_yaml_object() uses __setstate__ to load objects.
     def __setstate__(self, state: Dict[str, Any]) -> None:
+        self.__dict__ = self.new_from_state(state).__dict__
+
+    # If called via instance, cls == type(self).
+    @classmethod
+    def new_from_state(cls: Type[T], state: Dict[str, Any]) -> T:
         """ Redirect `Alias(key)=value` to `key=value`.
         Then call the dataclass constructor (to validate parameters). """
 
-        cls = type(self)
         cls_name = cls.__name__
         fields = attr.fields_dict(cls)
 
@@ -225,8 +230,14 @@ class DumpableAttrs:
                 new_state[key] = value
 
         del state
-        obj = cls(**new_state)
-        self.__dict__ = obj.__dict__
+        return cls(**new_state)
+
+
+def evolve_compat(obj: DumpableAttrs, **changes):
+    """Evolve an object, based on user-specified dict,
+    while ignoring unrecognized keywords."""
+    # In dictionaries, later values will always override earlier ones
+    return obj.new_from_state({**obj.__dict__, **changes})
 
 
 class KeywordAttrs(DumpableAttrs):

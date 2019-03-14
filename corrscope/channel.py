@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Optional, Union, Dict, Any
 import attr
 from ruamel.yaml.comments import CommentedMap
 
-from corrscope.config import DumpableAttrs, Alias, CorrError
+from corrscope.config import DumpableAttrs, Alias, CorrError, evolve_compat
 from corrscope.triggers import MainTriggerConfig
 from corrscope.util import coalesce
 from corrscope.wave import Wave, Flatten
@@ -88,12 +88,15 @@ class Channel:
         # Create a Trigger object.
         if isinstance(cfg.trigger, MainTriggerConfig):
             tcfg = cfg.trigger
+
         elif isinstance(
             cfg.trigger, (CommentedMap, dict)
         ):  # CommentedMap may/not be subclass of dict.
-            tcfg = attr.evolve(corr_cfg.trigger, **cfg.trigger)
+            tcfg = evolve_compat(corr_cfg.trigger, **cfg.trigger)
+
         elif cfg.trigger is None:
             tcfg = corr_cfg.trigger
+
         else:
             raise CorrError(
                 f"invalid per-channel trigger {cfg.trigger}, type={type(cfg.trigger)}, "
