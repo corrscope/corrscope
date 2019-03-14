@@ -217,7 +217,7 @@ def test_correlate_offset():
     """
 
     np.random.seed(31337)
-    correlate_offset = CorrelationTrigger.correlate_offset
+    correlate_offset = CorrelationTrigger.correlate_buffer
 
     # Ensure autocorrelation on random data returns peak at 0.
     N = 100

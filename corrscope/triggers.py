@@ -11,7 +11,7 @@ from corrscope.spectrum import SpectrumConfig, DummySpectrum, LogFreqSpectrum
 from corrscope.util import find, obj_name, iround
 from corrscope.utils.trigger_util import get_period, normalize_buffer, lerp
 from corrscope.utils.windows import midpad, leftpad, cosine_flat
-from corrscope.wave import FLOAT
+from corrscope.wave import FLOAT, CenteredBuffer
 
 if TYPE_CHECKING:
     from corrscope.wave import Wave
@@ -140,7 +140,7 @@ class PostTrigger(_Trigger, ABC):
         pass
 
 
-@attr.dataclass
+@attr.dataclass(slots=True)
 class PerFrameCache:
     """
     The estimated period of a wave region (Wave.get_around())
@@ -154,6 +154,7 @@ class PerFrameCache:
     # NOTE: period is a *non-subsampled* period.
     # The period of subsampled data must be multiplied by stride.
     period: Optional[int] = None
+    sum: Optional[float] = None
     mean: Optional[float] = None
 
 
@@ -181,7 +182,6 @@ class CircularArray:
 class CorrelationTriggerConfig(MainTriggerConfig, always_dump="pitch_tracking"):
     # get_trigger
     edge_strength: float
-    trigger_diameter: Optional[float] = 0.5
 
     trigger_falloff: Tuple[float, float] = (4.0, 1.0)
     recalc_semitones: float = 1.0
@@ -252,12 +252,6 @@ class CorrelationTrigger(MainTrigger):
             self._buffer_nsamp, dtype=FLOAT
         )  # type: np.ndarray[FLOAT]
 
-        # (const) Added to self._buffer. Nonzero if edge triggering is nonzero.
-        # Left half is -edge_strength, right half is +edge_strength.
-        # ASCII art: --._|‾'--
-        self._edge_finder = self._calc_step()
-        assert self._edge_finder.dtype == FLOAT
-
         # Will be overwritten on the first frame.
         self._prev_period: Optional[int] = None
         self._prev_window: Optional[np.ndarray] = None
@@ -320,23 +314,6 @@ class CorrelationTrigger(MainTrigger):
 
         return data_taper
 
-    def _calc_step(self) -> np.ndarray:
-        """ Step function used for approximate edge triggering. """
-
-        # Increasing buffer_falloff (width of history buffer)
-        # causes buffer to affect triggering, more than the step function.
-        # So we multiply edge_strength (step function height) by buffer_falloff.
-
-        edge_strength = self.cfg.edge_strength * self.cfg.buffer_falloff
-        N = self._buffer_nsamp
-        halfN = N // 2
-
-        step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
-        step[:halfN] = -edge_strength / 2
-        step[halfN:] = edge_strength / 2
-        step *= windows.gaussian(N, std=halfN / 3)
-        return step
-
     # end setup
 
     # begin per-frame
@@ -344,10 +321,15 @@ class CorrelationTrigger(MainTrigger):
         N = self._buffer_nsamp
         cfg = self.cfg
 
-        # Get data
+        # Get data (1D, downmixed to mono)
         stride = self._stride
-        data = self._wave.get_around(index, N, stride)
-        cache.mean = np.mean(data)
+        buf: CenteredBuffer = self._wave.get_around(
+            index, N, stride, return_center=True
+        )
+        data = buf.data
+
+        cache.sum = np.add.reduce(data)
+        cache.mean = cache.sum / N
         data -= cache.mean
 
         # Window data
@@ -384,15 +366,9 @@ class CorrelationTrigger(MainTrigger):
         data *= window
 
         prev_buffer: np.ndarray = self._buffer.copy()
-        prev_buffer += self._edge_finder
 
         # Calculate correlation
-        if self.cfg.trigger_diameter is not None:
-            radius = round(N * self.cfg.trigger_diameter / 2)
-        else:
-            radius = None
-
-        peak_offset = self.correlate_offset(data, prev_buffer, radius)
+        peak_offset = self.correlate_buffer(prev_buffer, buf, cache)
         trigger = index + (stride * peak_offset)
 
         # Apply post trigger (before updating correlation buffer)
@@ -409,10 +385,59 @@ class CorrelationTrigger(MainTrigger):
 
         return trigger
 
-    def _find_area(self, data: np.ndarray, cache: PerFrameCache) -> np.ndarray:
+    def correlate_buffer(
+        self, prev_buffer: np.ndarray, buf: CenteredBuffer, cache: PerFrameCache
+    ) -> int:
+        """
+        If data index < optimal, data will be too far to the right,
+        and we need to `index += positive`.
+        - The peak will appear near the right of `data`.
+
+        Either we must slide prev_buffer to the right,
+        or we must slide data to the left (by sliding index to the right):
+        - correlate(data, prev_buffer)
+        - trigger = index + peak_offset
+        """
+        data = buf.data
+
+        N = len(data)
+        corr = signal.correlate(data, prev_buffer)  # returns double, not single/FLOAT
+        Ncorr = 2 * N - 1
+        assert len(corr) == Ncorr
+        mid = N - 1
+
+        # edge_area_score[buf_mid] corresponds to get_around(sample) sample.
+        edge_area_score = self._edge_area_score(data, cache)
+        buf_mid = buf.center
+
+        # Trim corr to match (edge_area_score == get_around()).
+        left = mid - buf_mid
+        right = left + N
+
+        corr = corr[left:right]
+        mid = mid - left
+        assert len(corr) == len(edge_area_score)
+        assert mid == buf_mid
+
+        # Find optimal offset
+        corr += edge_area_score
+
+        # argmax(corr) == mid + peak_offset == (data >> peak_offset)
+        # peak_offset == argmax(corr) - mid
+        peak_offset = np.argmax(corr) - mid  # type: int
+        return peak_offset
+
+    def _edge_area_score(self, data: np.ndarray, cache: PerFrameCache) -> np.ndarray:
+        edge_area_score = self._find_area(data, cache)
+        edge_strength = self.cfg.edge_strength * self.cfg.buffer_falloff
+        edge_area_score *= edge_strength
+        return edge_area_score
+
+    @staticmethod
+    def _find_area(data: np.ndarray, cache: PerFrameCache) -> np.ndarray:
         """
         Input: length N
-        Output: length N
+        Output: length N, output[i] = -input[:i] + input[i:]
         - mid = N//2
         - result[mid=N//2] == self[sample]
         - Note that correlate() is length 2N-1, which is different.
@@ -436,15 +461,7 @@ class CorrelationTrigger(MainTrigger):
         # causes buffer to affect triggering, more than the step function.
         # So we multiply edge_strength (step function height) by buffer_falloff.
 
-        edge_strength = self.cfg.edge_strength * self.cfg.buffer_falloff
-        N = self._buffer_nsamp
-        halfN = N // 2
-
-        step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
-        step[:halfN] = -edge_strength / 2
-        step[halfN:] = edge_strength / 2
-        step *= windows.gaussian(N, std=halfN / 3)
-        return step
+        return edge_area
 
     def spectrum_rescale_buffer(
         self, data: np.ndarray, peak_semitones: Optional[float]
@@ -479,7 +496,7 @@ class CorrelationTrigger(MainTrigger):
             boost_y = 1.0
 
         # If we want to double pitch...
-        resample_notes = self.correlate_offset(
+        resample_notes = self.correlate_spectrum(
             spectrum,
             prev_spectrum,
             scfg.max_notes_to_resample,
@@ -498,25 +515,13 @@ class CorrelationTrigger(MainTrigger):
             self._buffer = midpad(self._buffer, N)
 
     @staticmethod
-    def correlate_offset(
+    def correlate_spectrum(
         data: np.ndarray,
         prev_buffer: np.ndarray,
         radius: Optional[int],
         boost_x: int = 0,
         boost_y: float = 1.0,
     ) -> int:
-        """
-        This is confusing.
-
-        If data index < optimal, data will be too far to the right,
-        and we need to `index += positive`.
-        - The peak will appear near the right of `data`.
-
-        Either we must slide prev_buffer to the right,
-        or we must slide data to the left (by sliding index to the right):
-        - correlate(data, prev_buffer)
-        - trigger = index + peak_offset
-        """
         N = len(data)
         corr = signal.correlate(data, prev_buffer)  # returns double, not single/FLOAT
         Ncorr = 2 * N - 1
