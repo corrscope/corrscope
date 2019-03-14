@@ -291,6 +291,15 @@ class MainWindow(QWidget):
                         self.trigger__responsiveness.setMaximum(1.0)
                         self.trigger__responsiveness.setSingleStep(0.1)
 
+                    with add_grid_col(
+                        s,
+                        tr("Mean Responsiveness"),
+                        BoundDoubleSpinBox,
+                        name="trigger__mean_responsiveness",
+                    ) as w:  # type: BoundDoubleSpinBox
+                        w.setMaximum(1.0)
+                        w.setSingleStep(0.1)
+
                 with append_widget(s, HLine):
                     pass
 
