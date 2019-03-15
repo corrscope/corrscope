@@ -198,7 +198,7 @@ class MainWindow(QWidget):
         with self._add_tab(s, tr("&Performance")) as tab:
             set_layout(s, QVBoxLayout)
 
-            with append_widget(s, QGroupBox) as self.perfAll:
+            with append_widget(s, QGroupBox) as self.perfPreview:
                 set_layout(s, QFormLayout)
 
                 with add_row(s, "", BoundSpinBox) as self.trigger_subsampling:
@@ -206,9 +206,6 @@ class MainWindow(QWidget):
 
                 with add_row(s, "", BoundSpinBox) as self.render_subsampling:
                     self.render_subsampling.setMinimum(1)
-
-            with append_widget(s, QGroupBox) as self.perfPreview:
-                set_layout(s, QFormLayout)
 
                 with add_row(s, "", BoundSpinBox) as self.render_subfps:
                     self.render_subfps.setMinimum(1)
@@ -419,10 +416,9 @@ class MainWindow(QWidget):
         self.layout__stereo_orientationL.setText(tr("Stereo Orientation"))
         self.render__stereo_grid_opacityL.setText(tr("Grid Opacity"))
 
-        self.perfAll.setTitle(tr("Preview and Render"))
+        self.perfPreview.setTitle(tr("Preview Only"))
         self.trigger_subsamplingL.setText(tr("Trigger Subsampling"))
         self.render_subsamplingL.setText(tr("Render Subsampling"))
-        self.perfPreview.setTitle(tr("Preview Only"))
         self.render_subfpsL.setText(tr("Render FPS Divisor"))
         self.render__res_divisorL.setText(tr("Resolution Divisor"))
         self.master_audio.setText(tr("/"))
