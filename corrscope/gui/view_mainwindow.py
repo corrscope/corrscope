@@ -282,6 +282,7 @@ class MainWindow(QWidget):
                         ):
                             assert isinstance(self.trigger__pitch_tracking, QWidget)
 
+                with append_widget(s, QHBoxLayout):
                     with append_widget(
                         s, QGroupBox, title=tr("Edge Search"), layout=QGridLayout
                     ):
@@ -294,7 +295,6 @@ class MainWindow(QWidget):
                         ):
                             self.trigger__edge_strength.setMinimum(0.0)
 
-                with append_widget(s, QHBoxLayout):
                     with append_widget(
                         s, QGroupBox, title=tr("Slope Search"), layout=QGridLayout
                     ):
