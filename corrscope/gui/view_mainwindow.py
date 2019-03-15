@@ -253,6 +253,13 @@ class MainWindow(QWidget):
                     with append_widget(
                         s, QGroupBox, title=tr("Wave Alignment"), layout=QGridLayout
                     ):
+                        with add_grid_col(
+                            s,
+                            tr("Buffer Strength"),
+                            BoundDoubleSpinBox,
+                            name="trigger__buffer_strength",
+                        ):
+                            pass
                         with add_grid_col(s, "", BoundDoubleSpinBox) as (
                             self.trigger__responsiveness
                         ):
