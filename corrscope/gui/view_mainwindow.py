@@ -260,11 +260,15 @@ class MainWindow(QWidget):
                             name="trigger__buffer_strength",
                         ):
                             pass
-                        with add_grid_col(s, "", BoundDoubleSpinBox) as (
-                            self.trigger__responsiveness
+                        with add_grid_col(
+                            s,
+                            tr("Buffer Responsiveness"),
+                            BoundDoubleSpinBox,
+                            name="trigger__responsiveness",
+                            maximum=1.0,
+                            singleStep=0.1,
                         ):
-                            self.trigger__responsiveness.setMaximum(1.0)
-                            self.trigger__responsiveness.setSingleStep(0.1)
+                            pass
                         with add_grid_col(
                             s,
                             tr("Mean Responsiveness"),
@@ -432,7 +436,6 @@ class MainWindow(QWidget):
         self.master_audio.setText(tr("/"))
         self.master_audio_browse.setText(tr("&Browse..."))
         self.trigger__edge_strengthL.setText(tr("Edge Strength"))
-        self.trigger__responsivenessL.setText(tr("Responsiveness"))
         self.trigger__pitch_tracking.setText(tr("Pitch Tracking"))
         self.trigger__edge_directionL.setText(tr("Edge Direction"))
 
