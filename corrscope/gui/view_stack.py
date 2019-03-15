@@ -89,14 +89,14 @@ def assert_peek(stack: LayoutStack, cls):
     assert isinstance(stack.widget, cls)
 
 
-def central_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget, name=None):
+def central_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget, **kwargs):
     assert_peek(stack, QMainWindow)
     # do NOT orphan=True
-    return _new_widget(stack, widget_type, exit_action="setCentralWidget", name=name)
+    return _new_widget(stack, widget_type, exit_action="setCentralWidget", **kwargs)
 
 
-def orphan_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget, name=None):
-    return _new_widget(stack, widget_type, orphan=True, name=name)
+def orphan_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget, **kwargs):
+    return _new_widget(stack, widget_type, orphan=True, **kwargs)
 
 
 @contextmanager
@@ -104,9 +104,9 @@ def append_widget(
     stack: LayoutStack,
     item_type: Type[WidgetOrLayout],
     layout_args: list = [],
-    name=None,
+    **kwargs,
 ) -> ctx[WidgetOrLayout]:
-    with _new_widget(stack, item_type, name=name) as item:
+    with _new_widget(stack, item_type, **kwargs) as item:
         yield item
     _insert_widget_or_layout(stack.layout, item, *layout_args)
 
@@ -155,7 +155,7 @@ def _new_widget(
     item_type: Type[WidgetOrLayout],
     orphan=False,
     exit_action: Union[Callable[[Any, Any], Any], str] = "",
-    name=None,
+    **kwargs,
 ) -> ctx[WidgetOrLayout]:
     """
     - Constructs item_type using parent.
@@ -168,8 +168,8 @@ def _new_widget(
         parent = None
 
     with stack.push(new_widget_or_layout(item_type, parent)) as item:
-        if name:
-            item.setObjectName(name)
+        for key, value in kwargs.items():
+            qt_setattr(item, key, value)
         yield item
 
     real_parent = stack.widget
@@ -177,6 +177,11 @@ def _new_widget(
         exit_action(real_parent, item)
     elif exit_action:
         getattr(real_parent, exit_action)(item)
+
+
+def qt_setattr(obj, key: str, value) -> None:
+    key = "set" + key[0].capitalize() + key[1:]
+    getattr(obj, key)(value)
 
 
 def append_stretch(stack: LayoutStack):

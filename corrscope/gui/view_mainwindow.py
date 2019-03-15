@@ -248,7 +248,7 @@ class MainWindow(QWidget):
                         pass
 
             # Trigger config
-            with append_widget(s, QGroupBox) as self.optionTrigger:
+            with append_widget(s, QGroupBox, title=tr("Trigger")):
                 set_layout(s, QVBoxLayout)
 
                 # Top row
@@ -423,7 +423,6 @@ class MainWindow(QWidget):
         self.render__res_divisorL.setText(tr("Resolution Divisor"))
         self.master_audio.setText(tr("/"))
         self.master_audio_browse.setText(tr("&Browse..."))
-        self.optionTrigger.setTitle(tr("Trigger"))
         self.trigger__edge_strengthL.setText(tr("Edge Strength"))
         self.trigger__responsivenessL.setText(tr("Responsiveness"))
         self.trigger__pitch_tracking.setText(tr("Pitch Tracking"))
