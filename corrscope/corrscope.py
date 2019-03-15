@@ -77,6 +77,8 @@ class Config(
     def before_record(self) -> None:
         """ Called *once* before recording video. Force high-quality rendering. """
         self.render_subfps = 1
+        self.trigger_subsampling = 1
+        self.render_subsampling = 1
         self.render.before_record()
 
     # End Performance
