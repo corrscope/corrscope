@@ -13,6 +13,13 @@ SomeQW = TypeVar("SomeQW", bound=QWidget)
 WidgetOrLayout = TypeVar("WidgetOrLayout", bound=Union[QWidget, QLayout])
 
 
+# TODO
+#   React-style component layouts
+#   @singledispatch
+#   new_widget_or_layout(type)
+#   LayoutStack.push(instance)
+
+# Like HTML document.createElement()
 def new_widget_or_layout(
     item_type: Union[Type[WidgetOrLayout], str], parent: QWidget
 ) -> WidgetOrLayout:
