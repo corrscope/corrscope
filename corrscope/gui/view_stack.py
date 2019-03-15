@@ -21,19 +21,31 @@ WidgetOrLayout = TypeVar("WidgetOrLayout", bound=Union[QWidget, QLayout])
 
 # Like HTML document.createElement()
 def new_widget_or_layout(
-    item_type: Union[Type[WidgetOrLayout], str], parent: QWidget
+    item_type: Union[Type[WidgetOrLayout], str], parent: QWidget, attributes=None
 ) -> WidgetOrLayout:
     """Creates a widget or layout, for insertion into an existing layout.
     Do NOT use for filling a widget with a layout!"""
+
+    if attributes is None:
+        attributes = {}
+
     if isinstance(item_type, str):
-        return QLabel(item_type, parent)
+        item = QLabel(item_type, parent)
     elif issubclass(item_type, QWidget):
-        return item_type(parent)
+        item = item_type(parent)
     else:
         assert issubclass(item_type, QLayout)
         # new_widget_or_layout is used to add sublayouts, which do NOT have a parent.
         # Only widgets' root layouts have parents.
-        return item_type(None)
+        item = item_type(None)
+
+    if "name" in attributes:
+        item.setObjectName(attributes.pop("name"))
+
+    for key, value in attributes.items():
+        qt_setattr(item, key, value)
+
+    return item
 
 
 @attr.dataclass
@@ -179,9 +191,6 @@ def _new_widget(
     with stack.push(new_widget_or_layout(item_type, parent, kwargs)) as item:
         if layout:
             set_layout(stack, layout)
-
-        for key, value in kwargs.items():
-            qt_setattr(item, key, value)
         yield item
 
     real_parent = stack.widget
@@ -214,20 +223,22 @@ Both = _Both()
 
 def widget_pair_inserter(append_widgets: Callable):
     @contextmanager
-    def add_row_col(stack: LayoutStack, left_type, right_type, *, name=None):
+    def add_row_col(stack: LayoutStack, left_type, right_type, *, name=None, **kwargs):
         parent = stack.widget
-        left = new_widget_or_layout(left_type, parent)
-        left_is_label = isinstance(left, QLabel)
 
         if right_type is Both:
+            left = new_widget_or_layout(left_type, parent, kwargs)
             right = Both
             push = left
         else:
-            right = new_widget_or_layout(right_type, parent)
+            left = new_widget_or_layout(left_type, parent)
+            right = new_widget_or_layout(right_type, parent, kwargs)
             push = right
 
         if name:
             (right or left).setObjectName(name)
+
+        left_is_label = isinstance(left, QLabel)
 
         with stack.push(push):
             if right is Both:
