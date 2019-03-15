@@ -89,21 +89,24 @@ def assert_peek(stack: LayoutStack, cls):
     assert isinstance(stack.widget, cls)
 
 
-def central_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget):
+def central_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget, name=None):
     assert_peek(stack, QMainWindow)
     # do NOT orphan=True
-    return _new_widget(stack, widget_type, exit_action="setCentralWidget")
+    return _new_widget(stack, widget_type, exit_action="setCentralWidget", name=name)
 
 
-def orphan_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget):
-    return _new_widget(stack, widget_type, orphan=True)
+def orphan_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget, name=None):
+    return _new_widget(stack, widget_type, orphan=True, name=name)
 
 
 @contextmanager
 def append_widget(
-    stack: LayoutStack, item_type: Type[WidgetOrLayout], layout_args: list = []
+    stack: LayoutStack,
+    item_type: Type[WidgetOrLayout],
+    layout_args: list = [],
+    name=None,
 ) -> ctx[WidgetOrLayout]:
-    with _new_widget(stack, item_type) as item:
+    with _new_widget(stack, item_type, name=name) as item:
         yield item
     _insert_widget_or_layout(stack.layout, item, *layout_args)
 
@@ -152,6 +155,7 @@ def _new_widget(
     item_type: Type[WidgetOrLayout],
     orphan=False,
     exit_action: Union[Callable[[Any, Any], Any], str] = "",
+    name=None,
 ) -> ctx[WidgetOrLayout]:
     """
     - Constructs item_type using parent.
@@ -164,6 +168,8 @@ def _new_widget(
         parent = None
 
     with stack.push(new_widget_or_layout(item_type, parent)) as item:
+        if name:
+            item.setObjectName(name)
         yield item
 
     real_parent = stack.widget
