@@ -168,6 +168,9 @@ def _new_widget(
         parent = None
 
     with stack.push(new_widget_or_layout(item_type, parent)) as item:
+        if "layout" in kwargs:
+            set_layout(stack, kwargs.pop("layout"))
+
         for key, value in kwargs.items():
             qt_setattr(item, key, value)
         yield item

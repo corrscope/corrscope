@@ -248,8 +248,7 @@ class MainWindow(QWidget):
                         pass
 
             # Trigger config
-            with append_widget(s, QGroupBox, title=tr("Trigger")):
-                set_layout(s, QVBoxLayout)
+            with append_widget(s, QGroupBox, title=tr("Trigger"), layout=QGridLayout):
 
                 # Top row
                 with append_widget(s, QGridLayout):
