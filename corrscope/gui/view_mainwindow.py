@@ -248,18 +248,42 @@ class MainWindow(QWidget):
                         pass
 
             # Trigger config
-            with append_widget(s, QGroupBox, title=tr("Trigger"), layout=QGridLayout):
+            with append_widget(
+                s, QGroupBox, title=tr("Wave Alignment"), layout=QGridLayout
+            ):
+                with add_grid_col(s, "", BoundDoubleSpinBox) as (
+                    self.trigger__responsiveness
+                ):
+                    self.trigger__responsiveness.setMaximum(1.0)
+                    self.trigger__responsiveness.setSingleStep(0.1)
+                with add_grid_col(
+                    s,
+                    tr("Mean Responsiveness"),
+                    BoundDoubleSpinBox,
+                    name="trigger__mean_responsiveness",
+                ) as w:  # type: BoundDoubleSpinBox
+                    w.setMaximum(1.0)
+                    w.setSingleStep(0.1)
+                with add_grid_col(s, BoundCheckBox, Both) as (
+                    self.trigger__pitch_tracking
+                ):
+                    assert isinstance(self.trigger__pitch_tracking, QWidget)
 
+            with append_widget(
+                s, QGroupBox, title=tr("Edge Search"), layout=QGridLayout
+            ):
                 with add_grid_col(s, "", BoundComboBox) as (
                     self.trigger__edge_direction
                 ):
                     pass
-
                 with add_grid_col(s, "", BoundDoubleSpinBox) as (
                     self.trigger__edge_strength
                 ):
                     self.trigger__edge_strength.setMinimum(0.0)
 
+            with append_widget(
+                s, QGroupBox, title=tr("Slope Search"), layout=QGridLayout
+            ):
                 with add_grid_col(
                     s,
                     tr("Slope Strength"),
@@ -268,7 +292,6 @@ class MainWindow(QWidget):
                 ):
                     s.widget.setSingleStep(10)
                     s.widget.setMaximum(200)
-
                 with add_grid_col(
                     s,
                     tr("Slope Width"),
@@ -279,26 +302,9 @@ class MainWindow(QWidget):
                     s.widget.setMaximum(0.5)
                     s.widget.setSingleStep(0.02)
 
-                with add_grid_col(s, "", BoundDoubleSpinBox) as (
-                    self.trigger__responsiveness
-                ):
-                    self.trigger__responsiveness.setMaximum(1.0)
-                    self.trigger__responsiveness.setSingleStep(0.1)
-
-                with add_grid_col(
-                    s,
-                    tr("Mean Responsiveness"),
-                    BoundDoubleSpinBox,
-                    name="trigger__mean_responsiveness",
-                ) as w:  # type: BoundDoubleSpinBox
-                    w.setMaximum(1.0)
-                    w.setSingleStep(0.1)
-
-                with add_grid_col(s, BoundCheckBox, Both) as (
-                    self.trigger__pitch_tracking
-                ):
-                    assert isinstance(self.trigger__pitch_tracking, QWidget)
-
+            with append_widget(
+                s, QGroupBox, title=tr("Post Triggering"), layout=QGridLayout
+            ):
                 with add_grid_col(
                     s, tr("Post Trigger"), TypeComboBox
                 ) as self.trigger__post_trigger:
