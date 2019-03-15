@@ -162,6 +162,8 @@ def _new_widget(
     item_type: Type[WidgetOrLayout],
     orphan=False,
     exit_action: Union[Callable[[Any, Any], Any], str] = "",
+    *,
+    layout: Optional[Type[QLayout]] = None,
     **kwargs,
 ) -> ctx[WidgetOrLayout]:
     """
@@ -174,9 +176,9 @@ def _new_widget(
     else:
         parent = None
 
-    with stack.push(new_widget_or_layout(item_type, parent)) as item:
-        if "layout" in kwargs:
-            set_layout(stack, kwargs.pop("layout"))
+    with stack.push(new_widget_or_layout(item_type, parent, kwargs)) as item:
+        if layout:
+            set_layout(stack, layout)
 
         for key, value in kwargs.items():
             qt_setattr(item, key, value)
