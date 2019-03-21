@@ -13,20 +13,39 @@ SomeQW = TypeVar("SomeQW", bound=QWidget)
 WidgetOrLayout = TypeVar("WidgetOrLayout", bound=Union[QWidget, QLayout])
 
 
+# TODO
+#   React-style component layouts
+#   @singledispatch
+#   new_widget_or_layout(type)
+#   LayoutStack.push(instance)
+
+# Like HTML document.createElement()
 def new_widget_or_layout(
-    item_type: Union[Type[WidgetOrLayout], str], parent: QWidget
+    item_type: Union[Type[WidgetOrLayout], str], parent: QWidget, attributes=None
 ) -> WidgetOrLayout:
     """Creates a widget or layout, for insertion into an existing layout.
     Do NOT use for filling a widget with a layout!"""
+
+    if attributes is None:
+        attributes = {}
+
     if isinstance(item_type, str):
-        return QLabel(item_type, parent)
+        item = QLabel(item_type, parent)
     elif issubclass(item_type, QWidget):
-        return item_type(parent)
+        item = item_type(parent)
     else:
         assert issubclass(item_type, QLayout)
         # new_widget_or_layout is used to add sublayouts, which do NOT have a parent.
         # Only widgets' root layouts have parents.
-        return item_type(None)
+        item = item_type(None)
+
+    if "name" in attributes:
+        item.setObjectName(attributes.pop("name"))
+
+    for key, value in attributes.items():
+        qt_setattr(item, key, value)
+
+    return item
 
 
 @attr.dataclass
@@ -89,21 +108,24 @@ def assert_peek(stack: LayoutStack, cls):
     assert isinstance(stack.widget, cls)
 
 
-def central_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget):
+def central_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget, **kwargs):
     assert_peek(stack, QMainWindow)
     # do NOT orphan=True
-    return _new_widget(stack, widget_type, exit_action="setCentralWidget")
+    return _new_widget(stack, widget_type, exit_action="setCentralWidget", **kwargs)
 
 
-def orphan_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget):
-    return _new_widget(stack, widget_type, orphan=True)
+def orphan_widget(stack: LayoutStack, widget_type: Type[SomeQW] = QWidget, **kwargs):
+    return _new_widget(stack, widget_type, orphan=True, **kwargs)
 
 
 @contextmanager
 def append_widget(
-    stack: LayoutStack, item_type: Type[WidgetOrLayout], layout_args: list = []
+    stack: LayoutStack,
+    item_type: Type[WidgetOrLayout],
+    layout_args: list = [],
+    **kwargs,
 ) -> ctx[WidgetOrLayout]:
-    with _new_widget(stack, item_type) as item:
+    with _new_widget(stack, item_type, **kwargs) as item:
         yield item
     _insert_widget_or_layout(stack.layout, item, *layout_args)
 
@@ -152,6 +174,9 @@ def _new_widget(
     item_type: Type[WidgetOrLayout],
     orphan=False,
     exit_action: Union[Callable[[Any, Any], Any], str] = "",
+    *,
+    layout: Optional[Type[QLayout]] = None,
+    **kwargs,
 ) -> ctx[WidgetOrLayout]:
     """
     - Constructs item_type using parent.
@@ -163,7 +188,9 @@ def _new_widget(
     else:
         parent = None
 
-    with stack.push(new_widget_or_layout(item_type, parent)) as item:
+    with stack.push(new_widget_or_layout(item_type, parent, kwargs)) as item:
+        if layout:
+            set_layout(stack, layout)
         yield item
 
     real_parent = stack.widget
@@ -171,6 +198,11 @@ def _new_widget(
         exit_action(real_parent, item)
     elif exit_action:
         getattr(real_parent, exit_action)(item)
+
+
+def qt_setattr(obj, key: str, value) -> None:
+    key = "set" + key[0].capitalize() + key[1:]
+    getattr(obj, key)(value)
 
 
 def append_stretch(stack: LayoutStack):
@@ -191,20 +223,22 @@ Both = _Both()
 
 def widget_pair_inserter(append_widgets: Callable):
     @contextmanager
-    def add_row_col(stack: LayoutStack, left_type, right_type, *, name=None):
+    def add_row_col(stack: LayoutStack, left_type, right_type, *, name=None, **kwargs):
         parent = stack.widget
-        left = new_widget_or_layout(left_type, parent)
-        left_is_label = isinstance(left, QLabel)
 
         if right_type is Both:
+            left = new_widget_or_layout(left_type, parent, kwargs)
             right = Both
             push = left
         else:
-            right = new_widget_or_layout(right_type, parent)
+            left = new_widget_or_layout(left_type, parent)
+            right = new_widget_or_layout(right_type, parent, kwargs)
             push = right
 
         if name:
             (right or left).setObjectName(name)
+
+        left_is_label = isinstance(left, QLabel)
 
         with stack.push(push):
             if right is Both:

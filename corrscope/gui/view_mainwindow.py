@@ -248,76 +248,88 @@ class MainWindow(QWidget):
                         pass
 
             # Trigger config
-            with append_widget(s, QGroupBox) as self.optionTrigger:
-                set_layout(s, QVBoxLayout)
-
-                # Top row
-                with append_widget(s, QGridLayout):
-                    with add_grid_col(s, "", BoundComboBox) as (
-                        self.trigger__edge_direction
+            with append_widget(s, QVBoxLayout):
+                with append_widget(s, QHBoxLayout):
+                    with append_widget(
+                        s, QGroupBox, title=tr("Wave Alignment"), layout=QGridLayout
                     ):
-                        pass
+                        with add_grid_col(
+                            s,
+                            tr("Buffer Strength"),
+                            BoundDoubleSpinBox,
+                            name="trigger__buffer_strength",
+                        ):
+                            pass
+                        with add_grid_col(
+                            s,
+                            tr("Buffer Responsiveness"),
+                            BoundDoubleSpinBox,
+                            name="trigger__responsiveness",
+                            maximum=1.0,
+                            singleStep=0.1,
+                        ):
+                            pass
+                        with add_grid_col(
+                            s,
+                            tr("Mean Responsiveness"),
+                            BoundDoubleSpinBox,
+                            name="trigger__mean_responsiveness",
+                        ) as w:  # type: BoundDoubleSpinBox
+                            w.setMaximum(1.0)
+                            w.setSingleStep(0.1)
+                        with add_grid_col(s, BoundCheckBox, Both) as (
+                            self.trigger__pitch_tracking
+                        ):
+                            assert isinstance(self.trigger__pitch_tracking, QWidget)
 
-                    with add_grid_col(s, "", BoundDoubleSpinBox) as (
-                        self.trigger__edge_strength
+                    with append_widget(
+                        s, QGroupBox, title=tr("Edge Search"), layout=QGridLayout
                     ):
-                        self.trigger__edge_strength.setMinimum(0.0)
+                        with add_grid_col(s, "", BoundComboBox) as (
+                            self.trigger__edge_direction
+                        ):
+                            pass
+                        with add_grid_col(s, "", BoundDoubleSpinBox) as (
+                            self.trigger__edge_strength
+                        ):
+                            self.trigger__edge_strength.setMinimum(0.0)
 
-                    with add_grid_col(
-                        s,
-                        tr("Slope Strength"),
-                        BoundDoubleSpinBox,
-                        name="trigger__slope_strength",
+                with append_widget(s, QHBoxLayout):
+                    with append_widget(
+                        s, QGroupBox, title=tr("Slope Search"), layout=QGridLayout
                     ):
-                        s.widget.setSingleStep(10)
-                        s.widget.setMaximum(200)
+                        with add_grid_col(
+                            s,
+                            tr("Slope Strength"),
+                            BoundDoubleSpinBox,
+                            name="trigger__slope_strength",
+                        ):
+                            s.widget.setSingleStep(10)
+                            s.widget.setMaximum(200)
+                        with add_grid_col(
+                            s,
+                            tr("Slope Width"),
+                            BoundDoubleSpinBox,
+                            name="trigger__slope_width",
+                        ):
+                            s.widget.setMinimum(0)
+                            s.widget.setMaximum(0.5)
+                            s.widget.setSingleStep(0.02)
 
-                    with add_grid_col(
-                        s,
-                        tr("Slope Width"),
-                        BoundDoubleSpinBox,
-                        name="trigger__slope_width",
+                    with append_widget(
+                        s, QGroupBox, title=tr("Post Triggering"), layout=QGridLayout
                     ):
-                        s.widget.setMinimum(0)
-                        s.widget.setMaximum(0.5)
-                        s.widget.setSingleStep(0.02)
+                        with add_grid_col(
+                            s, tr("Post Trigger"), TypeComboBox
+                        ) as self.trigger__post_trigger:
+                            pass
 
-                    with add_grid_col(s, "", BoundDoubleSpinBox) as (
-                        self.trigger__responsiveness
-                    ):
-                        self.trigger__responsiveness.setMaximum(1.0)
-                        self.trigger__responsiveness.setSingleStep(0.1)
-
-                    with add_grid_col(
-                        s,
-                        tr("Mean Responsiveness"),
-                        BoundDoubleSpinBox,
-                        name="trigger__mean_responsiveness",
-                    ) as w:  # type: BoundDoubleSpinBox
-                        w.setMaximum(1.0)
-                        w.setSingleStep(0.1)
-
-                with append_widget(s, HLine):
-                    pass
-
-                # Bottom row
-                with append_widget(s, QGridLayout):
-                    with add_grid_col(s, BoundCheckBox, Both) as (
-                        self.trigger__pitch_tracking
-                    ):
-                        assert isinstance(self.trigger__pitch_tracking, QWidget)
-
-                    with add_grid_col(
-                        s, tr("Post Trigger"), TypeComboBox
-                    ) as self.trigger__post_trigger:
-                        pass
-
-                    with add_grid_col(
-                        s, tr("Post Trigger Radius"), BoundSpinBox
-                    ) as self.trigger__post_radius:
-                        pass
-                        # self.trigger__post_radius: BoundSpinBox
-                        # self.trigger__post_radius.setMinimum(0)
+                        with add_grid_col(
+                            s, tr("Post Trigger Radius"), BoundSpinBox
+                        ) as self.trigger__post_radius:
+                            pass
+                            # self.trigger__post_radius: BoundSpinBox
+                            # self.trigger__post_radius.setMinimum(0)
 
     def add_channels_list(self, s):
         tr = self.tr
@@ -423,9 +435,7 @@ class MainWindow(QWidget):
         self.render__res_divisorL.setText(tr("Resolution Divisor"))
         self.master_audio.setText(tr("/"))
         self.master_audio_browse.setText(tr("&Browse..."))
-        self.optionTrigger.setTitle(tr("Trigger"))
         self.trigger__edge_strengthL.setText(tr("Edge Strength"))
-        self.trigger__responsivenessL.setText(tr("Responsiveness"))
         self.trigger__pitch_tracking.setText(tr("Pitch Tracking"))
         self.trigger__edge_directionL.setText(tr("Edge Direction"))
 
