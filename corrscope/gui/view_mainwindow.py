@@ -52,7 +52,11 @@ class MainWindow(QWidget):
     left_tabs: "TabWidget"
 
     def setupUi(self, MainWindow: QMainWindow):
-        MainWindow.resize(1160, 0)
+        scale = MainWindow.logicalDpiX() / 96.0
+
+        width = 1280
+        height = 0
+        MainWindow.resize(width * scale, height * scale)
 
         s = LayoutStack(MainWindow)
 
