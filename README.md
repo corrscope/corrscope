@@ -10,7 +10,7 @@ Corrscope uses "waveform correlation" to track complex waves (including SNES and
 
 Sample results can be found on my Youtube channel at https://www.youtube.com/channel/UCIjb87rjJZxtNsHUdKXMsww/videos.
 
-<!-- screenshot here -->
+![Screenshot of Corrscope and video preview](docs/images/corrscope-screenshot.png?raw=true)
 
 ## Dependencies
 
@@ -36,16 +36,6 @@ poetry install --develop corrscope
 poetry run corr (args)
 ```
 
-<!--
-### Conda (possibly installs pyqt5 twice and breaks env)
-
-```shell
-conda create -n ovgenpy python=3.6 pip numpy scipy matplotlib pyqt=5
-pip install -e .
-python -m corrscope (args)
-```
--->
-
 ## GUI Tutorial
 
 1. Open GUI:
@@ -60,7 +50,6 @@ python -m corrscope (args)
     - Per-channel on the right side
 1. Play or render to MP4/etc. video (requires ffmpeg)
     - Via toolbar or menu
-    
 
 ## Command-line Tutorial
 
