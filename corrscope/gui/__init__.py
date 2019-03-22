@@ -33,6 +33,7 @@ from corrscope.gui.model_bind import (
     Symbol,
     SymbolText,
     BoundComboBox,
+    _call_all,
 )
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
@@ -290,7 +291,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         if name:
             master_audio = "master_audio"
             self.model[master_audio] = name
-            self.model.update_widget[master_audio]()
+            self.model.update_all_bound(master_audio)
 
     def on_separate_render_dir_toggled(self, checked: bool):
         self.pref.separate_render_dir = checked
@@ -581,7 +582,7 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
         if val > 0:
             setattr(self.cfg.layout, altered, val)
             setattr(self.cfg.layout, unaltered, None)
-            self.update_widget["layout__" + unaltered]()
+            self.update_all_bound("layout__" + unaltered)
         elif val == 0:
             setattr(self.cfg.layout, altered, None)
         else:
