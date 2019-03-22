@@ -285,6 +285,9 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
     combo_symbol_text: Sequence[SymbolText]
     symbol2idx: Dict[Symbol, int]
 
+    Custom = object()
+    custom_if_unmatched: bool
+
     # noinspection PyAttributeOutsideInit
     def bind_widget(self, model: PresentationModel, path: str, *args, **kwargs) -> None:
         # Effectively enum values.
@@ -292,9 +295,13 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
 
         # symbol2idx[enum] = combo-box index
         self.symbol2idx = {}
+        self.custom_if_unmatched = False
 
         for i, (symbol, text) in enumerate(self.combo_symbol_text):
             self.symbol2idx[symbol] = i
+            if symbol is self.Custom:
+                self.custom_if_unmatched = True
+
             # Pretty-printed text
             self.addItem(text)
 
@@ -302,7 +309,12 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
 
     # combobox.index = pmodel.attr
     def set_gui(self, model_value: Any) -> None:
-        combo_index = self.symbol2idx[self._symbol_from_value(model_value)]
+        symbol = self._symbol_from_value(model_value)
+        if self.custom_if_unmatched and symbol not in self.symbol2idx:
+            combo_index = self.symbol2idx[self.Custom]
+        else:
+            combo_index = self.symbol2idx[self._symbol_from_value(model_value)]
+
         self.setCurrentIndex(combo_index)
 
     @staticmethod
@@ -316,7 +328,8 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
     def set_model(self, combo_index: int):
         assert isinstance(combo_index, int)
         combo_symbol, _ = self.combo_symbol_text[combo_index]
-        self.pmodel[self.path] = self._value_from_symbol(combo_symbol)
+        if combo_symbol is not self.Custom:
+            self.pmodel[self.path] = self._value_from_symbol(combo_symbol)
 
     @staticmethod
     def _value_from_symbol(symbol: Symbol):

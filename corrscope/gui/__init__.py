@@ -32,6 +32,7 @@ from corrscope.gui.model_bind import (
     rsetattr,
     Symbol,
     SymbolText,
+    BoundComboBox,
 )
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
@@ -637,8 +638,12 @@ class ConfigModel(PresentationModel):
     master_audio = path_fix_property("master_audio")
 
     # Stereo flattening
-    combo_symbol_text["trigger_stereo"] = list(flatten_no_stereo.items())
-    combo_symbol_text["render_stereo"] = list(flatten_modes.items())
+    combo_symbol_text["trigger_stereo"] = list(flatten_no_stereo.items()) + [
+        (BoundComboBox.Custom, "Custom")
+    ]
+    combo_symbol_text["render_stereo"] = list(flatten_modes.items()) + [
+        (BoundComboBox.Custom, "Custom")
+    ]
 
     # Trigger
     @property
