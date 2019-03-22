@@ -8,7 +8,7 @@ from delayed_assert import expect, assert_expectations
 
 from corrscope.config import CorrError
 from corrscope.utils.scipy.wavfile import WavFileWarning
-from corrscope.wave import Wave, Flatten
+from corrscope.wave import Wave, Flatten, calc_flatten_matrix
 
 prefix = "tests/wav-formats/"
 wave_paths = [
@@ -43,6 +43,55 @@ def test_wave(wave_path):
 # Stereo tests
 
 
+def arr(*args):
+    return np.array(args)
+
+
+def test_calc_flatten_matrix():
+    nchan = 3
+
+    # Test Stereo
+    np.testing.assert_equal(calc_flatten_matrix(Flatten.Stereo, nchan), np.eye(nchan))
+
+    # Test SumAvg on various channel counts
+    np.testing.assert_equal(calc_flatten_matrix(Flatten.SumAvg, 1), [1])
+    np.testing.assert_equal(calc_flatten_matrix(Flatten.SumAvg, 2), [0.5, 0.5])
+    np.testing.assert_equal(calc_flatten_matrix(Flatten.SumAvg, 4), [0.25] * 4)
+
+    # Test DiffAvg on various channel counts
+    # (Wave will use Mono instead of DiffAvg, on mono audio signals.
+    # But ensure it doesn't crash anyway.)
+    np.testing.assert_equal(calc_flatten_matrix(Flatten.DiffAvg, 1), [0.5])
+    np.testing.assert_equal(calc_flatten_matrix(Flatten.DiffAvg, 2), [0.5, -0.5])
+    np.testing.assert_equal(calc_flatten_matrix(Flatten.DiffAvg, 4), [0.5, -0.5, 0, 0])
+
+    # Test Mono
+    np.testing.assert_equal(calc_flatten_matrix(Flatten.Mono, 1), [1])
+
+    # Test custom strings and delimiters
+    out = arr(1, 2, 1)
+    nchan = 3
+    np.testing.assert_equal(calc_flatten_matrix(",1,2,1,", nchan), out / sum(out))
+    np.testing.assert_equal(calc_flatten_matrix(" 1, 2, 1 ", nchan), out / sum(out))
+    np.testing.assert_equal(calc_flatten_matrix("1 2 1", nchan), out / sum(out))
+
+    # Test negative values
+    nchan = 2
+    np.testing.assert_equal(calc_flatten_matrix("1, -1", nchan), arr(1, -1) / 2)
+    np.testing.assert_equal(calc_flatten_matrix("-1, 1", nchan), arr(-1, 1) / 2)
+    np.testing.assert_equal(calc_flatten_matrix("-1, -1", nchan), arr(-1, -1) / 2)
+
+    # Test invalid inputs
+    with pytest.raises(CorrError):
+        calc_flatten_matrix("", 0)
+
+    with pytest.raises(CorrError):
+        calc_flatten_matrix("1 -1 uwu", 3)
+
+    with pytest.raises(CorrError):
+        calc_flatten_matrix("0 0", 2)
+
+
 def test_stereo_merge():
     """Test indexing Wave by slices *or* ints. Flatten using default SumAvg mode."""
 
@@ -75,7 +124,7 @@ def test_stereo_merge():
     check_bound(wave[:])
 
 
-AllFlattens = Flatten.__members__.values()
+AllFlattens = [*Flatten.__members__.values(), "1 1", "1 0", "1 -1"]
 
 
 @pytest.mark.parametrize("flatten", AllFlattens)
@@ -107,7 +156,7 @@ def test_stereo_flatten_modes(
     assert nchan == len(peaks)
     wave = Wave(path)
 
-    if flatten not in Flatten.modes:
+    if flatten is Flatten.Mono:
         with pytest.raises(CorrError):
             wave.with_flatten(flatten, return_channels)
         return
@@ -135,9 +184,9 @@ def test_stereo_flatten_modes(
             else:
                 pass
         # If SumAvg, check average.
-        else:
-            assert flatten == Flatten.SumAvg
+        elif flatten == Flatten.SumAvg:
             assert_full_scale(data, np.mean(peaks))
+        # Don't test custom string modes for now.
 
 
 def assert_full_scale(data, peak):

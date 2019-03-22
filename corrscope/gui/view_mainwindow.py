@@ -174,7 +174,13 @@ class MainWindow(QWidget):
                 with add_row(s, "", BoundComboBox) as self.trigger_stereo:
                     pass
 
+                with add_row(s, tr("Downmix"), BoundLineEdit, name="trigger_stereo"):
+                    pass
+
                 with add_row(s, "", BoundComboBox) as self.render_stereo:
+                    pass
+
+                with add_row(s, tr("Downmix"), BoundLineEdit, name="render_stereo"):
                     pass
 
             with append_widget(s, QGroupBox) as self.dockStereo_2:

@@ -832,6 +832,7 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("wav_path", path_strip_quotes, "", "WAV Path"),
         Column("amplification", float, None, "Amplification\n(override)"),
         Column("line_color", str, None, "Line Color"),
+        Column("render_stereo", str, None, "Render Stereo\nDownmix"),
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
         Column("trigger__buffer_strength", float, None),
@@ -871,7 +872,7 @@ class ChannelModel(qc.QAbstractTableModel):
     # data
     TRIGGER = "trigger__"
 
-    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> qc.QVariant:
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> Any:
         col = index.column()
         row = index.row()
 
