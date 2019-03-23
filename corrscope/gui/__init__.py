@@ -825,14 +825,15 @@ class ChannelModel(qc.QAbstractTableModel):
     col_data = [
         Column("wav_path", path_strip_quotes, "", "WAV Path"),
         Column("amplification", float, None, "Amplification\n(override)"),
+        Column("line_color", str, None, "Line Color"),
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
-        Column("line_color", str, None, "Line Color"),
+        Column("trigger__buffer_strength", float, None),
+        Column("trigger__responsiveness", float, None, "Buffer\nResponsiveness"),
         Column("trigger__edge_direction", plus_minus_one, None),
         Column("trigger__edge_strength", float, None),
         Column("trigger__slope_strength", float, None),
         Column("trigger__slope_width", float, None),
-        Column("trigger__responsiveness", float, None),
     ]
 
     idx_of_key = {}
