@@ -145,6 +145,7 @@ def test_config_channel_width_stride(
         [Flatten.Stereo, None],
         [Flatten.SumAvg, Flatten.Stereo],
         [Flatten.Stereo, Flatten.SumAvg],
+        [Flatten.Stereo, "1 0"],
     ],
 )
 def test_per_channel_stereo(

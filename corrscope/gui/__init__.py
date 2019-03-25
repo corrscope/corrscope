@@ -32,6 +32,8 @@ from corrscope.gui.model_bind import (
     rsetattr,
     Symbol,
     SymbolText,
+    BoundComboBox,
+    _call_all,
 )
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
@@ -289,7 +291,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         if name:
             master_audio = "master_audio"
             self.model[master_audio] = name
-            self.model.update_widget[master_audio]()
+            self.model.update_all_bound(master_audio)
 
     def on_separate_render_dir_toggled(self, checked: bool):
         self.pref.separate_render_dir = checked
@@ -580,7 +582,7 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
         if val > 0:
             setattr(self.cfg.layout, altered, val)
             setattr(self.cfg.layout, unaltered, None)
-            self.update_widget["layout__" + unaltered]()
+            self.update_all_bound("layout__" + unaltered)
         elif val == 0:
             setattr(self.cfg.layout, altered, None)
         else:
@@ -637,8 +639,12 @@ class ConfigModel(PresentationModel):
     master_audio = path_fix_property("master_audio")
 
     # Stereo flattening
-    combo_symbol_text["trigger_stereo"] = list(flatten_no_stereo.items())
-    combo_symbol_text["render_stereo"] = list(flatten_modes.items())
+    combo_symbol_text["trigger_stereo"] = list(flatten_no_stereo.items()) + [
+        (BoundComboBox.Custom, "Custom")
+    ]
+    combo_symbol_text["render_stereo"] = list(flatten_modes.items()) + [
+        (BoundComboBox.Custom, "Custom")
+    ]
 
     # Trigger
     @property
@@ -826,6 +832,7 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("wav_path", path_strip_quotes, "", "WAV Path"),
         Column("amplification", float, None, "Amplification\n(override)"),
         Column("line_color", str, None, "Line Color"),
+        Column("render_stereo", str, None, "Render Stereo\nDownmix"),
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
         Column("trigger__buffer_strength", float, None),
@@ -865,7 +872,7 @@ class ChannelModel(qc.QAbstractTableModel):
     # data
     TRIGGER = "trigger__"
 
-    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> qc.QVariant:
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> Any:
         col = index.column()
         row = index.row()
 
