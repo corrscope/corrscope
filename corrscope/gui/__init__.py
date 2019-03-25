@@ -8,9 +8,8 @@ from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
 import attr
-from PyQt5.QtCore import QModelIndex, Qt
-from PyQt5.QtCore import QVariant
-from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent
+from PyQt5.QtCore import QModelIndex, Qt, QVariant
+from PyQt5.QtGui import QKeySequence, QFont, QCloseEvent, QDesktopServices
 from PyQt5.QtWidgets import QShortcut
 
 import corrscope
@@ -38,7 +37,7 @@ from corrscope.gui.model_bind import (
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
 from corrscope.layout import Orientation, StereoOrientation
-from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
+from corrscope.outputs import IOutputConfig, FFplayOutputConfig
 from corrscope.settings import paths
 from corrscope.triggers import (
     CorrelationTriggerConfig,
@@ -122,6 +121,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self.actionSaveAs.triggered.connect(self.on_action_save_as)
         self.actionPreview.triggered.connect(self.on_action_preview)
         self.actionRender.triggered.connect(self.on_action_render)
+        self.actionHelp.triggered.connect(self.on_action_help)
         self.actionExit.triggered.connect(qw.QApplication.closeAllWindows)
 
         # Initialize CorrScope-thread attribute.
@@ -453,6 +453,12 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     @property
     def cfg(self):
         return self.model.cfg
+
+    # Misc.
+    @qc.pyqtSlot()
+    def on_action_help(self):
+        help_url = r"https://jimbo1qaz.github.io/corrscope/"
+        QDesktopServices.openUrl(qc.QUrl(help_url))
 
 
 def format_stack_trace(e):

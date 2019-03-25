@@ -17,6 +17,7 @@ from corrscope.gui.view_stack import (
     set_menu_bar,
     append_menu,
     add_toolbar,
+    create_element,
 )
 
 NBSP = "\xa0"
@@ -372,6 +373,7 @@ class MainWindow(QWidget):
         self.actionExit = QAction(MainWindow)
         self.actionPreview = QAction(MainWindow)
         self.actionRender = QAction(MainWindow)
+        self.actionHelp = create_element(QAction, MainWindow, text=tr("Help"))
         self.action_separate_render_dir = QAction(MainWindow)
         self.action_separate_render_dir.setCheckable(True)
 
@@ -391,6 +393,10 @@ class MainWindow(QWidget):
 
             with append_menu(s) as self.menuTools:
                 self.menuTools.addAction(self.action_separate_render_dir)
+
+            with append_menu(s, title=tr("&Help")) as w:
+                self.menuHelp = w
+                w.addAction(self.actionHelp)
 
         # Setup toolbar
         with add_toolbar(s, Qt.TopToolBarArea) as self.toolBar:
