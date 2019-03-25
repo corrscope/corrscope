@@ -1,5 +1,6 @@
 import functools
 import operator
+from collections import defaultdict
 from typing import *
 
 import attr
@@ -10,8 +11,8 @@ from PyQt5.QtWidgets import QWidget
 
 from corrscope.config import CorrError, DumpableAttrs, get_units
 from corrscope.gui.util import color2hex
-from corrscope.utils.trigger_util import lerp
 from corrscope.util import obj_name, perr
+from corrscope.utils.trigger_util import lerp
 
 if TYPE_CHECKING:
     from corrscope.gui import MainWindow
@@ -37,6 +38,12 @@ Symbol = Hashable
 
 SymbolText = Tuple[Symbol, str]
 
+
+def _call_all(updaters: List[WidgetUpdater]):
+    for updater in updaters:
+        updater()
+
+
 # Data binding presentation-model
 class PresentationModel(qc.QObject):
     """ Key-value MVP presentation-model.
@@ -54,7 +61,7 @@ class PresentationModel(qc.QObject):
     def __init__(self, cfg: DumpableAttrs):
         super().__init__()
         self.cfg = cfg
-        self.update_widget: Dict[str, WidgetUpdater] = {}
+        self.update_widget: Dict[str, List[WidgetUpdater]] = defaultdict(list)
 
     def __getitem__(self, item: str) -> Any:
         try:
@@ -76,8 +83,11 @@ class PresentationModel(qc.QObject):
 
     def set_cfg(self, cfg: DumpableAttrs):
         self.cfg = cfg
-        for updater in self.update_widget.values():
-            updater()
+        for updater_list in self.update_widget.values():
+            _call_all(updater_list)
+
+    def update_all_bound(self, key: str):
+        _call_all(self.update_widget[key])
 
 
 SKIP_BINDING = "skip"
@@ -137,7 +147,7 @@ class BoundWidget(QWidget):
 
             if connect_to_model:
                 # Allow widget to be updated by other events.
-                model.update_widget[path] = self.cfg2gui
+                model.update_widget[path].append(self.cfg2gui)
 
             # Allow pmodel to be changed by widget.
             self.gui_changed.connect(self.set_model)
@@ -146,6 +156,8 @@ class BoundWidget(QWidget):
             perr(self)
             perr(path)
             raise
+
+    # TODO unbind_widget(), model.update_widget[path].remove(self.cfg2gui)?
 
     def calc_error_palette(self) -> QPalette:
         """ Palette with red background, used for widgets with invalid input. """
@@ -179,7 +191,9 @@ class BoundWidget(QWidget):
     gui_changed: ClassVar[Signal]
 
     def set_model(self, value):
-        pass
+        for updater in self.pmodel.update_widget[self.path]:
+            if updater != self.cfg2gui:
+                updater()
 
 
 def blend_colors(
@@ -212,6 +226,7 @@ def model_setter(value_type: type) -> Callable[..., None]:
         except CorrError:
             self.setPalette(self.error_palette)
         else:
+            BoundWidget.set_model(self, value)
             self.setPalette(self.default_palette)
 
     return set_model
@@ -285,6 +300,9 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
     combo_symbol_text: Sequence[SymbolText]
     symbol2idx: Dict[Symbol, int]
 
+    Custom = object()
+    custom_if_unmatched: bool
+
     # noinspection PyAttributeOutsideInit
     def bind_widget(self, model: PresentationModel, path: str, *args, **kwargs) -> None:
         # Effectively enum values.
@@ -292,9 +310,13 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
 
         # symbol2idx[enum] = combo-box index
         self.symbol2idx = {}
+        self.custom_if_unmatched = False
 
         for i, (symbol, text) in enumerate(self.combo_symbol_text):
             self.symbol2idx[symbol] = i
+            if symbol is self.Custom:
+                self.custom_if_unmatched = True
+
             # Pretty-printed text
             self.addItem(text)
 
@@ -302,7 +324,12 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
 
     # combobox.index = pmodel.attr
     def set_gui(self, model_value: Any) -> None:
-        combo_index = self.symbol2idx[self._symbol_from_value(model_value)]
+        symbol = self._symbol_from_value(model_value)
+        if self.custom_if_unmatched and symbol not in self.symbol2idx:
+            combo_index = self.symbol2idx[self.Custom]
+        else:
+            combo_index = self.symbol2idx[self._symbol_from_value(model_value)]
+
         self.setCurrentIndex(combo_index)
 
     @staticmethod
@@ -316,7 +343,9 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
     def set_model(self, combo_index: int):
         assert isinstance(combo_index, int)
         combo_symbol, _ = self.combo_symbol_text[combo_index]
-        self.pmodel[self.path] = self._value_from_symbol(combo_symbol)
+        if combo_symbol is not self.Custom:
+            self.pmodel[self.path] = self._value_from_symbol(combo_symbol)
+            BoundWidget.set_model(self, None)
 
     @staticmethod
     def _value_from_symbol(symbol: Symbol):
@@ -445,6 +474,7 @@ class _ColorText(BoundLineEdit):
         self.setPalette(self.default_palette)
         self.hex_color.emit(value or "")  # calls button.set_color()
         self.pmodel[self.path] = value
+        BoundWidget.set_model(self, value)
 
     def sizeHint(self) -> qc.QSize:
         """Reduce the width taken up by #rrggbb color text boxes."""
