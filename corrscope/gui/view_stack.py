@@ -20,24 +20,28 @@ WidgetOrLayout = TypeVar("WidgetOrLayout", bound=Union[QWidget, QLayout])
 #   LayoutStack.push(instance)
 
 # Like HTML document.createElement()
-def new_widget_or_layout(
-    item_type: Union[Type[WidgetOrLayout], str], parent: QWidget, attributes=None
+def create_element(
+    item_type: Union[Type[WidgetOrLayout], str],
+    parent: QWidget,
+    attributes=None,
+    **kwargs,
 ) -> WidgetOrLayout:
     """Creates a widget or layout, for insertion into an existing layout.
     Do NOT use for filling a widget with a layout!"""
 
     if attributes is None:
         attributes = {}
+    attributes.update(kwargs)
 
     if isinstance(item_type, str):
         item = QLabel(item_type, parent)
-    elif issubclass(item_type, QWidget):
-        item = item_type(parent)
-    else:
-        assert issubclass(item_type, QLayout)
+    elif issubclass(item_type, QLayout):
         # new_widget_or_layout is used to add sublayouts, which do NOT have a parent.
         # Only widgets' root layouts have parents.
         item = item_type(None)
+    else:
+        assert issubclass(item_type, (QWidget, QAction))
+        item = item_type(parent)
 
     if "name" in attributes:
         item.setObjectName(attributes.pop("name"))
@@ -151,9 +155,9 @@ def set_menu_bar(stack: LayoutStack):
 
 
 # won't bother adding type hints that pycharm is too dumb to understand
-def append_menu(stack: LayoutStack):
+def append_menu(stack: LayoutStack, **kwargs):
     assert_peek(stack, QMenuBar)
-    return _new_widget(stack, QMenu, exit_action="addMenu")
+    return _new_widget(stack, QMenu, exit_action="addMenu", **kwargs)
 
 
 def add_toolbar(stack: LayoutStack, area=Qt.TopToolBarArea):
@@ -188,7 +192,7 @@ def _new_widget(
     else:
         parent = None
 
-    with stack.push(new_widget_or_layout(item_type, parent, kwargs)) as item:
+    with stack.push(create_element(item_type, parent, kwargs)) as item:
         if layout:
             set_layout(stack, layout)
         yield item
@@ -227,12 +231,12 @@ def widget_pair_inserter(append_widgets: Callable):
         parent = stack.widget
 
         if right_type is Both:
-            left = new_widget_or_layout(left_type, parent, kwargs)
+            left = create_element(left_type, parent, kwargs)
             right = Both
             push = left
         else:
-            left = new_widget_or_layout(left_type, parent)
-            right = new_widget_or_layout(right_type, parent, kwargs)
+            left = create_element(left_type, parent)
+            right = create_element(right_type, parent, kwargs)
             push = right
 
         if name:
