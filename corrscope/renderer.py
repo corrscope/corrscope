@@ -303,7 +303,8 @@ class MatplotlibRenderer(Renderer):
             for idx, wave_data in enumerate(datas):
                 wave_axes = self._axes2d[idx]
                 for ax in unique_by_id(wave_axes):
-                    max_x = len(wave_data) - 1
+                    N = len(wave_data)
+                    max_x = N - 1
                     ax.set_xlim(0, max_x)
                     ax.set_ylim(-1, 1)
 
@@ -314,7 +315,9 @@ class MatplotlibRenderer(Renderer):
                     # zorder=-100 still draws on top of gridlines :(
                     kw = dict(color=midline_color, linewidth=midline_width)
                     if cfg.v_midline:
-                        ax.axvline(x=max_x / 2, **kw)
+                        # See Wave.get_around() docstring.
+                        # wave_data[N//2] == self[sample], usually > 0.
+                        ax.axvline(x=N // 2 - 0.5, **kw)
                     if cfg.h_midline:
                         ax.axhline(y=0, **kw)
 
