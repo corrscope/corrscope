@@ -6,7 +6,7 @@
 
 [tool.poetry]
 name = "corrscope"
-version = "0.4.0"
+version = "0.5.0-pre"
 description = ""
 authors = ["jimbo1qaz <jimbo1qaz@gmail.com>"]
 license = "BSD-2-Clause"

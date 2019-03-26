@@ -1,3 +1,12 @@
+## 0.5.0
+
+### Breaking Changes
+
+### Features
+
+### Changelog
+
+
 ## 0.4.0
 
 ### Breaking Changes
@@ -20,6 +29,7 @@
 - Add trigger "buffer responsiveness" option
 - Remove dependency on more_itertools
 
+
 ## 0.3.1
 
 ### Breaking Changes
@@ -30,6 +40,7 @@
 - Rebuild UI in Python, not .ui XML
 - Show stack trace dialog when loading config fails
 - Show stack trace dialog if exceptions raised before playback begins
+
 
 ## 0.3.0
 
@@ -57,6 +68,7 @@
 - Prevent YAML dump from line-breaking long paths
 - Dump Config.show_internals to YAML by default
 - Add non-GUI option to disable antialiasing (does not improve performance)
+
 
 ## 0.2.0 and before
 
