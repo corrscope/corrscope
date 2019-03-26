@@ -255,6 +255,7 @@ class CorrelationTrigger(MainTrigger):
     - So wave.get_around(x) = [x - N//2 : ...]
 
     test_trigger() checks that get_around() works properly, for even/odd N.
+    See Wave.get_around() docstring.
     """
 
     cfg: CorrelationTriggerConfig
