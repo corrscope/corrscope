@@ -56,7 +56,10 @@ is_odd = parametrize("is_odd", [False, True])
 def test_trigger(cfg: CorrelationTriggerConfig, is_odd: bool, post_trigger):
     """Ensures that trigger can locate
     the first positive sample of a -+ step exactly,
-    without off-by-1 errors."""
+    without off-by-1 errors.
+
+    See CorrelationTrigger and Wave.get_around() docstrings.
+    """
     wave = Wave("tests/step2400.wav")
     cfg = attr.evolve(cfg, post_trigger=post_trigger)
 
