@@ -11,6 +11,7 @@
 
 ### Breaking Changes
 
+- Set default mean responsiveness to 0.05 instead of 1 (even in unmodified older files, oops)
 - Always use full-resolution rendering, when rendering to file (make trigger/render subsampling preview-only)
 - Remove buffer falloff from GUI (defaults to 0.5)
 - Lag prevention is no longer increased, when trigger subsampling or trigger width × are >1
