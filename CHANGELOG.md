@@ -2,17 +2,22 @@
 
 ### Breaking Changes
 
+- Always use full-resolution rendering, when rendering to file (make trigger/render subsampling preview-only)
 - Remove buffer falloff from GUI (defaults to 0.5)
 - Lag prevention is no longer increased, when trigger subsampling or trigger width × are >1
 
 ### Features
 
+- Add Help menu (online help manual)
+- Add custom stereo downmix modes
+    - Allow left-only triggering, downmixing specific channels to mono, etc.
 - Add post-triggering for finding zero-crossing edges
 - Add optional slope-based triggering
     - Previous edge-triggering was area-based and located zero crossings
 
 ### Changelog
 
+- Add trigger "buffer responsiveness" option
 - Remove dependency on more_itertools
 
 ## 0.3.1
