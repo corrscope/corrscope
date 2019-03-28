@@ -263,8 +263,9 @@ def widget_pair_inserter(append_widgets: Callable):
 def _add_row(layout: QFormLayout, left, right):
     assert isinstance(layout, QFormLayout), layout
     if right is Both:
-        raise TypeError("Cannot add_row(QFormLayout, span=Both)")
-    return layout.addRow(left, right)
+        return layout.addRow(left)
+    else:
+        return layout.addRow(left, right)
 
 
 add_row = widget_pair_inserter(_add_row)
