@@ -475,7 +475,7 @@ class MainWindow(QWidget):
         self.action_separate_render_dir.setText(tr("&Separate Render Folder"))
 
 
-from corrscope.gui.__init__ import ChannelTableView, ShortcutButton
+from corrscope.gui.widgets import ChannelTableView, ShortcutButton
 from corrscope.gui.model_bind import (
     BoundLineEdit,
     BoundSpinBox,
