@@ -10,7 +10,7 @@ from corrscope.config import KeywordAttrs, CorrError, Alias, with_units
 from corrscope.spectrum import SpectrumConfig, DummySpectrum, LogFreqSpectrum
 from corrscope.util import find, obj_name, iround
 from corrscope.utils.trigger_util import get_period, normalize_buffer, lerp
-from corrscope.utils.windows import leftpad, midpad, rightpad, cosine_flat
+from corrscope.utils.windows import leftpad, midpad, rightpad
 from corrscope.wave import FLOAT
 
 if TYPE_CHECKING:
@@ -416,7 +416,8 @@ class CorrelationTrigger(MainTrigger):
         if semitones:
             diameter, falloff = [round(period * x) for x in cfg.trigger_falloff]
             # 4 periods + left/right falloff.
-            period_symmetric_window = cosine_flat(N, diameter, falloff)
+            data_radius = diameter / 2 + falloff / 2
+            period_symmetric_window = windows.gaussian(N, 0.5 * data_radius)
 
             # Left-sided falloff
             lag_prevention_window = self._lag_prevention_window
