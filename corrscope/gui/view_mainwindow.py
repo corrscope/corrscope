@@ -13,7 +13,6 @@ from corrscope.gui.view_stack import (
     add_tab,
     set_attr_objectName,
     append_stretch,
-    add_grid_col,
     Both,
     set_menu_bar,
     append_menu,
@@ -64,8 +63,8 @@ class MainWindow(QWidget):
             # Left-hand config tabs
             with append_widget(s, TabWidget) as self.left_tabs:
                 self.tabGeneral = self.add_general_tab(s)
-                self.tabStereo = self.add_stereo_tab(s)
-                self.tabPerf = self.add_performance_tab(s)
+                self.add_appear_tab(s)
+                self.tabTrigger = self.add_trigger_tab(s)
 
             # Right-hand channel list
             with append_widget(s, QVBoxLayout) as self.audioColumn:
@@ -92,8 +91,7 @@ class MainWindow(QWidget):
 
     def add_general_tab(self, s: LayoutStack) -> QWidget:
         tr = self.tr
-        with self._add_tab(s, tr("&General")) as tab:
-            set_layout(s, QVBoxLayout)
+        with self._add_tab(s, tr("&General"), layout=QVBoxLayout) as tab:
 
             # Global group
             with append_widget(s, QGroupBox) as self.optionGlobal:
@@ -117,6 +115,31 @@ class MainWindow(QWidget):
 
                 with add_row(s, "", BoundDoubleSpinBox) as self.begin_time:
                     self.begin_time.setMaximum(9999.0)
+
+            with append_widget(
+                s, QGroupBox, title=tr("Performance (Preview Only)"), layout=QFormLayout
+            ):
+                with add_row(
+                    s, tr("Render Subsampling"), BoundSpinBox
+                ) as self.render_subsampling:
+                    self.render_subsampling.setMinimum(1)
+
+                with add_row(
+                    s, tr("Render FPS Divisor"), BoundSpinBox
+                ) as self.render_subfps:
+                    self.render_subfps.setMinimum(1)
+
+                with add_row(
+                    s, tr("Resolution Divisor"), BoundDoubleSpinBox
+                ) as self.render__res_divisor:
+                    self.render__res_divisor.setMinimum(1.0)
+                    self.render__res_divisor.setSingleStep(0.5)
+
+        return tab
+
+    def add_appear_tab(self, s: LayoutStack) -> QWidget:
+        tr = self.tr
+        with self._add_tab(s, tr("&Appearance"), layout=QVBoxLayout) as tab:
 
             with append_widget(s, QGroupBox) as self.optionAppearance:
                 set_layout(s, QFormLayout)
@@ -162,61 +185,135 @@ class MainWindow(QWidget):
                     with append_widget(s, BoundSpinBox) as self.layout__nrows:
                         self.layout__nrows.setSpecialValueText(NBSP)
 
-        return tab
-
-    def add_stereo_tab(self, s: LayoutStack) -> QWidget:
-        tr = self.tr
-        with self._add_tab(s, tr("&Stereo")) as tab:
-            set_layout(s, QVBoxLayout)
-
-            with append_widget(s, QGroupBox) as self.optionStereo:
-                set_layout(s, QFormLayout)
-                with add_row(s, "", BoundComboBox) as self.trigger_stereo:
-                    pass
-
-                with add_row(s, tr("Downmix"), BoundLineEdit, name="trigger_stereo"):
-                    pass
-
-                with add_row(s, "", BoundComboBox) as self.render_stereo:
-                    pass
-
-                with add_row(s, tr("Downmix"), BoundLineEdit, name="render_stereo"):
-                    pass
-
-            with append_widget(s, QGroupBox) as self.dockStereo_2:
-                set_layout(s, QFormLayout)
-
-                with add_row(s, "", BoundComboBox) as self.layout__stereo_orientation:
-                    pass
-
-                with add_row(s, "", BoundDoubleSpinBox) as (
-                    self.render__stereo_grid_opacity
+            with append_widget(s, QGroupBox, title=tr("Stereo"), layout=QFormLayout):
+                with add_row(
+                    s, tr("Downmix Mode"), BoundComboBox, name="render_stereo"
                 ):
-                    self.render__stereo_grid_opacity.setMaximum(1.0)
-                    self.render__stereo_grid_opacity.setSingleStep(0.25)
+                    pass
+
+                with add_row(
+                    s, tr("Downmix Vector"), BoundLineEdit, name="render_stereo"
+                ):
+                    pass
+
+                with add_row(
+                    s,
+                    tr("Stereo Orientation"),
+                    BoundComboBox,
+                    name="layout__stereo_orientation",
+                ):
+                    pass
+
+                with add_row(
+                    s,
+                    tr("Grid Opacity"),
+                    BoundDoubleSpinBox,
+                    name="render__stereo_grid_opacity",
+                    maximum=1.0,
+                    singleStep=0.25,
+                ):
+                    pass
 
         return tab
 
-    def add_performance_tab(self, s: LayoutStack) -> QWidget:
+    def add_trigger_tab(self, s: LayoutStack) -> QWidget:
         tr = self.tr
-        with self._add_tab(s, tr("&Performance")) as tab:
-            set_layout(s, QVBoxLayout)
 
-            with append_widget(s, QGroupBox) as self.perfPreview:
-                set_layout(s, QFormLayout)
+        with self._add_tab(s, tr("&Trigger"), layout=QVBoxLayout) as tab:
+            with append_widget(
+                s, QGroupBox, title=tr("Wave Alignment"), layout=QFormLayout
+            ):
+                with add_row(
+                    s,
+                    tr("Buffer Strength"),
+                    BoundDoubleSpinBox,
+                    name="trigger__buffer_strength",
+                ):
+                    pass
+                with add_row(
+                    s,
+                    tr("Buffer Responsiveness"),
+                    BoundDoubleSpinBox,
+                    name="trigger__responsiveness",
+                    maximum=1.0,
+                    singleStep=0.1,
+                ):
+                    pass
+                with add_row(
+                    s,
+                    tr("Mean Responsiveness"),
+                    BoundDoubleSpinBox,
+                    name="trigger__mean_responsiveness",
+                ) as w:  # type: BoundDoubleSpinBox
+                    w.setMaximum(1.0)
+                    w.setSingleStep(0.1)
+                with add_row(s, BoundCheckBox, Both) as (self.trigger__pitch_tracking):
+                    assert isinstance(self.trigger__pitch_tracking, QWidget)
 
-                with add_row(s, "", BoundSpinBox) as self.trigger_subsampling:
-                    self.trigger_subsampling.setMinimum(1)
+            with append_widget(
+                s, QGroupBox, title=tr("Edge Triggering"), layout=QFormLayout
+            ):
+                with add_row(s, "", BoundComboBox) as (self.trigger__edge_direction):
+                    pass
+                with add_row(s, "", BoundDoubleSpinBox) as (
+                    self.trigger__edge_strength
+                ):
+                    self.trigger__edge_strength.setMinimum(0.0)
 
-                with add_row(s, "", BoundSpinBox) as self.render_subsampling:
-                    self.render_subsampling.setMinimum(1)
+            with append_widget(
+                s,
+                QGroupBox,
+                title=tr("Slope Triggering (for PSG/FM)"),
+                layout=QFormLayout,
+            ):
+                with add_row(
+                    s,
+                    tr("Slope Strength"),
+                    BoundDoubleSpinBox,
+                    name="trigger__slope_strength",
+                ):
+                    s.widget.setSingleStep(10)
+                    s.widget.setMaximum(200)
+                with add_row(
+                    s,
+                    tr("Slope Width"),
+                    BoundDoubleSpinBox,
+                    name="trigger__slope_width",
+                ):
+                    s.widget.setMinimum(0)
+                    s.widget.setMaximum(0.5)
+                    s.widget.setSingleStep(0.02)
 
-                with add_row(s, "", BoundSpinBox) as self.render_subfps:
-                    self.render_subfps.setMinimum(1)
+            with append_widget(
+                s, QGroupBox, title=tr("Post Triggering"), layout=QFormLayout
+            ):
+                with add_row(
+                    s, tr("Post Trigger"), TypeComboBox
+                ) as self.trigger__post_trigger:
+                    pass
 
-                with add_row(s, "", BoundDoubleSpinBox) as self.render__res_divisor:
-                    self.render__res_divisor.setMinimum(1.0)
-                    self.render__res_divisor.setSingleStep(0.5)
+                with add_row(
+                    s, tr("Post Trigger Radius"), BoundSpinBox
+                ) as self.trigger__post_radius:
+                    pass
+                    # self.trigger__post_radius: BoundSpinBox
+                    # self.trigger__post_radius.setMinimum(0)
+
+            with append_widget(
+                s,
+                QGroupBox,
+                title=tr("Stereo (for SNES invert surround)"),
+                layout=QFormLayout,
+            ):
+                with add_row(
+                    s, tr("Downmix Mode"), BoundComboBox, name="trigger_stereo"
+                ):
+                    pass
+
+                with add_row(
+                    s, tr("Downmix Vector"), BoundLineEdit, name="trigger_stereo"
+                ):
+                    pass
 
         return tab
 
@@ -251,90 +348,6 @@ class MainWindow(QWidget):
                         s, tr("Audio Template"), BoundLineEdit
                     ) as self.ffmpeg_cli__audio_template:
                         pass
-
-            # Trigger config
-            with append_widget(s, QVBoxLayout):
-                with append_widget(s, QHBoxLayout):
-                    with append_widget(
-                        s, QGroupBox, title=tr("Wave Alignment"), layout=QGridLayout
-                    ):
-                        with add_grid_col(
-                            s,
-                            tr("Buffer Strength"),
-                            BoundDoubleSpinBox,
-                            name="trigger__buffer_strength",
-                        ):
-                            pass
-                        with add_grid_col(
-                            s,
-                            tr("Buffer Responsiveness"),
-                            BoundDoubleSpinBox,
-                            name="trigger__responsiveness",
-                            maximum=1.0,
-                            singleStep=0.1,
-                        ):
-                            pass
-                        with add_grid_col(
-                            s,
-                            tr("Mean Responsiveness"),
-                            BoundDoubleSpinBox,
-                            name="trigger__mean_responsiveness",
-                        ) as w:  # type: BoundDoubleSpinBox
-                            w.setMaximum(1.0)
-                            w.setSingleStep(0.1)
-                        with add_grid_col(s, BoundCheckBox, Both) as (
-                            self.trigger__pitch_tracking
-                        ):
-                            assert isinstance(self.trigger__pitch_tracking, QWidget)
-
-                    with append_widget(
-                        s, QGroupBox, title=tr("Edge Search"), layout=QGridLayout
-                    ):
-                        with add_grid_col(s, "", BoundComboBox) as (
-                            self.trigger__edge_direction
-                        ):
-                            pass
-                        with add_grid_col(s, "", BoundDoubleSpinBox) as (
-                            self.trigger__edge_strength
-                        ):
-                            self.trigger__edge_strength.setMinimum(0.0)
-
-                with append_widget(s, QHBoxLayout):
-                    with append_widget(
-                        s, QGroupBox, title=tr("Slope Search"), layout=QGridLayout
-                    ):
-                        with add_grid_col(
-                            s,
-                            tr("Slope Strength"),
-                            BoundDoubleSpinBox,
-                            name="trigger__slope_strength",
-                        ):
-                            s.widget.setSingleStep(10)
-                            s.widget.setMaximum(200)
-                        with add_grid_col(
-                            s,
-                            tr("Slope Width"),
-                            BoundDoubleSpinBox,
-                            name="trigger__slope_width",
-                        ):
-                            s.widget.setMinimum(0)
-                            s.widget.setMaximum(0.5)
-                            s.widget.setSingleStep(0.02)
-
-                    with append_widget(
-                        s, QGroupBox, title=tr("Post Triggering"), layout=QGridLayout
-                    ):
-                        with add_grid_col(
-                            s, tr("Post Trigger"), TypeComboBox
-                        ) as self.trigger__post_trigger:
-                            pass
-
-                        with add_grid_col(
-                            s, tr("Post Trigger Radius"), BoundSpinBox
-                        ) as self.trigger__post_radius:
-                            pass
-                            # self.trigger__post_radius: BoundSpinBox
-                            # self.trigger__post_radius.setMinimum(0)
 
     def add_channels_list(self, s):
         tr = self.tr
@@ -431,18 +444,7 @@ class MainWindow(QWidget):
         self.optionLayout.setTitle(tr("Layout"))
         self.layout__orientationL.setText(tr("Orientation"))
         self.layout__nrowsL.setText(tr("Rows"))
-        self.optionStereo.setTitle(tr("Stereo Enable"))
-        self.trigger_stereoL.setText(tr("Trigger Stereo"))
-        self.render_stereoL.setText(tr("Render Stereo"))
-        self.dockStereo_2.setTitle(tr("Stereo Appearance"))
-        self.layout__stereo_orientationL.setText(tr("Stereo Orientation"))
-        self.render__stereo_grid_opacityL.setText(tr("Grid Opacity"))
 
-        self.perfPreview.setTitle(tr("Preview Only"))
-        self.trigger_subsamplingL.setText(tr("Trigger Subsampling"))
-        self.render_subsamplingL.setText(tr("Render Subsampling"))
-        self.render_subfpsL.setText(tr("Render FPS Divisor"))
-        self.render__res_divisorL.setText(tr("Resolution Divisor"))
         self.master_audio.setText(tr("/"))
         self.master_audio_browse.setText(tr("&Browse..."))
         self.trigger__edge_strengthL.setText(tr("Edge Strength"))
