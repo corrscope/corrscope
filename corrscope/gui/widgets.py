@@ -88,3 +88,20 @@ def new_shortcut(shortcut: str, scope: qw.QWidget, slot: Callable) -> qw.QShortc
     scoped_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
     scoped_shortcut.activated.connect(slot)
     return scoped_shortcut
+
+
+class TabWidget(qw.QTabWidget):
+    def __init__(self, *args, **kwargs):
+        qw.QTabWidget.__init__(self, *args, **kwargs)
+
+        new_shortcut("ctrl+tab", self, self.next_tab)
+        new_shortcut("ctrl+pgDown", self, self.next_tab)
+
+        new_shortcut("ctrl+shift+tab", self, self.prev_tab)
+        new_shortcut("ctrl+pgUp", self, self.prev_tab)
+
+    def next_tab(self):
+        self.setCurrentIndex((self.currentIndex() + 1) % self.count())
+
+    def prev_tab(self):
+        self.setCurrentIndex((self.currentIndex() - 1) % self.count())

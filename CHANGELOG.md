@@ -4,6 +4,8 @@
 
 ### Features
 
+- Add Ctrl+Tab or Ctrl+PageUp/Down shortcuts to switch GUI tabs
+
 ### Changelog
 
 
