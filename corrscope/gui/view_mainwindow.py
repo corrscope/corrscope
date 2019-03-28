@@ -49,7 +49,7 @@ class MainWindow(QWidget):
         # noinspection PyCallByClass,PyTypeChecker
         return QCoreApplication.translate("MainWindow", *args, **kwargs)
 
-    left_tabs: QTabWidget
+    left_tabs: "TabWidget"
 
     def setupUi(self, MainWindow: QMainWindow):
         MainWindow.resize(1160, 0)
@@ -61,7 +61,7 @@ class MainWindow(QWidget):
             horizontalLayout = set_layout(s, QHBoxLayout)
 
             # Left-hand config tabs
-            with append_widget(s, QTabWidget) as self.left_tabs:
+            with append_widget(s, TabWidget) as self.left_tabs:
                 self.tabGeneral = self.add_general_tab(s)
                 self.tabStereo = self.add_stereo_tab(s)
                 self.tabPerf = self.add_performance_tab(s)
@@ -475,7 +475,6 @@ class MainWindow(QWidget):
         self.action_separate_render_dir.setText(tr("&Separate Render Folder"))
 
 
-from corrscope.gui.__init__ import ChannelTableView, ShortcutButton
 from corrscope.gui.model_bind import (
     BoundLineEdit,
     BoundSpinBox,
@@ -489,3 +488,7 @@ from corrscope.gui.model_bind import (
 
 # Delete unbound widgets, so they cannot accidentally be used.
 del QLineEdit, QSpinBox, QDoubleSpinBox, QCheckBox, QComboBox
+
+from corrscope.gui.widgets import ChannelTableView, ShortcutButton, TabWidget
+
+del QTabWidget
