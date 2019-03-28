@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Type, Tuple, Optional, ClassVar, Union
+from typing import TYPE_CHECKING, Type, Optional, ClassVar, Union
 
 import attr
 import numpy as np
@@ -10,7 +10,7 @@ from corrscope.config import KeywordAttrs, CorrError, Alias, with_units
 from corrscope.spectrum import SpectrumConfig, DummySpectrum, LogFreqSpectrum
 from corrscope.util import find, obj_name, iround
 from corrscope.utils.trigger_util import get_period, normalize_buffer, lerp
-from corrscope.utils.windows import leftpad, midpad, rightpad, cosine_flat
+from corrscope.utils.windows import leftpad, midpad, rightpad
 from corrscope.wave import FLOAT
 
 if TYPE_CHECKING:
@@ -210,16 +210,21 @@ class CorrelationTriggerConfig(
     # Correlation detection (meow~ =^_^=)
     buffer_strength: float = 1
 
+    # Both data and buffer uses Gaussian windows. std = wave_period * falloff.
+    # get_trigger()
+    data_falloff: float = 1.5
+
+    # _update_buffer()
+    buffer_falloff: float = 0.5
+
     # Maximum distance to move
     trigger_diameter: Optional[float] = 0.5
 
-    trigger_falloff: Tuple[float, float] = (4.0, 1.0)
     recalc_semitones: float = 1.0
     lag_prevention: LagPrevention = attr.ib(factory=LagPrevention)
 
     # _update_buffer
     responsiveness: float
-    buffer_falloff: float = 0.5  # Gaussian std = wave_period * buffer_falloff
 
     # Pitch tracking = compute spectrum.
     pitch_tracking: Optional["SpectrumConfig"] = None
@@ -414,9 +419,8 @@ class CorrelationTrigger(MainTrigger):
         semitones = self._is_window_invalid(period)
         # If pitch changed...
         if semitones:
-            diameter, falloff = [round(period * x) for x in cfg.trigger_falloff]
-            # 4 periods + left/right falloff.
-            period_symmetric_window = cosine_flat(N, diameter, falloff)
+            # Gaussian window
+            period_symmetric_window = windows.gaussian(N, period * cfg.data_falloff)
 
             # Left-sided falloff
             lag_prevention_window = self._lag_prevention_window
