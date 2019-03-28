@@ -294,7 +294,9 @@ add_grid_col = widget_pair_inserter(_add_grid_col)
 
 
 @contextmanager
-def add_tab(stack, widget_type: Type[SomeQW] = QWidget, label: str = "") -> ctx[SomeQW]:
+def add_tab(
+    stack, widget_type: Type[SomeQW] = QWidget, label: str = "", **kwargs
+) -> ctx[SomeQW]:
     """
     - Constructs widget using parent.
     - Yields widget.
@@ -302,7 +304,7 @@ def add_tab(stack, widget_type: Type[SomeQW] = QWidget, label: str = "") -> ctx[
     tabs: QTabWidget = stack.widget
     assert isinstance(tabs, QTabWidget), tabs
 
-    with orphan_widget(stack, widget_type) as w:
+    with orphan_widget(stack, widget_type, **kwargs) as w:
         yield w
     tabs.addTab(w, label)
 

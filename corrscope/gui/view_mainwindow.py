@@ -226,8 +226,8 @@ class MainWindow(QWidget):
         return tab
 
     @staticmethod
-    def _add_tab(s: LayoutStack, label: str = ""):
-        return add_tab(s, QWidget, label)
+    def _add_tab(s: LayoutStack, label: str = "", **kwargs):
+        return add_tab(s, QWidget, label, **kwargs)
 
     def add_top_bar(self, s):
         tr = self.tr
