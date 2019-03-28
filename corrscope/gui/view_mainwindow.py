@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from contextlib import contextmanager
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -161,8 +162,6 @@ class MainWindow(QWidget):
                     with append_widget(s, BoundSpinBox) as self.layout__nrows:
                         self.layout__nrows.setSpecialValueText(NBSP)
 
-            append_stretch(s)
-
         return tab
 
     def add_stereo_tab(self, s: LayoutStack) -> QWidget:
@@ -196,8 +195,6 @@ class MainWindow(QWidget):
                     self.render__stereo_grid_opacity.setMaximum(1.0)
                     self.render__stereo_grid_opacity.setSingleStep(0.25)
 
-            append_stretch(s)
-
         return tab
 
     def add_performance_tab(self, s: LayoutStack) -> QWidget:
@@ -221,13 +218,14 @@ class MainWindow(QWidget):
                     self.render__res_divisor.setMinimum(1.0)
                     self.render__res_divisor.setSingleStep(0.5)
 
-            append_stretch(s)
-
         return tab
 
     @staticmethod
+    @contextmanager
     def _add_tab(s: LayoutStack, label: str = "", **kwargs):
-        return add_tab(s, QWidget, label, **kwargs)
+        with add_tab(s, QWidget, label, **kwargs) as tab:
+            yield tab
+            append_stretch(s)
 
     def add_top_bar(self, s):
         tr = self.tr
