@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Callable
 
 from PyQt5 import QtWidgets as qw, QtCore as qc
 from PyQt5.QtCore import Qt
@@ -75,10 +75,16 @@ class ShortcutButton(qw.QPushButton):
 
     def add_shortcut(self, scope: qw.QWidget, shortcut: str) -> None:
         """ Adds shortcut and tooltip. """
-        keys = QKeySequence(shortcut, QKeySequence.PortableText)
+        self.scoped_shortcut = new_shortcut(shortcut, scope, self.click)
 
-        self.scoped_shortcut = qw.QShortcut(keys, scope)
-        self.scoped_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
-        self.scoped_shortcut.activated.connect(self.click)
+        parsed_keys: QKeySequence = self.scoped_shortcut.key()
+        self.setToolTip(parsed_keys.toString(QKeySequence.NativeText))
 
-        self.setToolTip(keys.toString(QKeySequence.NativeText))
+
+def new_shortcut(shortcut: str, scope: qw.QWidget, slot: Callable) -> qw.QShortcut:
+    parsed_keys = QKeySequence(shortcut, QKeySequence.PortableText)
+
+    scoped_shortcut = qw.QShortcut(parsed_keys, scope)
+    scoped_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+    scoped_shortcut.activated.connect(slot)
+    return scoped_shortcut
