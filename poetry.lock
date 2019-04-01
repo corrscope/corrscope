@@ -232,16 +232,21 @@ version = "1.8.0"
 [[package]]
 category = "dev"
 description = "PyInstaller bundles a Python application and all its dependencies into a single package."
-name = "pyinstaller"
+name = "PyInstaller"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "3.4"
+version = "3.5.dev0+g5bed1af2"
 
 [package.dependencies]
 altgraph = "*"
 macholib = ">=1.8"
 pefile = ">=2017.8.1"
 setuptools = "*"
+
+[package.source]
+reference = "5bed1af275dfaeb2267af2d10a808bd29a8674f7"
+type = "git"
+url = "https://github.com/jimbo1qaz/pyinstaller.git"
 
 [[package]]
 category = "main"
@@ -385,10 +390,11 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, <4"
 version = "1.24.1"
 
 [metadata]
-content-hash = "1748b2b4ae777376ef67fdcd06b40329e6bd5ce55756969493cfeca771385a99"
+content-hash = "3c9c902939a295d7d39404c62fc7f77ffb03a6da0a10fde164af4d3543d6727e"
 python-versions = "^3.6"
 
 [metadata.hashes]
+PyInstaller = []
 altgraph = ["d6814989f242b2b43025cba7161fc1b8fb487a62cd49c49245d6fd01c18ac997", "ddf5320017147ba7b810198e0b6619bd7b5563aa034da388cea8546b877f9b0c"]
 appdirs = ["9e5896d1372858f8dd3344faf4e5014d21849c756c8d5701f78f8a103b372d92", "d8b24664561d0d34ddfaec54636d502d7cea6e29c3eaf68f3df6180863e2166e"]
 atomicwrites = ["03472c30eb2c5d1ba9227e4c2ca66ab8287fbfbbda3888aa93dc2e28fc6811b4", "75a9445bac02d8d058d5e1fe689654ba5a6556a1dfd8ce6ec55a0ed79866cfa6"]
@@ -414,7 +420,6 @@ numpy = ["1980f8d84548d74921685f68096911585fee393975f53797614b34d4f409b6da", "22
 pefile = ["4c5b7e2de0c8cb6c504592167acf83115cbbde01fe4a507c16a1422850e86cd6"]
 pluggy = ["19ecf9ce9db2fce065a7a0586e07cfb4ac8614fe96edf628a264b1c70116cf8f", "84d306a647cc805219916e62aab89caa97a33a1dd8c342e87a37f91073cd4746"]
 py = ["64f65755aee5b381cea27766a3a147c3f15b9b6b9ac88676de66ba2ae36793fa", "dc639b046a6e2cff5bbe40194ad65936d6ba360b52b3c3fe1d08a82dd50b5e53"]
-pyinstaller = ["a5a6e04a66abfcf8761e89a2ebad937919c6be33a7b8963e1a961b55cb35986b"]
 pyparsing = ["66c9268862641abcac4a96ba74506e594c884e3f57690a696d21ad8210ed667a", "f6c5ef0d7480ad048c054c37632c67fca55299990fff127850181659eea33fc3"]
 pyqt5 = ["020e8771ad66429587d3db6cceb028be3435e2c65f417dcc8e3b3e644b6ab1d7", "399fd9c3b3786210d9d2a86bc73255cc03c997b454480b7c0daf3e1a09e1ab58", "c0565737d1d5fd40a7e14b6692bfec1f1e1f0be082ae70d1776c44561980e3c4", "d4e88208dfd017636e4b1f407990d0c3b6cf47afed6be4f2fb6ca887ef513e4b"]
 pyqt5-sip = ["0aed4266e52f4d11947439d9df8c57d4578e92258ad0d70645f9f69b627b35c7", "15750a4a3718c68ba662eede7310612aedad70c9727497908bf2eeddd255d16f", "2071265b7a603354b624b6cfae4ea032719e341799fb925961fd192f328fd203", "31a59f76168df007b480b9382256c20f8898c642e1394df2990559f0f6389f66", "39ce455bf5be5c1b20db10d840a536f70c3454be3baa7adca22f67ed90507853", "5d8a4b8e75fa6c9f837ea92793f1aeacbf3929f1d11cdf36f9604c1876182aca", "6bf9bacac776257390dd3f8a703d12c8228e4eb1aa0b191f1550965f44e4c23a", "87a76841e07e6dae5df34dded427708b5ea8d605c017e0bb6e56a7354959271e", "9f0ad4198f2657da9d59a393c266959362c517445cace842051e5ad564fa8fb0", "cbb0f24e3bfa1403bf3a05f30066d4457509aa411d6c6823d02b0508b787b8ea", "d38d379fa4f5c86a8ea92b8fab42748f37de093d21a25c34b2339eb2764ee5d5", "f24413d34707525a0fe1448b9574089242b9baa7c604ae5714abef9ad1749839"]

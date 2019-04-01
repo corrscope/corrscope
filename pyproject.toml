@@ -27,7 +27,10 @@ pytest = "^4.0"
 pytest_mock = "^1.10"
 hypothesis = "^3.84"
 delayed-assert = "^0.2.3"
-pyinstaller = "^3.4"
+
+# I forked https://github.com/Loran425/pyinstaller,
+# since Loran425 tends to force-push and delete the commit Poetry uses.
+pyinstaller = {git = "https://github.com/jimbo1qaz/pyinstaller.git", branch = "develop"}
 pywin32-ctypes = {version = "^0.2.0",platform = "win32"}
 coverage = "^4.5"
 pytest-cov = "^2.6"
