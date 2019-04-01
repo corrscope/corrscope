@@ -2,6 +2,8 @@
 
 ### Breaking Changes
 
+- Reorganize GUI, move trigger options to tab
+
 ### Features
 
 - Add Ctrl+Tab or Ctrl+PageUp/Down shortcuts to switch GUI tabs

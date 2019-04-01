@@ -263,8 +263,9 @@ def widget_pair_inserter(append_widgets: Callable):
 def _add_row(layout: QFormLayout, left, right):
     assert isinstance(layout, QFormLayout), layout
     if right is Both:
-        raise TypeError("Cannot add_row(QFormLayout, span=Both)")
-    return layout.addRow(left, right)
+        return layout.addRow(left)
+    else:
+        return layout.addRow(left, right)
 
 
 add_row = widget_pair_inserter(_add_row)
@@ -294,7 +295,9 @@ add_grid_col = widget_pair_inserter(_add_grid_col)
 
 
 @contextmanager
-def add_tab(stack, widget_type: Type[SomeQW] = QWidget, label: str = "") -> ctx[SomeQW]:
+def add_tab(
+    stack, widget_type: Type[SomeQW] = QWidget, label: str = "", **kwargs
+) -> ctx[SomeQW]:
     """
     - Constructs widget using parent.
     - Yields widget.
@@ -302,7 +305,7 @@ def add_tab(stack, widget_type: Type[SomeQW] = QWidget, label: str = "") -> ctx[
     tabs: QTabWidget = stack.widget
     assert isinstance(tabs, QTabWidget), tabs
 
-    with orphan_widget(stack, widget_type) as w:
+    with orphan_widget(stack, widget_type, **kwargs) as w:
         yield w
     tabs.addTab(w, label)
 
