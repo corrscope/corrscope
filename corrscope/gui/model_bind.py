@@ -195,14 +195,6 @@ class BoundWidget(QWidget):
             if updater != self.cfg2gui:
                 updater()
 
-    def __bool__(self):
-        """
-        qw.QComboBox().__bool__ does not exist,
-        yet bool(qw.QComboBox()) == False.
-        I suspect https://docs.python.org/3/c-api/bool.html is involved.
-        """
-        return True
-
 
 def blend_colors(
     color1: QColor, color2: QColor, ratio: float, gamma: float = 2
