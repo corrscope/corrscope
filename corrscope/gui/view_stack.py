@@ -218,8 +218,7 @@ Right = TypeVar("Right", bound=Union[QWidget, QLayout])  # same as WidgetOrLayou
 
 
 class _Both:
-    def __bool__(self):
-        return False
+    pass
 
 
 Both = _Both()
@@ -233,18 +232,18 @@ def widget_pair_inserter(append_widgets: Callable):
         if right_type is Both:
             left = create_element(left_type, parent, kwargs)
             right = Both
-            push = left
+            child = left
         else:
             left = create_element(left_type, parent)
             right = create_element(right_type, parent, kwargs)
-            push = right
+            child = right
 
         if name:
-            (right or left).setObjectName(name)
+            child.setObjectName(name)
 
         left_is_label = isinstance(left, QLabel)
 
-        with stack.push(push):
+        with stack.push(child):
             if right is Both:
                 yield left
             elif left_is_label:
