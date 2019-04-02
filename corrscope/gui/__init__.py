@@ -1,4 +1,5 @@
 import functools
+import signal
 import sys
 import traceback
 from pathlib import Path
@@ -58,6 +59,9 @@ def res(file: str) -> str:
 
 
 def gui_main(cfg_or_path: Union[Config, Path]):
+    # Allow Ctrl-C to exit
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     # qw.QApplication.setStyle('fusion')
     QApp = qw.QApplication
     QApp.setAttribute(qc.Qt.AA_EnableHighDpiScaling)
