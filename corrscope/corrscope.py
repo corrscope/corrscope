@@ -4,9 +4,8 @@ from contextlib import ExitStack, contextmanager
 from enum import unique
 from fractions import Fraction
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Iterator
-from typing import Optional, List, Callable, cast
+from typing import Optional, List, Callable
 
 import attr
 
@@ -16,12 +15,7 @@ from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
 from corrscope.outputs import FFmpegOutputConfig
 from corrscope.renderer import MatplotlibRenderer, RendererConfig, Renderer
-from corrscope.triggers import (
-    CorrelationTriggerConfig,
-    PerFrameCache,
-    CorrelationTrigger,
-    SpectrumConfig,
-)
+from corrscope.triggers import CorrelationTriggerConfig, PerFrameCache, SpectrumConfig
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave, Flatten
 
@@ -47,7 +41,6 @@ class Config(
     begin_time end_time
     render_subfps trigger_subsampling render_subsampling
     trigger_stereo render_stereo
-    show_internals
     """,
 ):
     """ Default values indicate optional attributes. """
@@ -100,7 +93,6 @@ class Config(
     def get_ffmpeg_cfg(self, video_path: str) -> FFmpegOutputConfig:
         return attr.evolve(self.ffmpeg_cli, path=video_path)
 
-    show_internals: List[str] = attr.Factory(list)
     benchmark_mode: BenchmarkMode = attr.ib(
         BenchmarkMode.NONE, converter=BenchmarkMode.by_name
     )
@@ -247,32 +239,6 @@ class CorrScope:
         renderer = self._load_renderer()
         self.renderer = renderer  # only used for unit tests
 
-        # region show_internals
-        # Display buffers, for debugging purposes.
-        internals = self.cfg.show_internals
-        extra_outputs = SimpleNamespace()
-        if internals:
-            from corrscope.outputs import FFplayOutputConfig
-            import attr
-
-            no_audio = attr.evolve(self.cfg, master_audio="")
-
-            corr = self
-
-            class RenderOutput:
-                def __init__(self):
-                    self.renderer = corr._load_renderer()
-                    self.output = FFplayOutputConfig()(no_audio)
-
-                def render_frame(self, datas):
-                    self.renderer.render_frame(datas)
-                    self.output.write_frame(self.renderer.get_frame())
-
-        extra_outputs.window = RenderOutput() if "window" in internals else None
-        extra_outputs.buffer = RenderOutput() if "buffer" in internals else None
-        extra_outputs.spectrum = RenderOutput() if "spectrum" in internals else None
-        # endregion
-
         if PRINT_TIMESTAMP:
             begin = time.perf_counter()
 
@@ -324,25 +290,6 @@ class CorrScope:
 
                 if not should_render:
                     continue
-
-                # region Display buffers, for debugging purposes.
-                triggers = cast(List[CorrelationTrigger], self.triggers)
-                if extra_outputs.window:
-                    extra_outputs.window.render_frame(
-                        [trigger._prev_window for trigger in triggers]
-                    )
-
-                if extra_outputs.buffer:
-                    extra_outputs.buffer.render_frame(
-                        [trigger._buffer for trigger in triggers]
-                    )
-
-                if extra_outputs.spectrum:
-                    extra_outputs.spectrum.render_frame(
-                        [trigger._spectrum - 0.99 for trigger in triggers]
-                    )
-
-                # endregion
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
