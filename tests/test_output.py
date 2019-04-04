@@ -84,10 +84,12 @@ def sine440_config():
 # Calls MatplotlibRenderer, FFmpegOutput, FFmpeg.
 def test_render_output():
     """ Ensure rendering to output does not raise exceptions. """
-    renderer = MatplotlibRenderer(CFG.render, CFG.layout, nplots=1, channel_cfgs=None)
+    datas = [RENDER_Y_ZEROS]
+
+    renderer = MatplotlibRenderer(CFG.render, CFG.layout, datas, channel_cfgs=None)
     out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG)
 
-    renderer.render_frame([RENDER_Y_ZEROS])
+    renderer.update_main_lines(datas)
     out.write_frame(renderer.get_frame())
 
     assert out.close() == 0
@@ -166,8 +168,8 @@ def test_corr_terminate_ffplay(Popen, mocker: "pytest_mock.MockFixture"):
     cfg = sine440_config()
     corr = CorrScope(cfg, Arguments(".", [FFplayOutputConfig()]))
 
-    render_frame = mocker.patch.object(MatplotlibRenderer, "render_frame")
-    render_frame.side_effect = DummyException()
+    update_main_lines = mocker.patch.object(MatplotlibRenderer, "update_main_lines")
+    update_main_lines.side_effect = DummyException()
     with pytest.raises(DummyException):
         corr.play()
 

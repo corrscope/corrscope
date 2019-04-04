@@ -153,11 +153,15 @@ class RendererLayout:
         self.wave_nrow = nrows
         self.wave_ncol = ncols
 
-    def arrange(self, region_factory: RegionFactory[Region]) -> List[List[Region]]:
+    def arrange(
+        self, region_factory: RegionFactory[Region], **kwargs
+    ) -> List[List[Region]]:
         """
         (row, column) are fed into region_factory in a row-major order [row][col].
         Stereo channel pairs are extracted.
         The results are possibly reshaped into column-major order [col][row].
+
+        **kwargs -> region_factory(**kwargs).
 
         :return arr[wave][channel] = Region
         """
@@ -229,7 +233,7 @@ class RendererLayout:
                         screen_edges,
                         wave_edges,
                     )
-                    region = region_factory(chan_spec)
+                    region = region_factory(chan_spec, **kwargs)
                 region_chan.append(region)
 
                 # Move to next channel position
