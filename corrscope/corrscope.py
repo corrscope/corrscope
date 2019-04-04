@@ -214,8 +214,9 @@ class CorrScope:
                 yield
 
     def _load_renderer(self) -> Renderer:
+        dummy_datas = [channel.get_render_around(0) for channel in self.channels]
         renderer = MatplotlibRenderer(
-            self.cfg.render, self.cfg.layout, self.nchan, self.cfg.channels
+            self.cfg.render, self.cfg.layout, dummy_datas, self.cfg.channels
         )
         return renderer
 
@@ -293,7 +294,7 @@ class CorrScope:
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
-                    renderer.render_frame(render_datas)
+                    renderer.update_main_lines(render_datas)
                     frame_data = renderer.get_frame()
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:

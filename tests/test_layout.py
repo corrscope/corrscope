@@ -221,8 +221,9 @@ def test_renderer_layout():
     lcfg = LayoutConfig(ncols=2)
     nplots = 15
 
-    r = MatplotlibRenderer(cfg, lcfg, nplots, None)
-    r.render_frame([RENDER_Y_ZEROS] * nplots)
+    datas = [RENDER_Y_ZEROS] * nplots
+    r = MatplotlibRenderer(cfg, lcfg, datas, None)
+    r.update_main_lines(datas)
     layout = r.layout
 
     # 2 columns, 8 rows
