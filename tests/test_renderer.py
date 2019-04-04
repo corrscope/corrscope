@@ -1,4 +1,4 @@
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 
 import matplotlib.colors
 import numpy as np
@@ -54,15 +54,16 @@ def test_default_colors(bg_str, fg_str, grid_str, data):
         antialiasing=False,
     )
     lcfg = LayoutConfig()
+    datas = [data] * NPLOTS
 
-    r = MatplotlibRenderer(cfg, lcfg, NPLOTS, None)
-    verify(r, bg_str, fg_str, grid_str, data)
+    r = MatplotlibRenderer(cfg, lcfg, datas, None)
+    verify(r, bg_str, fg_str, grid_str, datas)
 
     # Ensure default ChannelConfig(line_color=None) does not override line color
     chan = ChannelConfig(wav_path="")
     channels = [chan] * NPLOTS
-    r = MatplotlibRenderer(cfg, lcfg, NPLOTS, channels)
-    verify(r, bg_str, fg_str, grid_str, data)
+    r = MatplotlibRenderer(cfg, lcfg, datas, channels)
+    verify(r, bg_str, fg_str, grid_str, datas)
 
 
 @all_colors
@@ -79,20 +80,25 @@ def test_line_colors(bg_str, fg_str, grid_str, data):
         antialiasing=False,
     )
     lcfg = LayoutConfig()
+    datas = [data] * NPLOTS
 
     chan = ChannelConfig(wav_path="", line_color=fg_str)
     channels = [chan] * NPLOTS
-    r = MatplotlibRenderer(cfg, lcfg, NPLOTS, channels)
-    verify(r, bg_str, fg_str, grid_str, data)
+    r = MatplotlibRenderer(cfg, lcfg, datas, channels)
+    verify(r, bg_str, fg_str, grid_str, datas)
 
 
 TOLERANCE = 3
 
 
 def verify(
-    r: MatplotlibRenderer, bg_str, fg_str, grid_str: Optional[str], data: np.ndarray
+    r: MatplotlibRenderer,
+    bg_str,
+    fg_str,
+    grid_str: Optional[str],
+    datas: List[np.ndarray],
 ):
-    r.render_frame([data] * NPLOTS)
+    r.update_main_lines(datas)
     frame_colors: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
         (-1, RGB_DEPTH)
     )
@@ -107,6 +113,7 @@ def verify(
     else:
         grid_u8 = bg_u8
 
+    data = datas[0]
     assert (data.shape[1] > 1) == (data is RENDER_Y_STEREO)
     is_stereo = data.shape[1] > 1
     if is_stereo:

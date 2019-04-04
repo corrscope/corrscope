@@ -127,9 +127,9 @@ def test_config_channel_width_stride(
     assert _return_nsamp == channel._render_samp
     assert _subsampling == channel._render_stride
 
-    # Inspect arguments to renderer.render_frame()
+    # Inspect arguments to renderer.update_main_lines()
     # datas: List[np.ndarray]
-    (datas,), kwargs = renderer.render_frame.call_args
+    (datas,), kwargs = renderer.update_main_lines.call_args
     render_data = datas[0]
     assert len(render_data) == channel._render_samp
 
