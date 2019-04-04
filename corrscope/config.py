@@ -114,7 +114,10 @@ def copy_config(obj: T) -> T:
 
 
 class DumpableAttrs:
-    """ Marks class as attrs, and enables YAML dumping (excludes default fields). """
+    """ Marks class as attrs, and enables YAML dumping (excludes default fields).
+    - Subclass parameter `always_dump` contains
+      whitespace-separated list of fields to always dump.
+    """
 
     # Private variable, to avoid clashing with subclass attributes.
     __always_dump: ClassVar[FrozenSet[str]] = frozenset()
