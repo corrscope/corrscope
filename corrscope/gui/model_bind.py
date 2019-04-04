@@ -557,18 +557,24 @@ def behead(string: str, header: str) -> str:
     return string[len(header) :]
 
 
-DUNDER = "__"
+SEPARATOR = "."
+
+
+def strip_dunders(dunder_delim_path: str):
+    return dunder_delim_path.replace("__", SEPARATOR)
+
 
 # https://gist.github.com/wonderbeyond/d293e7a2af1de4873f2d757edd580288
 def rgetattr(obj: DumpableAttrs, dunder_delim_path: str, *default) -> Any:
     """
     :param obj: Object
-    :param dunder_delim_path: 'attr1__attr2__etc'
+    :param dunder_delim_path: 'attr1__attr2.etc' (__ and . are equivalent)
     :param default: Optional default value, at any point in the path
     :return: obj.attr1.attr2.etc
     """
 
-    attrs: List[Any] = dunder_delim_path.split(DUNDER)
+    path = strip_dunders(dunder_delim_path)
+    attrs: List[Any] = path.split(SEPARATOR)
     try:
         return functools.reduce(getattr, attrs, obj)
     except AttributeError:
@@ -588,12 +594,13 @@ def rhasattr(obj, dunder_delim_path: str):
 def flatten_attr(obj, dunder_delim_path: str) -> Tuple[Any, str]:
     """
     :param obj: Object
-    :param dunder_delim_path: 'attr1__attr2__etc'
+    :param dunder_delim_path: 'attr1__attr2.etc' (__ and . are equivalent)
     :return: (shallow_obj, name) such that
         getattr(shallow_obj, name) == rgetattr(obj, dunder_delim_path).
     """
 
-    parent, _, name = dunder_delim_path.rpartition(DUNDER)
+    path = strip_dunders(dunder_delim_path)
+    parent, _, name = path.rpartition(SEPARATOR)
     parent_obj = rgetattr(obj, parent) if parent else obj
 
     return parent_obj, name
@@ -603,7 +610,7 @@ def flatten_attr(obj, dunder_delim_path: str) -> Tuple[Any, str]:
 def rsetattr(obj, dunder_delim_path: str, val):
     """
     :param obj: Object
-    :param dunder_delim_path: 'attr1__attr2__etc'
+    :param dunder_delim_path: 'attr1__attr2.etc' (__ and . are equivalent)
     :param val: obj.attr1.attr2.etc = val
     """
     parent_obj, name = flatten_attr(obj, dunder_delim_path)
