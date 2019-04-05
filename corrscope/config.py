@@ -14,8 +14,6 @@ from ruamel.yaml import (
     Node,
 )
 
-from corrscope.util import obj_name
-
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -161,34 +159,44 @@ class DumpableAttrs:
         state = {}
         cls = type(self)
 
-        for field in attr.fields(cls):
+        def should_dump(attr_name, value) -> bool:
             """
-            Skip fields which cannot be passed into __init__().
-            - init=False
-            - leading underscores: deprecated fields.
-                - They have already been baked into other config fields.
-                - Even if you want to keep them, __init__(field) removes underscore.
+            Sure it would be simpler to dump and load __dict__ directly,
+            and not deal with __init__ underscore stripping,
+            but I'd lose structure checking, converters, and __attrs_post_init__.
             """
-            name = field.name
-            if name[0] == "_" or not field.init:
-                continue
 
-            value = getattr(self, name)
-
-            if dump_all or name in always_dump:
-                state[name] = value
-                continue
+            if dump_all or attr_name in always_dump:
+                return True
 
             if field.default == value:
-                continue
+                return False
             # noinspection PyTypeChecker,PyUnresolvedReferences
             if (
                 isinstance(field.default, attr.Factory)  # type: ignore
                 and field.default.factory() == value  # type: ignore
             ):
+                return False
+
+            return True
+
+        for field in attr.fields(cls):
+            # Used for getattr(), dot access.
+            attr_name = field.name
+
+            # Dumped to state, and passed into __init__.
+            state_name = attr_name
+            if state_name[0] == "_":
+                state_name = state_name[1:]
+
+            # Skip fields which cannot be passed into __init__().
+            # - init=False
+            if not field.init:
                 continue
 
-            state[name] = value
+            value = getattr(self, attr_name)
+            if should_dump(attr_name, value):
+                state[state_name] = value
 
         return state
 

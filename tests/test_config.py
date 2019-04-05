@@ -318,18 +318,29 @@ foo: 0
 def test_skip_dump_load():
     """Ensure _fields or init=False are not dumped,
     and don't crash on loading.
+
+    Ensure that init=False fields are not retrieved at all.
     """
 
-    class Foo(DumpableAttrs):
+    class Foo(DumpableAttrs, always_dump="*"):
         _underscore: int
+        _underscore_default: int = 1
         init_false: int = attr.ib(init=False)
+        never_initialized: int = attr.ib(init=False)
 
         def __attrs_post_init__(self):
             self.init_false = 1
 
     # Ensure fields are not dumped.
     foo = Foo(underscore=1)
-    assert yaml.dump(foo).strip() == "!Foo {}"
+    assert (
+        yaml.dump(foo)
+        == """\
+!Foo
+underscore: 1
+underscore_default: 1
+"""
+    )
 
     # Ensure init=False fields don't crash on loading.
     evil = """\
