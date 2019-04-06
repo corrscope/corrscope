@@ -125,8 +125,8 @@ class DumpableAttrs:
         def __init__(self, *args, **kwargs):
             pass
 
-    def __init_subclass__(cls, kw_only: bool = False, always_dump: str = ""):
-        _yaml_loadable(attr.dataclass(cls, kw_only=kw_only))
+    def __init_subclass__(cls, kw_only: bool = False, always_dump: str = "", **kwargs):
+        _yaml_loadable(attr.dataclass(cls, kw_only=kw_only, **kwargs))
 
         # Merge always_dump with superclass's __always_dump.
         super_always_dump = cls.__always_dump
@@ -202,7 +202,8 @@ class DumpableAttrs:
 
     # SafeConstructor.construct_yaml_object() uses __setstate__ to load objects.
     def __setstate__(self, state: Dict[str, Any]) -> None:
-        self.__dict__ = self.new_from_state(state).__dict__
+        __dict__ = self.new_from_state(state).__dict__
+        object.__setattr__(self, "__dict__", __dict__)
 
     # If called via instance, cls == type(self).
     @classmethod
