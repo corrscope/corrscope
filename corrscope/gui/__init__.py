@@ -4,7 +4,18 @@ import sys
 import traceback
 from pathlib import Path
 from types import MethodType
-from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence
+from typing import (
+    Optional,
+    List,
+    Any,
+    Tuple,
+    Callable,
+    Union,
+    Dict,
+    Sequence,
+    NewType,
+    cast,
+)
 
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
@@ -564,8 +575,24 @@ def run_on_ui_thread(
 
 # Begin ConfigModel properties
 
+SafeProperty = NewType("SafeProperty", property)
 
-def nrow_ncol_property(altered: str, unaltered: str) -> property:
+
+def safe_property(unsafe_getter: Callable, *args, **kwargs) -> SafeProperty:
+    """Prevents (AttributeError from leaking outside a property,
+    which causes hasattr() to return False)."""
+
+    @functools.wraps(unsafe_getter)
+    def safe_getter(self):
+        try:
+            return unsafe_getter(self)
+        except AttributeError as e:
+            raise RuntimeError(e) from e
+
+    return cast(SafeProperty, property(safe_getter, *args, **kwargs))
+
+
+def nrow_ncol_property(altered: str, unaltered: str) -> SafeProperty:
     def get(self: "ConfigModel"):
         val = getattr(self.cfg.layout, altered)
         if val is None:
@@ -583,10 +610,10 @@ def nrow_ncol_property(altered: str, unaltered: str) -> property:
         else:
             raise CorrError(f"invalid input: {altered} < 0, should never happen")
 
-    return property(get, set)
+    return safe_property(get, set)
 
 
-def default_property(path: str, default: Any) -> property:
+def default_property(path: str, default: Any) -> SafeProperty:
     def getter(self: "ConfigModel"):
         val = rgetattr(self.cfg, path)
         if val is None:
@@ -597,7 +624,7 @@ def default_property(path: str, default: Any) -> property:
     def setter(self: "ConfigModel", val):
         rsetattr(self.cfg, path, val)
 
-    return property(getter, setter)
+    return safe_property(getter, setter)
 
 
 def path_strip_quotes(path: str) -> str:
@@ -606,7 +633,7 @@ def path_strip_quotes(path: str) -> str:
     return path
 
 
-def path_fix_property(path: str) -> property:
+def path_fix_property(path: str) -> SafeProperty:
     """Removes quotes from paths, when setting from GUI."""
 
     def getter(self: "ConfigModel") -> str:
@@ -616,7 +643,7 @@ def path_fix_property(path: str) -> property:
         val = path_strip_quotes(val)
         rsetattr(self.cfg, path, val)
 
-    return property(getter, setter)
+    return safe_property(getter, setter)
 
 
 flatten_no_stereo = {
@@ -642,7 +669,7 @@ class ConfigModel(PresentationModel):
     ]
 
     # Trigger
-    @property
+    @safe_property
     def trigger__pitch_tracking(self) -> bool:
         scfg = self.cfg.trigger.pitch_tracking
         gui = scfg is not None
@@ -664,7 +691,7 @@ class ConfigModel(PresentationModel):
     ]
 
     # Render
-    @property
+    @safe_property
     def render_resolution(self) -> str:
         render = self.cfg.render
         w, h = render.width, render.height
