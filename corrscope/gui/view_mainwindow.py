@@ -452,8 +452,6 @@ class MainWindow(QWidget):
     def retranslateUi(self, MainWindow):
         tr = self.tr
 
-        MainWindow.setWindowTitle(tr("MainWindow"))
-
         self.optionGlobal.setTitle(tr("Global"))
         self.fpsL.setText(tr("FPS"))
         self.trigger_msL.setText(tr("Trigger Width"))
@@ -461,7 +459,6 @@ class MainWindow(QWidget):
         self.amplificationL.setText(tr("Amplification"))
         self.begin_timeL.setText(tr("Begin Time"))
         self.render_resolutionL.setText(tr("Resolution"))
-        self.render_resolution.setText(tr("vs"))
         self.render__bg_colorL.setText(tr("Background"))
         self.render__init_line_colorL.setText(tr("Line Color"))
         self.render__line_widthL.setText(tr("Line Width"))
@@ -472,7 +469,6 @@ class MainWindow(QWidget):
         self.layout__orientationL.setText(tr("Orientation"))
         self.layout__nrowsL.setText(tr("Rows"))
 
-        self.master_audio.setText(tr("/"))
         self.master_audio_browse.setText(tr("&Browse..."))
         self.trigger__edge_strengthL.setText(tr("Edge Strength"))
         self.trigger__pitch_tracking.setText(tr("Pitch Tracking"))
@@ -484,7 +480,6 @@ class MainWindow(QWidget):
         self.channelDown.setText(tr("Down"))
         self.menuFile.setTitle(tr("&File"))
         self.menuTools.setTitle(tr("&Tools"))
-        self.toolBar.setWindowTitle(tr("toolBar"))
         self.actionOpen.setText(tr("&Open"))
         self.actionOpen.setShortcut(tr("Ctrl+O"))
         self.actionSave.setText(tr("&Save"))
