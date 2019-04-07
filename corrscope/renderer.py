@@ -15,7 +15,7 @@ from corrscope.layout import (
     RegionSpec,
     Edges,
 )
-from corrscope.outputs import RGB_DEPTH, ByteBuffer
+from corrscope.outputs import BYTES_PER_PIXEL, ByteBuffer
 from corrscope.util import coalesce
 
 """
@@ -419,7 +419,7 @@ class MatplotlibRenderer(Renderer):
         assert (w, h) == canvas.get_width_height()
 
         buffer_rgb = canvas.tostring_rgb()
-        assert len(buffer_rgb) == w * h * RGB_DEPTH
+        assert len(buffer_rgb) == w * h * BYTES_PER_PIXEL
 
         return buffer_rgb
 
