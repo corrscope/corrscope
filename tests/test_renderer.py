@@ -9,6 +9,7 @@ from corrscope.corrscope import CorrScope, default_config, Arguments
 from corrscope.layout import LayoutConfig
 from corrscope.outputs import BYTES_PER_PIXEL, FFplayOutputConfig
 from corrscope.renderer import RendererConfig, MatplotlibRenderer, LabelPosition, Font
+from corrscope.util import perr
 from corrscope.wave import Flatten
 
 if TYPE_CHECKING:
@@ -233,3 +234,27 @@ def test_stereo_render_integration(mocker: "pytest_mock.MockFixture"):
     # Make sure it doesn't crash.
     corr = CorrScope(cfg, Arguments(".", [FFplayOutputConfig()]))
     corr.play()
+
+
+# Ensure that pathological-case float rounding errors
+# don't cause inconsistent dimensions and assertion errors.
+# TODO hypothesis to autogenerate cases
+@pytest.mark.parametrize(
+    "target_int, res_divisor", [(50, 2.0), (51, 2.0), (100, 1.001)]
+)
+def test_res_divisor_rounding(target_int: int, res_divisor: float):
+    target_dim = target_int + 0.5
+    undivided_dim = round(target_dim * res_divisor)
+
+    cfg = RendererConfig(undivided_dim, undivided_dim, res_divisor=res_divisor)
+    cfg.before_preview()
+
+    datas = [RENDER_Y_ZEROS]
+
+    try:
+        renderer = MatplotlibRenderer(cfg, LayoutConfig(), datas, channel_cfgs=None)
+        renderer.update_main_lines(datas)
+        renderer.get_frame()
+    except Exception:
+        perr(cfg.divided_width)
+        raise

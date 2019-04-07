@@ -117,11 +117,11 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
 
     @property
     def divided_width(self):
-        return round(self.width / self.res_divisor)
+        return int(self.width / self.res_divisor)
 
     @property
     def divided_height(self):
-        return round(self.height / self.res_divisor)
+        return int(self.height / self.res_divisor)
 
     bg_color: str = "#000000"
     init_line_color: str = default_color()
@@ -300,6 +300,9 @@ class MatplotlibRenderer(Renderer):
         self._fig.set_dpi(DPI / cfg.res_divisor)
         self._fig.set_size_inches(self.cfg.width / DPI, self.cfg.height / DPI)
         FigureCanvasAgg(self._fig)
+
+        real_dims = self._fig.canvas.get_width_height()
+        assert (self.w, self.h) == real_dims, [(self.w, self.h), real_dims]
 
         # Setup background
         self._fig.set_facecolor(cfg.bg_color)
@@ -551,8 +554,6 @@ class MatplotlibRenderer(Renderer):
             raise RuntimeError(
                 f"oh shit, cannot read data from {type(canvas)} != FigureCanvasAgg"
             )
-
-        assert (self.w, self.h) == canvas.get_width_height()
 
         buffer_rgb = canvas.tostring_rgb()
         assert len(buffer_rgb) == self.w * self.h * BYTES_PER_PIXEL
