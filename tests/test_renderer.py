@@ -7,7 +7,7 @@ import pytest
 from corrscope.channel import ChannelConfig
 from corrscope.corrscope import CorrScope, default_config, Arguments
 from corrscope.layout import LayoutConfig
-from corrscope.outputs import RGB_DEPTH, FFplayOutputConfig
+from corrscope.outputs import BYTES_PER_PIXEL, FFplayOutputConfig
 from corrscope.renderer import RendererConfig, MatplotlibRenderer
 from corrscope.wave import Flatten
 
@@ -100,7 +100,7 @@ def verify(
 ):
     r.update_main_lines(datas)
     frame_colors: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
-        (-1, RGB_DEPTH)
+        (-1, BYTES_PER_PIXEL)
     )
 
     bg_u8 = to_rgb(bg_str)

@@ -15,7 +15,7 @@ import pytest
 from corrscope.channel import ChannelConfig
 from corrscope.corrscope import default_config, Config, CorrScope, Arguments
 from corrscope.outputs import (
-    RGB_DEPTH,
+    BYTES_PER_PIXEL,
     FFmpegOutput,
     FFmpegOutputConfig,
     FFplayOutput,
@@ -99,7 +99,7 @@ def test_render_output():
 def test_output():
     out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG)
 
-    frame = bytes(WIDTH * HEIGHT * RGB_DEPTH)
+    frame = bytes(WIDTH * HEIGHT * BYTES_PER_PIXEL)
     out.write_frame(frame)
 
     assert out.close() == 0
