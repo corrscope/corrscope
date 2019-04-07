@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 ByteBuffer = Union[bytes, np.ndarray]
-RGB_DEPTH = 3
+BYTES_PER_PIXEL = 3
 PIXEL_FORMAT = "rgb24"
 
 FRAMES_TO_BUFFER = 2
@@ -44,7 +44,7 @@ class Output(ABC):
 
         rcfg = corr_cfg.render
 
-        frame_bytes = rcfg.height * rcfg.width * RGB_DEPTH
+        frame_bytes = rcfg.height * rcfg.width * BYTES_PER_PIXEL
         self.bufsize = frame_bytes * FRAMES_TO_BUFFER
 
     def __enter__(self):
