@@ -8,7 +8,7 @@ from pytest_mock import MockFixture
 
 import corrscope.channel
 import corrscope.corrscope
-from corrscope.channel import ChannelConfig, Channel
+from corrscope.channel import ChannelConfig, Channel, DefaultTitle
 from corrscope.corrscope import default_config, CorrScope, BenchmarkMode, Arguments
 from corrscope.triggers import NullTriggerConfig
 from corrscope.util import coalesce
@@ -18,6 +18,8 @@ from corrscope.wave import Flatten
 positive = hs.integers(min_value=1, max_value=100)
 real = hs.floats(min_value=0, max_value=100)
 maybe_real = hs.one_of(hs.none(), real)
+bools = hs.booleans()
+default_titles = hs.sampled_from(DefaultTitle)
 
 
 @given(
@@ -31,8 +33,10 @@ maybe_real = hs.one_of(hs.none(), real)
     render_ms=positive,
     tsub=positive,
     rsub=positive,
+    default_title=hs.sampled_from(DefaultTitle),
+    override_title=bools,
 )
-def test_config_channel_width_stride(
+def test_config_channel_integration(
     # Channel
     c_amplification: Optional[float],
     c_trigger_width: int,
@@ -43,6 +47,8 @@ def test_config_channel_width_stride(
     render_ms: int,
     tsub: int,
     rsub: int,
+    default_title: DefaultTitle,
+    override_title: bool,
     mocker: MockFixture,
 ):
     """ (Tautologically) verify:
@@ -50,6 +56,7 @@ def test_config_channel_width_stride(
     - channel.t/r_stride (given cfg.*_subsampling/*_width)
     - trigger._tsamp, _stride
     - renderer's method calls(samp, stride)
+    - rendered title (channel.title, given cfg, corr_cfg.use_filename_as_title)
     """
 
     # region setup test variables
@@ -71,6 +78,7 @@ def test_config_channel_width_stride(
         trigger_width=c_trigger_width,
         render_width=c_render_width,
         amplification=c_amplification,
+        title="title" if override_title else "",
     )
 
     def get_cfg():
@@ -81,6 +89,7 @@ def test_config_channel_width_stride(
             render_subsampling=rsub,
             amplification=amplification,
             channels=[ccfg],
+            default_title=default_title,
             trigger=NullTriggerConfig(),
             benchmark_mode=BenchmarkMode.OUTPUT,
         )
@@ -132,6 +141,19 @@ def test_config_channel_width_stride(
     (datas,), kwargs = renderer.update_main_lines.call_args
     render_data = datas[0]
     assert len(render_data) == channel._render_samp
+
+    # Inspect arguments to renderer.add_titles().
+    (titles,), kwargs = renderer.add_titles.call_args
+    title = titles[0]
+    if override_title:
+        assert title == "title"
+    else:
+        if default_title is DefaultTitle.FileName:
+            assert title == "sine440"
+        elif default_title is DefaultTitle.Number:
+            assert title == "1"
+        else:
+            assert title == ""
 
 
 # line_color is tested in test_renderer.py

@@ -1,10 +1,18 @@
+from enum import unique, auto
 from os.path import abspath
+from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union, Dict, Any
 
 import attr
 from ruamel.yaml.comments import CommentedMap
 
-from corrscope.config import DumpableAttrs, Alias, CorrError, evolve_compat
+from corrscope.config import (
+    DumpableAttrs,
+    Alias,
+    CorrError,
+    evolve_compat,
+    TypedEnumDump,
+)
 from corrscope.triggers import MainTriggerConfig
 from corrscope.util import coalesce
 from corrscope.wave import Wave, Flatten
@@ -15,6 +23,7 @@ if TYPE_CHECKING:
 
 class ChannelConfig(DumpableAttrs):
     wav_path: str
+    title: str = ""
 
     # Supplying a dict inherits attributes from global trigger.
     # TODO test channel-specific triggers
@@ -39,6 +48,13 @@ class ChannelConfig(DumpableAttrs):
     # endregion
 
 
+@unique
+class DefaultTitle(TypedEnumDump):
+    NoTitle = 0
+    FileName = auto()
+    Number = auto()
+
+
 class Channel:
     # trigger_samp is unneeded, since __init__ (not CorrScope) constructs triggers.
     _render_samp: int
@@ -47,8 +63,16 @@ class Channel:
     _trigger_stride: int
     _render_stride: int
 
-    def __init__(self, cfg: ChannelConfig, corr_cfg: "Config"):
+    def __init__(self, cfg: ChannelConfig, corr_cfg: "Config", channel_idx: int = 0):
+        """channel_idx counts from 0."""
         self.cfg = cfg
+
+        self.title = cfg.title
+        if not self.title:
+            if corr_cfg.default_title is DefaultTitle.FileName:
+                self.title = Path(cfg.wav_path).stem
+            elif corr_cfg.default_title is DefaultTitle.Number:
+                self.title = str(channel_idx + 1)
 
         # Create a Wave object.
         wave = Wave(

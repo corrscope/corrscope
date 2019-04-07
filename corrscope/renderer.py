@@ -1,13 +1,14 @@
+import enum
 import os
 from abc import ABC, abstractmethod
-from typing import Optional, List, TYPE_CHECKING, Any, Callable
+from typing import Optional, List, TYPE_CHECKING, Any, Callable, TypeVar
 
 import attr
 import matplotlib  # do NOT import anything else until we call matplotlib.use().
 import matplotlib.colors
 import numpy as np
 
-from corrscope.config import DumpableAttrs, with_units
+from corrscope.config import DumpableAttrs, with_units, TypedEnumDump
 from corrscope.layout import (
     RendererLayout,
     LayoutConfig,
@@ -30,7 +31,7 @@ and font cache entries point to invalid paths.
 - https://github.com/pyinstaller/pyinstaller/issues/617
 - https://github.com/pyinstaller/pyinstaller/blob/c06d853c0c4df7480d3fa921851354d4ee11de56/PyInstaller/loader/rthooks/pyi_rth_mplconfig.py#L35-L37
 
-corrscope uses one-folder mode, does not use fonts yet,
+corrscope uses one-folder mode
 and deletes all matplotlib-bundled fonts to save space. So reenable global font cache.
 """
 
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
     from matplotlib.artist import Artist
     from matplotlib.axes import Axes
     from matplotlib.lines import Line2D
+    from matplotlib.text import Text, Annotation
     from corrscope.channel import ChannelConfig
 
 
@@ -57,6 +59,55 @@ def default_color() -> str:
     #
     # return matplotlib.colors.to_hex(colors, keep_alpha=False)
     return "#ffffff"
+
+
+T = TypeVar("T")
+
+
+class TitleX(enum.Enum):
+    Left = enum.auto()
+    Right = enum.auto()
+
+    def match(self, *, left: T, right: T) -> T:
+        if self is self.Left:
+            return left
+        if self is self.Right:
+            return right
+        raise ValueError("failed match")
+
+
+class TitleY(enum.Enum):
+    Bottom = enum.auto()
+    Top = enum.auto()
+
+    def match(self, *, bottom: T, top: T) -> T:
+        if self is self.Bottom:
+            return bottom
+        if self is self.Top:
+            return top
+        raise ValueError("failed match")
+
+
+class TitlePosition(TypedEnumDump):
+    def __init__(self, x: TitleX, y: TitleY):
+        self.x = x
+        self.y = y
+
+    LeftBottom = (TitleX.Left, TitleY.Bottom)
+    LeftTop = (TitleX.Left, TitleY.Top)
+    RightBottom = (TitleX.Right, TitleY.Bottom)
+    RightTop = (TitleX.Right, TitleY.Top)
+
+
+class Font(DumpableAttrs, always_dump="*"):
+    # Font file selection
+    family: Optional[str] = None
+    bold: bool = False
+    italic: bool = False
+    # Font size
+    size: float = with_units("pt", default=20)
+    # QFont implementation details
+    toString: str = None
 
 
 class RendererConfig(DumpableAttrs, always_dump="*"):
@@ -73,6 +124,18 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     midline_color: Optional[str] = None
     v_midline: bool = False
     h_midline: bool = False
+
+    # Title settings
+    font: Font = attr.ib(factory=Font)
+
+    title_position: TitlePosition = TitlePosition.LeftTop
+    # The text will be located (title_padding_ratio * font.size) from the corner.
+    title_padding_ratio: float = with_units("px/pt", default=0.5)
+    font_color_override: Optional[str] = None
+
+    @property
+    def get_font_color(self):
+        return coalesce(self.font_color_override, self.init_line_color)
 
     antialiasing: bool = True
 
@@ -148,6 +211,10 @@ class Renderer(ABC):
 
     @abstractmethod
     def get_frame(self) -> ByteBuffer:
+        ...
+
+    @abstractmethod
+    def add_titles(self, titles: List[str]) -> Any:
         ...
 
 
@@ -399,6 +466,67 @@ class MatplotlibRenderer(Renderer):
             for chan_idx, chan_data in enumerate(wave_data.T):
                 chan_line = wave_lines[chan_idx]
                 chan_line.set_ydata(chan_data)
+
+    # Channel titles
+    def add_titles(self, titles: List[str]) -> List["Text"]:
+        """
+        Updates background, adds text.
+        Do NOT call after calling self.add_lines().
+        """
+        ntitle = len(titles)
+        if ntitle != self.nplots:
+            raise ValueError(
+                f"incorrect titles: {self.nplots} plots but {ntitle} titles"
+            )
+
+        cfg = self.cfg
+        color = cfg.get_font_color
+
+        size_pt = cfg.font.size
+        distance_px = cfg.title_padding_ratio * size_pt
+
+        @attr.dataclass
+        class AxisPosition:
+            pos_axes: float
+            offset_px: float
+            align: str
+
+        xpos = cfg.title_position.x.match(
+            left=AxisPosition(0, distance_px, "left"),
+            right=AxisPosition(1, -distance_px, "right"),
+        )
+        ypos = cfg.title_position.y.match(
+            bottom=AxisPosition(0, distance_px, "bottom"),
+            top=AxisPosition(1, -distance_px, "top"),
+        )
+
+        pos_axes = (xpos.pos_axes, ypos.pos_axes)
+        offset_px = (xpos.offset_px, ypos.offset_px)
+
+        out: List["Text"] = []
+        for title_text, ax in zip(titles, self._axes_mono):
+            # https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.annotate.html
+            # Annotation subclasses Text.
+            text: "Annotation" = ax.annotate(
+                title_text,
+                # Positioning
+                xy=pos_axes,
+                xycoords="axes fraction",
+                xytext=offset_px,
+                textcoords="offset pixels",
+                horizontalalignment=xpos.align,
+                verticalalignment=ypos.align,
+                # Cosmetics
+                color=color,
+                fontsize=size_pt,
+                fontfamily=cfg.font.family,
+                fontweight=("bold" if cfg.font.bold else "normal"),
+                fontstyle=("italic" if cfg.font.italic else "normal"),
+            )
+            out.append(text)
+
+        self._save_background()
+        return out
 
     # Output frames
     def get_frame(self) -> ByteBuffer:

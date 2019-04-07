@@ -10,7 +10,7 @@ from typing import Optional, List, Callable
 import attr
 
 from corrscope import outputs as outputs_
-from corrscope.channel import Channel, ChannelConfig
+from corrscope.channel import Channel, ChannelConfig, DefaultTitle
 from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
 from corrscope.outputs import FFmpegOutputConfig
@@ -85,6 +85,7 @@ class Config(
 
     # Multiplies by trigger_width, render_width. Can override trigger.
     channels: List[ChannelConfig]
+    default_title: DefaultTitle = DefaultTitle.NoTitle
 
     layout: LayoutConfig
     render: RendererConfig
@@ -197,7 +198,10 @@ class CorrScope:
                 raise CorrError(
                     f'File not found: master_audio="{self.cfg.master_audio}"'
                 )
-            self.channels = [Channel(ccfg, self.cfg) for ccfg in self.cfg.channels]
+            self.channels = [
+                Channel(ccfg, self.cfg, idx)
+                for idx, ccfg in enumerate(self.cfg.channels)
+            ]
             self.trigger_waves = [channel.trigger_wave for channel in self.channels]
             self.render_waves = [channel.render_wave for channel in self.channels]
             self.triggers = [channel.trigger for channel in self.channels]
@@ -239,6 +243,8 @@ class CorrScope:
 
         renderer = self._load_renderer()
         self.renderer = renderer  # only used for unit tests
+
+        renderer.add_titles([channel.title for channel in self.channels])
 
         if PRINT_TIMESTAMP:
             begin = time.perf_counter()

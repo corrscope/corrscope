@@ -26,7 +26,7 @@ from PyQt5.QtGui import QFont, QCloseEvent, QDesktopServices
 import corrscope
 import corrscope.settings.global_prefs as gp
 from corrscope import cli
-from corrscope.channel import ChannelConfig
+from corrscope.channel import ChannelConfig, DefaultTitle
 from corrscope.config import CorrError, copy_config, yaml
 from corrscope.corrscope import CorrScope, Config, Arguments, default_config
 from corrscope.gui.history_file_dlg import (
@@ -49,6 +49,7 @@ from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
 from corrscope.layout import Orientation, StereoOrientation
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig
+from corrscope.renderer import TitlePosition
 from corrscope.settings import paths
 from corrscope.triggers import (
     CorrelationTriggerConfig,
@@ -56,7 +57,7 @@ from corrscope.triggers import (
     SpectrumConfig,
     ZeroCrossingTriggerConfig,
 )
-from corrscope.util import obj_name, iround
+from corrscope.util import obj_name, iround, coalesce
 from corrscope.wave import Flatten
 
 FILTER_WAV_FILES = ["WAV files (*.wav)"]
@@ -718,6 +719,54 @@ class ConfigModel(PresentationModel):
 
     render__line_width = default_property("render__line_width", 1.5)
 
+    combo_symbol_text["default_title"] = [
+        (DefaultTitle.NoTitle, MainWindow.tr("None", "Default Title")),
+        (DefaultTitle.FileName, MainWindow.tr("File Name", "Default Title")),
+        (DefaultTitle.Number, MainWindow.tr("Number", "Default Title")),
+    ]
+
+    combo_symbol_text["render.title_position"] = [
+        (TitlePosition.LeftTop, "Top Left"),
+        (TitlePosition.LeftBottom, "Bottom Left"),
+        (TitlePosition.RightTop, "Top Right"),
+        (TitlePosition.RightBottom, "Bottom Right"),
+    ]
+
+    @safe_property
+    def render__qfont(self) -> QFont:
+        qfont = QFont()
+        qfont.setStyleHint(QFont.SansSerif)  # no-op on X11
+
+        font = self.cfg.render.font
+        if font.toString:
+            qfont.fromString(font.toString)
+            return qfont
+
+        # Passing None or "" to QFont(family) results in qfont.family() = "", and
+        # wrong font being selected (Abyssinica SIL, which appears early in the list).
+        family = coalesce(font.family, qfont.defaultFamily())
+        # Font file selection
+        qfont.setFamily(family)
+        qfont.setBold(font.bold)
+        qfont.setItalic(font.italic)
+        # Font size
+        qfont.setPointSizeF(font.size)
+        return qfont
+
+    @render__qfont.setter
+    def render__qfont(self, qfont: QFont):
+        self.cfg.render.font = attr.evolve(
+            self.cfg.render.font,
+            # Font file selection
+            family=qfont.family(),
+            bold=qfont.bold(),
+            italic=qfont.italic(),
+            # Font size
+            size=qfont.pointSizeF(),
+            # QFont implementation details
+            toString=qfont.toString(),
+        )
+
     # Layout
     layout__nrows = nrow_ncol_property("nrows", unaltered="ncols")
     layout__ncols = nrow_ncol_property("ncols", unaltered="nrows")
@@ -740,6 +789,9 @@ class ConfigModel(PresentationModel):
 class Column:
     key: str
     cls: Union[type, Callable[[str], Any]]
+
+    # `default` is written into config,
+    # when users type "blank or whitespace" into table cell.
     default: Any
 
     def _display_name(self) -> str:
@@ -793,6 +845,7 @@ class ChannelModel(qc.QAbstractTableModel):
     # columns
     col_data = [
         Column("wav_path", path_strip_quotes, "", "WAV Path"),
+        Column("title", str, "", "Title"),
         Column("amplification", float, None, "Amplification\n(override)"),
         Column("line_color", str, None, "Line Color"),
         Column("render_stereo", str, None, "Render Stereo\nDownmix"),
