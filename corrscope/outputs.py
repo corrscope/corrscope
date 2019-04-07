@@ -44,7 +44,7 @@ class Output(ABC):
 
         rcfg = corr_cfg.render
 
-        frame_bytes = rcfg.height * rcfg.width * BYTES_PER_PIXEL
+        frame_bytes = rcfg.divided_height * rcfg.divided_width * BYTES_PER_PIXEL
         self.bufsize = frame_bytes * FRAMES_TO_BUFFER
 
     def __enter__(self):
@@ -116,8 +116,8 @@ class _FFmpegProcess:
 
 def ffmpeg_input_video(cfg: "Config") -> List[str]:
     fps = cfg.render_fps
-    width = cfg.render.width
-    height = cfg.render.height
+    width = cfg.render.divided_width
+    height = cfg.render.divided_height
 
     return [
         f"-f rawvideo -pixel_format {PIXEL_FORMAT} -video_size {width}x{height}",

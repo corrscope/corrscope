@@ -115,6 +115,14 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     height: int
     line_width: float = with_units("px", default=1.5)
 
+    @property
+    def divided_width(self):
+        return round(self.width / self.res_divisor)
+
+    @property
+    def divided_height(self):
+        return round(self.height / self.res_divisor)
+
     bg_color: str = "#000000"
     init_line_color: str = default_color()
 
@@ -148,14 +156,12 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
         assert isinstance(self.height, (int, float))
 
     def before_preview(self) -> None:
-        """ Called *once* before preview. Decreases render resolution/etc. """
-        self.width = round(self.width / self.res_divisor)
-        self.height = round(self.height / self.res_divisor)
-        self.line_width /= self.res_divisor
+        """ Called *once* before preview. Does nothing. """
+        pass
 
     def before_record(self) -> None:
-        """ Called *once* before recording video. Does nothing yet. """
-        pass
+        """ Called *once* before recording video. Eliminates res_divisor. """
+        self.res_divisor = 1
 
 
 @attr.dataclass
@@ -177,8 +183,8 @@ class Renderer(ABC):
         self.cfg = cfg
         self.lcfg = lcfg
 
-        self.w = cfg.width
-        self.h = cfg.height
+        self.w = cfg.divided_width
+        self.h = cfg.divided_height
 
         self.nplots = len(dummy_datas)
 
@@ -291,7 +297,7 @@ class MatplotlibRenderer(Renderer):
         cfg = self.cfg
 
         self._fig = Figure()
-        self._fig.set_dpi(DPI)
+        self._fig.set_dpi(DPI / cfg.res_divisor)
         self._fig.set_size_inches(self.cfg.width / DPI, self.cfg.height / DPI)
         FigureCanvasAgg(self._fig)
 
@@ -505,7 +511,7 @@ class MatplotlibRenderer(Renderer):
         )
 
         pos_axes = (xpos.pos_axes, ypos.pos_axes)
-        offset_px = (xpos.offset_px, ypos.offset_px)
+        offset_pt = (pixels(xpos.offset_px), pixels(ypos.offset_px))
 
         out: List["Text"] = []
         for label_text, ax in zip(labels, self._axes_mono):
@@ -516,8 +522,8 @@ class MatplotlibRenderer(Renderer):
                 # Positioning
                 xy=pos_axes,
                 xycoords="axes fraction",
-                xytext=offset_px,
-                textcoords="offset pixels",
+                xytext=offset_pt,
+                textcoords="offset points",
                 horizontalalignment=xpos.align,
                 verticalalignment=ypos.align,
                 # Cosmetics
@@ -546,12 +552,10 @@ class MatplotlibRenderer(Renderer):
                 f"oh shit, cannot read data from {type(canvas)} != FigureCanvasAgg"
             )
 
-        w = self.cfg.width
-        h = self.cfg.height
-        assert (w, h) == canvas.get_width_height()
+        assert (self.w, self.h) == canvas.get_width_height()
 
         buffer_rgb = canvas.tostring_rgb()
-        assert len(buffer_rgb) == w * h * BYTES_PER_PIXEL
+        assert len(buffer_rgb) == self.w * self.h * BYTES_PER_PIXEL
 
         return buffer_rgb
 
