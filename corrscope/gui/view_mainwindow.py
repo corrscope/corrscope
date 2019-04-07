@@ -308,7 +308,7 @@ class MainWindow(QWidget):
             with append_widget(
                 s,
                 QGroupBox,
-                title=tr("Slope Triggering (for PSG/FM)"),
+                title=tr("Slope Triggering (for PSG/C64/FM)"),
                 layout=QFormLayout,
             ):
                 with add_row(
