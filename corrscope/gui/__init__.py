@@ -614,6 +614,7 @@ def nrow_ncol_property(altered: str, unaltered: str) -> SafeProperty:
     return safe_property(get, set)
 
 
+# Unused
 def default_property(path: str, default: Any) -> SafeProperty:
     def getter(self: "ConfigModel"):
         val = rgetattr(self.cfg, path)
@@ -716,8 +717,6 @@ class ConfigModel(PresentationModel):
             render.height = int(height)
         except ValueError:
             raise error
-
-    render__line_width = default_property("render__line_width", 1.5)
 
     combo_symbol_text["default_label"] = [
         (DefaultLabel.NoLabel, MainWindow.tr("None", "Default Label")),
