@@ -1,8 +1,10 @@
 from typing import Optional, TYPE_CHECKING, List
 
+import hypothesis.strategies as hs
 import matplotlib.colors
 import numpy as np
 import pytest
+from hypothesis import given
 
 from corrscope.channel import ChannelConfig
 from corrscope.corrscope import CorrScope, default_config, Arguments
@@ -236,25 +238,43 @@ def test_stereo_render_integration(mocker: "pytest_mock.MockFixture"):
     corr.play()
 
 
-# Ensure that pathological-case float rounding errors
-# don't cause inconsistent dimensions and assertion errors.
-# TODO hypothesis to autogenerate cases
 @pytest.mark.parametrize(
     "target_int, res_divisor", [(50, 2.0), (51, 2.0), (100, 1.001)]
 )
-def test_res_divisor_rounding(target_int: int, res_divisor: float):
+def test_res_divisor_rounding_fixed(target_int: int, res_divisor: float):
+    verify_res_divisor_rounding(target_int, res_divisor, speed_hack=False)
+
+
+@given(target_int=hs.integers(1, 10000), res_divisor=hs.floats(1, 100))
+def test_res_divisor_rounding_hypothesis(target_int: int, res_divisor: float, mocker):
+    verify_res_divisor_rounding(target_int, res_divisor, speed_hack=True, mocker=mocker)
+
+
+def verify_res_divisor_rounding(
+    target_int: int,
+    res_divisor: float,
+    speed_hack: bool,
+    mocker: "pytest_mock.MockFixture" = None,
+):
+    """Ensure that pathological-case float rounding errors
+    don't cause inconsistent dimensions and assertion errors."""
     target_dim = target_int + 0.5
     undivided_dim = round(target_dim * res_divisor)
 
     cfg = RendererConfig(undivided_dim, undivided_dim, res_divisor=res_divisor)
     cfg.before_preview()
 
-    datas = [RENDER_Y_ZEROS]
+    if speed_hack:
+        mocker.patch.object(MatplotlibRenderer, "_save_background")
+        datas = []
+    else:
+        datas = [RENDER_Y_ZEROS]
 
     try:
         renderer = MatplotlibRenderer(cfg, LayoutConfig(), datas, channel_cfgs=None)
-        renderer.update_main_lines(datas)
-        renderer.get_frame()
+        if not speed_hack:
+            renderer.update_main_lines(datas)
+            renderer.get_frame()
     except Exception:
         perr(cfg.divided_width)
         raise

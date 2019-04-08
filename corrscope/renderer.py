@@ -188,7 +188,8 @@ class Renderer(ABC):
 
         self.nplots = len(dummy_datas)
 
-        assert len(dummy_datas[0].shape) == 2, dummy_datas[0].shape
+        if self.nplots > 0:
+            assert len(dummy_datas[0].shape) == 2, dummy_datas[0].shape
         self.wave_nsamps = [data.shape[0] for data in dummy_datas]
         self.wave_nchans = [data.shape[1] for data in dummy_datas]
 
