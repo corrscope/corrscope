@@ -176,6 +176,10 @@ class Renderer(ABC):
     ):
         self.cfg = cfg
         self.lcfg = lcfg
+
+        self.w = cfg.width
+        self.h = cfg.height
+
         self.nplots = len(dummy_datas)
 
         assert len(dummy_datas[0].shape) == 2, dummy_datas[0].shape

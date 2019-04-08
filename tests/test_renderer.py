@@ -156,13 +156,21 @@ def to_rgb(c) -> np.ndarray:
 # Test label positioning and rendering
 @parametrize("label_position", LabelPosition.__members__.values())
 @parametrize("data", [RENDER_Y_ZEROS, RENDER_Y_STEREO])
-def test_label_render(label_position: LabelPosition, data):
+@parametrize("hide_lines", [True, False])
+def test_label_render(label_position: LabelPosition, data, hide_lines):
     """Test that text labels are drawn:
     - in the correct quadrant
-    - with the correct color
+    - with the correct color (defaults to init_line_color)
+    - even if no lines are drawn at all
     """
     font_str = "#FF00FF"
     font_u8 = to_rgb(font_str)
+
+    # If hide_lines: set line color to purple, draw text using the line color.
+    # Otherwise: draw lines white, draw text purple,
+    cfg_kwargs = {}
+    if hide_lines:
+        cfg_kwargs.update(init_line_color=font_str)
 
     cfg = RendererConfig(
         WIDTH,
@@ -171,6 +179,7 @@ def test_label_render(label_position: LabelPosition, data):
         label_font=Font(size=16, bold=True),
         label_position=label_position,
         label_color_override=font_str,
+        **cfg_kwargs,
     )
 
     lcfg = LayoutConfig()
@@ -181,7 +190,9 @@ def test_label_render(label_position: LabelPosition, data):
 
     r = MatplotlibRenderer(cfg, lcfg, datas, None)
     r.add_labels(labels)
-    r.update_main_lines(datas)
+    if not hide_lines:
+        r.update_main_lines(datas)
+
     frame_buffer: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
         (r.h, r.w, BYTES_PER_PIXEL)
     )
