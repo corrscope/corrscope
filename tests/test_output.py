@@ -339,6 +339,8 @@ def test_preview_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
 
     cfg = cfg_192x108()
     corr = CorrScope(cfg, Arguments(".", outputs))
+
+    # Run corrscope main loop.
     corr.play()
 
     # Check that only before_preview() called.
@@ -348,8 +350,8 @@ def test_preview_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
         r.assert_not_called()
 
     # Check renderer is 128x72
-    assert corr.renderer.cfg.width == 128
-    assert corr.renderer.cfg.height == 72
+    assert corr.renderer.w == 128
+    assert corr.renderer.h == 72
 
     # Ensure subfps is enabled (only odd frames are rendered, 1..29).
     # See CorrScope `should_render` variable.
