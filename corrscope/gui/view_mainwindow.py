@@ -170,13 +170,15 @@ class MainWindow(QWidget):
                     pass
 
             with append_widget(s, QGroupBox, title=tr("Labels"), layout=QFormLayout):
-                with add_row(s, tr("Font"), BoundFontButton, name="render__qfont"):
+                with add_row(
+                    s, tr("Font"), BoundFontButton, name="render__label_qfont"
+                ):
                     pass
                 with add_row(
                     s,
                     tr("Font Color"),
                     OptionalColorWidget,
-                    name="render.font_color_override",
+                    name="render.label_color_override",
                 ):
                     pass
 

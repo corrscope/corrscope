@@ -168,9 +168,9 @@ def test_label_render(label_position: LabelPosition, data):
         WIDTH,
         HEIGHT,
         antialiasing=False,
-        font=Font(size=16, bold=True),
+        label_font=Font(size=16, bold=True),
         label_position=label_position,
-        font_color_override=font_str,
+        label_color_override=font_str,
     )
 
     lcfg = LayoutConfig()

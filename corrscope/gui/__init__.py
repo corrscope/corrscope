@@ -733,11 +733,11 @@ class ConfigModel(PresentationModel):
     ]
 
     @safe_property
-    def render__qfont(self) -> QFont:
+    def render__label_qfont(self) -> QFont:
         qfont = QFont()
         qfont.setStyleHint(QFont.SansSerif)  # no-op on X11
 
-        font = self.cfg.render.font
+        font = self.cfg.render.label_font
         if font.toString:
             qfont.fromString(font.toString)
             return qfont
@@ -753,10 +753,10 @@ class ConfigModel(PresentationModel):
         qfont.setPointSizeF(font.size)
         return qfont
 
-    @render__qfont.setter
-    def render__qfont(self, qfont: QFont):
-        self.cfg.render.font = attr.evolve(
-            self.cfg.render.font,
+    @render__label_qfont.setter
+    def render__label_qfont(self, qfont: QFont):
+        self.cfg.render.label_font = attr.evolve(
+            self.cfg.render.label_font,
             # Font file selection
             family=qfont.family(),
             bold=qfont.bold(),

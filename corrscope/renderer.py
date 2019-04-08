@@ -126,16 +126,16 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     h_midline: bool = False
 
     # Label settings
-    font: Font = attr.ib(factory=Font)
+    label_font: Font = attr.ib(factory=Font)
 
     label_position: LabelPosition = LabelPosition.LeftTop
-    # The text will be located (label_padding_ratio * font.size) from the corner.
+    # The text will be located (label_padding_ratio * label_font.size) from the corner.
     label_padding_ratio: float = with_units("px/pt", default=0.5)
-    font_color_override: Optional[str] = None
+    label_color_override: Optional[str] = None
 
     @property
-    def get_font_color(self):
-        return coalesce(self.font_color_override, self.init_line_color)
+    def get_label_color(self):
+        return coalesce(self.label_color_override, self.init_line_color)
 
     antialiasing: bool = True
 
@@ -480,9 +480,9 @@ class MatplotlibRenderer(Renderer):
             )
 
         cfg = self.cfg
-        color = cfg.get_font_color
+        color = cfg.get_label_color
 
-        size_pt = cfg.font.size
+        size_pt = cfg.label_font.size
         distance_px = cfg.label_padding_ratio * size_pt
 
         @attr.dataclass
@@ -519,9 +519,9 @@ class MatplotlibRenderer(Renderer):
                 # Cosmetics
                 color=color,
                 fontsize=size_pt,
-                fontfamily=cfg.font.family,
-                fontweight=("bold" if cfg.font.bold else "normal"),
-                fontstyle=("italic" if cfg.font.italic else "normal"),
+                fontfamily=cfg.label_font.family,
+                fontweight=("bold" if cfg.label_font.bold else "normal"),
+                fontstyle=("italic" if cfg.label_font.italic else "normal"),
             )
             out.append(text)
 
