@@ -8,11 +8,14 @@ from corrscope.channel import ChannelConfig
 from corrscope.corrscope import CorrScope, default_config, Arguments
 from corrscope.layout import LayoutConfig
 from corrscope.outputs import BYTES_PER_PIXEL, FFplayOutputConfig
-from corrscope.renderer import RendererConfig, MatplotlibRenderer
+from corrscope.renderer import RendererConfig, MatplotlibRenderer, LabelPosition, Font
 from corrscope.wave import Flatten
 
 if TYPE_CHECKING:
     import pytest_mock
+
+parametrize = pytest.mark.parametrize
+
 
 WIDTH = 64
 HEIGHT = 64
@@ -148,6 +151,57 @@ def verify(
 def to_rgb(c) -> np.ndarray:
     to_rgb = matplotlib.colors.to_rgb
     return np.array([round(c * 255) for c in to_rgb(c)], dtype=int)
+
+
+# Test label positioning and rendering
+@parametrize("label_position", LabelPosition.__members__.values())
+@parametrize("data", [RENDER_Y_ZEROS, RENDER_Y_STEREO])
+def test_label_render(label_position: LabelPosition, data):
+    """Test that text labels are drawn:
+    - in the correct quadrant
+    - with the correct color
+    """
+    font_str = "#FF00FF"
+    font_u8 = to_rgb(font_str)
+
+    cfg = RendererConfig(
+        WIDTH,
+        HEIGHT,
+        antialiasing=False,
+        font=Font(size=16, bold=True),
+        label_position=label_position,
+        font_color_override=font_str,
+    )
+
+    lcfg = LayoutConfig()
+
+    nplots = 1
+    labels = ["#"] * nplots
+    datas = [data] * nplots
+
+    r = MatplotlibRenderer(cfg, lcfg, datas, None)
+    r.add_labels(labels)
+    r.update_main_lines(datas)
+    frame_buffer: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
+        (r.h, r.w, BYTES_PER_PIXEL)
+    )
+    # Allow mutation
+    frame_buffer = frame_buffer.copy()
+
+    yslice = label_position.y.match(
+        top=slice(None, r.h // 2), bottom=slice(r.h // 2, None)
+    )
+    xslice = label_position.x.match(
+        left=slice(None, r.w // 2), right=slice(r.w // 2, None)
+    )
+    quadrant = frame_buffer[yslice, xslice]
+
+    assert np.prod(quadrant == font_u8, axis=-1).any(), "Missing text"
+
+    quadrant[:] = 0
+    assert not np.prod(
+        frame_buffer == font_u8, axis=-1
+    ).any(), "Text appeared in wrong area of screen"
 
 
 # Stereo *renderer* integration tests.
