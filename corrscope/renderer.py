@@ -127,9 +127,9 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     init_line_color: str = default_color()
 
     grid_color: Optional[str] = None
-    stereo_grid_opacity: float = 0.5
+    stereo_grid_opacity: float = 0.25
 
-    midline_color: Optional[str] = None
+    midline_color: Optional[str] = "#202020"
     v_midline: bool = False
     h_midline: bool = False
 
