@@ -3,13 +3,19 @@
 ### Breaking Changes
 
 - Reorganize GUI, move trigger options to tab
+- Improve NES triangle triggering, switch data window to Gaussian (#244)
 
 ### Features
 
+- Add support for per-channel labels (#256)
+    - Some fonts may not work or display the wrong weight, due to Matplotlib issues.
 - Add Ctrl+Tab or Ctrl+PageUp/Down shortcuts to switch GUI tabs
 
 ### Changelog
 
+- Quit GUI when pressing Ctrl-C in terminal (#252)
+- Refactor renderer API
+- Rewrite resolution division system to use internal DPI (#264)
 
 ## 0.4.0
 
