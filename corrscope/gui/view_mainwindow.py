@@ -169,7 +169,7 @@ class MainWindow(QWidget):
                 ):
                     pass
 
-            with append_widget(s, QGroupBox, title=tr("Titles"), layout=QFormLayout):
+            with append_widget(s, QGroupBox, title=tr("Labels"), layout=QFormLayout):
                 with add_row(s, tr("Font"), BoundFontButton, name="render__qfont"):
                     pass
                 with add_row(
@@ -181,20 +181,20 @@ class MainWindow(QWidget):
                     pass
 
                 with add_row(
-                    s, tr("Title Position"), BoundComboBox, name="render.title_position"
+                    s, tr("Label Position"), BoundComboBox, name="render.label_position"
                 ):
                     pass
                 with add_row(
                     s,
-                    tr("Title Padding"),
+                    tr("Label Padding"),
                     BoundDoubleSpinBox,
-                    name="render.title_padding_ratio",
+                    name="render.label_padding_ratio",
                     maximum=10,
                     singleStep=0.25,
                 ):
                     pass
                 with add_row(
-                    s, tr("Default Title"), BoundComboBox, name="default_title"
+                    s, tr("Default Label"), BoundComboBox, name="default_label"
                 ):
                     pass
 

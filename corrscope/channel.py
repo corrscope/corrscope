@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 class ChannelConfig(DumpableAttrs):
     wav_path: str
-    title: str = ""
+    label: str = ""
 
     # Supplying a dict inherits attributes from global trigger.
     # TODO test channel-specific triggers
@@ -49,8 +49,8 @@ class ChannelConfig(DumpableAttrs):
 
 
 @unique
-class DefaultTitle(TypedEnumDump):
-    NoTitle = 0
+class DefaultLabel(TypedEnumDump):
+    NoLabel = 0
     FileName = auto()
     Number = auto()
 
@@ -67,12 +67,12 @@ class Channel:
         """channel_idx counts from 0."""
         self.cfg = cfg
 
-        self.title = cfg.title
-        if not self.title:
-            if corr_cfg.default_title is DefaultTitle.FileName:
-                self.title = Path(cfg.wav_path).stem
-            elif corr_cfg.default_title is DefaultTitle.Number:
-                self.title = str(channel_idx + 1)
+        self.label = cfg.label
+        if not self.label:
+            if corr_cfg.default_label is DefaultLabel.FileName:
+                self.label = Path(cfg.wav_path).stem
+            elif corr_cfg.default_label is DefaultLabel.Number:
+                self.label = str(channel_idx + 1)
 
         # Create a Wave object.
         wave = Wave(

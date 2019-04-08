@@ -26,7 +26,7 @@ from PyQt5.QtGui import QFont, QCloseEvent, QDesktopServices
 import corrscope
 import corrscope.settings.global_prefs as gp
 from corrscope import cli
-from corrscope.channel import ChannelConfig, DefaultTitle
+from corrscope.channel import ChannelConfig, DefaultLabel
 from corrscope.config import CorrError, copy_config, yaml
 from corrscope.corrscope import CorrScope, Config, Arguments, default_config
 from corrscope.gui.history_file_dlg import (
@@ -49,7 +49,7 @@ from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
 from corrscope.layout import Orientation, StereoOrientation
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig
-from corrscope.renderer import TitlePosition
+from corrscope.renderer import LabelPosition
 from corrscope.settings import paths
 from corrscope.triggers import (
     CorrelationTriggerConfig,
@@ -719,17 +719,17 @@ class ConfigModel(PresentationModel):
 
     render__line_width = default_property("render__line_width", 1.5)
 
-    combo_symbol_text["default_title"] = [
-        (DefaultTitle.NoTitle, MainWindow.tr("None", "Default Title")),
-        (DefaultTitle.FileName, MainWindow.tr("File Name", "Default Title")),
-        (DefaultTitle.Number, MainWindow.tr("Number", "Default Title")),
+    combo_symbol_text["default_label"] = [
+        (DefaultLabel.NoLabel, MainWindow.tr("None", "Default Label")),
+        (DefaultLabel.FileName, MainWindow.tr("File Name", "Default Label")),
+        (DefaultLabel.Number, MainWindow.tr("Number", "Default Label")),
     ]
 
-    combo_symbol_text["render.title_position"] = [
-        (TitlePosition.LeftTop, "Top Left"),
-        (TitlePosition.LeftBottom, "Bottom Left"),
-        (TitlePosition.RightTop, "Top Right"),
-        (TitlePosition.RightBottom, "Bottom Right"),
+    combo_symbol_text["render.label_position"] = [
+        (LabelPosition.LeftTop, "Top Left"),
+        (LabelPosition.LeftBottom, "Bottom Left"),
+        (LabelPosition.RightTop, "Top Right"),
+        (LabelPosition.RightBottom, "Bottom Right"),
     ]
 
     @safe_property
@@ -845,7 +845,7 @@ class ChannelModel(qc.QAbstractTableModel):
     # columns
     col_data = [
         Column("wav_path", path_strip_quotes, "", "WAV Path"),
-        Column("title", str, "", "Title"),
+        Column("label", str, "", "Label"),
         Column("amplification", float, None, "Amplification\n(override)"),
         Column("line_color", str, None, "Line Color"),
         Column("render_stereo", str, None, "Render Stereo\nDownmix"),

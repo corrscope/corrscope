@@ -10,7 +10,7 @@ from typing import Optional, List, Callable
 import attr
 
 from corrscope import outputs as outputs_
-from corrscope.channel import Channel, ChannelConfig, DefaultTitle
+from corrscope.channel import Channel, ChannelConfig, DefaultLabel
 from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
 from corrscope.outputs import FFmpegOutputConfig
@@ -85,7 +85,7 @@ class Config(
 
     # Multiplies by trigger_width, render_width. Can override trigger.
     channels: List[ChannelConfig]
-    default_title: DefaultTitle = DefaultTitle.NoTitle
+    default_label: DefaultLabel = DefaultLabel.NoLabel
 
     layout: LayoutConfig
     render: RendererConfig
@@ -244,7 +244,7 @@ class CorrScope:
         renderer = self._load_renderer()
         self.renderer = renderer  # only used for unit tests
 
-        renderer.add_titles([channel.title for channel in self.channels])
+        renderer.add_labels([channel.label for channel in self.channels])
 
         if PRINT_TIMESTAMP:
             begin = time.perf_counter()

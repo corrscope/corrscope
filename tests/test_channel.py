@@ -8,7 +8,7 @@ from pytest_mock import MockFixture
 
 import corrscope.channel
 import corrscope.corrscope
-from corrscope.channel import ChannelConfig, Channel, DefaultTitle
+from corrscope.channel import ChannelConfig, Channel, DefaultLabel
 from corrscope.corrscope import default_config, CorrScope, BenchmarkMode, Arguments
 from corrscope.triggers import NullTriggerConfig
 from corrscope.util import coalesce
@@ -19,7 +19,7 @@ positive = hs.integers(min_value=1, max_value=100)
 real = hs.floats(min_value=0, max_value=100)
 maybe_real = hs.one_of(hs.none(), real)
 bools = hs.booleans()
-default_titles = hs.sampled_from(DefaultTitle)
+default_labels = hs.sampled_from(DefaultLabel)
 
 
 @given(
@@ -33,8 +33,8 @@ default_titles = hs.sampled_from(DefaultTitle)
     render_ms=positive,
     tsub=positive,
     rsub=positive,
-    default_title=hs.sampled_from(DefaultTitle),
-    override_title=bools,
+    default_label=hs.sampled_from(DefaultLabel),
+    override_label=bools,
 )
 def test_config_channel_integration(
     # Channel
@@ -47,8 +47,8 @@ def test_config_channel_integration(
     render_ms: int,
     tsub: int,
     rsub: int,
-    default_title: DefaultTitle,
-    override_title: bool,
+    default_label: DefaultLabel,
+    override_label: bool,
     mocker: MockFixture,
 ):
     """ (Tautologically) verify:
@@ -78,7 +78,7 @@ def test_config_channel_integration(
         trigger_width=c_trigger_width,
         render_width=c_render_width,
         amplification=c_amplification,
-        title="title" if override_title else "",
+        label="label" if override_label else "",
     )
 
     def get_cfg():
@@ -89,7 +89,7 @@ def test_config_channel_integration(
             render_subsampling=rsub,
             amplification=amplification,
             channels=[ccfg],
-            default_title=default_title,
+            default_label=default_label,
             trigger=NullTriggerConfig(),
             benchmark_mode=BenchmarkMode.OUTPUT,
         )
@@ -142,18 +142,18 @@ def test_config_channel_integration(
     render_data = datas[0]
     assert len(render_data) == channel._render_samp
 
-    # Inspect arguments to renderer.add_titles().
-    (titles,), kwargs = renderer.add_titles.call_args
-    title = titles[0]
-    if override_title:
-        assert title == "title"
+    # Inspect arguments to renderer.add_labels().
+    (labels,), kwargs = renderer.add_labels.call_args
+    label = labels[0]
+    if override_label:
+        assert label == "label"
     else:
-        if default_title is DefaultTitle.FileName:
-            assert title == "sine440"
-        elif default_title is DefaultTitle.Number:
-            assert title == "1"
+        if default_label is DefaultLabel.FileName:
+            assert label == "sine440"
+        elif default_label is DefaultLabel.Number:
+            assert label == "1"
         else:
-            assert title == ""
+            assert label == ""
 
 
 # line_color is tested in test_renderer.py

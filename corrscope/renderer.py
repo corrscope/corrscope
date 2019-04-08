@@ -64,7 +64,7 @@ def default_color() -> str:
 T = TypeVar("T")
 
 
-class TitleX(enum.Enum):
+class LabelX(enum.Enum):
     Left = enum.auto()
     Right = enum.auto()
 
@@ -76,7 +76,7 @@ class TitleX(enum.Enum):
         raise ValueError("failed match")
 
 
-class TitleY(enum.Enum):
+class LabelY(enum.Enum):
     Bottom = enum.auto()
     Top = enum.auto()
 
@@ -88,15 +88,15 @@ class TitleY(enum.Enum):
         raise ValueError("failed match")
 
 
-class TitlePosition(TypedEnumDump):
-    def __init__(self, x: TitleX, y: TitleY):
+class LabelPosition(TypedEnumDump):
+    def __init__(self, x: LabelX, y: LabelY):
         self.x = x
         self.y = y
 
-    LeftBottom = (TitleX.Left, TitleY.Bottom)
-    LeftTop = (TitleX.Left, TitleY.Top)
-    RightBottom = (TitleX.Right, TitleY.Bottom)
-    RightTop = (TitleX.Right, TitleY.Top)
+    LeftBottom = (LabelX.Left, LabelY.Bottom)
+    LeftTop = (LabelX.Left, LabelY.Top)
+    RightBottom = (LabelX.Right, LabelY.Bottom)
+    RightTop = (LabelX.Right, LabelY.Top)
 
 
 class Font(DumpableAttrs, always_dump="*"):
@@ -125,12 +125,12 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     v_midline: bool = False
     h_midline: bool = False
 
-    # Title settings
+    # Label settings
     font: Font = attr.ib(factory=Font)
 
-    title_position: TitlePosition = TitlePosition.LeftTop
-    # The text will be located (title_padding_ratio * font.size) from the corner.
-    title_padding_ratio: float = with_units("px/pt", default=0.5)
+    label_position: LabelPosition = LabelPosition.LeftTop
+    # The text will be located (label_padding_ratio * font.size) from the corner.
+    label_padding_ratio: float = with_units("px/pt", default=0.5)
     font_color_override: Optional[str] = None
 
     @property
@@ -214,7 +214,7 @@ class Renderer(ABC):
         ...
 
     @abstractmethod
-    def add_titles(self, titles: List[str]) -> Any:
+    def add_labels(self, labels: List[str]) -> Any:
         ...
 
 
@@ -467,23 +467,23 @@ class MatplotlibRenderer(Renderer):
                 chan_line = wave_lines[chan_idx]
                 chan_line.set_ydata(chan_data)
 
-    # Channel titles
-    def add_titles(self, titles: List[str]) -> List["Text"]:
+    # Channel labels
+    def add_labels(self, labels: List[str]) -> List["Text"]:
         """
         Updates background, adds text.
         Do NOT call after calling self.add_lines().
         """
-        ntitle = len(titles)
-        if ntitle != self.nplots:
+        nlabel = len(labels)
+        if nlabel != self.nplots:
             raise ValueError(
-                f"incorrect titles: {self.nplots} plots but {ntitle} titles"
+                f"incorrect labels: {self.nplots} plots but {nlabel} labels"
             )
 
         cfg = self.cfg
         color = cfg.get_font_color
 
         size_pt = cfg.font.size
-        distance_px = cfg.title_padding_ratio * size_pt
+        distance_px = cfg.label_padding_ratio * size_pt
 
         @attr.dataclass
         class AxisPosition:
@@ -491,11 +491,11 @@ class MatplotlibRenderer(Renderer):
             offset_px: float
             align: str
 
-        xpos = cfg.title_position.x.match(
+        xpos = cfg.label_position.x.match(
             left=AxisPosition(0, distance_px, "left"),
             right=AxisPosition(1, -distance_px, "right"),
         )
-        ypos = cfg.title_position.y.match(
+        ypos = cfg.label_position.y.match(
             bottom=AxisPosition(0, distance_px, "bottom"),
             top=AxisPosition(1, -distance_px, "top"),
         )
@@ -504,11 +504,11 @@ class MatplotlibRenderer(Renderer):
         offset_px = (xpos.offset_px, ypos.offset_px)
 
         out: List["Text"] = []
-        for title_text, ax in zip(titles, self._axes_mono):
+        for label_text, ax in zip(labels, self._axes_mono):
             # https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.annotate.html
             # Annotation subclasses Text.
             text: "Annotation" = ax.annotate(
-                title_text,
+                label_text,
                 # Positioning
                 xy=pos_axes,
                 xycoords="axes fraction",
