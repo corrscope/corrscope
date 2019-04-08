@@ -154,7 +154,7 @@ class RendererConfig(
     grid_color: Optional[str] = None
     stereo_grid_opacity: float = 0.5
 
-    midline_color: Optional[str] = None
+    midline_color: Optional[str] = "#404040"
     v_midline: bool = False
     h_midline: bool = False
 
