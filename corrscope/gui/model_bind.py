@@ -52,6 +52,15 @@ class PresentationModel(qc.QObject):
     Qt's built-in model-view framework expects all models to
     take the form of a database-style numbered [row, column] structure,
     whereas my model takes the form of a key-value struct exposed as a form.
+
+    Each GUI BoundWidget generally reads/writes `widget.pmodel[widget.path]`.
+
+    To access cfg.foo.bar, set BoundWidget's path to read/write
+    pmodel["foo.bar"] or pmodel["foo__bar"].
+
+    To create a GUI field not directly mapping to `cfg`,
+    define a property named "foo__baz", then set BoundWidget's path to read/write
+    pmodel["foo.baz"] or pmodel["foo__baz"].
     """
 
     # These fields are specific to each subclass, and assigned there.
