@@ -6,7 +6,7 @@ from typing import *
 import attr
 from PyQt5 import QtWidgets as qw, QtCore as qc
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtGui import QPalette, QColor, QFont
 from PyQt5.QtWidgets import QWidget
 
 from corrscope.config import CorrError, DumpableAttrs, get_units
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
     assert Enum
 
+# TODO include all BoundWidget subclasses into this?
 __all__ = [
     "PresentationModel",
     "map_gui",
@@ -365,6 +366,40 @@ class TypeComboBox(BoundComboBox):
     @staticmethod
     def _value_from_symbol(obj_type: type):
         return obj_type()
+
+
+def _format_font_size(size: float) -> str:
+    """Strips away trailing .0 from 13.0.
+    Basically unused, since QFontDialog will only allow integer font sizes."""
+    return ("%f" % size).rstrip("0").rstrip(".")
+
+
+class BoundFontButton(qw.QPushButton, BoundWidget):
+    def __init__(self, parent: qw.QWidget):
+        qw.QPushButton.__init__(self, parent)
+        self.clicked.connect(self.on_clicked)
+
+    def set_gui(self, qfont: QFont):
+        self.setText(qfont.family() + " " + _format_font_size(qfont.pointSizeF()))
+
+        preview_font = QFont(qfont)
+        preview_font.setPointSizeF(self.font().pointSizeF())
+        self.setFont(preview_font)
+
+    @pyqtSlot()
+    def on_clicked(self):
+        old_font: QFont = self.pmodel[self.path]
+
+        # https://doc.qt.io/qtforpython/PySide2/QtWidgets/QFontDialog.html#detailed-description
+        # is wrong.
+        (new_font, ok) = qw.QFontDialog.getFont(old_font, self.window())
+        if ok:
+            self.set_gui(new_font)
+            self.gui_changed.emit(new_font)
+
+    gui_changed = qc.pyqtSignal(QFont)
+
+    set_model = model_setter(QFont)
 
 
 # Color-specific widgets

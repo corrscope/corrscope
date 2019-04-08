@@ -62,9 +62,9 @@ class MainWindow(QWidget):
 
             # Left-hand config tabs
             with append_widget(s, TabWidget) as self.left_tabs:
-                self.tabGeneral = self.add_general_tab(s)
+                self.add_general_tab(s)
                 self.add_appear_tab(s)
-                self.tabTrigger = self.add_trigger_tab(s)
+                self.add_trigger_tab(s)
 
             # Right-hand channel list
             with append_widget(s, QVBoxLayout) as self.audioColumn:
@@ -141,9 +141,9 @@ class MainWindow(QWidget):
         tr = self.tr
         with self._add_tab(s, tr("&Appearance"), layout=QVBoxLayout) as tab:
 
-            with append_widget(s, QGroupBox) as self.optionAppearance:
-                set_layout(s, QFormLayout)
-
+            with append_widget(
+                s, QGroupBox, title=tr("Appearance"), layout=QFormLayout
+            ):
                 with add_row(s, "", BoundLineEdit) as self.render_resolution:
                     pass
 
@@ -169,9 +169,38 @@ class MainWindow(QWidget):
                 ):
                     pass
 
-            with append_widget(s, QGroupBox) as self.optionLayout:
-                set_layout(s, QFormLayout)
+            with append_widget(s, QGroupBox, title=tr("Labels"), layout=QFormLayout):
+                with add_row(
+                    s, tr("Font"), BoundFontButton, name="render__label_qfont"
+                ):
+                    pass
+                with add_row(
+                    s,
+                    tr("Font Color"),
+                    OptionalColorWidget,
+                    name="render.label_color_override",
+                ):
+                    pass
 
+                with add_row(
+                    s, tr("Label Position"), BoundComboBox, name="render.label_position"
+                ):
+                    pass
+                with add_row(
+                    s,
+                    tr("Label Padding"),
+                    BoundDoubleSpinBox,
+                    name="render.label_padding_ratio",
+                    maximum=10,
+                    singleStep=0.25,
+                ):
+                    pass
+                with add_row(
+                    s, tr("Default Label"), BoundComboBox, name="default_label"
+                ):
+                    pass
+
+            with append_widget(s, QGroupBox, title=tr("Layout"), layout=QFormLayout):
                 with add_row(s, "", BoundComboBox) as self.layout__orientation:
                     pass
 
@@ -431,7 +460,6 @@ class MainWindow(QWidget):
         self.render_msL.setText(tr("Render Width"))
         self.amplificationL.setText(tr("Amplification"))
         self.begin_timeL.setText(tr("Begin Time"))
-        self.optionAppearance.setTitle(tr("Appearance"))
         self.render_resolutionL.setText(tr("Resolution"))
         self.render_resolution.setText(tr("vs"))
         self.render__bg_colorL.setText(tr("Background"))
@@ -441,7 +469,6 @@ class MainWindow(QWidget):
         self.render__midline_colorL.setText(tr("Midline Color"))
         self.render__v_midline.setText(tr("Vertical"))
         self.render__h_midline.setText(tr("Horizontal Midline"))
-        self.optionLayout.setTitle(tr("Layout"))
         self.layout__orientationL.setText(tr("Orientation"))
         self.layout__nrowsL.setText(tr("Rows"))
 
@@ -484,6 +511,7 @@ from corrscope.gui.model_bind import (
     TypeComboBox,
     BoundColorWidget,
     OptionalColorWidget,
+    BoundFontButton,
 )
 
 # Delete unbound widgets, so they cannot accidentally be used.
