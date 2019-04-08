@@ -306,14 +306,12 @@ class MatplotlibRenderer(Renderer):
         - px_inch /= res_divisor (to scale visual elements correctly)
         - int(set_size_inches * px_inch) == self.w,h
             - matplotlib uses int instead of round. Who knows why.
-                I hope they don't change behavior in a future update.
+        - round(set_size_inches * px_inch) == self.w,h
+            - just in case matplotlib changes its mind
 
         Solution:
-        - [int(set_size_inches * px_inch) == self.w,h] from above
-        - [round(set_size_inches * px_inch) == self.w,h]
-            just in case matplotlib changes its mind
-        - set_size_inches * px_inch == self.w,h + 0.25
-        - set_size_inches == self.w,h + 0.25 ,/ px_inch
+        - (set_size_inches * px_inch) == self.w,h + 0.25
+        - set_size_inches == (self.w,h + 0.25) / px_inch
         """
         offset = 0.25
         self._fig.set_size_inches(
