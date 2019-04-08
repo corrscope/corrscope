@@ -56,7 +56,7 @@ def test_config_channel_integration(
     - channel.t/r_stride (given cfg.*_subsampling/*_width)
     - trigger._tsamp, _stride
     - renderer's method calls(samp, stride)
-    - rendered title (channel.title, given cfg, corr_cfg.use_filename_as_title)
+    - rendered label (channel.label, given cfg, corr_cfg.default_label)
     """
 
     # region setup test variables
