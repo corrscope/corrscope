@@ -385,7 +385,7 @@ class MatplotlibRenderer(Renderer):
 
     # satisfies RegionFactory
     def _axes_factory(self, r: RegionSpec, label: str = "") -> "Axes":
-        grid_color = self.cfg.grid_color
+        cfg = self.cfg
 
         width = 1 / r.ncol
         left = r.col / r.ncol
@@ -400,6 +400,7 @@ class MatplotlibRenderer(Renderer):
             [left, bottom, width, height], xticks=[], yticks=[], label=label
         )
 
+        grid_color = cfg.grid_color
         if grid_color:
             # Initialize borders
             # Hide Axises
@@ -432,9 +433,9 @@ class MatplotlibRenderer(Renderer):
                 hide("right")
 
             # Dim stereo gridlines
-            if self.cfg.stereo_grid_opacity > 0:
+            if cfg.stereo_grid_opacity > 0:
                 dim_color = matplotlib.colors.to_rgba_array(grid_color)[0]
-                dim_color[-1] = self.cfg.stereo_grid_opacity
+                dim_color[-1] = cfg.stereo_grid_opacity
 
                 def dim(key: str):
                     ax.spines[key].set_color(dim_color)
