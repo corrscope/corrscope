@@ -115,6 +115,7 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     width: int
     height: int
     line_width: float = with_units("px", default=1.5)
+    grid_line_width: float = with_units("px", default=1.0)
 
     @property
     def divided_width(self):
@@ -368,7 +369,7 @@ class MatplotlibRenderer(Renderer):
 
                 # Setup midlines (depends on max_x and wave_data)
                 midline_color = cfg.midline_color
-                midline_width = 1
+                midline_width = cfg.grid_line_width
 
                 # Not quite sure if midlines or gridlines draw on top
                 kw = dict(color=midline_color, linewidth=midline_width)
@@ -416,7 +417,7 @@ class MatplotlibRenderer(Renderer):
 
             # Set border colors
             for spine in ax.spines.values():  # type: Spine
-                spine.set_linewidth(1)
+                spine.set_linewidth(cfg.grid_line_width)
                 spine.set_color(grid_color)
 
             def hide(key: str):

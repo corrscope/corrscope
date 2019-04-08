@@ -1,5 +1,6 @@
 from typing import Optional, TYPE_CHECKING, List
 
+import attr
 import hypothesis.strategies as hs
 import matplotlib.colors
 import numpy as np
@@ -23,87 +24,115 @@ parametrize = pytest.mark.parametrize
 WIDTH = 64
 HEIGHT = 64
 
-RENDER_Y_ZEROS = np.zeros((2, 1))
-RENDER_Y_STEREO = np.zeros((2, 2))
+RENDER_Y_ZEROS = np.full((2, 1), 0.5)
+RENDER_Y_STEREO = np.full((2, 2), 0.5)
 OPACITY = 2 / 3
 
+
+def behead(string: str, header: str) -> str:
+    if not string.startswith(header):
+        raise ValueError(f"{string} does not start with {header}")
+    return string[len(header) :]
+
+
+def appearance_to_str(val):
+    """Called once for each `appear` and `data`."""
+    if isinstance(val, Appearance):
+        # Remove class name.
+        return behead(str(val), Appearance.__name__)
+    if isinstance(val, np.ndarray):
+        return "stereo" if val.shape[1] > 1 else "mono"
+    return None
+
+
+@attr.dataclass
+class Appearance:
+    bg_str: str
+    fg_str: str
+    grid_str: Optional[str]
+    grid_line_width: float
+
+
 all_colors = pytest.mark.parametrize(
-    "bg_str,fg_str,grid_str,data",
+    "appear, data",
     [
-        ("#000000", "#ffffff", None, RENDER_Y_ZEROS),
-        ("#ffffff", "#000000", None, RENDER_Y_ZEROS),
-        ("#0000aa", "#aaaa00", None, RENDER_Y_ZEROS),
-        ("#aaaa00", "#0000aa", None, RENDER_Y_ZEROS),
-        # Enabling ~~beautiful magenta~~ gridlines enables Axes rectangles.
-        # Make sure bg is disabled, so they don't overwrite global figure background.
-        ("#0000aa", "#aaaa00", "#ff00ff", RENDER_Y_ZEROS),
-        ("#aaaa00", "#0000aa", "#ff00ff", RENDER_Y_ZEROS),
-        ("#0000aa", "#aaaa00", "#ff00ff", RENDER_Y_STEREO),
-        ("#aaaa00", "#0000aa", "#ff00ff", RENDER_Y_STEREO),
+        (Appearance("#000000", "#ffffff", None, 1), RENDER_Y_ZEROS),
+        (Appearance("#ffffff", "#000000", None, 2), RENDER_Y_ZEROS),
+        (Appearance("#0000aa", "#aaaa00", None, 1), RENDER_Y_ZEROS),
+        (Appearance("#aaaa00", "#0000aa", None, 2), RENDER_Y_ZEROS),
+        (Appearance("#0000aa", "#aaaa00", "#ff00ff", 1), RENDER_Y_ZEROS),
+        (Appearance("#aaaa00", "#0000aa", "#ff00ff", 1), RENDER_Y_ZEROS),
+        (Appearance("#aaaa00", "#0000aa", "#ff00ff", 0), RENDER_Y_ZEROS),
+        (Appearance("#0000aa", "#aaaa00", "#ff00ff", 1), RENDER_Y_STEREO),
+        (Appearance("#aaaa00", "#0000aa", "#ff00ff", 1), RENDER_Y_STEREO),
     ],
+    ids=appearance_to_str,
 )
 
-NPLOTS = 2
 
-
-@all_colors
-def test_default_colors(bg_str, fg_str, grid_str, data):
-    """ Test the default background/foreground colors. """
+def get_renderer_config(appear: Appearance) -> RendererConfig:
     cfg = RendererConfig(
         WIDTH,
         HEIGHT,
-        bg_color=bg_str,
-        init_line_color=fg_str,
-        grid_color=grid_str,
+        bg_color=appear.bg_str,
+        init_line_color=appear.fg_str,
+        grid_color=appear.grid_str,
+        grid_line_width=appear.grid_line_width,
         stereo_grid_opacity=OPACITY,
         line_width=2.0,
         antialiasing=False,
     )
-    lcfg = LayoutConfig()
+    return cfg
+
+
+NPLOTS = 2
+ORIENTATION = "h"
+GRID_NPIXEL = WIDTH
+
+
+@all_colors
+def test_default_colors(appear: Appearance, data):
+    """ Test the default background/foreground colors. """
+    cfg = get_renderer_config(appear)
+    lcfg = LayoutConfig(orientation=ORIENTATION)
     datas = [data] * NPLOTS
 
     r = MatplotlibRenderer(cfg, lcfg, datas, None)
-    verify(r, bg_str, fg_str, grid_str, datas)
+    verify(r, appear, datas)
 
     # Ensure default ChannelConfig(line_color=None) does not override line color
     chan = ChannelConfig(wav_path="")
     channels = [chan] * NPLOTS
     r = MatplotlibRenderer(cfg, lcfg, datas, channels)
-    verify(r, bg_str, fg_str, grid_str, datas)
+    verify(r, appear, datas)
 
 
 @all_colors
-def test_line_colors(bg_str, fg_str, grid_str, data):
+def test_line_colors(appear: Appearance, data):
     """ Test channel-specific line color overrides """
-    cfg = RendererConfig(
-        WIDTH,
-        HEIGHT,
-        bg_color=bg_str,
-        init_line_color="#888888",
-        grid_color=grid_str,
-        stereo_grid_opacity=OPACITY,
-        line_width=2.0,
-        antialiasing=False,
-    )
-    lcfg = LayoutConfig()
+    cfg = get_renderer_config(appear)
+    lcfg = LayoutConfig(orientation=ORIENTATION)
     datas = [data] * NPLOTS
 
-    chan = ChannelConfig(wav_path="", line_color=fg_str)
+    # Move line color (appear.fg_str) from renderer cfg to individual channel.
+    chan = ChannelConfig(wav_path="", line_color=appear.fg_str)
     channels = [chan] * NPLOTS
+    cfg.init_line_color = "#888888"
+    chan.line_color = appear.fg_str
+
     r = MatplotlibRenderer(cfg, lcfg, datas, channels)
-    verify(r, bg_str, fg_str, grid_str, datas)
+    verify(r, appear, datas)
 
 
 TOLERANCE = 3
 
 
-def verify(
-    r: MatplotlibRenderer,
-    bg_str,
-    fg_str,
-    grid_str: Optional[str],
-    datas: List[np.ndarray],
-):
+def verify(r: MatplotlibRenderer, appear: Appearance, datas: List[np.ndarray]):
+    bg_str = appear.bg_str
+    fg_str = appear.fg_str
+    grid_str = appear.grid_str
+    grid_line_width = appear.grid_line_width
+
     r.update_main_lines(datas)
     frame_colors: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
         (-1, BYTES_PER_PIXEL)
@@ -113,15 +142,17 @@ def verify(
     fg_u8 = to_rgb(fg_str)
     all_colors = [bg_u8, fg_u8]
 
-    if grid_str:
+    is_grid = bool(grid_str and grid_line_width >= 1)
+
+    if is_grid:
         grid_u8 = to_rgb(grid_str)
         all_colors.append(grid_u8)
     else:
-        grid_u8 = bg_u8
+        grid_u8 = np.array([1000] * BYTES_PER_PIXEL)
 
     data = datas[0]
     assert (data.shape[1] > 1) == (data is RENDER_Y_STEREO)
-    is_stereo = data.shape[1] > 1
+    is_stereo = is_grid and data.shape[1] > 1
     if is_stereo:
         stereo_grid_u8 = (grid_u8 * OPACITY + bg_u8 * (1 - OPACITY)).astype(int)
         all_colors.append(stereo_grid_u8)
@@ -138,8 +169,14 @@ def verify(
     ).any(), "incorrect foreground, it might be 136 = #888888"
 
     # Ensure grid color is present
-    if grid_str:
-        assert np.prod(frame_colors == grid_u8, axis=-1).any(), "Missing grid_str"
+    does_grid_appear_here = np.prod(frame_colors == grid_u8, axis=-1)
+    does_grid_appear = does_grid_appear_here.any()
+    assert does_grid_appear == is_grid, f"{does_grid_appear} != {is_grid}"
+
+    if is_grid:
+        assert np.sum(does_grid_appear_here) == pytest.approx(
+            GRID_NPIXEL * grid_line_width, abs=GRID_NPIXEL * 0.1
+        )
 
     # Ensure stereo grid color is present
     if is_stereo:
