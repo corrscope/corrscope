@@ -80,11 +80,11 @@ class PresentationModel(qc.QObject):
         except AttributeError:
             return rgetattr(self.cfg, item)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value):
         self.edited.emit()
 
         # Custom properties
-        if hasattr(type(self), key):
+        if hasattr(type(self), key.replace(SEPARATOR, "__")):
             setattr(self, key, value)
         elif rhasattr(self.cfg, key):
             rsetattr(self.cfg, key, value)
