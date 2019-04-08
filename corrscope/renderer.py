@@ -297,9 +297,27 @@ class MatplotlibRenderer(Renderer):
         cfg = self.cfg
 
         self._fig = Figure()
-        self._fig.set_dpi(DPI / cfg.res_divisor)
-        self._fig.set_size_inches(self.cfg.width / DPI, self.cfg.height / DPI)
         FigureCanvasAgg(self._fig)
+
+        dpi = DPI / cfg.res_divisor
+        self._fig.set_dpi(dpi)
+
+        """
+        Requirements:
+        - dpi /= res_divisor (to scale visual elements correctly)
+        - int(set_size_inches * dpi) == self.w,h
+            - matplotlib uses int instead of round. Who knows why.
+                I hope they don't change behavior in a future update.
+
+        Solution:
+        - [int(set_size_inches * dpi) == self.w,h] from above
+        - [round(set_size_inches * dpi) == self.w,h]
+            just in case matplotlib changes its mind
+        - set_size_inches * dpi == self.w,h + 0.25
+        - set_size_inches == self.w,h + 0.25 ,/ dpi
+        """
+        offset = 0.25
+        self._fig.set_size_inches((self.w + offset) / dpi, (self.h + offset) / dpi)
 
         real_dims = self._fig.canvas.get_width_height()
         assert (self.w, self.h) == real_dims, [(self.w, self.h), real_dims]
