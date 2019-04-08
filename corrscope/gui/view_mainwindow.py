@@ -169,6 +169,16 @@ class MainWindow(QWidget):
                 ):
                     pass
 
+                with add_row(
+                    s,
+                    tr("Grid Line Width"),
+                    BoundDoubleSpinBox,
+                    name="render.grid_line_width",
+                    minimum=0.5,
+                    singleStep=0.5,
+                ):
+                    pass
+
             with append_widget(s, QGroupBox, title=tr("Labels"), layout=QFormLayout):
                 with add_row(
                     s, tr("Font"), BoundFontButton, name="render__label_qfont"
