@@ -117,11 +117,11 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
 
     @property
     def divided_width(self):
-        return int(self.width / self.res_divisor)
+        return round(self.width / self.res_divisor)
 
     @property
     def divided_height(self):
-        return int(self.height / self.res_divisor)
+        return round(self.height / self.res_divisor)
 
     bg_color: str = "#000000"
     init_line_color: str = default_color()
