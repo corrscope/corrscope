@@ -98,9 +98,7 @@ class MainWindow(QWidget):
 
     def add_general_tab(self, s: LayoutStack) -> QWidget:
         tr = self.tr
-        with add_tab(s, VerticalScrollArea, tr("&General")) as tab, fill_scroll(
-            s, layout=QVBoxLayout
-        ):
+        with self.add_tab_stretch(s, tr("&General"), layout=QVBoxLayout) as tab:
 
             # Global group
             with append_widget(s, QGroupBox) as self.optionGlobal:
@@ -269,9 +267,7 @@ class MainWindow(QWidget):
     def add_trigger_tab(self, s: LayoutStack) -> QWidget:
         tr = self.tr
 
-        with add_tab(s, VerticalScrollArea, tr("&Trigger")) as tab, fill_scroll(
-            s, layout=QVBoxLayout
-        ):
+        with self.add_tab_stretch(s, tr("&Trigger"), layout=QVBoxLayout) as tab:
             with append_widget(
                 s, QGroupBox, title=tr("Wave Alignment"), layout=QFormLayout
             ):
