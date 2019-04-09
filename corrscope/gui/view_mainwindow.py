@@ -146,6 +146,10 @@ class MainWindow(QWidget):
 
     def add_appear_tab(self, s: LayoutStack) -> QWidget:
         tr = self.tr
+
+        # Qt Designer produces path "QTabWidget/QWidget/QScrollView/QWidget/items".
+        # My current code produces path "QTabWidget/QScrollView/QWidget/items".
+        # This is missing a gap between the tab and scroll-area, but saves space.
         with add_tab(
             s, VerticalScrollArea, tr("&Appearance")
         ) as tab, fill_scroll_stretch(s, layout=QVBoxLayout):
