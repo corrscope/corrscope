@@ -52,6 +52,8 @@ class MainWindow(QWidget):
     left_tabs: "TabWidget"
 
     def setupUi(self, MainWindow: QMainWindow):
+        # Multiplying by DPI scale is necessary on both Windows and Linux,
+        # since MainWindow.resize() operates in physical pixels.
         scale = MainWindow.logicalDpiX() / 96.0
 
         width = 1280
