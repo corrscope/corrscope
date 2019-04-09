@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from matplotlib.artist import Artist
     from matplotlib.axes import Axes
     from matplotlib.lines import Line2D
+    from matplotlib.spines import Spine
     from matplotlib.text import Text, Annotation
     from corrscope.channel import ChannelConfig
 
@@ -114,6 +115,7 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     width: int
     height: int
     line_width: float = with_units("px", default=1.5)
+    grid_line_width: float = with_units("px", default=1.0)
 
     @property
     def divided_width(self):
@@ -230,12 +232,19 @@ class Renderer(ABC):
 
 
 Point = float
-PX_INCH = 96
-POINT_INCH = 72
+Pixel = float
+
+# Matplotlib multiplies all widths by (inch/72 units) (AKA "matplotlib points").
+# To simplify code, render output at (72 px/inch), so 1 unit = 1 px.
+# For font sizes, convert from font-pt to pixels.
+# (Font sizes are used far less than pixel measurements.)
+
+PX_INCH = 72
+PIXELS_PER_PT = 96 / 72
 
 
-def pixels(px: float) -> Point:
-    return px / PX_INCH * POINT_INCH
+def px_from_points(pt: Point) -> Pixel:
+    return pt * PIXELS_PER_PT
 
 
 class MatplotlibRenderer(Renderer):
@@ -360,7 +369,7 @@ class MatplotlibRenderer(Renderer):
 
                 # Setup midlines (depends on max_x and wave_data)
                 midline_color = cfg.midline_color
-                midline_width = pixels(1)
+                midline_width = cfg.grid_line_width
 
                 # Not quite sure if midlines or gridlines draw on top
                 kw = dict(color=midline_color, linewidth=midline_width)
@@ -377,7 +386,7 @@ class MatplotlibRenderer(Renderer):
 
     # satisfies RegionFactory
     def _axes_factory(self, r: RegionSpec, label: str = "") -> "Axes":
-        grid_color = self.cfg.grid_color
+        cfg = self.cfg
 
         width = 1 / r.ncol
         left = r.col / r.ncol
@@ -392,6 +401,7 @@ class MatplotlibRenderer(Renderer):
             [left, bottom, width, height], xticks=[], yticks=[], label=label
         )
 
+        grid_color = cfg.grid_color
         if grid_color:
             # Initialize borders
             # Hide Axises
@@ -406,7 +416,8 @@ class MatplotlibRenderer(Renderer):
             ax.set_facecolor(self.transparent)
 
             # Set border colors
-            for spine in ax.spines.values():
+            for spine in ax.spines.values():  # type: Spine
+                spine.set_linewidth(cfg.grid_line_width)
                 spine.set_color(grid_color)
 
             def hide(key: str):
@@ -423,9 +434,9 @@ class MatplotlibRenderer(Renderer):
                 hide("right")
 
             # Dim stereo gridlines
-            if self.cfg.stereo_grid_opacity > 0:
+            if cfg.stereo_grid_opacity > 0:
                 dim_color = matplotlib.colors.to_rgba_array(grid_color)[0]
-                dim_color[-1] = self.cfg.stereo_grid_opacity
+                dim_color[-1] = cfg.stereo_grid_opacity
 
                 def dim(key: str):
                     ax.spines[key].set_color(dim_color)
@@ -449,7 +460,7 @@ class MatplotlibRenderer(Renderer):
         cfg = self.cfg
 
         # Plot lines over background
-        line_width = pixels(cfg.line_width)
+        line_width = cfg.line_width
 
         # Foreach wave, plot dummy data.
         lines2d = []
@@ -531,7 +542,7 @@ class MatplotlibRenderer(Renderer):
         )
 
         pos_axes = (xpos.pos_axes, ypos.pos_axes)
-        offset_pt = (pixels(xpos.offset_px), pixels(ypos.offset_px))
+        offset_pt = (xpos.offset_px, ypos.offset_px)
 
         out: List["Text"] = []
         for label_text, ax in zip(labels, self._axes_mono):
@@ -548,7 +559,7 @@ class MatplotlibRenderer(Renderer):
                 verticalalignment=ypos.align,
                 # Cosmetics
                 color=color,
-                fontsize=size_pt,
+                fontsize=px_from_points(size_pt),
                 fontfamily=cfg.label_font.family,
                 fontweight=("bold" if cfg.label_font.bold else "normal"),
                 fontstyle=("italic" if cfg.label_font.italic else "normal"),
