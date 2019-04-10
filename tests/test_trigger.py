@@ -82,8 +82,7 @@ def test_trigger(cfg: CorrelationTriggerConfig, is_odd: bool, post_trigger):
     for i, ax in enumerate(axes):
         if i:
             offset = trigger.get_trigger(x, PerFrameCache())
-            print(offset)
-            assert offset == x0
+            assert offset == x0, offset
         if plot:
             ax.plot(trigger._buffer, label=str(i))
             ax.grid()
