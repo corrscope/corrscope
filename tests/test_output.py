@@ -15,20 +15,22 @@ import pytest
 from corrscope.channel import ChannelConfig
 from corrscope.corrscope import default_config, Config, CorrScope, Arguments
 from corrscope.outputs import (
-    BYTES_PER_PIXEL,
     FFmpegOutput,
     FFmpegOutputConfig,
     FFplayOutput,
     FFplayOutputConfig,
     Stop,
 )
-from corrscope.renderer import RendererConfig, MatplotlibRenderer
+from corrscope.renderer import RendererConfig, Renderer
 from tests.test_renderer import RENDER_Y_ZEROS, WIDTH, HEIGHT
 
 
 if TYPE_CHECKING:
     import pytest_mock
     from unittest.mock import MagicMock
+
+
+BYTES_PER_PIXEL = Renderer.bytes_per_pixel
 
 
 # Global setup
@@ -86,7 +88,7 @@ def test_render_output():
     """ Ensure rendering to output does not raise exceptions. """
     datas = [RENDER_Y_ZEROS]
 
-    renderer = MatplotlibRenderer(CFG.render, CFG.layout, datas, channel_cfgs=None)
+    renderer = Renderer(CFG.render, CFG.layout, datas, channel_cfgs=None)
     out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG)
 
     renderer.update_main_lines(datas)
@@ -168,7 +170,7 @@ def test_corr_terminate_ffplay(Popen, mocker: "pytest_mock.MockFixture"):
     cfg = sine440_config()
     corr = CorrScope(cfg, Arguments(".", [FFplayOutputConfig()]))
 
-    update_main_lines = mocker.patch.object(MatplotlibRenderer, "update_main_lines")
+    update_main_lines = mocker.patch.object(Renderer, "update_main_lines")
     update_main_lines.side_effect = DummyException()
     with pytest.raises(DummyException):
         corr.play()
@@ -334,7 +336,7 @@ NO_FFMPEG = [[], [FFplayOutputConfig()]]
 def test_preview_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
     """ Ensure performance optimizations enabled
     if all outputs are FFplay or others. """
-    get_frame = mocker.spy(MatplotlibRenderer, "get_frame")
+    get_frame = mocker.spy(Renderer, "get_frame")
     previews, records = previews_records(mocker)
 
     cfg = cfg_192x108()
@@ -368,7 +370,7 @@ YES_FFMPEG = [l + [FFmpegOutputConfig(None)] for l in NO_FFMPEG]
 def test_record_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
     """ Ensure performance optimizations disabled
     if any FFmpegOutputConfig is found. """
-    get_frame = mocker.spy(MatplotlibRenderer, "get_frame")
+    get_frame = mocker.spy(Renderer, "get_frame")
     previews, records = previews_records(mocker)
 
     cfg = cfg_192x108()

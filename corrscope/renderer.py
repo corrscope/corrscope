@@ -1,11 +1,19 @@
 import enum
 import os
 from abc import ABC, abstractmethod
-from typing import Optional, List, TYPE_CHECKING, Any, Callable, TypeVar
+from typing import (
+    Optional,
+    List,
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    TypeVar,
+    Sequence,
+    Type,
+    Union,
+)
 
 import attr
-import matplotlib  # do NOT import anything else until we call matplotlib.use().
-import matplotlib.colors
 import numpy as np
 
 from corrscope.config import DumpableAttrs, with_units, TypedEnumDump
@@ -16,8 +24,7 @@ from corrscope.layout import (
     RegionSpec,
     Edges,
 )
-from corrscope.outputs import BYTES_PER_PIXEL, ByteBuffer
-from corrscope.util import coalesce
+from corrscope.util import coalesce, obj_name
 
 """
 On first import, matplotlib.font_manager spends nearly 10 seconds
@@ -39,17 +46,24 @@ mpl_config_dir = "MPLCONFIGDIR"
 if mpl_config_dir in os.environ:
     del os.environ[mpl_config_dir]
 
-matplotlib.use("agg")
+# matplotlib.use() only affects pyplot. We don't use pyplot.
+import matplotlib
+import matplotlib.colors
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
 if TYPE_CHECKING:
     from matplotlib.artist import Artist
     from matplotlib.axes import Axes
+    from matplotlib.backend_bases import FigureCanvasBase
     from matplotlib.lines import Line2D
     from matplotlib.spines import Spine
     from matplotlib.text import Text, Annotation
     from corrscope.channel import ChannelConfig
+
+
+# Used by outputs.py.
+ByteBuffer = Union[bytes, np.ndarray]
 
 
 def default_color() -> str:
@@ -173,8 +187,35 @@ class LineParam:
 
 UpdateLines = Callable[[List[np.ndarray]], None]
 
-# TODO rename to Plotter
-class Renderer(ABC):
+
+@property
+@abstractmethod
+def abstract_classvar(self) -> Any:
+    """A ClassVar to be overriden by a subclass."""
+
+
+class BaseRenderer(ABC):
+    """
+    Renderer backend which takes data and produces images.
+    Does not touch Wave or Channel.
+    """
+
+    # Class attributes and methods
+    bytes_per_pixel: int = abstract_classvar
+    ffmpeg_pixel_format: str = abstract_classvar
+
+    @staticmethod
+    @abstractmethod
+    def color_to_bytes(c: str) -> np.ndarray:
+        """
+        Returns integer ndarray of length RGB_DEPTH.
+        This must return ndarray (not bytes or list),
+        since the caller performs arithmetic on the return value.
+
+        Only used for tests/test_renderer.py.
+        """
+
+    # Instance initializer
     def __init__(
         self,
         cfg: RendererConfig,
@@ -209,6 +250,8 @@ class Renderer(ABC):
             LineParam(color=coalesce(color, cfg.init_line_color))
             for color in line_colors
         ]
+
+    # Instance functionality
 
     _update_main_lines: Optional[UpdateLines] = None
 
@@ -247,29 +290,20 @@ def px_from_points(pt: Point) -> Pixel:
     return pt * PIXELS_PER_PT
 
 
-class MatplotlibRenderer(Renderer):
+class AbstractMatplotlibRenderer(BaseRenderer, ABC):
+    """Matplotlib renderer which can use any backend (agg, mplcairo).
+    To pick a backend, subclass and set canvas_type at the class level.
     """
-    Renderer backend which takes data and produces images.
-    Does not touch Wave or Channel.
 
-    If __init__ reads cfg, cfg cannot be hotswapped.
+    canvas_type: Type["FigureCanvasBase"] = abstract_classvar
 
-    Reasons to hotswap cfg: RendererCfg:
-    - GUI preview size
-    - Changing layout
-    - Changing #smp drawn (samples_visible)
-    (see RendererCfg)
-
-        Original OVGen does not support hotswapping.
-        It disables changing options during rendering.
-
-    Reasons to hotswap trigger algorithms:
-    - changing scan_nsamp (cannot be hotswapped, since correlation buffer is incompatible)
-    So don't.
-    """
+    @staticmethod
+    @abstractmethod
+    def canvas_to_bytes(canvas: "FigureCanvasBase") -> ByteBuffer:
+        pass
 
     def __init__(self, *args, **kwargs):
-        Renderer.__init__(self, *args, **kwargs)
+        BaseRenderer.__init__(self, *args, **kwargs)
 
         dict.__setitem__(
             matplotlib.rcParams, "lines.antialiased", self.cfg.antialiasing
@@ -305,7 +339,7 @@ class MatplotlibRenderer(Renderer):
         cfg = self.cfg
 
         self._fig = Figure()
-        FigureCanvasAgg(self._fig)
+        self.canvas_type(self._fig)
 
         px_inch = PX_INCH / cfg.res_divisor
         self._fig.set_dpi(px_inch)
@@ -571,20 +605,22 @@ class MatplotlibRenderer(Renderer):
 
     # Output frames
     def get_frame(self) -> ByteBuffer:
-        """ Returns ndarray of shape w,h,3. """
+        """Returns bytes with shape (h, w, self.bytes_per_pixel).
+        The actual return value's shape may be flat.
+        """
         self._redraw_over_background()
 
         canvas = self._fig.canvas
 
         # Agg is the default noninteractive backend except on OSX.
         # https://matplotlib.org/faq/usage_faq.html
-        if not isinstance(canvas, FigureCanvasAgg):
+        if not isinstance(canvas, self.canvas_type):
             raise RuntimeError(
-                f"oh shit, cannot read data from {type(canvas)} != FigureCanvasAgg"
+                f"oh shit, cannot read data from {obj_name(canvas)} != {self.canvas_type.__name__}"
             )
 
-        buffer_rgb = canvas.tostring_rgb()
-        assert len(buffer_rgb) == self.w * self.h * BYTES_PER_PIXEL
+        buffer_rgb = self.canvas_to_bytes(canvas)
+        assert len(buffer_rgb) == self.w * self.h * self.bytes_per_pixel
 
         return buffer_rgb
 
@@ -603,6 +639,8 @@ class MatplotlibRenderer(Renderer):
     def _redraw_over_background(self) -> None:
         """ Redraw animated elements of the image. """
 
+        # Both FigureCanvasAgg and FigureCanvasCairo, but not FigureCanvasBase,
+        # support restore_region().
         canvas: FigureCanvasAgg = self._fig.canvas
         canvas.restore_region(self.bg_cache)
 
@@ -610,3 +648,24 @@ class MatplotlibRenderer(Renderer):
             artist.axes.draw_artist(artist)
 
         # canvas.blit(self._fig.bbox) is unnecessary when drawing off-screen.
+
+
+class MatplotlibAggRenderer(AbstractMatplotlibRenderer):
+    # implements AbstractMatplotlibRenderer
+    canvas_type = FigureCanvasAgg
+
+    @staticmethod
+    def canvas_to_bytes(canvas: FigureCanvasAgg) -> ByteBuffer:
+        return canvas.tostring_rgb()
+
+    # implements BaseRenderer
+    bytes_per_pixel = 3
+    ffmpeg_pixel_format = "rgb24"
+
+    @staticmethod
+    def color_to_bytes(c: str) -> np.ndarray:
+        to_rgb = matplotlib.colors.to_rgb
+        return np.array([round(c * 255) for c in to_rgb(c)], dtype=int)
+
+
+Renderer = MatplotlibAggRenderer
