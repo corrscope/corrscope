@@ -295,11 +295,11 @@ class AbstractMatplotlibRenderer(BaseRenderer, ABC):
     To pick a backend, subclass and set canvas_type at the class level.
     """
 
-    canvas_type: Type["FigureCanvasBase"] = abstract_classvar
+    _canvas_type: Type["FigureCanvasBase"] = abstract_classvar
 
     @staticmethod
     @abstractmethod
-    def canvas_to_bytes(canvas: "FigureCanvasBase") -> ByteBuffer:
+    def _canvas_to_bytes(canvas: "FigureCanvasBase") -> ByteBuffer:
         pass
 
     def __init__(self, *args, **kwargs):
@@ -339,7 +339,7 @@ class AbstractMatplotlibRenderer(BaseRenderer, ABC):
         cfg = self.cfg
 
         self._fig = Figure()
-        self.canvas_type(self._fig)
+        self._canvas_type(self._fig)
 
         px_inch = PX_INCH / cfg.res_divisor
         self._fig.set_dpi(px_inch)
@@ -614,12 +614,12 @@ class AbstractMatplotlibRenderer(BaseRenderer, ABC):
 
         # Agg is the default noninteractive backend except on OSX.
         # https://matplotlib.org/faq/usage_faq.html
-        if not isinstance(canvas, self.canvas_type):
+        if not isinstance(canvas, self._canvas_type):
             raise RuntimeError(
-                f"oh shit, cannot read data from {obj_name(canvas)} != {self.canvas_type.__name__}"
+                f"oh shit, cannot read data from {obj_name(canvas)} != {self._canvas_type.__name__}"
             )
 
-        buffer_rgb = self.canvas_to_bytes(canvas)
+        buffer_rgb = self._canvas_to_bytes(canvas)
         assert len(buffer_rgb) == self.w * self.h * self.bytes_per_pixel
 
         return buffer_rgb
@@ -652,10 +652,10 @@ class AbstractMatplotlibRenderer(BaseRenderer, ABC):
 
 class MatplotlibAggRenderer(AbstractMatplotlibRenderer):
     # implements AbstractMatplotlibRenderer
-    canvas_type = FigureCanvasAgg
+    _canvas_type = FigureCanvasAgg
 
     @staticmethod
-    def canvas_to_bytes(canvas: FigureCanvasAgg) -> ByteBuffer:
+    def _canvas_to_bytes(canvas: FigureCanvasAgg) -> ByteBuffer:
         return canvas.tostring_rgb()
 
     # implements BaseRenderer
