@@ -121,10 +121,3 @@ class VerticalScrollArea(qw.QScrollArea):
 
         # Only allow expanding, not shrinking.
         self.setSizePolicy(qsp(qsp.Minimum, qsp.Minimum))
-
-    # def sizeHint(self) -> qc.QSize:
-    #     hint: qc.QSize = self.widget().sizeHint()
-    #     # hint: qc.QSize = qw.QScrollArea.sizeHint(self)
-    #     # hint.setHeight(1200)
-    #     print(hint.height(), hint.width())
-    #     return hint
