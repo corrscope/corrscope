@@ -14,7 +14,7 @@ from corrscope.channel import Channel, ChannelConfig, DefaultLabel
 from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
 from corrscope.outputs import FFmpegOutputConfig
-from corrscope.renderer import MatplotlibRenderer, RendererConfig, Renderer
+from corrscope.renderer import Renderer, RendererConfig, BaseRenderer
 from corrscope.triggers import CorrelationTriggerConfig, PerFrameCache, SpectrumConfig
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave, Flatten
@@ -217,9 +217,9 @@ class CorrScope:
                 ]
                 yield
 
-    def _load_renderer(self) -> Renderer:
+    def _load_renderer(self) -> BaseRenderer:
         dummy_datas = [channel.get_render_around(0) for channel in self.channels]
-        renderer = MatplotlibRenderer(
+        renderer = Renderer(
             self.cfg.render, self.cfg.layout, dummy_datas, self.cfg.channels
         )
         return renderer

@@ -5,18 +5,13 @@ from abc import ABC, abstractmethod
 from os.path import abspath
 from typing import TYPE_CHECKING, Type, List, Union, Optional, ClassVar, Callable
 
-import numpy as np
-
 from corrscope.config import DumpableAttrs
+from corrscope.renderer import ByteBuffer, Renderer
 from corrscope.settings.paths import MissingFFmpegError
 
 if TYPE_CHECKING:
     from corrscope.corrscope import Config
 
-
-ByteBuffer = Union[bytes, np.ndarray]
-BYTES_PER_PIXEL = 3
-PIXEL_FORMAT = "rgb24"
 
 FRAMES_TO_BUFFER = 2
 
@@ -44,7 +39,9 @@ class Output(ABC):
 
         rcfg = corr_cfg.render
 
-        frame_bytes = rcfg.divided_height * rcfg.divided_width * BYTES_PER_PIXEL
+        frame_bytes = (
+            rcfg.divided_height * rcfg.divided_width * Renderer.bytes_per_pixel
+        )
         self.bufsize = frame_bytes * FRAMES_TO_BUFFER
 
     def __enter__(self):
@@ -120,8 +117,8 @@ def ffmpeg_input_video(cfg: "Config") -> List[str]:
     height = cfg.render.divided_height
 
     return [
-        f"-f rawvideo -pixel_format {PIXEL_FORMAT} -video_size {width}x{height}",
-        f"-framerate {fps}",
+        f"-f rawvideo -pixel_format {Renderer.ffmpeg_pixel_format}",
+        f"-video_size {width}x{height} -framerate {fps}",
         *FFMPEG_QUIET,
         "-i -",
     ]

@@ -2,7 +2,6 @@ from typing import Optional, TYPE_CHECKING, List
 
 import attr
 import hypothesis.strategies as hs
-import matplotlib.colors
 import numpy as np
 import pytest
 from hypothesis import given
@@ -10,8 +9,8 @@ from hypothesis import given
 from corrscope.channel import ChannelConfig
 from corrscope.corrscope import CorrScope, default_config, Arguments
 from corrscope.layout import LayoutConfig
-from corrscope.outputs import BYTES_PER_PIXEL, FFplayOutputConfig
-from corrscope.renderer import RendererConfig, MatplotlibRenderer, LabelPosition, Font
+from corrscope.outputs import FFplayOutputConfig
+from corrscope.renderer import RendererConfig, Renderer, LabelPosition, Font
 from corrscope.util import perr
 from corrscope.wave import Flatten
 
@@ -20,6 +19,9 @@ if TYPE_CHECKING:
 
 parametrize = pytest.mark.parametrize
 
+
+color_to_bytes = Renderer.color_to_bytes
+BYTES_PER_PIXEL = Renderer.bytes_per_pixel
 
 WIDTH = 64
 HEIGHT = 64
@@ -97,13 +99,13 @@ def test_default_colors(appear: Appearance, data):
     lcfg = LayoutConfig(orientation=ORIENTATION)
     datas = [data] * NPLOTS
 
-    r = MatplotlibRenderer(cfg, lcfg, datas, None)
+    r = Renderer(cfg, lcfg, datas, None)
     verify(r, appear, datas)
 
     # Ensure default ChannelConfig(line_color=None) does not override line color
     chan = ChannelConfig(wav_path="")
     channels = [chan] * NPLOTS
-    r = MatplotlibRenderer(cfg, lcfg, datas, channels)
+    r = Renderer(cfg, lcfg, datas, channels)
     verify(r, appear, datas)
 
 
@@ -120,14 +122,14 @@ def test_line_colors(appear: Appearance, data):
     cfg.init_line_color = "#888888"
     chan.line_color = appear.fg_str
 
-    r = MatplotlibRenderer(cfg, lcfg, datas, channels)
+    r = Renderer(cfg, lcfg, datas, channels)
     verify(r, appear, datas)
 
 
 TOLERANCE = 3
 
 
-def verify(r: MatplotlibRenderer, appear: Appearance, datas: List[np.ndarray]):
+def verify(r: Renderer, appear: Appearance, datas: List[np.ndarray]):
     bg_str = appear.bg_str
     fg_str = appear.fg_str
     grid_str = appear.grid_str
@@ -138,14 +140,14 @@ def verify(r: MatplotlibRenderer, appear: Appearance, datas: List[np.ndarray]):
         (-1, BYTES_PER_PIXEL)
     )
 
-    bg_u8 = to_rgb(bg_str)
-    fg_u8 = to_rgb(fg_str)
+    bg_u8 = color_to_bytes(bg_str)
+    fg_u8 = color_to_bytes(fg_str)
     all_colors = [bg_u8, fg_u8]
 
     is_grid = bool(grid_str and grid_line_width >= 1)
 
     if is_grid:
-        grid_u8 = to_rgb(grid_str)
+        grid_u8 = color_to_bytes(grid_str)
         all_colors.append(grid_u8)
     else:
         grid_u8 = np.array([1000] * BYTES_PER_PIXEL)
@@ -188,11 +190,6 @@ def verify(r: MatplotlibRenderer, appear: Appearance, datas: List[np.ndarray]):
     assert (np.amin(frame_colors, axis=0) == np.amin(all_colors, axis=0)).all()
 
 
-def to_rgb(c) -> np.ndarray:
-    to_rgb = matplotlib.colors.to_rgb
-    return np.array([round(c * 255) for c in to_rgb(c)], dtype=int)
-
-
 # Test label positioning and rendering
 @parametrize("label_position", LabelPosition.__members__.values())
 @parametrize("data", [RENDER_Y_ZEROS, RENDER_Y_STEREO])
@@ -204,7 +201,7 @@ def test_label_render(label_position: LabelPosition, data, hide_lines):
     - even if no lines are drawn at all
     """
     font_str = "#FF00FF"
-    font_u8 = to_rgb(font_str)
+    font_u8 = color_to_bytes(font_str)
 
     # If hide_lines: set line color to purple, draw text using the line color.
     # Otherwise: draw lines white, draw text purple,
@@ -228,7 +225,7 @@ def test_label_render(label_position: LabelPosition, data, hide_lines):
     labels = ["#"] * nplots
     datas = [data] * nplots
 
-    r = MatplotlibRenderer(cfg, lcfg, datas, None)
+    r = Renderer(cfg, lcfg, datas, None)
     r.add_labels(labels)
     if not hide_lines:
         r.update_main_lines(datas)
@@ -302,13 +299,13 @@ def verify_res_divisor_rounding(
     cfg.before_preview()
 
     if speed_hack:
-        mocker.patch.object(MatplotlibRenderer, "_save_background")
+        mocker.patch.object(Renderer, "_save_background")
         datas = []
     else:
         datas = [RENDER_Y_ZEROS]
 
     try:
-        renderer = MatplotlibRenderer(cfg, LayoutConfig(), datas, channel_cfgs=None)
+        renderer = Renderer(cfg, LayoutConfig(), datas, channel_cfgs=None)
         if not speed_hack:
             renderer.update_main_lines(datas)
             renderer.get_frame()
