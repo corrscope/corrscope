@@ -463,7 +463,7 @@ class CorrelationTrigger(MainTrigger):
         )
 
         if cfg.sign_strength != 0:
-            signs = get_scaled_signs(data)
+            signs = sign_times_peak(data)
             data += cfg.sign_strength * signs
             data -= np.add.reduce(data) / N  # FIXME mean_responsiveness
             self.custom_line("sign+data", data)
@@ -692,10 +692,12 @@ def correlate_offset(
 SATURATION_LEVEL = 0.01
 
 
-def get_scaled_signs(data: np.ndarray) -> np.ndarray:
-    # range = np.amax(data) - np.amin(data)
-    # range2 = range + MIN_AMPLITUDE
-
+def sign_times_peak(data: np.ndarray) -> np.ndarray:
+    """
+    Computes peak = max(abs(data)).
+    Returns `peak` for positive parts of data, and `-peak` for negative parts,
+    and heavily amplifies parts of the wave near zero.
+    """
     data = data.copy()
 
     peak = abs_max(data)
