@@ -37,36 +37,81 @@ def behead(string: str, header: str) -> str:
     return string[len(header) :]
 
 
-def appearance_to_str(val):
+def appearance_to_str(val) -> Optional[str]:
     """Called once for each `appear` and `data`."""
     if isinstance(val, Appearance):
         # Remove class name.
         return behead(str(val), Appearance.__name__)
     if isinstance(val, np.ndarray):
         return "stereo" if val.shape[1] > 1 else "mono"
+    if val is None:
+        return "None"
     return None
 
 
-@attr.dataclass
+# "str" = HTML #FFFFFF color string.
+
+@attr.dataclass(frozen=True)
+class BG:
+    color: str
+
+
+@attr.dataclass(frozen=True)
+class FG:
+    color: str
+    draw_fg: bool = True
+
+
+@attr.dataclass(frozen=True)
+class Grid:
+    line_width: float
+    color: Optional[str]
+
+
+bg_black = BG("#000000")
+bg_white = BG("#ffffff")
+bg_blue = BG("#0000aa")
+bg_yellow = BG("#aaaa00")
+
+fg_white = FG("#ffffff")
+fg_black = FG("#000000")
+fg_NONE = FG("#ffffff", draw_fg=False)
+fg_yellow = FG("#aaaa00")
+fg_blue = FG("#0000aa")
+
+
+grid_0 = Grid(0, "#ff00ff")
+grid_1 = Grid(1, "#ff00ff")
+grid_10 = Grid(10, "#ff00ff")
+grid_NONE = Grid(10, None)
+
+
+@attr.dataclass(frozen=True)
 class Appearance:
-    bg_str: str
-    fg_str: str
-    grid_str: Optional[str]
-    grid_line_width: float
+    bg: BG
+    fg: FG
+    grid: Grid
 
 
 all_colors = pytest.mark.parametrize(
     "appear, data",
     [
-        (Appearance("#000000", "#ffffff", None, 1), RENDER_Y_ZEROS),
-        (Appearance("#ffffff", "#000000", None, 2), RENDER_Y_ZEROS),
-        (Appearance("#0000aa", "#aaaa00", None, 1), RENDER_Y_ZEROS),
-        (Appearance("#aaaa00", "#0000aa", None, 2), RENDER_Y_ZEROS),
-        (Appearance("#0000aa", "#aaaa00", "#ff00ff", 1), RENDER_Y_ZEROS),
-        (Appearance("#aaaa00", "#0000aa", "#ff00ff", 1), RENDER_Y_ZEROS),
-        (Appearance("#aaaa00", "#0000aa", "#ff00ff", 0), RENDER_Y_ZEROS),
-        (Appearance("#0000aa", "#aaaa00", "#ff00ff", 1), RENDER_Y_STEREO),
-        (Appearance("#aaaa00", "#0000aa", "#ff00ff", 1), RENDER_Y_STEREO),
+        # Test with foreground disabled
+        (Appearance(bg_black, fg_NONE, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_blue, fg_NONE, grid_1), RENDER_Y_ZEROS),
+        # Test with grid disabled
+        (Appearance(bg_black, fg_white, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_white, fg_black, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_blue, fg_yellow, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_yellow, fg_blue, grid_NONE), RENDER_Y_ZEROS),
+        # Test various grid thicknesses
+        (Appearance(bg_white, fg_black, grid_0), RENDER_Y_ZEROS),
+        (Appearance(bg_blue, fg_yellow, grid_1), RENDER_Y_ZEROS),
+        (Appearance(bg_blue, fg_yellow, grid_10), RENDER_Y_ZEROS),
+        # Test with stereo
+        (Appearance(bg_black, fg_white, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_blue, fg_yellow, grid_0), RENDER_Y_STEREO),
+        (Appearance(bg_blue, fg_yellow, grid_10), RENDER_Y_STEREO),
     ],
     ids=appearance_to_str,
 )
@@ -76,10 +121,10 @@ def get_renderer_config(appear: Appearance) -> RendererConfig:
     cfg = RendererConfig(
         WIDTH,
         HEIGHT,
-        bg_color=appear.bg_str,
-        init_line_color=appear.fg_str,
-        grid_color=appear.grid_str,
-        grid_line_width=appear.grid_line_width,
+        bg_color=appear.bg.color,
+        init_line_color=appear.fg.color,
+        grid_color=appear.grid.color,
+        grid_line_width=appear.grid.line_width,
         stereo_grid_opacity=OPACITY,
         line_width=2.0,
         antialiasing=False,
@@ -116,11 +161,11 @@ def test_line_colors(appear: Appearance, data):
     lcfg = LayoutConfig(orientation=ORIENTATION)
     datas = [data] * NPLOTS
 
-    # Move line color (appear.fg_str) from renderer cfg to individual channel.
-    chan = ChannelConfig(wav_path="", line_color=appear.fg_str)
+    # Move line color (appear.fg.color) from renderer cfg to individual channel.
+    chan = ChannelConfig(wav_path="", line_color=appear.fg.color)
     channels = [chan] * NPLOTS
     cfg.init_line_color = "#888888"
-    chan.line_color = appear.fg_str
+    chan.line_color = appear.fg.color
 
     r = Renderer(cfg, lcfg, datas, channels)
     verify(r, appear, datas)
@@ -129,20 +174,28 @@ def test_line_colors(appear: Appearance, data):
 TOLERANCE = 3
 
 
-def verify(r: Renderer, appear: Appearance, datas: List[np.ndarray]):
-    bg_str = appear.bg_str
-    fg_str = appear.fg_str
-    grid_str = appear.grid_str
-    grid_line_width = appear.grid_line_width
+def verify(r: Renderer, appear: Appearance, datas: List[Optional[np.ndarray]]):
+    bg_str = appear.bg.color
 
-    r.update_main_lines(datas)
+    fg_str = appear.fg.color
+    draw_fg = appear.fg.draw_fg
+
+    grid_str = appear.grid.color
+    grid_line_width = appear.grid.line_width
+
+    if draw_fg:
+        r.update_main_lines(datas)
+
     frame_colors: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
         (-1, BYTES_PER_PIXEL)
     )
 
     bg_u8 = color_to_bytes(bg_str)
+    all_colors = [bg_u8]
+
     fg_u8 = color_to_bytes(fg_str)
-    all_colors = [bg_u8, fg_u8]
+    if draw_fg:
+        all_colors.append(fg_u8)
 
     is_grid = bool(grid_str and grid_line_width >= 1)
 
@@ -163,12 +216,13 @@ def verify(r: Renderer, appear: Appearance, datas: List[np.ndarray]):
     bg_frame = frame_colors[0]
     assert (
         bg_frame == bg_u8
-    ).all(), f"incorrect background, it might be grid_str={grid_str}"
+    ).all(), f"incorrect background, it might be grid_str={grid.color}"
 
     # Ensure foreground is present
-    assert np.prod(
-        frame_colors == fg_u8, axis=-1
-    ).any(), "incorrect foreground, it might be 136 = #888888"
+    does_fg_appear = np.prod(frame_colors == fg_u8, axis=-1).any()
+
+    # it might be 136 == #888888 == init_line_color
+    assert does_fg_appear == draw_fg, f"{does_fg_appear} != {draw_fg}"
 
     # Ensure grid color is present
     does_grid_appear_here = np.prod(frame_colors == grid_u8, axis=-1)
