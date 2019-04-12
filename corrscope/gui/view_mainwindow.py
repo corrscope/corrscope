@@ -273,6 +273,22 @@ class MainWindow(QWidget):
 
         with self.add_tab_stretch(s, tr("&Trigger"), layout=QVBoxLayout) as tab:
             with append_widget(
+                s,
+                QGroupBox,
+                title=tr("Input Data Preprocessing"),
+                layout=QFormLayout,
+            ):
+                with add_row(
+                    s,
+                    tr("Sign Triggering\n(for triangle waves)"),
+                    BoundDoubleSpinBox,
+                    name="trigger__sign_strength",
+                    minimum=0,
+                    singleStep=0.25,
+                ):
+                    pass
+
+            with append_widget(
                 s, QGroupBox, title=tr("Wave Alignment"), layout=QFormLayout
             ):
                 with add_row(
@@ -291,14 +307,6 @@ class MainWindow(QWidget):
                     singleStep=0.1,
                 ):
                     pass
-                with add_row(
-                    s,
-                    tr("Mean Responsiveness"),
-                    BoundDoubleSpinBox,
-                    name="trigger__mean_responsiveness",
-                ) as w:  # type: BoundDoubleSpinBox
-                    w.setMaximum(1.0)
-                    w.setSingleStep(0.1)
                 with add_row(s, BoundCheckBox, Both) as (self.trigger__pitch_tracking):
                     assert isinstance(self.trigger__pitch_tracking, QWidget)
 

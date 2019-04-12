@@ -13,6 +13,7 @@ from corrscope.triggers import (
     PerFrameCache,
     ZeroCrossingTriggerConfig,
     SpectrumConfig,
+    correlate_offset,
 )
 from corrscope.wave import Wave
 
@@ -220,12 +221,11 @@ def test_correlate_offset():
     """
 
     np.random.seed(31337)
-    correlate_offset = CorrelationTrigger.correlate_offset
 
     # Ensure autocorrelation on random data returns peak at 0.
     N = 100
     spectrum = np.random.random(N)
-    assert correlate_offset(spectrum, spectrum, 12) == 0
+    assert correlate_offset(spectrum, spectrum, 12).peak == 0
 
     # Ensure cross-correlation of time-shifted impulses works.
     # Assume wave where y=[i==99].
@@ -236,15 +236,17 @@ def test_correlate_offset():
 
     # We need to slide `left` to the right by 10 samples, and vice versa.
     for radius in [None, 12]:
-        assert correlate_offset(data=left, prev_buffer=right, radius=radius) == 10
-        assert correlate_offset(data=right, prev_buffer=left, radius=radius) == -10
+        assert correlate_offset(data=left, prev_buffer=right, radius=radius).peak == 10
+        assert correlate_offset(data=right, prev_buffer=left, radius=radius).peak == -10
 
     # The correlation peak at zero-offset is small enough for boost_x to be returned.
     boost_y = 1.5
     ones = np.ones(N)
     for boost_x in [6, -6]:
         assert (
-            correlate_offset(ones, ones, radius=9, boost_x=boost_x, boost_y=boost_y)
+            correlate_offset(
+                ones, ones, radius=9, boost_x=boost_x, boost_y=boost_y
+            ).peak
             == boost_x
         )
 
