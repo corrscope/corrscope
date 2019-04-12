@@ -315,6 +315,22 @@ class MainWindow(QWidget):
             with append_widget(
                 s,
                 QGroupBox,
+                title=tr("Sign Triggering (for triangle waves)"),
+                layout=QFormLayout,
+            ):
+                with add_row(
+                    s,
+                    tr("Sign Strength"),
+                    BoundDoubleSpinBox,
+                    name="trigger__sign_strength",
+                    minimum=0,
+                    singleStep=0.25,
+                ):
+                    pass
+
+            with append_widget(
+                s,
+                QGroupBox,
                 title=tr("Slope Triggering (for PSG/C64/FM)"),
                 layout=QFormLayout,
             ):

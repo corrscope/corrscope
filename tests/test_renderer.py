@@ -6,11 +6,19 @@ import numpy as np
 import pytest
 from hypothesis import given
 
-from corrscope.channel import ChannelConfig
+from corrscope.channel import ChannelConfig, Channel
 from corrscope.corrscope import CorrScope, default_config, Arguments
 from corrscope.layout import LayoutConfig
 from corrscope.outputs import FFplayOutputConfig
-from corrscope.renderer import RendererConfig, Renderer, LabelPosition, Font
+from corrscope.renderer import (
+    RendererConfig,
+    Renderer,
+    LabelPosition,
+    Font,
+    calc_limits,
+    calc_xs,
+    calc_center,
+)
 from corrscope.util import perr
 from corrscope.wave import Flatten
 
@@ -37,36 +45,98 @@ def behead(string: str, header: str) -> str:
     return string[len(header) :]
 
 
-def appearance_to_str(val):
+def appearance_to_str(val) -> Optional[str]:
     """Called once for each `appear` and `data`."""
     if isinstance(val, Appearance):
         # Remove class name.
         return behead(str(val), Appearance.__name__)
     if isinstance(val, np.ndarray):
         return "stereo" if val.shape[1] > 1 else "mono"
+    if val is None:
+        return "None"
     return None
 
 
-@attr.dataclass
+# "str" = HTML #FFFFFF color string.
+
+
+@attr.dataclass(frozen=True)
+class BG:
+    color: str
+
+
+@attr.dataclass(frozen=True)
+class FG:
+    color: str
+    draw_fg: bool = True
+    line_width: float = 2.0
+
+
+@attr.dataclass(frozen=True)
+class Grid:
+    line_width: float
+    color: Optional[str]
+
+
+@attr.dataclass(frozen=True)
+class Debug:
+    viewport_width: float = 1
+
+
+bg_black = BG("#000000")
+bg_white = BG("#ffffff")
+bg_blue = BG("#0000aa")
+bg_yellow = BG("#aaaa00")
+
+fg_white = FG("#ffffff")
+fg_white_thick = FG("#ffffff", line_width=10.0)
+fg_black = FG("#000000")
+fg_NONE = FG("#ffffff", draw_fg=False)
+fg_yellow = FG("#aaaa00")
+fg_blue = FG("#0000aa")
+
+
+grid_0 = Grid(0, "#ff00ff")
+grid_1 = Grid(1, "#ff00ff")
+grid_10 = Grid(10, "#ff00ff")
+grid_NONE = Grid(10, None)
+
+
+debug_NONE = Debug()
+debug_wide = Debug(viewport_width=2)
+
+
+@attr.dataclass(frozen=True)
 class Appearance:
-    bg_str: str
-    fg_str: str
-    grid_str: Optional[str]
-    grid_line_width: float
+    bg: BG
+    fg: FG
+    grid: Grid
+    debug: Debug = debug_NONE
 
 
 all_colors = pytest.mark.parametrize(
     "appear, data",
     [
-        (Appearance("#000000", "#ffffff", None, 1), RENDER_Y_ZEROS),
-        (Appearance("#ffffff", "#000000", None, 2), RENDER_Y_ZEROS),
-        (Appearance("#0000aa", "#aaaa00", None, 1), RENDER_Y_ZEROS),
-        (Appearance("#aaaa00", "#0000aa", None, 2), RENDER_Y_ZEROS),
-        (Appearance("#0000aa", "#aaaa00", "#ff00ff", 1), RENDER_Y_ZEROS),
-        (Appearance("#aaaa00", "#0000aa", "#ff00ff", 1), RENDER_Y_ZEROS),
-        (Appearance("#aaaa00", "#0000aa", "#ff00ff", 0), RENDER_Y_ZEROS),
-        (Appearance("#0000aa", "#aaaa00", "#ff00ff", 1), RENDER_Y_STEREO),
-        (Appearance("#aaaa00", "#0000aa", "#ff00ff", 1), RENDER_Y_STEREO),
+        # Test with foreground disabled
+        (Appearance(bg_black, fg_NONE, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_blue, fg_NONE, grid_1), RENDER_Y_ZEROS),
+        # Test with grid disabled
+        (Appearance(bg_black, fg_white, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_white, fg_black, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_blue, fg_yellow, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_yellow, fg_blue, grid_NONE), RENDER_Y_ZEROS),
+        # Test FG line thickness
+        (Appearance(bg_black, fg_white_thick, grid_NONE), RENDER_Y_ZEROS),
+        # Test various grid thicknesses
+        (Appearance(bg_white, fg_black, grid_0), RENDER_Y_ZEROS),
+        (Appearance(bg_blue, fg_yellow, grid_1), RENDER_Y_ZEROS),
+        (Appearance(bg_blue, fg_yellow, grid_10), RENDER_Y_ZEROS),
+        # Test with stereo
+        (Appearance(bg_black, fg_white, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_blue, fg_yellow, grid_0), RENDER_Y_STEREO),
+        (Appearance(bg_blue, fg_yellow, grid_10), RENDER_Y_STEREO),
+        # Test debugging (viewport width)
+        (Appearance(bg_black, fg_white, grid_NONE, debug_wide), RENDER_Y_ZEROS),
     ],
     ids=appearance_to_str,
 )
@@ -76,12 +146,16 @@ def get_renderer_config(appear: Appearance) -> RendererConfig:
     cfg = RendererConfig(
         WIDTH,
         HEIGHT,
-        bg_color=appear.bg_str,
-        init_line_color=appear.fg_str,
-        grid_color=appear.grid_str,
-        grid_line_width=appear.grid_line_width,
+        # BG
+        bg_color=appear.bg.color,
+        # FG
+        init_line_color=appear.fg.color,
+        line_width=appear.fg.line_width,
+        viewport_width=appear.debug.viewport_width,
+        # Grid
+        grid_color=appear.grid.color,
+        grid_line_width=appear.grid.line_width,
         stereo_grid_opacity=OPACITY,
-        line_width=2.0,
         antialiasing=False,
     )
     return cfg
@@ -99,13 +173,13 @@ def test_default_colors(appear: Appearance, data):
     lcfg = LayoutConfig(orientation=ORIENTATION)
     datas = [data] * NPLOTS
 
-    r = Renderer(cfg, lcfg, datas, None)
+    r = Renderer(cfg, lcfg, datas, None, None)
     verify(r, appear, datas)
 
     # Ensure default ChannelConfig(line_color=None) does not override line color
     chan = ChannelConfig(wav_path="")
     channels = [chan] * NPLOTS
-    r = Renderer(cfg, lcfg, datas, channels)
+    r = Renderer(cfg, lcfg, datas, channels, None)
     verify(r, appear, datas)
 
 
@@ -116,33 +190,44 @@ def test_line_colors(appear: Appearance, data):
     lcfg = LayoutConfig(orientation=ORIENTATION)
     datas = [data] * NPLOTS
 
-    # Move line color (appear.fg_str) from renderer cfg to individual channel.
-    chan = ChannelConfig(wav_path="", line_color=appear.fg_str)
+    # Move line color (appear.fg.color) from renderer cfg to individual channel.
+    chan = ChannelConfig(wav_path="", line_color=appear.fg.color)
     channels = [chan] * NPLOTS
     cfg.init_line_color = "#888888"
-    chan.line_color = appear.fg_str
+    chan.line_color = appear.fg.color
 
-    r = Renderer(cfg, lcfg, datas, channels)
+    r = Renderer(cfg, lcfg, datas, channels, None)
     verify(r, appear, datas)
 
 
 TOLERANCE = 3
 
 
-def verify(r: Renderer, appear: Appearance, datas: List[np.ndarray]):
-    bg_str = appear.bg_str
-    fg_str = appear.fg_str
-    grid_str = appear.grid_str
-    grid_line_width = appear.grid_line_width
+def verify(r: Renderer, appear: Appearance, datas: List[Optional[np.ndarray]]):
+    bg_str = appear.bg.color
 
-    r.update_main_lines(datas)
+    fg_str = appear.fg.color
+    draw_fg = appear.fg.draw_fg
+    fg_line_width = appear.fg.line_width
+
+    grid_str = appear.grid.color
+    grid_line_width = appear.grid.line_width
+
+    viewport_width = appear.debug.viewport_width
+
+    if draw_fg:
+        r.update_main_lines(datas)
+
     frame_colors: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
         (-1, BYTES_PER_PIXEL)
     )
 
     bg_u8 = color_to_bytes(bg_str)
+    all_colors = [bg_u8]
+
     fg_u8 = color_to_bytes(fg_str)
-    all_colors = [bg_u8, fg_u8]
+    if draw_fg:
+        all_colors.append(fg_u8)
 
     is_grid = bool(grid_str and grid_line_width >= 1)
 
@@ -166,9 +251,16 @@ def verify(r: Renderer, appear: Appearance, datas: List[np.ndarray]):
     ).all(), f"incorrect background, it might be grid_str={grid_str}"
 
     # Ensure foreground is present
-    assert np.prod(
-        frame_colors == fg_u8, axis=-1
-    ).any(), "incorrect foreground, it might be 136 = #888888"
+    does_fg_appear_here = np.prod(frame_colors == fg_u8, axis=-1)
+    does_fg_appear = does_fg_appear_here.any()
+    # it might be 136 == #888888 == init_line_color
+    assert does_fg_appear == draw_fg, f"{does_fg_appear} != {draw_fg}"
+
+    if draw_fg:
+        expected_fg_pixels = NPLOTS * (WIDTH / viewport_width) * fg_line_width
+        assert does_fg_appear_here.sum() == pytest.approx(
+            expected_fg_pixels, abs=expected_fg_pixels * 0.1
+        )
 
     # Ensure grid color is present
     does_grid_appear_here = np.prod(frame_colors == grid_u8, axis=-1)
@@ -225,7 +317,7 @@ def test_label_render(label_position: LabelPosition, data, hide_lines):
     labels = ["#"] * nplots
     datas = [data] * nplots
 
-    r = Renderer(cfg, lcfg, datas, None)
+    r = Renderer(cfg, lcfg, datas, None, None)
     r.add_labels(labels)
     if not hide_lines:
         r.update_main_lines(datas)
@@ -272,6 +364,7 @@ def test_stereo_render_integration(mocker: "pytest_mock.MockFixture"):
     corr.play()
 
 
+# Image dimension tests
 @pytest.mark.parametrize(
     "target_int, res_divisor", [(50, 2.0), (51, 2.0), (100, 1.001)]
 )
@@ -305,10 +398,63 @@ def verify_res_divisor_rounding(
         datas = [RENDER_Y_ZEROS]
 
     try:
-        renderer = Renderer(cfg, LayoutConfig(), datas, channel_cfgs=None)
+        renderer = Renderer(cfg, LayoutConfig(), datas, None, None)
         if not speed_hack:
             renderer.update_main_lines(datas)
             renderer.get_frame()
     except Exception:
         perr(cfg.divided_width)
         raise
+
+
+# X-axis stride tests
+@given(N=hs.integers(2, 1000), stride=hs.integers(1, 1000))
+def test_calc_limits_xs(N: int, stride: int):
+    """Sanity check to ensure that data is drawn from 1 edge of screen to another,
+    that calc_limits() and calc_xs() match.
+
+    Test that calc_center() == "to the left of N//2".
+    """
+    min, max = calc_limits(N, stride)
+    xs = calc_xs(N, stride)
+    assert xs[0] == min
+    assert xs[-1] == max
+
+    center = calc_center(stride)
+    assert np.mean([xs[N // 2 - 1], xs[N // 2]]) == pytest.approx(center)
+
+
+# Debug plotting tests
+@parametrize("integration", [False, True])
+def test_renderer_knows_stride(mocker: "pytest_mock.MockFixture", integration: bool):
+    """
+    If Renderer draws both "main line" and "custom mono lines" at once,
+    each line must have its x-coordinates multiplied by the stride.
+
+    Renderer uses "main line stride = 1" by default,
+    but this results in the main line appearing too narrow compared to debug lines.
+    Make sure CorrScope.play() gives Renderer the correct values.
+    """
+
+    # Stub out FFplay output.
+    mocker.patch.object(FFplayOutputConfig, "cls")
+
+    subsampling = 2
+    width_mul = 3
+
+    chan_cfg = ChannelConfig("tests/sine440.wav", render_width=width_mul)
+    corr_cfg = default_config(
+        render_subsampling=subsampling, channels=[chan_cfg], end_time=0
+    )
+
+    if integration:
+        corr = CorrScope(corr_cfg, Arguments(".", [FFplayOutputConfig()]))
+        corr.play()
+        assert corr.renderer.render_strides == [subsampling * width_mul]
+    else:
+        channel = Channel(chan_cfg, corr_cfg, channel_idx=0)
+        data = channel.get_render_around(0)
+        renderer = Renderer(
+            corr_cfg.render, corr_cfg.layout, [data], [chan_cfg], [channel]
+        )
+        assert renderer.render_strides == [subsampling * width_mul]

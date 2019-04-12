@@ -260,12 +260,13 @@ class Wave:
     def get_around(self, sample: int, return_nsamp: int, stride: int) -> np.ndarray:
         """ Returns `return_nsamp` samples, centered around `sample`,
         sampled with spacing `stride`.
-        result[N//2] == self[sample]. See CorrelationTrigger docstring.
+        result[N//2] == self[sample].
+        See designNotes.md and CorrelationTrigger docstring.
 
         Copies self.data[...]. """
-        distance = return_nsamp * stride
-        begin = sample - distance // 2
-        end = begin + distance
+
+        begin = sample - (return_nsamp // 2) * stride
+        end = begin + return_nsamp * stride
         return self._get(begin, end, stride)
 
     def get_s(self) -> float:

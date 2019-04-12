@@ -115,7 +115,7 @@ def test_config_channel_integration(
     assert channel._render_samp == ideal_rsamp
 
     assert channel._trigger_stride == tsub * c_trigger_width
-    assert channel._render_stride == rsub * c_render_width
+    assert channel.render_stride == rsub * c_render_width
 
     # Ensure amplification override works
     args, kwargs = Wave.call_args
@@ -134,7 +134,7 @@ def test_config_channel_integration(
     # Only Channel.get_render_around() (not NullTrigger) calls wave.get_around().
     (_sample, _return_nsamp, _subsampling), kwargs = wave.get_around.call_args
     assert _return_nsamp == channel._render_samp
-    assert _subsampling == channel._render_stride
+    assert _subsampling == channel.render_stride
 
     # Inspect arguments to renderer.update_main_lines()
     # datas: List[np.ndarray]

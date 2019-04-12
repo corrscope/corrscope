@@ -222,7 +222,7 @@ def test_renderer_layout():
     nplots = 15
 
     datas = [RENDER_Y_ZEROS] * nplots
-    r = Renderer(cfg, lcfg, datas, None)
+    r = Renderer(cfg, lcfg, datas, None, None)
     r.update_main_lines(datas)
     layout = r.layout
 

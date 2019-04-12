@@ -9,12 +9,22 @@ import corrscope.utils.scipy.windows as windows
 from corrscope.config import KeywordAttrs, CorrError, Alias, with_units
 from corrscope.spectrum import SpectrumConfig, DummySpectrum, LogFreqSpectrum
 from corrscope.util import find, obj_name, iround
-from corrscope.utils.trigger_util import get_period, normalize_buffer, lerp
+from corrscope.utils.trigger_util import (
+    get_period,
+    normalize_buffer,
+    lerp,
+    MIN_AMPLITUDE,
+)
 from corrscope.utils.windows import leftpad, midpad, rightpad
 from corrscope.wave import FLOAT
 
 if TYPE_CHECKING:
     from corrscope.wave import Wave
+    from corrscope.renderer import RendererFrontend
+
+
+def abs_max(data, offset=0):
+    return np.amax(np.abs(data)) + offset
 
 
 # Abstract classes
@@ -23,8 +33,8 @@ if TYPE_CHECKING:
 class _TriggerConfig:
     cls: ClassVar[Type["_Trigger"]]
 
-    def __call__(self, wave: "Wave", tsamp: int, stride: int, fps: float) -> "_Trigger":
-        return self.cls(wave, cfg=self, tsamp=tsamp, stride=stride, fps=fps)
+    def __call__(self, wave: "Wave", *args, **kwargs) -> "_Trigger":
+        return self.cls(wave, self, *args, **kwargs)
 
 
 class MainTriggerConfig(
@@ -71,7 +81,14 @@ def register_trigger(config_t: Type[_TriggerConfig]):
 
 class _Trigger(ABC):
     def __init__(
-        self, wave: "Wave", cfg: _TriggerConfig, tsamp: int, stride: int, fps: float
+        self,
+        wave: "Wave",
+        cfg: _TriggerConfig,
+        tsamp: int,
+        stride: int,
+        fps: float,
+        renderer: Optional["RendererFrontend"] = None,
+        wave_idx: int = 0,
     ):
         self.cfg = cfg
         self._wave = wave
@@ -81,12 +98,33 @@ class _Trigger(ABC):
         self._stride = stride
         self._fps = fps
 
+        # Only used for debug plots
+        self._renderer = renderer
+        self._wave_idx = wave_idx
+
         frame_dur = 1 / fps
         # Subsamples per frame
         self._tsamp_frame = self.time2tsamp(frame_dur)
 
     def time2tsamp(self, time: float) -> int:
         return round(time * self._wave.smp_s / self._stride)
+
+    def custom_line(self, name: str, data: np.ndarray, **kwargs):
+        if self._renderer is None:
+            return
+        self._renderer.update_custom_line(
+            name, self._wave_idx, self._stride, data, **kwargs
+        )
+
+    def custom_vline(self, name: str, x: int):
+        if self._renderer is None:
+            return
+        self._renderer.update_vline(name, self._wave_idx, self._stride, x)
+
+    def offset_viewport(self, offset: int):
+        if self._renderer is None:
+            return
+        self._renderer.offset_viewport(self._wave_idx, offset)
 
     @abstractmethod
     def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
@@ -115,9 +153,21 @@ class MainTrigger(_Trigger, ABC):
         if cfg.post_trigger:
             # Create a post-processing trigger, with narrow nsamp and stride=1.
             # This improves speed and precision.
-            self.post = cfg.post_trigger(self._wave, cfg.post_radius, 1, self._fps)
+            self.post = cfg.post_trigger(
+                self._wave,
+                cfg.post_radius,
+                1,
+                self._fps,
+                self._renderer,
+                self._wave_idx,
+            )
         else:
             self.post = None
+
+    def set_renderer(self, renderer: "RendererFrontend"):
+        self._renderer = renderer
+        if self.post:
+            self.post._renderer = renderer
 
     def do_not_inherit__Trigger_directly(self):
         pass
@@ -201,6 +251,7 @@ class CorrelationTriggerConfig(
     mean_responsiveness: float = 0.05
 
     # Edge/area finding
+    sign_strength: float = 0
     edge_strength: float
 
     # Slope detection
@@ -410,7 +461,12 @@ class CorrelationTrigger(MainTrigger):
         self._prev_mean = cache.mean = lerp(
             self._prev_mean, raw_mean, cfg.mean_responsiveness
         )
-        data -= cache.mean
+
+        if cfg.sign_strength != 0:
+            signs = get_scaled_signs(data)
+            data += cfg.sign_strength * signs
+            data -= np.add.reduce(data) / N  # FIXME mean_responsiveness
+            self.custom_line("sign+data", data)
 
         # Window data
         period = get_period(data)
@@ -447,10 +503,14 @@ class CorrelationTrigger(MainTrigger):
             slope_finder = self._prev_slope_finder
 
         self.history.push(data)
+
         data *= window
 
         prev_buffer: np.ndarray = self._buffer * self.cfg.buffer_strength
         prev_buffer += self._edge_finder + slope_finder
+        self.custom_line(
+            "prev_buffer", prev_buffer / abs_max(prev_buffer), offset=False
+        )
 
         # Calculate correlation
         if self.cfg.trigger_diameter is not None:
@@ -458,7 +518,8 @@ class CorrelationTrigger(MainTrigger):
         else:
             radius = None
 
-        peak_offset = self.correlate_offset(data, prev_buffer, radius)
+        score = correlate_offset(data, prev_buffer, radius)
+        peak_offset = score.peak
         trigger = index + (stride * peak_offset)
 
         # Apply post trigger (before updating correlation buffer)
@@ -473,7 +534,12 @@ class CorrelationTrigger(MainTrigger):
         self._update_buffer(aligned, cache)
         self.frames_since_spectrum += 1
 
+        name = "corr"
+        self.custom_line(name, score.corr / (abs_max(score.corr, offset=1)))
+
+        self.offset_viewport(peak_offset)
         return trigger
+        # return index
 
     def spectrum_rescale_buffer(
         self, data: np.ndarray, peak_semitones: Optional[float]
@@ -508,13 +574,13 @@ class CorrelationTrigger(MainTrigger):
             boost_y = 1.0
 
         # If we want to double pitch...
-        resample_notes = self.correlate_offset(
+        resample_notes = correlate_offset(
             spectrum,
             prev_spectrum,
             scfg.max_notes_to_resample,
             boost_x=boost_x,
             boost_y=boost_y,
-        )
+        ).peak
         if resample_notes != 0:
             # we must divide sampling rate by 2.
             new_len = iround(N / 2 ** (resample_notes / scfg.notes_per_octave))
@@ -525,49 +591,6 @@ class CorrelationTrigger(MainTrigger):
             )
             # assert len(self._buffer) == new_len
             self._buffer = midpad(self._buffer, N)
-
-    @staticmethod
-    def correlate_offset(
-        data: np.ndarray,
-        prev_buffer: np.ndarray,
-        radius: Optional[int],
-        boost_x: int = 0,
-        boost_y: float = 1.0,
-    ) -> int:
-        """
-        This is confusing.
-
-        If data index < optimal, data will be too far to the right,
-        and we need to `index += positive`.
-        - The peak will appear near the right of `data`.
-
-        Either we must slide prev_buffer to the right,
-        or we must slide data to the left (by sliding index to the right):
-        - correlate(data, prev_buffer)
-        - trigger = index + peak_offset
-        """
-        N = len(data)
-        corr = signal.correlate(data, prev_buffer)  # returns double, not single/FLOAT
-        Ncorr = 2 * N - 1
-        assert len(corr) == Ncorr
-
-        # Find optimal offset
-        mid = N - 1
-
-        if radius is not None:
-            left = max(mid - radius, 0)
-            right = min(mid + radius + 1, Ncorr)
-
-            corr = corr[left:right]
-            mid = mid - left
-
-        # Prioritize part of it.
-        corr[mid + boost_x : mid + boost_x + 1] *= boost_y
-
-        # argmax(corr) == mid + peak_offset == (data >> peak_offset)
-        # peak_offset == argmax(corr) - mid
-        peak_offset = np.argmax(corr) - mid  # type: int
-        return peak_offset
 
     def _is_window_invalid(self, period: int) -> Union[bool, float]:
         """ Returns number of semitones,
@@ -615,6 +638,73 @@ class CorrelationTrigger(MainTrigger):
         # Old buffer
         normalize_buffer(self._buffer)
         self._buffer = lerp(self._buffer, data, responsiveness)
+
+
+@attr.dataclass
+class CorrelationResult:
+    peak: int
+    corr: np.ndarray
+
+
+def correlate_offset(
+    data: np.ndarray,
+    prev_buffer: np.ndarray,
+    radius: Optional[int],
+    boost_x: int = 0,
+    boost_y: float = 1.0,
+) -> CorrelationResult:
+    """
+    This is confusing.
+
+    If data index < optimal, data will be too far to the right,
+    and we need to `index += positive`.
+    - The peak will appear near the right of `data`.
+
+    Either we must slide prev_buffer to the right,
+    or we must slide data to the left (by sliding index to the right):
+    - correlate(data, prev_buffer)
+    - trigger = index + peak_offset
+    """
+    N = len(data)
+    corr = signal.correlate(data, prev_buffer)  # returns double, not single/FLOAT
+    Ncorr = 2 * N - 1
+    assert len(corr) == Ncorr
+
+    # Find optimal offset
+    mid = N - 1
+
+    if radius is not None:
+        left = max(mid - radius, 0)
+        right = min(mid + radius + 1, Ncorr)
+
+        corr = corr[left:right]
+        mid = mid - left
+
+    # Prioritize part of it.
+    corr[mid + boost_x : mid + boost_x + 1] *= boost_y
+
+    # argmax(corr) == mid + peak_offset == (data >> peak_offset)
+    # peak_offset == argmax(corr) - mid
+    peak_offset = np.argmax(corr) - mid  # type: int
+    return CorrelationResult(peak_offset, corr)
+
+
+SATURATION_LEVEL = 0.01
+
+
+def get_scaled_signs(data: np.ndarray) -> np.ndarray:
+    # range = np.amax(data) - np.amin(data)
+    # range2 = range + MIN_AMPLITUDE
+
+    data = data.copy()
+
+    peak = abs_max(data)
+    data /= (peak + MIN_AMPLITUDE) * SATURATION_LEVEL
+
+    sign_data = np.tanh(data)
+    sign_data *= peak
+
+    return sign_data
 
 
 #### Post-processing triggers

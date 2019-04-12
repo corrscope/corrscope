@@ -14,7 +14,7 @@ from corrscope.channel import Channel, ChannelConfig, DefaultLabel
 from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
 from corrscope.outputs import FFmpegOutputConfig
-from corrscope.renderer import Renderer, RendererConfig, BaseRenderer
+from corrscope.renderer import Renderer, RendererConfig, RendererFrontend
 from corrscope.triggers import CorrelationTriggerConfig, PerFrameCache, SpectrumConfig
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave, Flatten
@@ -217,10 +217,14 @@ class CorrScope:
                 ]
                 yield
 
-    def _load_renderer(self) -> BaseRenderer:
+    def _load_renderer(self) -> RendererFrontend:
         dummy_datas = [channel.get_render_around(0) for channel in self.channels]
         renderer = Renderer(
-            self.cfg.render, self.cfg.layout, dummy_datas, self.cfg.channels
+            self.cfg.render,
+            self.cfg.layout,
+            dummy_datas,
+            self.cfg.channels,
+            self.channels,
         )
         return renderer
 
@@ -245,6 +249,10 @@ class CorrScope:
         self.renderer = renderer  # only used for unit tests
 
         renderer.add_labels([channel.label for channel in self.channels])
+
+        # For debugging only
+        # for trigger in self.triggers:
+        #     trigger.set_renderer(renderer)
 
         if PRINT_TIMESTAMP:
             begin = time.perf_counter()
