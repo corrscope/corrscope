@@ -10,6 +10,8 @@ from corrscope.config import CorrError
 from corrscope.utils.scipy.wavfile import WavFileWarning
 from corrscope.wave import Wave, Flatten, calc_flatten_matrix
 
+parametrize = pytest.mark.parametrize
+
 prefix = "tests/wav-formats/"
 wave_paths = [
     # 2000 samples, with a full-scale peak at data[1000].
@@ -216,6 +218,25 @@ def test_wave_subsampling():
     for i in [-1000, 50000]:
         data = wave.get_around(i, region, stride)
         assert (data == 0).all()
+
+
+is_odd = parametrize("is_odd", [False, True])
+
+
+@is_odd
+def test_wave_subsampling_off_by_1(is_odd: bool):
+    """When calling wave.get_around(x, N), ensure that result[N//2] == wave[x]."""
+    wave = Wave(prefix + "s16-impulse1000.wav")
+    for stride in range(1, 5 + 1):
+        N = 500 + is_odd
+        halfN = N // 2
+        result = wave.get_around(1000, N, stride)
+
+        assert result[halfN] > 0.5, stride
+
+        result[halfN] = 0
+        np.testing.assert_almost_equal(result, 0, decimal=3)
+        # looks like s16-impulse1000.wav isn't 0-filled after all
 
 
 def test_stereo_doesnt_overflow():
