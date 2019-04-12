@@ -23,8 +23,8 @@ if TYPE_CHECKING:
 class _TriggerConfig:
     cls: ClassVar[Type["_Trigger"]]
 
-    def __call__(self, wave: "Wave", tsamp: int, stride: int, fps: float) -> "_Trigger":
-        return self.cls(wave, cfg=self, tsamp=tsamp, stride=stride, fps=fps)
+    def __call__(self, wave: "Wave", *args, **kwargs) -> "_Trigger":
+        return self.cls(wave, self, *args, **kwargs)
 
 
 class MainTriggerConfig(
@@ -71,7 +71,14 @@ def register_trigger(config_t: Type[_TriggerConfig]):
 
 class _Trigger(ABC):
     def __init__(
-        self, wave: "Wave", cfg: _TriggerConfig, tsamp: int, stride: int, fps: float
+        self,
+        wave: "Wave",
+        cfg: _TriggerConfig,
+        tsamp: int,
+        stride: int,
+        fps: float,
+        renderer: Optional["RendererFrontend"] = None,
+        wave_idx: int = 0,
     ):
         self.cfg = cfg
         self._wave = wave
@@ -81,12 +88,33 @@ class _Trigger(ABC):
         self._stride = stride
         self._fps = fps
 
+        # Only used for debug plots
+        self._renderer = renderer
+        self._wave_idx = wave_idx
+
         frame_dur = 1 / fps
         # Subsamples per frame
         self._tsamp_frame = self.time2tsamp(frame_dur)
 
     def time2tsamp(self, time: float) -> int:
         return round(time * self._wave.smp_s / self._stride)
+
+    def custom_line(self, name: str, data: np.ndarray, **kwargs):
+        if self._renderer is None:
+            return
+        self._renderer.update_custom_line(
+            name, self._wave_idx, self._stride, data, **kwargs
+        )
+
+    def custom_vline(self, name: str, x: int):
+        if self._renderer is None:
+            return
+        self._renderer.update_vline(name, self._wave_idx, self._stride, x)
+
+    def offset_viewport(self, offset: int):
+        if self._renderer is None:
+            return
+        self._renderer.offset_viewport(self._wave_idx, offset)
 
     @abstractmethod
     def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
@@ -115,9 +143,21 @@ class MainTrigger(_Trigger, ABC):
         if cfg.post_trigger:
             # Create a post-processing trigger, with narrow nsamp and stride=1.
             # This improves speed and precision.
-            self.post = cfg.post_trigger(self._wave, cfg.post_radius, 1, self._fps)
+            self.post = cfg.post_trigger(
+                self._wave,
+                cfg.post_radius,
+                1,
+                self._fps,
+                self._renderer,
+                self._wave_idx,
+            )
         else:
             self.post = None
+
+    def set_renderer(self, renderer: "RendererFrontend"):
+        self._renderer = renderer
+        if self.post:
+            self.post._renderer = renderer
 
     def do_not_inherit__Trigger_directly(self):
         pass

@@ -61,7 +61,7 @@ class Channel:
 
     # Product of corr_cfg.trigger/render_subsampling and trigger/render_width.
     _trigger_stride: int
-    _render_stride: int
+    render_stride: int
 
     def __init__(self, cfg: ChannelConfig, corr_cfg: "Config", channel_idx: int = 0):
         """channel_idx counts from 0."""
@@ -105,7 +105,7 @@ class Channel:
         self._render_samp = calculate_nsamp(corr_cfg.render_ms, rsub)
 
         self._trigger_stride = tsub * tw
-        self._render_stride = rsub * rw
+        self.render_stride = rsub * rw
 
         # Create a Trigger object.
         if isinstance(cfg.trigger, MainTriggerConfig):
@@ -130,9 +130,10 @@ class Channel:
             tsamp=trigger_samp,
             stride=self._trigger_stride,
             fps=corr_cfg.fps,
+            wave_idx=channel_idx,
         )
 
     def get_render_around(self, trigger_sample: int):
         return self.render_wave.get_around(
-            trigger_sample, self._render_samp, self._render_stride
+            trigger_sample, self._render_samp, self.render_stride
         )

@@ -1,6 +1,7 @@
 import enum
 import os
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import (
     Optional,
     List,
@@ -11,10 +12,15 @@ from typing import (
     Sequence,
     Type,
     Union,
+    Tuple,
+    Dict,
+    DefaultDict,
+    MutableSequence,
 )
 
 import attr
 import numpy as np
+from matplotlib.cm import get_cmap
 
 from corrscope.config import DumpableAttrs, with_units, TypedEnumDump
 from corrscope.layout import (
@@ -56,10 +62,11 @@ if TYPE_CHECKING:
     from matplotlib.artist import Artist
     from matplotlib.axes import Axes
     from matplotlib.backend_bases import FigureCanvasBase
+    from matplotlib.colors import ListedColormap
     from matplotlib.lines import Line2D
     from matplotlib.spines import Spine
     from matplotlib.text import Text, Annotation
-    from corrscope.channel import ChannelConfig
+    from corrscope.channel import ChannelConfig, Channel
 
 
 # Used by outputs.py.
@@ -166,6 +173,10 @@ class RendererConfig(DumpableAttrs, always_dump="*"):
     # Performance (skipped when recording to video)
     res_divisor: float = 1.0
 
+    # Debugging only
+    viewport_width: float = 1
+    viewport_height: float = 1
+
     def __attrs_post_init__(self) -> None:
         # round(np.int32 / float) == np.float32, but we want int.
         assert isinstance(self.width, (int, float))
@@ -185,7 +196,16 @@ class LineParam:
     color: str
 
 
-UpdateLines = Callable[[List[np.ndarray]], None]
+UpdateLines = Callable[[List[np.ndarray]], Any]
+UpdateOneLine = Callable[[np.ndarray], Any]
+
+
+@attr.dataclass
+class CustomLine:
+    stride: int
+    xdata: np.ndarray
+    set_xdata: UpdateOneLine
+    set_ydata: UpdateOneLine
 
 
 @property
@@ -194,7 +214,7 @@ def abstract_classvar(self) -> Any:
     """A ClassVar to be overriden by a subclass."""
 
 
-class BaseRenderer(ABC):
+class _RendererBackend(ABC):
     """
     Renderer backend which takes data and produces images.
     Does not touch Wave or Channel.
@@ -222,6 +242,7 @@ class BaseRenderer(ABC):
         lcfg: "LayoutConfig",
         dummy_datas: List[np.ndarray],
         channel_cfgs: Optional[List["ChannelConfig"]],
+        channels: List["Channel"],
     ):
         self.cfg = cfg
         self.lcfg = lcfg
@@ -251,18 +272,22 @@ class BaseRenderer(ABC):
             for color in line_colors
         ]
 
+        # Load channel strides.
+        if channels is not None:
+            if len(channels) != self.nplots:
+                raise ValueError(
+                    f"cannot assign {len(channels)} channels to {self.nplots} plots"
+                )
+            self.render_strides = [channel.render_stride for channel in channels]
+        else:
+            self.render_strides = [1] * self.nplots
+
     # Instance functionality
 
-    _update_main_lines: Optional[UpdateLines] = None
-
-    def update_main_lines(self, datas: List[np.ndarray]) -> None:
-        if self._update_main_lines is None:
-            self._update_main_lines = self.add_lines(datas)
-
-        self._update_main_lines(datas)
-
     @abstractmethod
-    def add_lines(self, dummy_datas: List[np.ndarray]) -> UpdateLines:
+    def add_lines_stereo(
+        self, dummy_datas: List[np.ndarray], strides: List[int]
+    ) -> UpdateLines:
         ...
 
     @abstractmethod
@@ -272,6 +297,102 @@ class BaseRenderer(ABC):
     @abstractmethod
     def add_labels(self, labels: List[str]) -> Any:
         ...
+
+    @abstractmethod
+    def add_xy_line_mono(
+        self, wave_idx: int, xs: Sequence[float], ys: Sequence[float], stride: int
+    ) -> CustomLine:
+        ...
+
+
+class RendererFrontend(_RendererBackend, ABC):
+    def __init__(self, *args, **kwargs):
+        _RendererBackend.__init__(self, *args, **kwargs)
+        self._update_main_lines = None
+        self._custom_lines = {}
+        self._offsetable = defaultdict(list)
+
+    _update_main_lines: Optional[UpdateLines]
+
+    def update_main_lines(self, datas: List[np.ndarray]) -> None:
+        if self._update_main_lines is None:
+            self._update_main_lines = self.add_lines_stereo(datas, self.render_strides)
+
+        self._update_main_lines(datas)
+
+    _custom_lines: Dict[Any, CustomLine]
+    _offsetable: DefaultDict[int, MutableSequence[CustomLine]]
+
+    def update_custom_line(
+        self,
+        name: str,
+        wave_idx: int,
+        stride: int,
+        data: np.ndarray,
+        *,
+        offset: bool = True,
+    ):
+        data = data.copy()
+        key = (name, wave_idx)
+
+        if key not in self._custom_lines:
+            line = self._add_line_mono(wave_idx, stride, data)
+            self._custom_lines[key] = line
+            if offset:
+                self._offsetable[wave_idx].append(line)
+        else:
+            line = self._custom_lines[key]
+
+        line.set_ydata(data)
+
+    def update_vline(
+        self, name: str, wave_idx: int, stride: int, x: int, *, offset: bool = True
+    ):
+        key = (name, wave_idx)
+        if key not in self._custom_lines:
+            line = self._add_vline_mono(wave_idx, stride)
+            self._custom_lines[key] = line
+            if offset:
+                self._offsetable[wave_idx].append(line)
+        else:
+            line = self._custom_lines[key]
+
+        line.xdata = [x * stride] * 2
+        self._custom_lines[key].set_xdata(line.xdata)
+
+    def offset_viewport(self, wave_idx: int, viewport_offset: float):
+        line_offset = -viewport_offset
+
+        for line in self._offsetable[wave_idx]:
+            line.set_xdata(line.xdata + line_offset * line.stride)
+
+    def _add_line_mono(
+        self, wave_idx: int, stride: int, dummy_data: np.ndarray
+    ) -> CustomLine:
+        ys = np.zeros_like(dummy_data)
+        xs = calc_xs(len(ys), stride)
+        return self.add_xy_line_mono(wave_idx, xs, ys, stride)
+
+    def _add_vline_mono(self, wave_idx: int, stride: int) -> CustomLine:
+        return self.add_xy_line_mono(wave_idx, [0, 0], [-1, 1], stride)
+
+
+# See Wave.get_around() and designNotes.md.
+# Viewport functions
+def calc_limits(N: int, viewport_stride: float) -> Tuple[float, float]:
+    halfN = N // 2
+    max_x = N - 1
+    return np.array([-halfN, -halfN + max_x]) * viewport_stride
+
+
+def calc_center(viewport_stride: float) -> float:
+    return -0.5 * viewport_stride
+
+
+# Line functions
+def calc_xs(N: int, stride: int) -> Sequence[float]:
+    halfN = N // 2
+    return (np.arange(N) - halfN) * stride
 
 
 Point = float
@@ -290,7 +411,7 @@ def px_from_points(pt: Point) -> Pixel:
     return pt * PIXELS_PER_PT
 
 
-class AbstractMatplotlibRenderer(BaseRenderer, ABC):
+class AbstractMatplotlibRenderer(RendererFrontend, ABC):
     """Matplotlib renderer which can use any backend (agg, mplcairo).
     To pick a backend, subclass and set canvas_type at the class level.
     """
@@ -303,7 +424,7 @@ class AbstractMatplotlibRenderer(BaseRenderer, ABC):
         pass
 
     def __init__(self, *args, **kwargs):
-        BaseRenderer.__init__(self, *args, **kwargs)
+        RendererFrontend.__init__(self, *args, **kwargs)
 
         dict.__setitem__(
             matplotlib.rcParams, "lines.antialiased", self.cfg.antialiasing
@@ -385,17 +506,28 @@ class AbstractMatplotlibRenderer(BaseRenderer, ABC):
         # Returns 2D list of [self.nplots][1]Axes.
         axes_mono_2d = self.layout_mono.arrange(self._axes_factory, label="mono")
         for axes_list in axes_mono_2d:
-            assert len(axes_list) == 1
-            self._axes_mono.extend(axes_list)
+            (axes,) = axes_list  # type: Axes
+
+            # List of colors at
+            # https://matplotlib.org/gallery/color/colormap_reference.html
+            # Discussion at https://github.com/matplotlib/matplotlib/issues/10840
+            cmap: ListedColormap = get_cmap("Accent")
+            colors = cmap.colors
+            axes.set_prop_cycle(color=colors)
+
+            self._axes_mono.append(axes)
 
         # Setup axes
         for idx, N in enumerate(self.wave_nsamps):
             wave_axes = self._axes2d[idx]
-            max_x = N - 1
+
+            viewport_stride = self.render_strides[idx] * cfg.viewport_width
+            ylim = cfg.viewport_height
 
             def scale_axes(ax: "Axes"):
-                ax.set_xlim(0, max_x)
-                ax.set_ylim(-1, 1)
+                xlim = calc_limits(N, viewport_stride)
+                ax.set_xlim(*xlim)
+                ax.set_ylim(-ylim, ylim)
 
             scale_axes(self._axes_mono[idx])
             for ax in unique_by_id(wave_axes):
@@ -408,9 +540,7 @@ class AbstractMatplotlibRenderer(BaseRenderer, ABC):
                 # Not quite sure if midlines or gridlines draw on top
                 kw = dict(color=midline_color, linewidth=midline_width)
                 if cfg.v_midline:
-                    # See Wave.get_around() docstring.
-                    # wave_data[N//2] == self[sample], usually > 0.
-                    ax.axvline(x=N // 2 - 0.5, **kw)
+                    ax.axvline(x=calc_center(viewport_stride), **kw)
                 if cfg.h_midline:
                     ax.axhline(y=0, **kw)
 
@@ -490,7 +620,9 @@ class AbstractMatplotlibRenderer(BaseRenderer, ABC):
         return ax
 
     # Public API
-    def add_lines(self, dummy_datas: List[np.ndarray]) -> UpdateLines:
+    def add_lines_stereo(
+        self, dummy_datas: List[np.ndarray], strides: List[int]
+    ) -> UpdateLines:
         cfg = self.cfg
 
         # Plot lines over background
@@ -504,22 +636,26 @@ class AbstractMatplotlibRenderer(BaseRenderer, ABC):
             wave_axes = self._axes2d[wave_idx]
             wave_lines = []
 
+            xs = calc_xs(len(wave_zeros), strides[wave_idx])
+
             # Foreach chan
             for chan_idx, chan_zeros in enumerate(wave_zeros.T):
                 ax = wave_axes[chan_idx]
                 line_color = self._line_params[wave_idx].color
                 chan_line: Line2D = ax.plot(
-                    chan_zeros, color=line_color, linewidth=line_width
+                    xs, chan_zeros, color=line_color, linewidth=line_width
                 )[0]
                 wave_lines.append(chan_line)
 
             lines2d.append(wave_lines)
             self._artists.extend(wave_lines)
 
-        return lambda datas: self._update_lines(lines2d, datas)
+        return lambda datas: self._update_lines_stereo(lines2d, datas)
 
     @staticmethod
-    def _update_lines(lines2d: "List[List[Line2D]]", datas: List[np.ndarray]) -> None:
+    def _update_lines_stereo(
+        lines2d: "List[List[Line2D]]", datas: List[np.ndarray]
+    ) -> None:
         """
         Preconditions:
         - lines2d[wave][chan] = Line2D
@@ -541,6 +677,22 @@ class AbstractMatplotlibRenderer(BaseRenderer, ABC):
             for chan_idx, chan_data in enumerate(wave_data.T):
                 chan_line = wave_lines[chan_idx]
                 chan_line.set_ydata(chan_data)
+
+    def add_xy_line_mono(
+        self, wave_idx: int, xs: Sequence[float], ys: Sequence[float], stride: int
+    ) -> CustomLine:
+        cfg = self.cfg
+
+        # Plot lines over background
+        line_width = cfg.line_width
+
+        ax = self._axes_mono[wave_idx]
+        mono_line: Line2D = ax.plot(xs, ys, linewidth=line_width)[0]
+
+        self._artists.append(mono_line)
+
+        # noinspection PyTypeChecker
+        return CustomLine(stride, xs, mono_line.set_xdata, mono_line.set_ydata)
 
     # Channel labels
     def add_labels(self, labels: List[str]) -> List["Text"]:
