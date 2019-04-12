@@ -204,7 +204,6 @@ class PerFrameCache:
     # NOTE: period is a *non-subsampled* period.
     # The period of subsampled data must be multiplied by stride.
     period: Optional[int] = None
-    sum: Optional[float] = None  # Only used in branch 'rewrite-area-trigger'
     mean: Optional[float] = None
 
 
@@ -248,8 +247,6 @@ class CorrelationTriggerConfig(
     " buffer_falloff ",
 ):
     # get_trigger()
-    mean_responsiveness: float = 0.05
-
     # Edge/area finding
     sign_strength: float = 0
     edge_strength: float
@@ -291,7 +288,6 @@ class CorrelationTriggerConfig(
         validate_param(self, "slope_width", 0, 0.5)
 
         validate_param(self, "responsiveness", 0, 1)
-        validate_param(self, "mean_responsiveness", 0, 1)
         # TODO trigger_falloff >= 0
         validate_param(self, "buffer_falloff", 0, np.inf)
 
@@ -350,7 +346,6 @@ class CorrelationTrigger(MainTrigger):
         self._prev_window: Optional[np.ndarray] = None
         self._prev_slope_finder: Optional[np.ndarray] = None
 
-        self._prev_mean: float = 0.0
         self._prev_trigger: int = 0
 
         # (mutable) Log-scaled spectrum
@@ -454,18 +449,12 @@ class CorrelationTrigger(MainTrigger):
         # Get data (1D, downmixed to mono)
         stride = self._stride
         data = self._wave.get_around(index, N, stride)
-        cache.sum = np.add.reduce(data)
 
         # Update data-mean estimate
-        raw_mean = cache.sum / N
-        self._prev_mean = cache.mean = lerp(
-            self._prev_mean, raw_mean, cfg.mean_responsiveness
-        )
-
         if cfg.sign_strength != 0:
             signs = sign_times_peak(data)
             data += cfg.sign_strength * signs
-            data -= np.add.reduce(data) / N  # FIXME mean_responsiveness
+            data -= np.add.reduce(data) / N
             self.custom_line("sign+data", data)
 
         # Window data
@@ -522,20 +511,27 @@ class CorrelationTrigger(MainTrigger):
         peak_offset = score.peak
         trigger = index + (stride * peak_offset)
 
-        # Apply post trigger (before updating correlation buffer)
+        del data
+
         if self.post:
+            new_data = self._wave.get_around(trigger, N, stride)
+            cache.mean = np.add.reduce(new_data) / N
+
+            # Apply post trigger (before updating correlation buffer)
             trigger = self.post.get_trigger(trigger, cache)
 
         # Avoid time traveling backwards.
         self._prev_trigger = trigger = max(trigger, self._prev_trigger)
 
         # Update correlation buffer (distinct from visible area)
-        aligned = self._wave.get_around(trigger, self._buffer_nsamp, stride)
+        aligned = self._wave.get_around(trigger, N, stride)
+        if cache.mean is None:
+            cache.mean = np.add.reduce(aligned) / N
         self._update_buffer(aligned, cache)
+
         self.frames_since_spectrum += 1
 
-        name = "corr"
-        self.custom_line(name, score.corr / (abs_max(score.corr, offset=1)))
+        self.custom_line("score.corr", score.corr / abs_max(score.corr, offset=1))
 
         self.offset_viewport(peak_offset)
         return trigger

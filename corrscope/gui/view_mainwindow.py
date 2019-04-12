@@ -280,14 +280,6 @@ class MainWindow(QWidget):
             ):
                 with add_row(
                     s,
-                    tr("Mean Responsiveness"),
-                    BoundDoubleSpinBox,
-                    name="trigger__mean_responsiveness",
-                ) as w:  # type: BoundDoubleSpinBox
-                    w.setMaximum(1.0)
-                    w.setSingleStep(0.1)
-                with add_row(
-                    s,
                     tr("Sign Triggering\n(for triangle waves)"),
                     BoundDoubleSpinBox,
                     name="trigger__sign_strength",
