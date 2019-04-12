@@ -685,7 +685,7 @@ def correlate_offset(
     return CorrelationResult(peak_offset, corr)
 
 
-SATURATION_LEVEL = 0.01
+SIGN_AMPLIFICATION = 1000
 
 
 def sign_times_peak(data: np.ndarray) -> np.ndarray:
@@ -697,7 +697,7 @@ def sign_times_peak(data: np.ndarray) -> np.ndarray:
     data = data.copy()
 
     peak = abs_max(data)
-    data /= (peak + MIN_AMPLITUDE) * SATURATION_LEVEL
+    data *= SIGN_AMPLIFICATION / (peak + MIN_AMPLITUDE)
 
     sign_data = np.tanh(data)
     sign_data *= peak
