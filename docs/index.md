@@ -48,11 +48,11 @@ If `period` changes significantly, corrscope computes the spectrums of `data` an
 
 ### Correlation Triggering (uses `buffer`)
 
-Corrscope multiplies `data` by `data window` of some sort.
+Corrscope multiplies `data` by `data window` to taper off the edges towards zero, and avoid using data over 1 frame old.
 
-Corrscope uses `edge_finder`, which is computed once and reused for every frame.
+Precomputed: `edge_finder`, which is computed once and reused for every frame.
 
-Corrscope correlates `data` with `buffer` + `edge_finder` to find the best part of `data` to pick, then sets `position` to be used for rendering.
+Corrscope cross-correlates `data` with `buffer + edge_finder` to produce a "buffer similarity + edge" score for each possible `data` triggering location. Corrscope then picks the location in `data` with the highest score, then sets `position` to be used for rendering.
 
 ### (Optional) Post Triggering
 
