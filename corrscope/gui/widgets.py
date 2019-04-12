@@ -7,6 +7,8 @@ from PyQt5.QtWidgets import QShortcut
 
 from corrscope.gui.util import find_ranges
 
+qsp = qw.QSizePolicy
+
 if TYPE_CHECKING:
     from corrscope.gui import ChannelModel
 
@@ -105,3 +107,17 @@ class TabWidget(qw.QTabWidget):
 
     def prev_tab(self):
         self.setCurrentIndex((self.currentIndex() - 1) % self.count())
+
+
+class VerticalScrollArea(qw.QScrollArea):
+    def __init__(self, parent):
+        qw.QScrollArea.__init__(self, parent)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.horizontalScrollBar().setEnabled(False)
+
+        # If removed, you will get unused space to the right and bottom.
+        self.setWidgetResizable(True)
+
+        # Only allow expanding, not shrinking.
+        self.setSizePolicy(qsp(qsp.Minimum, qsp.Minimum))

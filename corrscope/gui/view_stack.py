@@ -19,6 +19,11 @@ WidgetOrLayout = TypeVar("WidgetOrLayout", bound=Union[QWidget, QLayout])
 #   new_widget_or_layout(type)
 #   LayoutStack.push(instance)
 
+
+def issubclass_soft(type_maybe, parent_s):
+    return isinstance(type_maybe, type) and issubclass(type_maybe, parent_s)
+
+
 # Like HTML document.createElement()
 def create_element(
     item_type: Union[Type[WidgetOrLayout], str],
@@ -35,12 +40,11 @@ def create_element(
 
     if isinstance(item_type, str):
         item = QLabel(item_type, parent)
-    elif issubclass(item_type, QLayout):
+    elif issubclass_soft(item_type, QLayout):
         # new_widget_or_layout is used to add sublayouts, which do NOT have a parent.
         # Only widgets' root layouts have parents.
         item = item_type(None)
     else:
-        assert issubclass(item_type, (QWidget, QAction))
         item = item_type(parent)
 
     if "name" in attributes:
@@ -144,6 +148,24 @@ def _insert_widget_or_layout(layout: QLayout, item: WidgetOrLayout, *args, **kwa
         layout.addLayout(item, *args, **kwargs)
     else:
         raise TypeError(item)
+
+
+@contextmanager
+def fill_scroll_stretch(
+    stack: LayoutStack, item_type: Type[WidgetOrLayout] = QWidget, **kwargs
+) -> ctx[WidgetOrLayout]:
+    """Fill a QScrollArea with a widget,
+    then append a stretch to keep GUI elements packed."""
+    with _new_widget(stack, item_type, **kwargs) as widget:
+        yield widget
+        append_stretch(stack)
+
+    parent_scroll = stack.widget
+    assert isinstance(parent_scroll, QScrollArea)
+
+    # void QScrollArea::setWidget(QWidget *widget)
+    # You must add the layout of `widget` before you call this function.
+    parent_scroll.setWidget(widget)
 
 
 # Main window toolbars/menus
