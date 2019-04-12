@@ -455,7 +455,6 @@ class CorrelationTrigger(MainTrigger):
             signs = sign_times_peak(data)
             data += cfg.sign_strength * signs
             data -= np.add.reduce(data) / N
-            self.custom_line("sign+data", data)
 
         # Window data
         period = get_period(data)
@@ -497,9 +496,6 @@ class CorrelationTrigger(MainTrigger):
 
         prev_buffer: np.ndarray = self._buffer * self.cfg.buffer_strength
         prev_buffer += self._edge_finder + slope_finder
-        self.custom_line(
-            "prev_buffer", prev_buffer / abs_max(prev_buffer), offset=False
-        )
 
         # Calculate correlation
         if self.cfg.trigger_diameter is not None:
@@ -531,11 +527,7 @@ class CorrelationTrigger(MainTrigger):
 
         self.frames_since_spectrum += 1
 
-        self.custom_line("score.corr", score.corr / abs_max(score.corr, offset=1))
-
-        self.offset_viewport(peak_offset)
         return trigger
-        # return index
 
     def spectrum_rescale_buffer(
         self, data: np.ndarray, peak_semitones: Optional[float]
