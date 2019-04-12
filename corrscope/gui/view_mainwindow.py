@@ -18,6 +18,7 @@ from corrscope.gui.view_stack import (
     append_menu,
     add_toolbar,
     create_element,
+    fill_scroll_stretch,
 )
 
 NBSP = "\xa0"
@@ -97,7 +98,7 @@ class MainWindow(QWidget):
 
     def add_general_tab(self, s: LayoutStack) -> QWidget:
         tr = self.tr
-        with self._add_tab(s, tr("&General"), layout=QVBoxLayout) as tab:
+        with self.add_tab_stretch(s, tr("&General"), layout=QVBoxLayout) as tab:
 
             # Global group
             with append_widget(s, QGroupBox) as self.optionGlobal:
@@ -145,7 +146,13 @@ class MainWindow(QWidget):
 
     def add_appear_tab(self, s: LayoutStack) -> QWidget:
         tr = self.tr
-        with self._add_tab(s, tr("&Appearance"), layout=QVBoxLayout) as tab:
+
+        # Qt Designer produces path "QTabWidget/QWidget/QScrollView/QWidget/items".
+        # My current code produces path "QTabWidget/QScrollView/QWidget/items".
+        # This is missing a gap between the tab and scroll-area, but saves space.
+        with add_tab(
+            s, VerticalScrollArea, tr("&Appearance")
+        ) as tab, fill_scroll_stretch(s, layout=QVBoxLayout):
 
             with append_widget(
                 s, QGroupBox, title=tr("Appearance"), layout=QFormLayout
@@ -264,7 +271,7 @@ class MainWindow(QWidget):
     def add_trigger_tab(self, s: LayoutStack) -> QWidget:
         tr = self.tr
 
-        with self._add_tab(s, tr("&Trigger"), layout=QVBoxLayout) as tab:
+        with self.add_tab_stretch(s, tr("&Trigger"), layout=QVBoxLayout) as tab:
             with append_widget(
                 s, QGroupBox, title=tr("Wave Alignment"), layout=QFormLayout
             ):
@@ -364,7 +371,9 @@ class MainWindow(QWidget):
 
     @staticmethod
     @contextmanager
-    def _add_tab(s: LayoutStack, label: str = "", **kwargs):
+    def add_tab_stretch(s: LayoutStack, label: str = "", **kwargs):
+        """Create a tab widget,
+        then append a stretch to keep GUI elements packed."""
         with add_tab(s, QWidget, label, **kwargs) as tab:
             yield tab
             append_stretch(s)
@@ -528,6 +537,11 @@ from corrscope.gui.model_bind import (
 # Delete unbound widgets, so they cannot accidentally be used.
 del QLineEdit, QSpinBox, QDoubleSpinBox, QCheckBox, QComboBox
 
-from corrscope.gui.widgets import ChannelTableView, ShortcutButton, TabWidget
+from corrscope.gui.widgets import (
+    ChannelTableView,
+    ShortcutButton,
+    TabWidget,
+    VerticalScrollArea,
+)
 
 del QTabWidget
