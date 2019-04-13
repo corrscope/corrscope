@@ -23,10 +23,6 @@ if TYPE_CHECKING:
     from corrscope.renderer import RendererFrontend
 
 
-def abs_max(data, offset=0):
-    return np.amax(np.abs(data)) + offset
-
-
 # Abstract classes
 
 
@@ -694,6 +690,10 @@ def sign_times_peak(data: np.ndarray) -> np.ndarray:
     sign_data *= peak
 
     return sign_data
+
+
+def abs_max(data, offset=0):
+    return np.amax(np.abs(data)) + offset
 
 
 #### Post-processing triggers
