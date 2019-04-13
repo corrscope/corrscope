@@ -26,8 +26,11 @@ def _get_hist_name(
     default_name: Optional[str],
     filters: List[str],
 ) -> Optional[FileName]:
-    """Get file name, defaulting to history folder. If user accepts, update history."""
-
+    """
+    Get file name.
+    Default folder is history folder, and `default_name`.folder is discarded.
+    If user accepts, update history.
+    """
     # Get recently used dir.
     dir_or_file: str = history_dir.get()
     if default_name:
