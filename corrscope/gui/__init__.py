@@ -850,11 +850,11 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("render_stereo", str, None, "Render Stereo\nDownmix"),
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),
+        Column("trigger__sign_strength", float, None),
         Column("trigger__buffer_strength", float, None),
         Column("trigger__responsiveness", float, None, "Buffer\nResponsiveness"),
         Column("trigger__edge_direction", plus_minus_one, None),
         Column("trigger__edge_strength", float, None),
-        Column("trigger__sign_strength", float, None),
         Column("trigger__slope_strength", float, None),
         Column("trigger__slope_width", float, None),
     ]
