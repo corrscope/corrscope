@@ -43,7 +43,6 @@ class SpectrumConfig(KeywordAttrs):
 
     # Time-domain history parameters
     min_frames_between_recompute: int = 1
-    frames_to_lookbehind: int = 2
 
 
 class DummySpectrum:

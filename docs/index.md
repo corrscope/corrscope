@@ -55,15 +55,20 @@ To remove DC offset from the wave, corrscope calculates the `mean` of input `dat
 
 Corrscope then estimates the fundamental `period` of the waveform, using autocorrelation.
 
+Corrscope multiplies `data` by `data window` to taper off the edges towards zero, and avoid using data over 1 frame old.
+
 ### (optional) Pitch Tracking
 
 If `Pitch Tracking` is enabled:
 
-If `period` changes significantly, corrscope computes the spectrums of `data` and `data` from 2 frames ago, and cross-correlates them to estimate the pitch change over the last 2 frames. It then resamples (horizontally scales) `buffer` to match this pitch change.
+If `period` changes significantly:
+
+- Cross-correlate the log-frequency spectrum of `data` with `buffer`.
+- Rescale `buffer` until its pitch matches `data`.
+
+Pitch Tracking may get confused when `data` moves from 1 note to another over the course of multiple frames. If the right half of `buffer` changes to a new note while the left half is still latched onto the old note, the next frame will latch onto the mistriggered right half of the buffer. To prevent issues, you should consider reducing `Buffer Responsiveness` (so `buffer` will not "learn" the wrong pitch, and instead be rescaled to align with the new note).
 
 ### Correlation Triggering (uses `buffer`)
-
-Corrscope multiplies `data` by `data window` to taper off the edges towards zero, and avoid using data over 1 frame old.
 
 Precomputed: `edge_finder`, which is computed once and reused for every frame.
 
