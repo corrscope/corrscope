@@ -109,11 +109,11 @@ class MainWindow(QWidget):
                     self.fps.setMaximum(999)
                     self.fps.setSingleStep(10)
 
-                with add_row(s, "", BoundSpinBox) as self.trigger_ms:
+                with add_row(s, "", BoundSpinBox, maximum=200) as self.trigger_ms:
                     self.trigger_ms.setMinimum(5)
                     self.trigger_ms.setSingleStep(5)
 
-                with add_row(s, "", BoundSpinBox) as self.render_ms:
+                with add_row(s, "", BoundSpinBox, maximum=200) as self.render_ms:
                     self.render_ms.setMinimum(5)
                     self.render_ms.setSingleStep(5)
 
