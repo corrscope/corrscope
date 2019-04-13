@@ -108,7 +108,7 @@ def default_config(**kwargs) -> Config:
         master_audio="",
         fps=_FPS,
         amplification=1,
-        trigger_ms=40,
+        trigger_ms=60,
         render_ms=40,
         trigger_subsampling=1,
         render_subsampling=2,
