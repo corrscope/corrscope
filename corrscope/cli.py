@@ -2,16 +2,16 @@ import datetime
 import sys
 from itertools import count
 from pathlib import Path
-from typing import Optional, List, Tuple, Union, Iterator, cast
+from typing import Optional, List, Tuple, Union, Iterator, cast, TypeVar
 
 import click
 
 import corrscope
 from corrscope.channel import ChannelConfig
 from corrscope.config import yaml
-from corrscope.settings.paths import MissingFFmpegError
-from corrscope.outputs import IOutputConfig, FFplayOutputConfig, FFmpegOutputConfig
 from corrscope.corrscope import default_config, CorrScope, Config, Arguments
+from corrscope.outputs import IOutputConfig, FFplayOutputConfig
+from corrscope.settings.paths import MissingFFmpegError
 
 
 Folder = click.Path(exists=True, file_okay=False)
@@ -43,20 +43,44 @@ VIDEO_NAME = ".mp4"
 DEFAULT_NAME = corrscope.app_name
 
 
-def get_name(audio_file: Union[None, str, Path]) -> str:
-    # Write file to current working dir, not audio dir.
-    if audio_file:
-        name = Path(audio_file).stem
+def _get_file_name(cfg_path: Optional[Path], cfg: Config, ext: str) -> str:
+    """
+    Returns a file path with extension (but no dir).
+    Defaults to "corrscope.ext".
+    """
+    name = get_file_stem(cfg_path, cfg, default=DEFAULT_NAME)
+    return name + ext
+
+
+T = TypeVar("T")
+Return = str
+
+
+def get_file_stem(
+    cfg_path: Optional[Path], cfg: Config, default: T
+) -> Union[Return, T]:
+    """
+    Returns a "name" (no dir or extension) for saving file or video.
+    Defaults to `default`.
+
+    Used by GUI as well.
+    """
+    Inner = Path
+
+    if cfg_path:
+        # Current file was saved.
+        file_path_or_name = Inner(cfg_path)
+
+    # Current file was never saved.
+    # Master audio and all channels may/not be absolute paths.
+    elif cfg.master_audio:
+        file_path_or_name = Inner(cfg.master_audio)
+    elif len(cfg.channels) > 0:
+        file_path_or_name = Inner(cfg.channels[0].wav_path)
     else:
-        name = DEFAULT_NAME
-    return name
+        return default
 
-
-def get_path(audio_file: Union[None, str, Path], ext: str) -> Path:
-    name = get_name(audio_file)
-
-    # Add extension
-    return Path(name).with_suffix(ext)
+    return file_path_or_name.stem
 
 
 PROFILE_DUMP_NAME = "cprofile"
@@ -202,8 +226,9 @@ def main(
             assert False, cfg_or_path
 
         if write:
-            write_path = get_path(audio, YAML_NAME)
-            yaml.dump(cfg, write_path)
+            # `corrscope file.yaml -w` should write back to same path.
+            write_path = _get_file_name(cfg_path, cfg, ext=YAML_NAME)
+            yaml.dump(cfg, Path(write_path))
 
         outputs = []  # type: List[IOutputConfig]
 
@@ -211,8 +236,8 @@ def main(
             outputs.append(FFplayOutputConfig())
 
         if render:
-            video_path = get_path(cfg_path or audio, VIDEO_NAME)
-            outputs.append(cfg.get_ffmpeg_cfg(str(video_path)))
+            video_path = _get_file_name(cfg_path, cfg, ext=VIDEO_NAME)
+            outputs.append(cfg.get_ffmpeg_cfg(video_path))
 
         if outputs:
             arg = Arguments(cfg_dir=cfg_dir, outputs=outputs)

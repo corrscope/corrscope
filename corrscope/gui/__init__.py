@@ -145,6 +145,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         # Bind config to UI.
         if isinstance(cfg_or_path, Config):
             self.load_cfg(cfg_or_path, None)
+            save_dir = self.compute_save_dir(self.cfg)
+            if save_dir:
+                self.pref.file_dir = save_dir
         elif isinstance(cfg_or_path, Path):
             self.load_cfg_from_path(cfg_or_path)
         else:
@@ -343,7 +346,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         """
 
         # Name and extension (no folder).
-        cfg_filename = self.file_stem + cli.YAML_NAME
+        cfg_filename = self.get_save_filename(cli.YAML_NAME)
 
         # Folder is obtained from self.pref.file_dir_ref.
         filters = ["YAML files (*.yaml)", "All files (*)"]
@@ -381,7 +384,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             return
 
         # Name and extension (no folder).
-        video_filename = self.file_stem + cli.VIDEO_NAME
+        video_filename = self.get_save_filename(cli.VIDEO_NAME)
         filters = ["MP4 files (*.mp4)", "All files (*)"]
 
         # Points to either `file_dir` or `render_dir`.
@@ -465,10 +468,34 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             return self._cfg_path.name
         return self.UNTITLED
 
-    @property
-    def file_stem(self) -> str:
-        """ Returns a "config name" with no dots or slashes. """
-        return cli.get_name(self._cfg_path or self.cfg.master_audio)
+    def get_save_filename(self, suffix: str) -> str:
+        """
+        If file name can be guessed, return "filename.suffix" (no dir).
+        Otherwise return "".
+
+        Used for saving file or video.
+        """
+        stem = cli.get_file_stem(self._cfg_path, self.cfg, default="")
+        if stem:
+            return stem + suffix
+        else:
+            return ""
+
+    @staticmethod
+    def compute_save_dir(cfg: Config) -> Optional[str]:
+        """Computes a "save directory" when constructing a config from CLI wav files."""
+        if cfg.master_audio:
+            file_path = cfg.master_audio
+        elif len(cfg.channels) > 0:
+            file_path = cfg.channels[0].wav_path
+        else:
+            return None
+
+        # If file_path is "file.wav", we want to return "." .
+        # os.path.dirname("file.wav") == ""
+        # Path("file.wav").parent..str == "."
+        dir = Path(file_path).parent
+        return str(dir)
 
     @property
     def cfg(self):
