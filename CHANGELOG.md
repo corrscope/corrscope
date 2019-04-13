@@ -5,6 +5,7 @@
 - Rewrite pitch tracking to avoid false negatives
     - Previously, we rescaled the *buffer* to maximize spectral similarity between *data 2 frames ago* and data now.
     - Now we rescale the buffer to maximize spectral similarity between the buffer and data now.
+- Make "Begin Time" preview-only. (All renders will start at 0 seconds.)
 
 ### Features
 

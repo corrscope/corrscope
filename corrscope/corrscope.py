@@ -68,7 +68,11 @@ class Config(
         self.render.before_preview()
 
     def before_record(self) -> None:
-        """ Called *once* before recording video. Force high-quality rendering. """
+        """ Called *once* before recording video.
+        - Disable cutting off the beginning of video.
+        - Force high-quality rendering.
+        """
+        self.begin_time = 0
         self.render_subfps = 1
         self.trigger_subsampling = 1
         self.render_subsampling = 1

@@ -120,8 +120,14 @@ class MainWindow(QWidget):
                 with add_row(s, "", BoundDoubleSpinBox) as self.amplification:
                     self.amplification.setSingleStep(0.1)
 
-                with add_row(s, "", BoundDoubleSpinBox) as self.begin_time:
-                    self.begin_time.setMaximum(9999.0)
+                with add_row(
+                    s,
+                    tr("Begin Time\n(preview only)"),
+                    BoundDoubleSpinBox,
+                    name="begin_time",
+                    maximum=10000,
+                ):
+                    pass
 
             with append_widget(
                 s, QGroupBox, title=tr("Performance (Preview Only)"), layout=QFormLayout
@@ -487,7 +493,6 @@ class MainWindow(QWidget):
         self.trigger_msL.setText(tr("Trigger Width"))
         self.render_msL.setText(tr("Render Width"))
         self.amplificationL.setText(tr("Amplification"))
-        self.begin_timeL.setText(tr("Begin Time"))
         self.render_resolutionL.setText(tr("Resolution"))
         self.render__bg_colorL.setText(tr("Background"))
         self.render__init_line_colorL.setText(tr("Line Color"))
