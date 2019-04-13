@@ -42,7 +42,7 @@ class SpectrumConfig(KeywordAttrs):
         return round(self.notes_per_octave * self.max_octaves_to_resample)
 
     # Time-domain history parameters
-    min_frames_between_recompute: int = 6
+    min_frames_between_recompute: int = 1
     frames_to_lookbehind: int = 2
 
 
