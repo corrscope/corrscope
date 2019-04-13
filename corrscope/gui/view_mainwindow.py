@@ -194,6 +194,10 @@ class MainWindow(QWidget):
 
             with append_widget(s, QGroupBox, title=tr("Labels"), layout=QFormLayout):
                 with add_row(
+                    s, tr("Default Label"), BoundComboBox, name="default_label"
+                ):
+                    pass
+                with add_row(
                     s, tr("Font"), BoundFontButton, name="render__label_qfont"
                 ):
                     pass
@@ -216,10 +220,6 @@ class MainWindow(QWidget):
                     name="render.label_padding_ratio",
                     maximum=10,
                     singleStep=0.25,
-                ):
-                    pass
-                with add_row(
-                    s, tr("Default Label"), BoundComboBox, name="default_label"
                 ):
                     pass
 
