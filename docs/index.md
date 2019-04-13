@@ -16,16 +16,21 @@ Unlike other triggering algorithms (which only depend on the current frame's wor
 
 ### Options
 
-- Left pane, Global
+All tabs are located in the left pane.
+
+- Global
     - `Trigger Width` (also controllable via per-channel "Trigger Width ×")
-- Top pane, Wave Alignment
+- Trigger, Wave Alignment
     <!-- - `Buffer Strength` -->
     - `Buffer Responsiveness`
     - `Mean Responsiveness`
     - `Pitch Tracking`
-- Top pane, Edge Search
+- Trigger, Edge Triggering
     - `Edge Direction`
     - `Edge Strength`
+- Trigger, Post Triggering
+    - Post Trigger
+    - `Post Trigger Radius`
 
 ### Variables Remembered
 
@@ -36,7 +41,17 @@ Unlike other triggering algorithms (which only depend on the current frame's wor
 
 On each frame, corrscope fetches [from the channel] a buffer of mono `data`, centered at the current time. The amount of data used is controlled by `Trigger Width`, which should be increased to keep low bass stable.
 
-To remove DC offset from the wave, corrscope calculates the `new mean` of input `data`. Because each frame's mean may jitter depending on what window of the wave was selected, update saved `mean` = `mean` + `Mean Responsiveness` × (`new mean` - `mean`). Then corrscope subtracts this averaged `mean` from `data`.
+- If `Edge Direction` is "Falling (-1)", then both the main and post trigger will receive negated data from the wave, causing both to search for falling edges (instead of rising edges).
+
+### Sign Triggering
+
+Some waves do not have clear edges. For example, triangle waves do not have clear rising edges (leading to suboptimal triggering), and NES triangles have 15 small rising edges, causing corrscope to jump between them.
+
+If `Sign Triggering` is set to nonzero `strength`, corrscope computes `peak = max(abs(data))`. It adds `peak * strength` to positive parts of `data`, subtracts `peak * strength` from negative parts of `data`, and heavily amplifies parts of the wave near zero. This helps the correlation trigger locate zero-crossings exactly.
+
+### Mean/Period
+
+To remove DC offset from the wave, corrscope calculates the `mean` of input `data` and subtracts this averaged `mean` from `data`.
 
 Corrscope then estimates the fundamental `period` of the waveform, using autocorrelation.
 
@@ -56,7 +71,17 @@ Corrscope cross-correlates `data` with `buffer + edge_finder` to produce a "buff
 
 ### (Optional) Post Triggering
 
-If post triggering is enabled, the post trigger is called with `position` and returns a new `position`, which overwrites the original variable.
+If post triggering is enabled:
+- We recalculate the `post mean` of data around our new `position` value. If `position` is a good trigger position (and there are no nearby discontinuities like note changes), then `post mean` should be stable and not jitter.
+- The post trigger is called with `position` and returns a new `position`, which overwrites the original variable.
+
+#### Zero Crossing Trigger
+
+Setting Post Trigger to "Zero Crossing Trigger" causes corrscope to "slide" towards edges. The maximum distance per frame is determined by GUI `Post Trigger Radius` (in samples).
+
+- Grab some new data around `position`. Subtract `post mean` from the new data.
+- If the data is positive, search left for a rising edge. If the data is negative, search right for a rising edge.
+- If no edge is found within `Post Trigger Radius` samples, return `position` ± `Post Trigger Radius`.
 
 ### Updating Buffer
 
