@@ -192,6 +192,39 @@ c: 3
     )
 
 
+def test_exclude_dump():
+    """
+    Test that the exclude="" parameter can remove fields from always_dump="*".
+    """
+
+    class Config(DumpableAttrs, always_dump="*", exclude="b"):
+        a: int = 1
+        b: int = 2
+
+    s = yaml.dump(Config())
+    assert (
+        s
+        == """\
+!Config
+a: 1
+"""
+    )
+
+    class Special(Config, exclude="d"):
+        c: int = 3
+        d: int = 4
+
+    s = yaml.dump(Special())
+    assert (
+        s
+        == """\
+!Special
+a: 1
+c: 3
+"""
+    )
+
+
 # Dataclass load testing
 
 
@@ -369,6 +402,16 @@ def test_always_dump_validate():
     with pytest.raises(AssertionError):
 
         class Foo(DumpableAttrs, always_dump="bar"):
+            foo: int
+
+    with pytest.raises(AssertionError):
+
+        class Foo(DumpableAttrs, exclude="foo"):
+            foo: int
+
+    with pytest.raises(AssertionError):
+
+        class Foo(DumpableAttrs, always_dump="*", exclude="bar"):
             foo: int
 
 

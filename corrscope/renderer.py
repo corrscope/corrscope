@@ -132,7 +132,9 @@ class Font(DumpableAttrs, always_dump="*"):
     toString: str = None
 
 
-class RendererConfig(DumpableAttrs, always_dump="*"):
+class RendererConfig(
+    DumpableAttrs, always_dump="*", exclude="viewport_width viewport_height"
+):
     width: int
     height: int
     line_width: float = with_units("px", default=1.5)
