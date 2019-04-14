@@ -13,7 +13,8 @@ from corrscope.triggers import (
     PerFrameCache,
     ZeroCrossingTriggerConfig,
     SpectrumConfig,
-    correlate_offset,
+    correlate_data,
+    correlate_spectrum,
 )
 from corrscope.wave import Wave
 
@@ -214,18 +215,23 @@ def test_post_trigger_radius():
 # Test pitch-tracking (spectrum)
 
 
-def test_correlate_offset():
+@parametrize("correlate", [correlate_data, correlate_spectrum])
+def test_correlate_offset(correlate):
     """
     Catches bug where writing N instead of Ncorr
     prevented function from returning positive numbers.
     """
+    if correlate == correlate_spectrum:
+        approx = lambda x: pytest.approx(x, rel=0.5)
+    else:
+        approx = lambda x: x
 
     np.random.seed(31337)
 
     # Ensure autocorrelation on random data returns peak at 0.
     N = 100
     spectrum = np.random.random(N)
-    assert correlate_offset(spectrum, spectrum, 12).peak == 0
+    assert correlate(spectrum, spectrum, 12).peak == approx(0)
 
     # Ensure cross-correlation of time-shifted impulses works.
     # Assume wave where y=[i==99].
@@ -236,18 +242,9 @@ def test_correlate_offset():
 
     # We need to slide `left` to the right by 10 samples, and vice versa.
     for radius in [None, 12]:
-        assert correlate_offset(data=left, prev_buffer=right, radius=radius).peak == 10
-        assert correlate_offset(data=right, prev_buffer=left, radius=radius).peak == -10
-
-    # The correlation peak at zero-offset is small enough for boost_x to be returned.
-    boost_y = 1.5
-    ones = np.ones(N)
-    for boost_x in [6, -6]:
-        assert (
-            correlate_offset(
-                ones, ones, radius=9, boost_x=boost_x, boost_y=boost_y
-            ).peak
-            == boost_x
+        assert correlate(data=left, prev_buffer=right, radius=radius).peak == approx(10)
+        assert correlate(data=right, prev_buffer=left, radius=radius).peak == approx(
+            -10
         )
 
 
