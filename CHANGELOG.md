@@ -1,3 +1,11 @@
+## 0.6.0
+
+### Breaking Changes
+
+### Features
+
+### Changelog
+
 ## 0.5.0
 
 ### Breaking Changes
