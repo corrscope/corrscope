@@ -2,6 +2,7 @@ import attr
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+import pytest_mock
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from pytest_cases import pytest_fixture_plus
@@ -36,11 +37,13 @@ def cfg_template(**kwargs) -> CorrelationTriggerConfig:
 @parametrize("trigger_diameter", [None, 0.5])
 @parametrize("pitch_tracking", [None, SpectrumConfig()])
 @parametrize("slope_strength", [0, 100])
-def cfg(trigger_diameter, pitch_tracking, slope_strength):
+@parametrize("sign_strength", [0, 1])
+def cfg(trigger_diameter, pitch_tracking, slope_strength, sign_strength):
     return cfg_template(
         trigger_diameter=trigger_diameter,
         pitch_tracking=pitch_tracking,
         slope_strength=slope_strength,
+        sign_strength=sign_strength,
         slope_width=0.14,
     )
 
@@ -91,6 +94,26 @@ def test_trigger(cfg: CorrelationTriggerConfig, is_odd: bool, post_trigger):
 
     if plot:
         plt.show()
+
+
+def test_mean_subtraction(
+    cfg: CorrelationTriggerConfig, mocker: "pytest_mock.MockFixture"
+):
+    """
+    Ensure that trigger subtracts mean properly in all configurations.
+    -   Due to a regression, mean was not subtracted when sign_strength = 0.
+        This caused get_period() to malfunction.
+    """
+    wave = Wave("tests/step2400.wav")
+
+    get_period = mocker.spy(triggers, "get_period")
+    trigger = cfg(wave, tsamp=100, stride=1, fps=FPS)
+    cache = PerFrameCache()
+    trigger.get_trigger(2600, cache)  # step2400.wav
+
+    (data, *args), kwargs = get_period.call_args
+    assert isinstance(data, np.ndarray)
+    assert abs(np.mean(data)) < 0.01
 
 
 @parametrize("post_trigger", [None, ZeroCrossingTriggerConfig()])
