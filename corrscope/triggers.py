@@ -422,11 +422,12 @@ class CorrelationTrigger(MainTrigger):
         stride = self._stride
         data = self._wave.get_around(index, N, stride)
 
-        # Update data-mean estimate
         if cfg.sign_strength != 0:
             signs = sign_times_peak(data)
             data += cfg.sign_strength * signs
-            data -= np.add.reduce(data) / N
+
+        # Remove mean from data
+        data -= np.add.reduce(data) / N
 
         # Window data
         period = get_period(data)
