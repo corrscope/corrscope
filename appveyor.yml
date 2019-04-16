@@ -4,10 +4,6 @@
 #https://github.com/sdispater/poetry/blob/master/.appveyor.yml
 #https://github.com/sdispater/pendulum/blob/master/appveyor.yml
 
-branches:
-  only:
-    - master
-
 image: Visual Studio 2017
 shallow_clone: true
 environment:
