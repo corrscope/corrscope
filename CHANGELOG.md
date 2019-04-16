@@ -4,18 +4,23 @@
 
 - Reorganize GUI, move trigger options to tab
 - Improve NES triangle triggering, switch data window to Gaussian (#244)
+- Remove mean responsiveness (always set to 1)
+    - To improve triangle waves, use sign triggering instead.
 
 ### Features
 
+- Add sign triggering (37d2c08a)
 - Add support for per-channel labels (#256)
     - Some fonts may not work or display the wrong weight, due to Matplotlib issues.
-- Add Ctrl+Tab or Ctrl+PageUp/Down shortcuts to switch GUI tabs
+- Add configurable grid line width (#265)
+- Add Ctrl+Tab or Ctrl+PageUp/Down shortcuts to switch GUI tabs (#246)
 
 ### Changelog
 
 - Quit GUI when pressing Ctrl-C in terminal (#252)
-- Refactor renderer API
 - Rewrite resolution division system to use internal DPI (#264)
+- Refactor renderer API (c8239558)
+- Add renderer debugging visualizations (development only)
 
 ## 0.4.0
 
