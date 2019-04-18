@@ -20,14 +20,17 @@ class FileName:
 
 def _get_hist_name(
     func: Callable[..., Tuple[str, str]],
-    history_dir: _gp.Ref[_gp.GlobalPrefs],
     parent: qw.QWidget,
     title: str,
+    history_dir: _gp.Ref[_gp.GlobalPrefs],
     default_name: Optional[str],
     filters: List[str],
 ) -> Optional[FileName]:
-    """Get file name, defaulting to history folder. If user accepts, update history."""
-
+    """
+    Get file name.
+    Default folder is history folder, and `default_name`.folder is discarded.
+    If user accepts, update history.
+    """
     # Get recently used dir.
     dir_or_file: str = history_dir.get()
     if default_name:
@@ -56,13 +59,13 @@ def _get_hist_name(
 
 
 def get_open_file_name(
-    history_dir: _gp.Ref[_gp.GlobalPrefs],
     parent: qw.QWidget,
     title: str,
+    history_dir: _gp.Ref[_gp.GlobalPrefs],
     filters: List[str],
 ) -> Optional[str]:
     name = _get_hist_name(
-        qw.QFileDialog.getOpenFileName, history_dir, parent, title, None, filters
+        qw.QFileDialog.getOpenFileName, parent, title, history_dir, None, filters
     )
     if name:
         assert name.file_name is not None
@@ -71,13 +74,13 @@ def get_open_file_name(
 
 
 def get_open_file_list(
-    history_dir: _gp.Ref[_gp.GlobalPrefs],
     parent: qw.QWidget,
     title: str,
+    history_dir: _gp.Ref[_gp.GlobalPrefs],
     filters: List[str],
 ) -> Optional[List[str]]:
     name = _get_hist_name(
-        qw.QFileDialog.getOpenFileNames, history_dir, parent, title, None, filters
+        qw.QFileDialog.getOpenFileNames, parent, title, history_dir, None, filters
     )
     if name:
         assert name.file_list is not None
@@ -87,18 +90,18 @@ def get_open_file_list(
 
 # Returns Path for legacy reasons. Others return str.
 def get_save_file_path(
-    history_dir: _gp.Ref[_gp.GlobalPrefs],
     parent: qw.QWidget,
     title: str,
+    history_dir: _gp.Ref[_gp.GlobalPrefs],
     default_name: str,
     filters: List[str],
     default_suffix: str,
 ) -> Optional[Path]:
     name = _get_hist_name(
         qw.QFileDialog.getSaveFileName,
-        history_dir,
         parent,
         title,
+        history_dir,
         default_name,
         filters,
     )

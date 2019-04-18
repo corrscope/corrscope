@@ -102,6 +102,31 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     Opening a document:
     - load_cfg_from_path
+
+    ## Dialog Directory/Filename Generation
+
+    Save-dialog dir is persistent state, saved across program runs.
+    Most recent of:
+    - Any open/save dialog (unless separate_render_dir is True).
+        - self.pref.file_dir_ref, .set()
+    - Load YAML from CLI.
+        - load_cfg_from_path(cfg_path) sets `self.pref.file_dir`.
+    - Load .wav files from CLI.
+        - if isinstance(cfg_or_path, Config):
+            - save_dir = self.compute_save_dir(self.cfg)
+            - self.pref.file_dir = save_dir (if not empty)
+
+    Render-dialog dir is persistent state, = most recent render-save dialog.
+    - self.pref.render_dir, .set()
+
+    Save/render-dialog filename (no dir) is computed on demand, NOT persistent state.
+    - (Currently loaded config path, or master audio, or channel 0) + ext.
+    - Otherwise empty string.
+        - self.get_save_filename() calls cli.get_file_stem().
+
+    CLI filename is the same,
+    but defaults to "corrscope.{yaml, mp4}" instead of empty string.
+    - cli._get_file_name() calls cli.get_file_stem().
     """
 
     def __init__(self, cfg_or_path: Union[Config, Path]):
@@ -145,6 +170,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         # Bind config to UI.
         if isinstance(cfg_or_path, Config):
             self.load_cfg(cfg_or_path, None)
+            save_dir = self.compute_save_dir(self.cfg)
+            if save_dir:
+                self.pref.file_dir = save_dir
         elif isinstance(cfg_or_path, Path):
             self.load_cfg_from_path(cfg_or_path)
         else:
@@ -217,7 +245,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         if not self.prompt_save():
             return
         name = get_open_file_name(
-            self.pref.file_dir_ref, self, "Open config", ["YAML files (*.yaml)"]
+            self, "Open config", self.pref.file_dir_ref, ["YAML files (*.yaml)"]
         )
         if name:
             cfg_path = Path(name)
@@ -301,7 +329,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     def on_master_audio_browse(self):
         name = get_open_file_name(
-            self.pref.file_dir_ref, self, "Open master audio file", FILTER_WAV_FILES
+            self, "Open master audio file", self.pref.file_dir_ref, FILTER_WAV_FILES
         )
         if name:
             master_audio = "master_audio"
@@ -317,7 +345,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     def on_channel_add(self):
         wavs = get_open_file_list(
-            self.pref.file_dir_ref, self, "Add audio channels", FILTER_WAV_FILES
+            self, "Add audio channels", self.pref.file_dir_ref, FILTER_WAV_FILES
         )
         if wavs:
             self.channel_view.append_channels(wavs)
@@ -341,14 +369,17 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         """
         :return: False if user cancels save action.
         """
-        cfg_path_default = self.file_stem + cli.YAML_NAME
 
+        # Name and extension (no folder).
+        cfg_filename = self.get_save_filename(cli.YAML_NAME)
+
+        # Folder is obtained from self.pref.file_dir_ref.
         filters = ["YAML files (*.yaml)", "All files (*)"]
         path = get_save_file_path(
-            self.pref.file_dir_ref,
             self,
             "Save As",
-            cfg_path_default,
+            self.pref.file_dir_ref,
+            cfg_filename,
             filters,
             cli.YAML_NAME,
         )
@@ -377,14 +408,16 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             qw.QMessageBox.critical(self, "Error", error_msg)
             return
 
-        video_path = self.file_stem + cli.VIDEO_NAME
+        # Name and extension (no folder).
+        video_filename = self.get_save_filename(cli.VIDEO_NAME)
         filters = ["MP4 files (*.mp4)", "All files (*)"]
 
         # Points to either `file_dir` or `render_dir`.
-        ref = self.pref.render_dir_ref
+        # Folder is obtained from `dir_ref`.
+        dir_ref = self.pref.render_dir_ref
 
         path = get_save_file_path(
-            ref, self, "Render to Video", video_path, filters, cli.VIDEO_NAME
+            self, "Render to Video", dir_ref, video_filename, filters, cli.VIDEO_NAME
         )
         if path:
             name = str(path)
@@ -460,10 +493,34 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             return self._cfg_path.name
         return self.UNTITLED
 
-    @property
-    def file_stem(self) -> str:
-        """ Returns a "config name" with no dots or slashes. """
-        return cli.get_name(self._cfg_path or self.cfg.master_audio)
+    def get_save_filename(self, suffix: str) -> str:
+        """
+        If file name can be guessed, return "filename.suffix" (no dir).
+        Otherwise return "".
+
+        Used for saving file or video.
+        """
+        stem = cli.get_file_stem(self._cfg_path, self.cfg, default="")
+        if stem:
+            return stem + suffix
+        else:
+            return ""
+
+    @staticmethod
+    def compute_save_dir(cfg: Config) -> Optional[str]:
+        """Computes a "save directory" when constructing a config from CLI wav files."""
+        if cfg.master_audio:
+            file_path = cfg.master_audio
+        elif len(cfg.channels) > 0:
+            file_path = cfg.channels[0].wav_path
+        else:
+            return None
+
+        # If file_path is "file.wav", we want to return "." .
+        # os.path.dirname("file.wav") == ""
+        # Path("file.wav").parent..str == "."
+        dir = Path(file_path).parent
+        return str(dir)
 
     @property
     def cfg(self):
