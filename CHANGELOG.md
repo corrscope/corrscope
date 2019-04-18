@@ -6,6 +6,8 @@
 
 ### Changelog
 
+- Improve GUI dialog path defaults (#277)
+
 ## 0.5.0
 
 ### Breaking Changes
