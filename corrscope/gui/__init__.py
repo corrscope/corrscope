@@ -102,6 +102,31 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     Opening a document:
     - load_cfg_from_path
+
+    ## Dialog Directory/Filename Generation
+
+    Save-dialog dir is persistent state, saved across program runs.
+    Most recent of:
+    - Any open/save dialog (unless separate_render_dir is True).
+        - self.pref.file_dir_ref, .set()
+    - Load YAML from CLI.
+        - load_cfg_from_path(cfg_path) sets `self.pref.file_dir`.
+    - Load .wav files from CLI.
+        - if isinstance(cfg_or_path, Config):
+            - save_dir = self.compute_save_dir(self.cfg)
+            - self.pref.file_dir = save_dir (if not empty)
+
+    Render-dialog dir is persistent state, = most recent render-save dialog.
+    - self.pref.render_dir, .set()
+
+    Save/render-dialog filename (no dir) is computed on demand, NOT persistent state.
+    - (Currently loaded config path, or master audio, or channel 0) + ext.
+    - Otherwise empty string.
+        - self.get_save_filename() calls cli.get_file_stem().
+
+    CLI filename is the same,
+    but defaults to "corrscope.{yaml, mp4}" instead of empty string.
+    - cli._get_file_name() calls cli.get_file_stem().
     """
 
     def __init__(self, cfg_or_path: Union[Config, Path]):
