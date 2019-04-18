@@ -142,7 +142,7 @@ def test_load_yaml_another_dir(mocker, Popen):
 
     # Issue: this test does not use cli.main() to compute output path.
     # Possible solution: Call cli.main() via Click runner.
-    output = FFmpegOutputConfig(cli.get_path(cfg.master_audio, cli.VIDEO_NAME))
+    output = FFmpegOutputConfig(cli._get_file_name(None, cfg, cli.VIDEO_NAME))
     corr = CorrScope(cfg, Arguments(subdir, [output]))
     corr.play()
 
