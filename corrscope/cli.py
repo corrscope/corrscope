@@ -53,30 +53,25 @@ def _get_file_name(cfg_path: Optional[Path], cfg: Config, ext: str) -> str:
 
 
 T = TypeVar("T")
-Return = str
 
 
-def get_file_stem(
-    cfg_path: Optional[Path], cfg: Config, default: T
-) -> Union[Return, T]:
+def get_file_stem(cfg_path: Optional[Path], cfg: Config, default: T) -> Union[str, T]:
     """
     Returns a "name" (no dir or extension) for saving file or video.
     Defaults to `default`.
 
     Used by GUI as well.
     """
-    Inner = Path
-
     if cfg_path:
         # Current file was saved.
-        file_path_or_name = Inner(cfg_path)
+        file_path_or_name = Path(cfg_path)
 
     # Current file was never saved.
     # Master audio and all channels may/not be absolute paths.
     elif cfg.master_audio:
-        file_path_or_name = Inner(cfg.master_audio)
+        file_path_or_name = Path(cfg.master_audio)
     elif len(cfg.channels) > 0:
-        file_path_or_name = Inner(cfg.channels[0].wav_path)
+        file_path_or_name = Path(cfg.channels[0].wav_path)
     else:
         return default
 
