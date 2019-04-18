@@ -220,7 +220,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         if not self.prompt_save():
             return
         name = get_open_file_name(
-            self.pref.file_dir_ref, self, "Open config", ["YAML files (*.yaml)"]
+            self, "Open config", self.pref.file_dir_ref, ["YAML files (*.yaml)"]
         )
         if name:
             cfg_path = Path(name)
@@ -304,7 +304,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     def on_master_audio_browse(self):
         name = get_open_file_name(
-            self.pref.file_dir_ref, self, "Open master audio file", FILTER_WAV_FILES
+            self, "Open master audio file", self.pref.file_dir_ref, FILTER_WAV_FILES
         )
         if name:
             master_audio = "master_audio"
@@ -320,7 +320,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     def on_channel_add(self):
         wavs = get_open_file_list(
-            self.pref.file_dir_ref, self, "Add audio channels", FILTER_WAV_FILES
+            self, "Add audio channels", self.pref.file_dir_ref, FILTER_WAV_FILES
         )
         if wavs:
             self.channel_view.append_channels(wavs)
@@ -351,9 +351,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         # Folder is obtained from self.pref.file_dir_ref.
         filters = ["YAML files (*.yaml)", "All files (*)"]
         path = get_save_file_path(
-            self.pref.file_dir_ref,
             self,
             "Save As",
+            self.pref.file_dir_ref,
             cfg_filename,
             filters,
             cli.YAML_NAME,
@@ -392,7 +392,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         dir_ref = self.pref.render_dir_ref
 
         path = get_save_file_path(
-            dir_ref, self, "Render to Video", video_filename, filters, cli.VIDEO_NAME
+            self, "Render to Video", dir_ref, video_filename, filters, cli.VIDEO_NAME
         )
         if path:
             name = str(path)
