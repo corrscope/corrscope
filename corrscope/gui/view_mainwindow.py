@@ -273,10 +273,7 @@ class MainWindow(QWidget):
 
         with self.add_tab_stretch(s, tr("&Trigger"), layout=QVBoxLayout) as tab:
             with append_widget(
-                s,
-                QGroupBox,
-                title=tr("Input Data Preprocessing"),
-                layout=QFormLayout,
+                s, QGroupBox, title=tr("Input Data Preprocessing"), layout=QFormLayout
             ):
                 with add_row(
                     s,
