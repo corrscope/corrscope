@@ -7,6 +7,7 @@
 ### Changelog
 
 - Improve GUI dialog path defaults (#277)
+- Display all GUI errors in dialog box, instead of crashing (#279)
 
 
 ## 0.5.0
