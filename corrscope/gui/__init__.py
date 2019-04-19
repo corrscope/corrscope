@@ -278,15 +278,14 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         assert cfg_path.is_file()
         self.pref.file_dir = str(cfg_path.parent.resolve())
 
+        # Raises YAML structural exceptions
+        cfg = yaml.load(cfg_path)
+
         try:
-            # Raises YAML structural exceptions
-            cfg = yaml.load(cfg_path)
-
             # Raises color getter exceptions
-            # FIXME if error halfway, clear "file path" and load empty model.
             self.load_cfg(cfg, cfg_path)
-
         except Exception as e:
+            # FIXME if error halfway, clear "file path" and load empty model.
             TracebackDialog(self).showMessage(format_stack_trace(e))
             return
 
@@ -452,29 +451,26 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     def play_thread(
         self, outputs: List[IOutputConfig], dlg: Optional["CorrProgressDialog"]
     ):
-        try:
-            assert self.model
+        assert self.model
 
-            arg = self._get_args(outputs)
-            cfg = copy_config(self.model.cfg)
-            t = self.corr_thread = CorrThread(cfg, arg)
+        arg = self._get_args(outputs)
+        cfg = copy_config(self.model.cfg)
+        t = self.corr_thread = CorrThread(cfg, arg)
 
-            if dlg:
-                dlg.canceled.connect(t.abort)
-                t.arg = attr.evolve(
-                    arg,
-                    on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
-                    progress=run_on_ui_thread(dlg.setValue, (int,)),
-                    is_aborted=t.is_aborted.get,
-                    on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
-                )
+        if dlg:
+            dlg.canceled.connect(t.abort)
+            t.arg = attr.evolve(
+                arg,
+                on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
+                progress=run_on_ui_thread(dlg.setValue, (int,)),
+                is_aborted=t.is_aborted.get,
+                on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
+            )
 
-            t.finished.connect(self.on_play_thread_finished)
-            t.error.connect(self.on_play_thread_error)
-            t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
-            t.start()
-        except Exception as e:
-            TracebackDialog(self).showMessage(format_stack_trace(e))
+        t.finished.connect(self.on_play_thread_finished)
+        t.error.connect(self.on_play_thread_error)
+        t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
+        t.start()
 
     def _get_args(self, outputs: List[IOutputConfig]):
         arg = Arguments(cfg_dir=self.cfg_dir, outputs=outputs)
