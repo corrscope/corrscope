@@ -2,6 +2,7 @@ import functools
 import signal
 import sys
 import traceback
+from contextlib import contextmanager
 from pathlib import Path
 from types import MethodType
 from typing import (
@@ -43,7 +44,6 @@ from corrscope.gui.model_bind import (
     Symbol,
     SymbolText,
     BoundComboBox,
-    _call_all,
 )
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
@@ -70,6 +70,19 @@ def res(file: str) -> str:
     return str(APP_DIR / file)
 
 
+@contextmanager
+def exception_as_dialog(window: qw.QWidget):
+    def excepthook(exc_type, exc_val, exc_tb):
+        TracebackDialog(window).showMessage(format_stack_trace(exc_val))
+
+    orig = sys.excepthook
+    try:
+        sys.excepthook = excepthook
+        yield
+    finally:
+        sys.excepthook = orig
+
+
 def gui_main(cfg_or_path: Union[Config, Path]):
     # Allow Ctrl-C to exit
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -88,7 +101,13 @@ def gui_main(cfg_or_path: Union[Config, Path]):
 
     app = qw.QApplication(sys.argv)
     window = MainWindow(cfg_or_path)
-    sys.exit(app.exec_())
+    # Any exceptions raised within MainWindow() will be caught within exec_.
+    # exception_as_dialog() turns it into a Qt dialog.
+    with exception_as_dialog(window):
+        sys.exit(app.exec_())
+        # Any exceptions raised after exec_ terminates will call
+        # exception_as_dialog().__exit__ before being caught.
+        # This produces a Python traceback.
 
 
 class MainWindow(qw.QMainWindow, Ui_MainWindow):
@@ -259,15 +278,14 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         assert cfg_path.is_file()
         self.pref.file_dir = str(cfg_path.parent.resolve())
 
+        # Raises YAML structural exceptions
+        cfg = yaml.load(cfg_path)
+
         try:
-            # Raises YAML structural exceptions
-            cfg = yaml.load(cfg_path)
-
             # Raises color getter exceptions
-            # FIXME if error halfway, clear "file path" and load empty model.
             self.load_cfg(cfg, cfg_path)
-
         except Exception as e:
+            # FIXME if error halfway, clear "file path" and load empty model.
             TracebackDialog(self).showMessage(format_stack_trace(e))
             return
 
@@ -433,29 +451,26 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     def play_thread(
         self, outputs: List[IOutputConfig], dlg: Optional["CorrProgressDialog"]
     ):
-        try:
-            assert self.model
+        assert self.model
 
-            arg = self._get_args(outputs)
-            cfg = copy_config(self.model.cfg)
-            t = self.corr_thread = CorrThread(cfg, arg)
+        arg = self._get_args(outputs)
+        cfg = copy_config(self.model.cfg)
+        t = self.corr_thread = CorrThread(cfg, arg)
 
-            if dlg:
-                dlg.canceled.connect(t.abort)
-                t.arg = attr.evolve(
-                    arg,
-                    on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
-                    progress=run_on_ui_thread(dlg.setValue, (int,)),
-                    is_aborted=t.is_aborted.get,
-                    on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
-                )
+        if dlg:
+            dlg.canceled.connect(t.abort)
+            t.arg = attr.evolve(
+                arg,
+                on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
+                progress=run_on_ui_thread(dlg.setValue, (int,)),
+                is_aborted=t.is_aborted.get,
+                on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
+            )
 
-            t.finished.connect(self.on_play_thread_finished)
-            t.error.connect(self.on_play_thread_error)
-            t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
-            t.start()
-        except Exception as e:
-            TracebackDialog(self).showMessage(format_stack_trace(e))
+        t.finished.connect(self.on_play_thread_finished)
+        t.error.connect(self.on_play_thread_error)
+        t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
+        t.start()
 
     def _get_args(self, outputs: List[IOutputConfig]):
         arg = Arguments(cfg_dir=self.cfg_dir, outputs=outputs)
@@ -533,11 +548,20 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         QDesktopServices.openUrl(qc.QUrl(help_url))
 
 
-def format_stack_trace(e):
+def _format_exc_value(e: BaseException, limit=None, chain=True):
+    """Like traceback.format_exc() but takes an exception object."""
+    list = traceback.format_exception(
+        type(e), e, e.__traceback__, limit=limit, chain=chain
+    )
+    str = "".join(list)
+    return str
+
+
+def format_stack_trace(e: BaseException):
     if isinstance(e, CorrError):
-        stack_trace = traceback.format_exc(limit=0)
+        stack_trace = _format_exc_value(e, limit=0)
     else:
-        stack_trace = traceback.format_exc()
+        stack_trace = _format_exc_value(e)
     return stack_trace
 
 
