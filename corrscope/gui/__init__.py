@@ -3,6 +3,7 @@ import signal
 import sys
 import traceback
 from contextlib import contextmanager
+from enum import Enum
 from pathlib import Path
 from types import MethodType
 from typing import (
@@ -120,6 +121,23 @@ def gui_main(cfg_or_path: Union[Config, Path]):
         corr_thread.wait()
 
     sys.exit(ret)
+
+
+SafeProperty = NewType("SafeProperty", property)
+
+
+def safe_property(unsafe_getter: Callable, *args, **kwargs) -> SafeProperty:
+    """Prevents (AttributeError from leaking outside a property,
+    which causes hasattr() to return False)."""
+
+    @functools.wraps(unsafe_getter)
+    def safe_getter(self):
+        try:
+            return unsafe_getter(self)
+        except AttributeError as e:
+            raise RuntimeError(e) from e
+
+    return cast(SafeProperty, property(safe_getter, *args, **kwargs))
 
 
 class MainWindow(qw.QMainWindow, Ui_MainWindow):
@@ -245,7 +263,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         Msg = qw.QMessageBox
 
-        message = self.tr("Abort current preview/render and close project?")
+        message = self.tr("Abort current {} and close project?").format(
+            self.preview_or_render
+        )
         response = Msg.question(self, title, message, Msg.Yes | Msg.No, Msg.No)
 
         if response == Msg.Yes:
@@ -459,18 +479,22 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     def on_action_preview(self):
         """ Launch CorrScope and ffplay. """
-        error_msg = "Cannot play, another preview/render is active"
         if self.corr_thread is not None:
+            error_msg = self.tr("Cannot preview, another {} is active").format(
+                self.preview_or_render
+            )
             qw.QMessageBox.critical(self, "Error", error_msg)
             return
 
         outputs = [FFplayOutputConfig()]
-        self.play_thread(outputs, dlg=None)
+        self.play_thread(outputs, PreviewOrRender.preview, dlg=None)
 
     def on_action_render(self):
         """ Get file name. Then show a progress dialog while rendering to file. """
-        error_msg = "Cannot render to file, another preview/render is active"
         if self.corr_thread is not None:
+            error_msg = self.tr("Cannot render to file, another {} is active").format(
+                self.preview_or_render
+            )
             qw.QMessageBox.critical(self, "Error", error_msg)
             return
 
@@ -494,16 +518,19 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             # Optionally copy_config() first.
 
             outputs = [self.cfg.get_ffmpeg_cfg(name)]
-            self.play_thread(outputs, dlg)
+            self.play_thread(outputs, PreviewOrRender.render, dlg)
 
     def play_thread(
-        self, outputs: List[IOutputConfig], dlg: Optional["CorrProgressDialog"]
+        self,
+        outputs: List[IOutputConfig],
+        mode: "PreviewOrRender",
+        dlg: Optional["CorrProgressDialog"],
     ):
         assert self.model
 
         arg = self._get_args(outputs)
         cfg = copy_config(self.model.cfg)
-        t = self.corr_thread = CorrThread(cfg, arg)
+        t = self.corr_thread = CorrThread(cfg, arg, mode)
 
         if dlg:
             # t.abort -> Locked.set() is thread-safe (hopefully).
@@ -521,6 +548,12 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
         t.start()
 
+    @safe_property
+    def preview_or_render(self) -> str:
+        if self.corr_thread is not None:
+            return self.tr(self.corr_thread.mode.value)
+        return "neither preview nor render"
+
     def _get_args(self, outputs: List[IOutputConfig]):
         arg = Arguments(
             cfg_dir=self.cfg_dir, outputs=outputs, is_aborted=lambda: bool(1 / 0)
@@ -537,7 +570,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         DownloadFFmpegActivity(self)
 
     # File paths
-    @property
+    @safe_property
     def cfg_dir(self) -> str:
         """Only used when generating Arguments when playing corrscope.
         Not used to determine default path of file dialogs."""
@@ -553,7 +586,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     UNTITLED = "Untitled"
 
-    @property
+    @safe_property
     def title(self) -> str:
         if self._cfg_path:
             return self._cfg_path.name
@@ -588,7 +621,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         dir = Path(file_path).parent
         return str(dir)
 
-    @property
+    @safe_property
     def cfg(self):
         return self.model.cfg
 
@@ -616,6 +649,12 @@ def format_stack_trace(e: BaseException):
     return stack_trace
 
 
+class PreviewOrRender(Enum):
+    # PreviewOrRender.value is translated at time of use, not time of definition.
+    preview = qc.QT_TRANSLATE_NOOP("MainWindow", "preview")
+    render = qc.QT_TRANSLATE_NOOP("MainWindow", "render")
+
+
 class CorrThread(qc.QThread):
     is_aborted: Locked[bool]
 
@@ -633,10 +672,11 @@ class CorrThread(qc.QThread):
     error = qc.pyqtSignal(str)
     ffmpeg_missing = qc.pyqtSignal()
 
-    def __init__(self, cfg: Config, arg: Arguments):
+    def __init__(self, cfg: Config, arg: Arguments, mode: PreviewOrRender):
         qc.QThread.__init__(self)
         self.cfg = cfg
         self.arg = arg
+        self.mode = mode
         self.corr = None  # type: Optional[CorrScope]
         self.is_aborted = Locked(False)
         self.arg.is_aborted = self.is_aborted.get
@@ -718,22 +758,6 @@ def run_on_ui_thread(
 
 
 # Begin ConfigModel properties
-
-SafeProperty = NewType("SafeProperty", property)
-
-
-def safe_property(unsafe_getter: Callable, *args, **kwargs) -> SafeProperty:
-    """Prevents (AttributeError from leaking outside a property,
-    which causes hasattr() to return False)."""
-
-    @functools.wraps(unsafe_getter)
-    def safe_getter(self):
-        try:
-            return unsafe_getter(self)
-        except AttributeError as e:
-            raise RuntimeError(e) from e
-
-    return cast(SafeProperty, property(safe_getter, *args, **kwargs))
 
 
 def nrow_ncol_property(altered: str, unaltered: str) -> SafeProperty:
