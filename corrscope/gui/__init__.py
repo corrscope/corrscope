@@ -47,6 +47,7 @@ from corrscope.gui.model_bind import (
 )
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
+from corrscope.gui.widgets import ChannelTableView, ShortcutButton
 from corrscope.layout import Orientation, StereoOrientation
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig
 from corrscope.renderer import LabelPosition
