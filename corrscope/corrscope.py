@@ -13,7 +13,7 @@ from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig, DefaultLabel
 from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
-from corrscope.outputs import FFmpegOutputConfig
+from corrscope.outputs import FFmpegOutputConfig, IOutputConfig
 from corrscope.renderer import Renderer, RendererConfig, RendererFrontend
 from corrscope.triggers import CorrelationTriggerConfig, PerFrameCache, SpectrumConfig
 from corrscope.util import pushd, coalesce
@@ -167,7 +167,7 @@ class CorrScope:
         if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
             self.output_cfgs = arg.outputs
         else:
-            self.output_cfgs = []
+            self.output_cfgs = []  # type: List[IOutputConfig]
 
         if len(self.cfg.channels) == 0:
             raise CorrError("Config.channels is empty")
