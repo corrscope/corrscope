@@ -236,7 +236,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     # Closing active document
 
-    def quit_render_if_active(self) -> bool:
+    def _quit_render_if_active(self, title: str) -> bool:
         """
         :return: False if user cancels close-document action.
         """
@@ -245,7 +245,6 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         Msg = qw.QMessageBox
 
-        title = self.tr("Abort current preview/render?")
         message = self.tr("Abort current preview/render and close project?")
         response = Msg.question(self, title, message, Msg.Yes | Msg.No, Msg.No)
 
@@ -261,7 +260,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         return False
 
-    def prompt_if_unsaved(self) -> bool:
+    def _prompt_if_unsaved(self, title: str) -> bool:
         """
         :return: False if user cancels close-document action.
         """
@@ -270,7 +269,6 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         Msg = qw.QMessageBox
 
-        title = "Save Changes?"
         message = f"Save changes to {self.title_cache}?"
         should_close = Msg.question(
             self, title, message, Msg.Save | Msg.Discard | Msg.Cancel
@@ -283,35 +281,35 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         else:
             return self.on_action_save()
 
-    def should_close_document(self) -> bool:
+    def should_close_document(self, title: str) -> bool:
         """
         Called when user is closing document
         (when opening a new document or closing the app).
 
         :return: False if user cancels close-document action.
         """
-        if not self.quit_render_if_active():
+        if not self._quit_render_if_active(title):
             return False
-        if not self.prompt_if_unsaved():
+        if not self._prompt_if_unsaved(title):
             return False
         return True
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """Called on closing window."""
-        if self.should_close_document():
+        if self.should_close_document(self.tr("Close Window")):
             gp.dump_prefs(self.pref)
             event.accept()
         else:
             event.ignore()
 
     def on_action_new(self):
-        if not self.should_close_document():
+        if not self.should_close_document(self.tr("New Project")):
             return
         cfg = default_config()
         self.load_cfg(cfg, None)
 
     def on_action_open(self):
-        if not self.should_close_document():
+        if not self.should_close_document(self.tr("Open Project")):
             return
         name = get_open_file_name(
             self, "Open config", self.pref.file_dir_ref, ["YAML files (*.yaml)"]
