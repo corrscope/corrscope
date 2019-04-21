@@ -245,8 +245,8 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         Msg = qw.QMessageBox
 
-        title = self.tr("Abort current play/render?")
-        message = self.tr("Abort current play/render and close project?")
+        title = self.tr("Abort current preview/render?")
+        message = self.tr("Abort current preview/render and close project?")
         response = Msg.question(self, title, message, Msg.Yes | Msg.No, Msg.No)
 
         if response == Msg.Yes:
@@ -461,7 +461,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     def on_action_preview(self):
         """ Launch CorrScope and ffplay. """
-        error_msg = "Cannot play, another play/render is active"
+        error_msg = "Cannot play, another preview/render is active"
         if self.corr_thread is not None:
             qw.QMessageBox.critical(self, "Error", error_msg)
             return
@@ -471,7 +471,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     def on_action_render(self):
         """ Get file name. Then show a progress dialog while rendering to file. """
-        error_msg = "Cannot render to file, another play/render is active"
+        error_msg = "Cannot render to file, another preview/render is active"
         if self.corr_thread is not None:
             qw.QMessageBox.critical(self, "Error", error_msg)
             return
