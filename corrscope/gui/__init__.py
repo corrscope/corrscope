@@ -245,8 +245,8 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         Msg = qw.QMessageBox
 
-        title = "Abort active play/render?"
-        message = "Abort active play/render and close file?"
+        title = self.tr("Abort current play/render?")
+        message = self.tr("Abort current play/render and close project?")
         response = Msg.question(self, title, message, Msg.Yes | Msg.No, Msg.No)
 
         if response == Msg.Yes:
