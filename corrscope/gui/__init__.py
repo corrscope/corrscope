@@ -263,7 +263,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         Msg = qw.QMessageBox
 
-        message = self.tr("Abort current {} and close project?").format(
+        message = self.tr("Cancel current {} and close project?").format(
             self.preview_or_render
         )
         response = Msg.question(self, title, message, Msg.Yes | Msg.No, Msg.No)
