@@ -266,9 +266,15 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         message = self.tr("Cancel current {} and close project?").format(
             self.preview_or_render
         )
-        response = Msg.question(self, title, message, Msg.Yes | Msg.No, Msg.No)
+        box = Msg(Msg.Question, title, message, Msg.NoButton)
+        abort = box.addButton(self.tr("&Abort"), Msg.DestructiveRole)
+        cont = box.addButton(self.tr("&Don't Abort"), Msg.RejectRole)
+        box.setDefaultButton(cont)
 
-        if response == Msg.Yes:
+        box.exec()
+        response = box.clickedButton()
+
+        if response == abort:
             # Closing ffplay preview (can't cancel render, the dialog is untouchable)
             # will set self.corr_thread to None while the dialog is active.
             # https://www.vikingsoftware.com/how-to-use-qthread-properly/ # QObject thread affinity
