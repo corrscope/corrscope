@@ -322,7 +322,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """Called on closing window."""
-        if self.should_close_document(self.tr("Close Window")):
+        if self.should_close_document(self.tr("Quit")):
             gp.dump_prefs(self.pref)
             event.accept()
         else:
