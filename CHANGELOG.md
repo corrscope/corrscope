@@ -1,3 +1,12 @@
+## 0.5.1
+
+### Breaking Changes
+
+### Features
+
+### Changelog
+
+
 ## 0.5.0
 
 ### Breaking Changes
@@ -21,6 +30,7 @@
 - Rewrite resolution division system to use internal DPI (#264)
 - Refactor renderer API (c8239558)
 - Add renderer debugging visualizations (development only)
+
 
 ## 0.4.0
 
