@@ -314,9 +314,10 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         :return: False if user cancels close-document action.
         """
-        if not self._quit_render_if_active(title):
-            return False
         if not self._prompt_if_unsaved(title):
+            return False
+        if not self._quit_render_if_active(title):
+            # Saying Yes quits render immediately, so place this dialog last.
             return False
         return True
 
