@@ -556,8 +556,13 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         return "neither preview nor render"
 
     def _get_args(self, outputs: List[IOutputConfig]):
+        def raise_exception():
+            raise RuntimeError(
+                "Arguments.is_aborted should be overwritten by CorrThread"
+            )
+
         arg = Arguments(
-            cfg_dir=self.cfg_dir, outputs=outputs, is_aborted=lambda: bool(1 / 0)
+            cfg_dir=self.cfg_dir, outputs=outputs, is_aborted=raise_exception
         )
         return arg
 
@@ -675,12 +680,13 @@ class CorrThread(qc.QThread):
 
     def __init__(self, cfg: Config, arg: Arguments, mode: PreviewOrRender):
         qc.QThread.__init__(self)
+        self.is_aborted = Locked(False)
+
         self.cfg = cfg
         self.arg = arg
+        self.arg.is_aborted = self.is_aborted.get
         self.mode = mode
         self.corr = None  # type: Optional[CorrScope]
-        self.is_aborted = Locked(False)
-        self.arg.is_aborted = self.is_aborted.get
 
     def run(self) -> None:
         """Called in separate thread."""
