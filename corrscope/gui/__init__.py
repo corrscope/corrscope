@@ -137,7 +137,8 @@ def safe_property(unsafe_getter: Callable, *args, **kwargs) -> SafeProperty:
         except AttributeError as e:
             raise RuntimeError(e) from e
 
-    return cast(SafeProperty, property(safe_getter, *args, **kwargs))
+    # NewType("", cls)(x) == x.
+    return SafeProperty(property(safe_getter, *args, **kwargs))
 
 
 class MainWindow(qw.QMainWindow, Ui_MainWindow):
