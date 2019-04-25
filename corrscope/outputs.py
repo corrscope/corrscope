@@ -54,7 +54,7 @@ class Output(ABC):
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def terminate(self):
+    def terminate(self, from_same_thread: bool = True) -> None:
         pass
 
 
@@ -182,15 +182,24 @@ class PipeOutput(Output):
         else:
             self.terminate()
 
-    def terminate(self) -> None:
+    def terminate(self, from_same_thread: bool = True) -> None:
         # Calling self.close() is bad.
         # If exception occurred but ffplay continues running,
         # popen.wait() will prevent stack trace from showing up.
-        self.close(wait=False)
+        if from_same_thread:
+            self.close(wait=False)
+        # If terminating from another thread,
+        # possibly not thread-safe to call self._stream.close().
+
+        # Terminate all processes.
+        # If blocked on reading, must close pipe and terminate from front to back.
+        # If blocked on writing, must terminate from back to front.
+        # If we terminate everything, both cases should work.
+        for popen in self._pipeline:
+            popen.terminate()
 
         exc = None
         for popen in self._pipeline:
-            popen.terminate()
             # https://stackoverflow.com/a/49038779/2683842
             try:
                 popen.wait(1)  # timeout=seconds

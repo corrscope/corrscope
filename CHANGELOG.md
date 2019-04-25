@@ -7,6 +7,7 @@
 ### Changelog
 
 - Improve GUI dialog path defaults (#277)
+- Display dialog and terminate ffmpeg, when closing project with preview/render active (#280)
 
 ## 0.5.0
 

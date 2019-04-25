@@ -3,6 +3,7 @@ import signal
 import sys
 import traceback
 from contextlib import contextmanager
+from enum import Enum
 from pathlib import Path
 from types import MethodType
 from typing import (
@@ -102,13 +103,42 @@ def gui_main(cfg_or_path: Union[Config, Path]):
 
     app = qw.QApplication(sys.argv)
     window = MainWindow(cfg_or_path)
+
     # Any exceptions raised within MainWindow() will be caught within exec_.
     # exception_as_dialog() turns it into a Qt dialog.
     with exception_as_dialog(window):
-        sys.exit(app.exec_())
+        ret = app.exec_()
         # Any exceptions raised after exec_ terminates will call
         # exception_as_dialog().__exit__ before being caught.
         # This produces a Python traceback.
+
+    # On Linux, if signal.signal(signal.SIGINT, signal.SIG_DFL) and Ctrl+C pressed,
+    # corrscope closes immediately.
+    # ffmpeg receives SIGPIPE and terminates by itself (according to strace).
+    corr_thread = window.corr_thread
+    if corr_thread is not None:
+        corr_thread.abort_terminate()
+        corr_thread.wait()
+
+    sys.exit(ret)
+
+
+SafeProperty = NewType("SafeProperty", property)
+
+
+def safe_property(unsafe_getter: Callable, *args, **kwargs) -> SafeProperty:
+    """Prevents (AttributeError from leaking outside a property,
+    which causes hasattr() to return False)."""
+
+    @functools.wraps(unsafe_getter)
+    def safe_getter(self):
+        try:
+            return unsafe_getter(self)
+        except AttributeError as e:
+            raise RuntimeError(e) from e
+
+    # NewType("", cls)(x) == x.
+    return SafeProperty(property(safe_getter, *args, **kwargs))
 
 
 class MainWindow(qw.QMainWindow, Ui_MainWindow):
@@ -223,11 +253,36 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     channel_view: "ChannelTableView"
     channelsGroup: qw.QGroupBox
 
-    def prompt_save(self) -> bool:
-        """
-        Called when user is closing document
-        (when opening a new document or closing the app).
+    # Closing active document
 
+    def _cancel_render_if_active(self, title: str) -> bool:
+        """
+        :return: False if user cancels close-document action.
+        """
+        if self.corr_thread is None:
+            return True
+
+        Msg = qw.QMessageBox
+
+        message = self.tr("Cancel current {} and close project?").format(
+            self.preview_or_render
+        )
+        response = Msg.question(self, title, message, Msg.Yes | Msg.No, Msg.No)
+
+        if response == Msg.Yes:
+            # Closing ffplay preview (can't cancel render, the dialog is untouchable)
+            # will set self.corr_thread to None while the dialog is active.
+            # https://www.vikingsoftware.com/how-to-use-qthread-properly/ # QObject thread affinity
+            # But since the dialog is modal,
+            # self.corr_thread cannot have been replaced by a different thread.
+            if self.corr_thread is not None:
+                self.corr_thread.abort_terminate()
+            return True
+
+        return False
+
+    def _prompt_if_unsaved(self, title: str) -> bool:
+        """
         :return: False if user cancels close-document action.
         """
         if not self.any_unsaved:
@@ -235,9 +290,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         Msg = qw.QMessageBox
 
-        save_message = f"Save changes to {self.title_cache}?"
+        message = f"Save changes to {self.title_cache}?"
         should_close = Msg.question(
-            self, "Save Changes?", save_message, Msg.Save | Msg.Discard | Msg.Cancel
+            self, title, message, Msg.Save | Msg.Discard | Msg.Cancel
         )
 
         if should_close == Msg.Cancel:
@@ -247,22 +302,36 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         else:
             return self.on_action_save()
 
+    def should_close_document(self, title: str) -> bool:
+        """
+        Called when user is closing document
+        (when opening a new document or closing the app).
+
+        :return: False if user cancels close-document action.
+        """
+        if not self._prompt_if_unsaved(title):
+            return False
+        if not self._cancel_render_if_active(title):
+            # Saying Yes quits render immediately, so place this dialog last.
+            return False
+        return True
+
     def closeEvent(self, event: QCloseEvent) -> None:
         """Called on closing window."""
-        if self.prompt_save():
+        if self.should_close_document(self.tr("Quit")):
             gp.dump_prefs(self.pref)
             event.accept()
         else:
             event.ignore()
 
     def on_action_new(self):
-        if not self.prompt_save():
+        if not self.should_close_document(self.tr("New Project")):
             return
         cfg = default_config()
         self.load_cfg(cfg, None)
 
     def on_action_open(self):
-        if not self.prompt_save():
+        if not self.should_close_document(self.tr("Open Project")):
             return
         name = get_open_file_name(
             self, "Open config", self.pref.file_dir_ref, ["YAML files (*.yaml)"]
@@ -412,18 +481,22 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     def on_action_preview(self):
         """ Launch CorrScope and ffplay. """
-        error_msg = "Cannot play, another play/render is active"
         if self.corr_thread is not None:
+            error_msg = self.tr("Cannot preview, another {} is active").format(
+                self.preview_or_render
+            )
             qw.QMessageBox.critical(self, "Error", error_msg)
             return
 
         outputs = [FFplayOutputConfig()]
-        self.play_thread(outputs, dlg=None)
+        self.play_thread(outputs, PreviewOrRender.preview, dlg=None)
 
     def on_action_render(self):
         """ Get file name. Then show a progress dialog while rendering to file. """
-        error_msg = "Cannot render to file, another play/render is active"
         if self.corr_thread is not None:
+            error_msg = self.tr("Cannot render to file, another {} is active").format(
+                self.preview_or_render
+            )
             qw.QMessageBox.critical(self, "Error", error_msg)
             return
 
@@ -447,24 +520,28 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             # Optionally copy_config() first.
 
             outputs = [self.cfg.get_ffmpeg_cfg(name)]
-            self.play_thread(outputs, dlg)
+            self.play_thread(outputs, PreviewOrRender.render, dlg)
 
     def play_thread(
-        self, outputs: List[IOutputConfig], dlg: Optional["CorrProgressDialog"]
+        self,
+        outputs: List[IOutputConfig],
+        mode: "PreviewOrRender",
+        dlg: Optional["CorrProgressDialog"],
     ):
         assert self.model
 
         arg = self._get_args(outputs)
         cfg = copy_config(self.model.cfg)
-        t = self.corr_thread = CorrThread(cfg, arg)
+        t = self.corr_thread = CorrThread(cfg, arg, mode)
 
         if dlg:
-            dlg.canceled.connect(t.abort)
+            # t.abort -> Locked.set() is thread-safe (hopefully).
+            # It can be called from main thread (not just within CorrThread).
+            dlg.canceled.connect(t.abort, Qt.DirectConnection)
             t.arg = attr.evolve(
                 arg,
                 on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
                 progress=run_on_ui_thread(dlg.setValue, (int,)),
-                is_aborted=t.is_aborted.get,
                 on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
             )
 
@@ -473,8 +550,21 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
         t.start()
 
+    @safe_property
+    def preview_or_render(self) -> str:
+        if self.corr_thread is not None:
+            return self.tr(self.corr_thread.mode.value)
+        return "neither preview nor render"
+
     def _get_args(self, outputs: List[IOutputConfig]):
-        arg = Arguments(cfg_dir=self.cfg_dir, outputs=outputs)
+        def raise_exception():
+            raise RuntimeError(
+                "Arguments.is_aborted should be overwritten by CorrThread"
+            )
+
+        arg = Arguments(
+            cfg_dir=self.cfg_dir, outputs=outputs, is_aborted=raise_exception
+        )
         return arg
 
     def on_play_thread_finished(self):
@@ -487,7 +577,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         DownloadFFmpegActivity(self)
 
     # File paths
-    @property
+    @safe_property
     def cfg_dir(self) -> str:
         """Only used when generating Arguments when playing corrscope.
         Not used to determine default path of file dialogs."""
@@ -503,7 +593,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     UNTITLED = "Untitled"
 
-    @property
+    @safe_property
     def title(self) -> str:
         if self._cfg_path:
             return self._cfg_path.name
@@ -538,7 +628,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         dir = Path(file_path).parent
         return str(dir)
 
-    @property
+    @safe_property
     def cfg(self):
         return self.model.cfg
 
@@ -566,6 +656,12 @@ def format_stack_trace(e: BaseException):
     return stack_trace
 
 
+class PreviewOrRender(Enum):
+    # PreviewOrRender.value is translated at time of use, not time of definition.
+    preview = qc.QT_TRANSLATE_NOOP("MainWindow", "preview")
+    render = qc.QT_TRANSLATE_NOOP("MainWindow", "render")
+
+
 class CorrThread(qc.QThread):
     is_aborted: Locked[bool]
 
@@ -573,20 +669,33 @@ class CorrThread(qc.QThread):
     def abort(self):
         self.is_aborted.set(True)
 
+    def abort_terminate(self):
+        """Sends abort signal to main loop, and terminates all outputs."""
+        self.abort()
+        if self.corr is not None:
+            for output in self.corr.outputs:
+                output.terminate(from_same_thread=False)
+
     error = qc.pyqtSignal(str)
     ffmpeg_missing = qc.pyqtSignal()
 
-    def __init__(self, cfg: Config, arg: Arguments):
+    def __init__(self, cfg: Config, arg: Arguments, mode: PreviewOrRender):
         qc.QThread.__init__(self)
-        self.cfg = cfg
-        self.arg = arg
         self.is_aborted = Locked(False)
 
+        self.cfg = cfg
+        self.arg = arg
+        self.arg.is_aborted = self.is_aborted.get
+        self.mode = mode
+        self.corr = None  # type: Optional[CorrScope]
+
     def run(self) -> None:
+        """Called in separate thread."""
         cfg = self.cfg
         arg = self.arg
         try:
-            CorrScope(cfg, arg).play()
+            self.corr = CorrScope(cfg, arg)
+            self.corr.play()
 
         except paths.MissingFFmpegError:
             arg.on_end()
@@ -657,22 +766,6 @@ def run_on_ui_thread(
 
 
 # Begin ConfigModel properties
-
-SafeProperty = NewType("SafeProperty", property)
-
-
-def safe_property(unsafe_getter: Callable, *args, **kwargs) -> SafeProperty:
-    """Prevents (AttributeError from leaking outside a property,
-    which causes hasattr() to return False)."""
-
-    @functools.wraps(unsafe_getter)
-    def safe_getter(self):
-        try:
-            return unsafe_getter(self)
-        except AttributeError as e:
-            raise RuntimeError(e) from e
-
-    return cast(SafeProperty, property(safe_getter, *args, **kwargs))
 
 
 def nrow_ncol_property(altered: str, unaltered: str) -> SafeProperty:
