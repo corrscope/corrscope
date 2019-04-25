@@ -8,6 +8,7 @@
 
 - Improve GUI dialog path defaults (#277)
 - Display all GUI errors in dialog box, instead of crashing (#279)
+- Display dialog and terminate ffmpeg, when closing project with preview/render active (#280)
 
 
 ## 0.5.0
