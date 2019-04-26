@@ -1,8 +1,6 @@
 ## 0.5.1
 
-### Breaking Changes
-
-### Features
+This is a bugfix release, since master has regressions in pitch tracking.
 
 ### Changelog
 
