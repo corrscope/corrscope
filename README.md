@@ -10,6 +10,8 @@ Corrscope uses "waveform correlation" to track complex waves (including SNES and
 
 Sample results can be found on my Youtube channel at https://www.youtube.com/user/MrJimbo1qaz/videos.
 
+Documentation is available at https://jimbo1qaz.github.io/corrscope/.
+
 ![Screenshot of Corrscope and video preview](docs/images/corrscope-screenshot.png?raw=true)
 
 ## Dependencies
