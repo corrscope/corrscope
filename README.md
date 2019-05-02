@@ -22,19 +22,32 @@ Documentation is available at https://jimbo1qaz.github.io/corrscope/.
 
 - Releases (recommended): https://github.com/jimbo1qaz/corrscope/releases
 - Dev Builds: https://ci.appveyor.com/project/jimbo1qaz/ovgenpy/history
-    - Download Windows binary releases (zip files), then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
-    - Download cross-platform Python packages (whl), then install Python 3.6+ and run `pip install *.whl`.
 
-## Running from Source Code (cross-platform)
+Instructions:
+
+- Download Windows binary releases (zip files), then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
+- Download cross-platform Python packages (whl), then install Python 3.6+ and run `pip install *.whl`.
+
+## Installing from PyPI via Pip (cross-platform, releases)
+
+Install Python 3.6 or above (3.5 will not work).
+
+```shell
+# Installs into per-user Python environment.
+pip3 install --user corrscope
+corr (args)
+```
+
+## Running from Source Code (cross-platform, dev master)
 
 Install Python 3.6 or above (3.5 will not work), and Poetry.
 
 ```shell
+# Installs into an isolated environment.
 # Install Poetry (only do this once)
 curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
-# Install corrscope
 cd path/to/corrscope
-poetry install --develop corrscope
+poetry install corrscope  # --develop is implied
 poetry run corr (args)
 ```
 
