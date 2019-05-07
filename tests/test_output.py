@@ -3,9 +3,7 @@
 - Integration tests (see conftest.py).
 """
 import errno
-import os
 import shutil
-import subprocess
 from fractions import Fraction
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -26,7 +24,6 @@ from tests.test_renderer import RENDER_Y_ZEROS, WIDTH, HEIGHT
 
 if TYPE_CHECKING:
     import pytest_mock
-    from unittest.mock import MagicMock
 
 
 BYTES_PER_PIXEL = Renderer.bytes_per_pixel
@@ -39,26 +36,6 @@ if not shutil.which("ffmpeg"):
         raises=FileNotFoundError,  # includes MissingFFmpegError
         strict=False,
     )
-
-
-def exception_Popen(mocker: "pytest_mock.MockFixture", exc: Exception) -> "MagicMock":
-    """Mock Popen to raise an exception."""
-    real_Popen = subprocess.Popen
-
-    def popen_factory(*args, **kwargs):
-        popen = mocker.create_autospec(real_Popen)
-
-        popen.stdin = mocker.mock_open()(os.devnull, "wb")
-        popen.stdout = mocker.mock_open()(os.devnull, "rb")
-        assert popen.stdin != popen.stdout
-
-        popen.stdin.write.side_effect = exc
-        popen.wait.return_value = 0
-        return popen
-
-    Popen = mocker.patch.object(subprocess, "Popen", autospec=True)
-    Popen.side_effect = popen_factory
-    return Popen
 
 
 class DummyException(Exception):
@@ -199,8 +176,9 @@ def test_corr_terminate_works():
 # Simulate user closing ffplay window.
 # Why OSError? See comment at PipeOutput.write_frame().
 # Calls FFplayOutput, mocks Popen.
+@pytest.mark.usefixtures("Popen")
 @pytest.mark.parametrize("errno_id", [errno.EPIPE, errno.EINVAL])
-def test_closing_ffplay_stops_main(mocker: "pytest_mock.MockFixture", errno_id):
+def test_closing_ffplay_stops_main(Popen, errno_id):
     """ Closing FFplay should make FFplayOutput.write_frame() return Stop
     to main loop. """
 
@@ -209,14 +187,12 @@ def test_closing_ffplay_stops_main(mocker: "pytest_mock.MockFixture", errno_id):
     if errno_id == errno.EPIPE:
         assert type(exc) == BrokenPipeError
 
-    # Yo Mock, I herd you like not working properly,
-    # so I put a test in your test so I can test your mocks while I test my code.
-    Popen = exception_Popen(mocker, exc)
-    assert Popen is subprocess.Popen
+    Popen.set_exception(exc)
     assert Popen.side_effect
 
     # Launch corrscope
     with FFplayOutputConfig()(CFG) as output:
+        # Writing to Popen instance raises exc.
         ret = output.write_frame(b"")
 
     # Ensure FFplayOutput catches OSError.
