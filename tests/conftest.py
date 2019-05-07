@@ -6,11 +6,12 @@ Integration tests found in:
 """
 
 import os
-import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+
+from corrscope import outputs
 
 if TYPE_CHECKING:
     import pytest_mock
@@ -23,7 +24,7 @@ os.chdir(Path(__file__).parent.parent)
 
 @pytest.fixture
 def Popen(mocker: "pytest_mock.MockFixture"):
-    real_Popen = subprocess.Popen
+    real_Popen = outputs.MyPopen
 
     def popen_factory(*args, **kwargs):
         popen = mocker.create_autospec(real_Popen)
@@ -35,6 +36,6 @@ def Popen(mocker: "pytest_mock.MockFixture"):
         popen.wait.return_value = 0
         return popen
 
-    Popen = mocker.patch.object(subprocess, "Popen", autospec=True)
+    Popen = mocker.patch.object(outputs, "MyPopen", autospec=True)
     Popen.side_effect = popen_factory
     yield Popen

@@ -1,5 +1,7 @@
 import errno
+import os
 import shlex
+import signal
 import subprocess
 from abc import ABC, abstractmethod
 from os.path import abspath
@@ -74,6 +76,12 @@ def register_output(
 # FFmpeg command line generation
 
 
+class MyPopen(subprocess.Popen):
+    def interrupt(self):
+        # FIXME is self.send_signal() cross-platform???
+        os.kill(self.pid, signal.SIGINT)
+
+
 class _FFmpegProcess:
     def __init__(self, templates: List[str], corr_cfg: "Config"):
         self.templates = templates
@@ -97,13 +105,11 @@ class _FFmpegProcess:
         if self.corr_cfg.master_audio:
             self.templates.append(cfg.audio_template)  # audio
 
-    def popen(self, extra_args: List[str], bufsize: int, **kwargs) -> subprocess.Popen:
+    def popen(self, extra_args: List[str], bufsize: int, **kwargs) -> MyPopen:
         """Raises FileNotFoundError if FFmpeg missing"""
         try:
             args = self._generate_args() + extra_args
-            return subprocess.Popen(
-                args, stdin=subprocess.PIPE, bufsize=bufsize, **kwargs
-            )
+            return MyPopen(args, stdin=subprocess.PIPE, bufsize=bufsize, **kwargs)
         except FileNotFoundError as e:
             raise MissingFFmpegError() from e
 
@@ -129,7 +135,7 @@ def ffmpeg_input_audio(audio_path: str) -> List[str]:
 
 
 class PipeOutput(Output):
-    def open(self, *pipeline: subprocess.Popen) -> None:
+    def open(self, *pipeline: MyPopen) -> None:
         """ Called by __init__ with a Popen pipeline to ffmpeg/ffplay. """
         if len(pipeline) == 0:
             raise TypeError("must provide at least one Popen argument to popens")
@@ -196,7 +202,7 @@ class PipeOutput(Output):
         # If blocked on writing, must terminate from back to front.
         # If we terminate everything, both cases should work.
         for popen in self._pipeline:
-            popen.terminate()
+            popen.interrupt()
 
         exc = None
         for popen in self._pipeline:
@@ -268,7 +274,7 @@ class FFplayOutput(PipeOutput):
 
         ffplay = shlex.split("ffplay -autoexit -") + FFMPEG_QUIET
         try:
-            p2 = subprocess.Popen(ffplay, stdin=p1.stdout)
+            p2 = MyPopen(ffplay, stdin=p1.stdout)
         except FileNotFoundError as e:
             raise MissingFFmpegError() from e
 

@@ -24,7 +24,6 @@ from corrscope.outputs import (
 from corrscope.renderer import RendererConfig, Renderer
 from tests.test_renderer import RENDER_Y_ZEROS, WIDTH, HEIGHT
 
-
 if TYPE_CHECKING:
     import pytest_mock
     from unittest.mock import MagicMock
@@ -158,13 +157,13 @@ def test_terminate_ffplay(Popen):
 
     except DummyException:
         for popen in output._pipeline:
-            popen.terminate.assert_called()
+            popen.interrupt.assert_called()
 
 
 # Integration: Calls CorrScope, mocks Popen.
 @pytest.mark.usefixtures("Popen")
-def test_corr_terminate_ffplay(Popen, mocker: "pytest_mock.MockFixture"):
-    """ Integration test: Ensure corrscope calls terminate() on ffmpeg and ffplay when
+def test_corr_interrupt_ffplay(Popen, mocker: "pytest_mock.MockFixture"):
+    """ Integration test: Ensure corrscope calls interrupt() on ffmpeg and ffplay when
     Python exceptions occur. """
 
     cfg = sine440_config()
@@ -179,7 +178,7 @@ def test_corr_terminate_ffplay(Popen, mocker: "pytest_mock.MockFixture"):
     output: FFplayOutput = corr.outputs[0]
 
     for popen in output._pipeline:
-        popen.terminate.assert_called()
+        popen.interrupt.assert_called()
 
 
 # Integration: Calls CorrScope and FFplay.
