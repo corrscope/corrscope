@@ -3,6 +3,7 @@ import os
 import shlex
 import signal
 import subprocess
+import sys
 from abc import ABC, abstractmethod
 from os.path import abspath
 from typing import TYPE_CHECKING, Type, List, Union, Optional, ClassVar, Callable
@@ -84,10 +85,20 @@ class MyPopen(subprocess.Popen):
             "makes ffmpeg produce corrupted mp4 files."
         )
 
+    # https://stackoverflow.com/q/40762545
+
+    # You can send a control event to other processes attached to the current console
+    # via GenerateConsoleCtrlEvent,
+    # which is what Python os.kill calls for CTRL_C_EVENT and CTRL_BREAK_EVENT.
+    # (For all other values it calls TerminateProcess.)
+
+    if sys.platform == "win32":
+        INTERRUPT = signal.CTRL_C_EVENT
+    else:
+        INTERRUPT = signal.SIGINT
+
     def interrupt(self):
-        # On Windows, self.send_signal(signal.SIGINT)
-        # raises "ValueError: Unsupported signal: 2".
-        os.kill(self.pid, signal.SIGINT)
+        self.send_signal(self.INTERRUPT)
 
 
 class _FFmpegProcess:
