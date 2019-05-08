@@ -323,9 +323,6 @@ class CorrScope:
                             end_frame = frame + 1
                             break
 
-            if self.raise_on_teardown:
-                raise self.raise_on_teardown
-
         if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
             dtime_sec = time.perf_counter() - begin
@@ -338,5 +335,3 @@ class CorrScope:
                 msec_per_frame = float("inf")
 
             print(f"{frame_per_sec:.1f} FPS, {msec_per_frame:.2f} ms/frame")
-
-    raise_on_teardown: Optional[Exception] = None
