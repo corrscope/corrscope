@@ -328,8 +328,15 @@ class CorrScope:
 
         if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
-            dtime = time.perf_counter() - begin
-            render_fps = (end_frame - begin_frame) / dtime
-            print(f"{render_fps:.1f} FPS, {1000 / render_fps:.2f} ms")
+            dtime_sec = time.perf_counter() - begin
+            dframe = end_frame - begin_frame
+
+            frame_per_sec = dframe / dtime_sec
+            try:
+                msec_per_frame = 1000 * dtime_sec / dframe
+            except ZeroDivisionError:
+                msec_per_frame = float("inf")
+
+            print(f"{frame_per_sec:.1f} FPS, {msec_per_frame:.2f} ms/frame")
 
     raise_on_teardown: Optional[Exception] = None
