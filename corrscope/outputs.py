@@ -77,6 +77,13 @@ def register_output(
 
 
 class MyPopen(subprocess.Popen):
+    def terminate(self):
+        raise TypeError(
+            "Do not call MyPopen.terminate(), instead interrupt().\n"
+            "On Windows, Popen(ffmpeg).terminate() "
+            "makes ffmpeg produce corrupted mp4 files."
+        )
+
     def interrupt(self):
         # On Windows, self.send_signal(signal.SIGINT)
         # raises "ValueError: Unsupported signal: 2".
