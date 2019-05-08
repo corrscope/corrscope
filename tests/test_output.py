@@ -8,6 +8,7 @@ from fractions import Fraction
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import attr
 import pytest
 
 from corrscope.channel import ChannelConfig
@@ -26,6 +27,7 @@ if TYPE_CHECKING:
     import pytest_mock
 
 
+parametrize = pytest.mark.parametrize
 BYTES_PER_PIXEL = Renderer.bytes_per_pixel
 
 
@@ -159,17 +161,63 @@ def test_corr_interrupt_ffplay(Popen, mocker: "pytest_mock.MockFixture"):
 
 
 # Integration: Calls CorrScope and FFplay.
-@pytest.mark.skip("Launches ffmpeg and ffplay processes, creating a ffplay window")
-def test_corr_terminate_works():
-    """ Ensure that ffmpeg/ffplay terminate quickly after Python exceptions, when
-    `popen.terminate()` is called. """
+
+
+@attr.dataclass(kw_only=True)
+class TestMode:
+    should_abort: bool = False
+    should_raise: bool = False
+
+
+@parametrize(
+    "test", [TestMode(should_abort=True), TestMode(should_raise=True)], ids=str
+)
+def test_corr_interrupt_works(test):
+    """
+    Ensure that output exits quickly after output.terminate() is called.
+
+    What calls output.terminate() -> popen.interrupt()?
+
+    - Cancelling a GUI render sets is_aborted()=True.
+    - corrscope may throw an exception.
+
+    Either way, ffmpeg should be interrupted so it stops writing audio.
+    """
+
+    import sys
+    import subprocess
+    from corrscope.outputs import IOutputConfig, register_output, PipeOutput, MyPopen
+
+    class StayOpenOutputConfig(IOutputConfig):
+        pass
+
+    @register_output(StayOpenOutputConfig)
+    class StayOpenOutput(PipeOutput):
+        def __init__(self, corr_cfg: "Config", cfg: StayOpenOutputConfig):
+            super().__init__(corr_cfg, cfg)
+
+            sleep_process = MyPopen(
+                [sys.executable, "-c", "import time; time.sleep(10)"],
+                stdin=subprocess.PIPE,
+            )
+            self.open(sleep_process)
+
+    def is_aborted() -> bool:
+        if test.should_raise:
+            raise DummyException
+        return test.should_abort
 
     cfg = sine440_config()
-    corr = CorrScope(cfg, Arguments(".", [FFplayOutputConfig()]))
-    corr.raise_on_teardown = DummyException
+    arg = Arguments(".", [StayOpenOutputConfig()], is_aborted=is_aborted)
+    corr = CorrScope(cfg, arg)
 
-    with pytest.raises(DummyException):
-        # Raises `subprocess.TimeoutExpired` if popen.terminate() doesn't work.
+    if test.should_raise:
+        with pytest.raises(DummyException):
+            # Raises `subprocess.TimeoutExpired` if popen.interrupt() doesn't work.
+            corr.play()
+
+    else:
+        # Raises `subprocess.TimeoutExpired` if popen.interrupt() doesn't work.
         corr.play()
 
 

@@ -78,7 +78,8 @@ def register_output(
 
 class MyPopen(subprocess.Popen):
     def interrupt(self):
-        # FIXME is self.send_signal() cross-platform???
+        # On Windows, self.send_signal(signal.SIGINT)
+        # raises "ValueError: Unsupported signal: 2".
         os.kill(self.pid, signal.SIGINT)
 
 
