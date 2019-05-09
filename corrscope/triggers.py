@@ -603,7 +603,6 @@ class InterpolatedCorrelationResult:
     corr: np.ndarray
 
 
-# TODO use parabolic() for added precision when trigger subsampling enabled
 def correlate_data(
     data: np.ndarray, prev_buffer: np.ndarray, radius: Optional[int]
 ) -> CorrelationResult:
@@ -642,29 +641,16 @@ def correlate_data(
 
 def correlate_spectrum(
     data: np.ndarray, prev_buffer: np.ndarray, radius: Optional[int]
-) -> InterpolatedCorrelationResult:
-    N = len(data)
-    corr = signal.correlate(data, prev_buffer)  # returns double, not single/FLOAT
-    Ncorr = 2 * N - 1
-    assert len(corr) == Ncorr
-
-    # Find optimal offset
-    mid = N - 1
-
-    if radius is not None:
-        left = max(mid - radius, 0)
-        right = min(mid + radius + 1, Ncorr)
-
-        corr = corr[left:right]
-        mid = mid - left
-
-    # argmax(corr) == mid + peak_offset == (data >> peak_offset)
-    # peak_offset == argmax(corr) - mid
-    peak_offset = parabolic(corr, np.argmax(corr)) - mid  # type: float
-    return InterpolatedCorrelationResult(peak_offset, corr)
+) -> CorrelationResult:
+    """
+    I used to use parabolic() on the return value,
+    but unfortunately it was unreliable and caused Plok Beach bass to jitter,
+    so I turned it off (resulting in the same code as correlate_data).
+    """
+    return correlate_data(data, prev_buffer, radius)
 
 
-def parabolic(ys: np.ndarray, xint: int) -> float:
+def parabolic(xint: int, ys: np.ndarray) -> float:
     """
     Quadratic interpolation for estimating the true position of an inter-sample maximum
     when nearby samples are known.
