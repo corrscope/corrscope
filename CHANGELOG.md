@@ -6,8 +6,17 @@
 
 ### Changelog
 
+
+## 0.5.1
+
+This is a bugfix release, since master has regressions in pitch tracking.
+
+### Changelog
+
 - Improve GUI dialog path defaults (#277)
+- Display all GUI errors in dialog box, instead of crashing (#279)
 - Display dialog and terminate ffmpeg, when closing project with preview/render active (#280)
+
 
 ## 0.5.0
 
@@ -32,6 +41,7 @@
 - Rewrite resolution division system to use internal DPI (#264)
 - Refactor renderer API (c8239558)
 - Add renderer debugging visualizations (development only)
+
 
 ## 0.4.0
 
