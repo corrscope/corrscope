@@ -243,11 +243,10 @@ def test_correlate_offset(correlate):
     """
     Catches bug where writing N instead of Ncorr
     prevented function from returning positive numbers.
+
+    Right now, correlate_spectrum() is identical to correlate_data().
     """
-    if correlate == correlate_spectrum:
-        approx = lambda x: pytest.approx(x, rel=0.5)
-    else:
-        approx = lambda x: x
+    approx = lambda x: x
 
     np.random.seed(31337)
 
