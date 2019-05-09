@@ -4,8 +4,7 @@ from contextlib import ExitStack, contextmanager
 from enum import unique
 from fractions import Fraction
 from pathlib import Path
-from typing import Iterator
-from typing import Optional, List, Callable
+from typing import Iterator, Optional, List, Callable
 
 import attr
 
