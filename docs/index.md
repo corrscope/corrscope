@@ -1,5 +1,7 @@
 # Corrscope Help
 
+Homepage at <https://github.com/jimbo1qaz/corrscope>.
+
 *Corrscope is named because it cross-correlates the input wave and a history buffer, to maximize wave alignment between frames.*
 
 ## Program Layout
