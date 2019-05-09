@@ -184,6 +184,7 @@ class RendererConfig(
         assert isinstance(self.width, (int, float))
         assert isinstance(self.height, (int, float))
 
+    # Both before_* functions should be idempotent, AKA calling twice does no harm.
     def before_preview(self) -> None:
         """ Called *once* before preview. Does nothing. """
         pass

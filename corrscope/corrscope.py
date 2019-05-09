@@ -62,8 +62,9 @@ class Config(
     render_fps = property(lambda self: Fraction(self.fps, self.render_subfps))
     # FFmpeg accepts FPS as a fraction. (decimals may work, but are inaccurate.)
 
+    # Both before_* functions should be idempotent, AKA calling twice does no harm.
     def before_preview(self) -> None:
-        """ Called *once* before preview. Decreases render fps/etc. """
+        """ Called *once* before preview. Does nothing. """
         self.render.before_preview()
 
     def before_record(self) -> None:
