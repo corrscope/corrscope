@@ -2,10 +2,18 @@
 
 ### Breaking Changes
 
+- Rewrite pitch tracking to avoid false negatives
+    - Previously, we rescaled the *buffer* to maximize spectral similarity between *data 2 frames ago* and data now.
+    - Now we rescale the buffer to maximize spectral similarity between the buffer and data now.
+
 ### Features
 
 ### Changelog
 
+- Rewrite FPS printing code
+- Add test to ensure cancelling render terminates FFmpeg quickly
+- Add support for excluding fields from always_dump="*" (#268)
+    - Don't dump viewport_width/height by default
 
 ## 0.5.1
 
