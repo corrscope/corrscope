@@ -1,14 +1,17 @@
 # Corrscope
 
-[![Build status](https://ci.appveyor.com/api/projects/status/awiajnwd6a4uhu37/branch/master?svg=true)](https://ci.appveyor.com/project/nyanpasu64/ovgenpy/branch/master)
+[![Appveyor build status](https://ci.appveyor.com/api/projects/status/awiajnwd6a4uhu37/branch/master?svg=true)](https://ci.appveyor.com/project/nyanpasu64/ovgenpy/branch/master)
+[![Latest release](https://img.shields.io/github/release-pre/nyanpasu64/corrscope.svg)](https://github.com/nyanpasu64/corrscope/releases)
+![PyPI release](https://img.shields.io/pypi/v/corrscope.svg)
 [![codecov](https://codecov.io/gh/nyanpasu64/corrscope/branch/master/graph/badge.svg)](https://codecov.io/gh/nyanpasu64/corrscope)
-[![Latest pre-release](https://img.shields.io/github/release-pre/nyanpasu64/corrscope.svg)](https://github.com/nyanpasu64/corrscope/releases)
 
 Corrscope renders oscilloscope views of WAV files recorded from chiptune (game music from retro sound chips).
 
 Corrscope uses "waveform correlation" to track complex waves (including SNES and Sega Genesis/FM synthesis) which jump around on other oscilloscope programs.
 
 Sample results can be found on my Youtube channel at https://www.youtube.com/channel/UCIjb87rjJZxtNsHUdKXMsww/videos.
+
+Documentation is available at https://nyanpasu64.github.io/corrscope/.
 
 ![Screenshot of Corrscope and video preview](docs/images/corrscope-screenshot.png?raw=true)
 
@@ -20,19 +23,32 @@ Sample results can be found on my Youtube channel at https://www.youtube.com/cha
 
 - Releases (recommended): https://github.com/nyanpasu64/corrscope/releases
 - Dev Builds: https://ci.appveyor.com/project/nyanpasu64/ovgenpy/history
-    - Download Windows binary releases (zip files), then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
-    - Download cross-platform Python packages (whl), then install Python 3.6+ and run `pip install *.whl`.
 
-## Running from Source Code (cross-platform)
+Instructions:
+
+- Download Windows binary releases (zip files), then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
+- Download cross-platform Python packages (whl), then install Python 3.6+ and run `pip install *.whl`.
+
+## Installing from PyPI via Pip (cross-platform, releases)
+
+Install Python 3.6 or above (3.5 will not work).
+
+```shell
+# Installs into per-user Python environment.
+pip3 install --user corrscope
+corr (args)
+```
+
+## Running from Source Code (cross-platform, dev master)
 
 Install Python 3.6 or above (3.5 will not work), and Poetry.
 
 ```shell
+# Installs into an isolated environment.
 # Install Poetry (only do this once)
 curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
-# Install corrscope
 cd path/to/corrscope
-poetry install --develop corrscope
+poetry install corrscope  # --develop is implied
 poetry run corr (args)
 ```
 
