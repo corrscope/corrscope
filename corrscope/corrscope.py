@@ -58,7 +58,7 @@ class Config(
     render_subsampling: int = 1
 
     # Performance (skipped when recording to video)
-    render_subfps: int = 1
+    render_subfps: int = 2
     render_fps = property(lambda self: Fraction(self.fps, self.render_subfps))
     # FFmpeg accepts FPS as a fraction. (decimals may work, but are inaccurate.)
 
@@ -105,11 +105,10 @@ _FPS = 60  # f_s
 def default_config(**kwargs) -> Config:
     """ Default template values do NOT indicate optional attributes. """
     cfg = Config(
-        render_subfps=1,
         master_audio="",
         fps=_FPS,
         amplification=1,
-        trigger_ms=40,
+        trigger_ms=60,
         render_ms=40,
         trigger_subsampling=1,
         render_subsampling=2,
