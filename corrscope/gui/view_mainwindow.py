@@ -173,7 +173,7 @@ class MainWindow(QWidget):
                 with add_row(s, "", OptionalColorWidget) as self.render__grid_color:
                     pass
 
-                with add_row(s, "", OptionalColorWidget) as self.render__midline_color:
+                with add_row(s, "", BoundColorWidget) as self.render__midline_color:
                     pass
 
                 with add_row(s, BoundCheckBox, BoundCheckBox) as (
