@@ -154,7 +154,7 @@ class RendererConfig(
     grid_color: Optional[str] = None
     stereo_grid_opacity: float = 0.5
 
-    midline_color: Optional[str] = "#404040"
+    midline_color: str = "#404040"
     v_midline: bool = False
     h_midline: bool = False
 
@@ -541,12 +541,11 @@ class AbstractMatplotlibRenderer(RendererFrontend, ABC):
                 midline_width = cfg.grid_line_width
 
                 # Not quite sure if midlines or gridlines draw on top
-                if midline_color:
-                    kw = dict(color=midline_color, linewidth=midline_width)
-                    if cfg.v_midline:
-                        ax.axvline(x=calc_center(viewport_stride), **kw)
-                    if cfg.h_midline:
-                        ax.axhline(y=0, **kw)
+                kw = dict(color=midline_color, linewidth=midline_width)
+                if cfg.v_midline:
+                    ax.axvline(x=calc_center(viewport_stride), **kw)
+                if cfg.h_midline:
+                    ax.axhline(y=0, **kw)
 
         self._save_background()
 
