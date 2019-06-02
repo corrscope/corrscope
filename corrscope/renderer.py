@@ -152,7 +152,7 @@ class RendererConfig(
     init_line_color: str = default_color()
 
     grid_color: Optional[str] = None
-    stereo_grid_opacity: float = 0.5
+    stereo_grid_opacity: float = 0.25
 
     midline_color: str = "#404040"
     v_midline: bool = False
