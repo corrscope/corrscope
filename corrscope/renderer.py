@@ -541,11 +541,12 @@ class AbstractMatplotlibRenderer(RendererFrontend, ABC):
                 midline_width = cfg.grid_line_width
 
                 # Not quite sure if midlines or gridlines draw on top
-                kw = dict(color=midline_color, linewidth=midline_width)
-                if cfg.v_midline:
-                    ax.axvline(x=calc_center(viewport_stride), **kw)
-                if cfg.h_midline:
-                    ax.axhline(y=0, **kw)
+                if midline_color:
+                    kw = dict(color=midline_color, linewidth=midline_width)
+                    if cfg.v_midline:
+                        ax.axvline(x=calc_center(viewport_stride), **kw)
+                    if cfg.h_midline:
+                        ax.axhline(y=0, **kw)
 
         self._save_background()
 
