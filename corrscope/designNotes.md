@@ -1,3 +1,47 @@
+# Module/Class Structure and Organization
+
+When corrscope is launched, it first executes `__main__.py` and `cli.py`.
+
+## cli.py
+
+If -w is present, it writes a .yaml file. If -p are present, it runs `corrscope.CorrScope` directly. If neither is present, it imports and runs the `gui` subdirectory.
+
+## CorrScope, Config
+
+`corrscope.py` defines classes `CorrScope`, `Config` (and `Arguments`).
+
+- `CorrScope` is the main loop of the program, and only communicates with the GUI through `Arguments`. `CorrScope` requires a `Config` and `Arguments`.
+    - `Arguments` is constructed by the GUI and used to update rendering progress dialogs, etc.
+    - `Config` is a dataclass (see `config.py`) which can be edited through the GUI, or loaded/saved to a YAML file.
+- When `cli.py` creates new configs, `default_config()` is used as a template to supply values. When loading existing YAML files, only dataclass default values are used.
+
+-----
+
+`Config` holds `channels: List[ChannelConfig]`, which store all per-channel settings.
+
+`CorrScope` turns `channels` into a list of `Channel` objects. Each channel uses its own `ChannelConfig` parameters to create:
+
+- self.trigger_wave: Wave
+- self.render_wave: Wave
+- self.trigger: MainTrigger
+
+-----
+
+Each frame:
+
+`CorrScope` reads data from Wave objects, asks MainTrigger
+
+Each channel has its own `trigger_wave`, `render_wave`, and `trigger` instance. For each channel, `trigger_wave` is used by `trigger` to find a "trigger time" near the frame's center time.
+
+The `Renderer` and `Output` instances are shared among all channels.
+
+- `Renderer` turns a list of N-channel "wave file portions" (from `render_wave`) into a RGB video frame.
+- `Output` sends a RGB video frame to ffmpeg, ffplay, or (in the future) an interactive GUI player window.
+
+## config.py
+
+See docstring at top of file.
+
 # Design Notes (cross-cutting concerns)
 
 ## Renderer to Output

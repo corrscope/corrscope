@@ -1,3 +1,49 @@
+"""
+The most important class in this module is `DumpableAttrs`. It is subclassed for
+(statically-typed key-value objects which will be dumped/loaded as YAML files).
+
+Using `DumpableAttrs`:
+
+- This class works like `dataclasses` or `attrs.dataclass` decorators,
+  and wraps the latter.
+- Subclass `DumpableAttrs`, then add class-level type annotations.
+  These annotations are converted into `__init__(...)` constructor parameters.
+
+```py
+class Config(DumpableAttrs):
+    path: str  # path is required in YAML.
+    priority: int = 0  # priority is optional and does not need to be present in YAML.
+```
+
+Unlike many other libraries and usual JSON,
+the YAML string representation of a `DumpableAttrs` object
+encodes what Python type the object is.
+For example, `class Config` is dumped as:
+
+```yaml
+!Config
+path: foo.wav
+priority: 0
+```
+
+The YAML file determines what type is loaded,
+so the config type can be used to pick a object type at runtime.
+
+- For example, putting `!CorrelationTriggerConfig` in YAML
+  loads a `CorrelationTriggerConfig` config object,
+  which tells corrscope to create a `CorrelationTrigger` algorithm object.
+- Putting `!NullTriggerConfig` in YAML
+  instead loads a `NullTriggerConfig` config object,
+  which tells corrscope to create a `NullTrigger` algorithm object.
+  (This is only used for unit tests, and is incompatible with GUI.)
+
+`KeywordAttrs` are similar, with 2 differences:
+
+- Subclasses can have non-default arguments after default arguments.
+- Its constructor can only be called with keyword (a=1, b=2) arguments,
+  not positional (1, 2).
+"""
+
 import pickle
 import warnings
 from enum import Enum
