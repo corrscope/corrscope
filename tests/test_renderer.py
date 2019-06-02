@@ -45,65 +45,68 @@ def behead(string: str, header: str) -> str:
     return string[len(header) :]
 
 
-def appearance_to_str(val) -> Optional[str]:
-    """Called once for each `appear` and `data`."""
-    if isinstance(val, Appearance):
-        # Remove class name.
-        return behead(str(val), Appearance.__name__)
-    if isinstance(val, np.ndarray):
-        return "stereo" if val.shape[1] > 1 else "mono"
-    if val is None:
-        return "None"
-    return None
+my_dataclass = attr.dataclass(frozen=True, repr=False)
+
+
+@my_dataclass
+class NamedDebug:
+    name: str
+
+    def __init_subclass__(cls):
+        my_dataclass(cls)
+
+    def __repr__(self):
+        return self.name
+
+    if TYPE_CHECKING:
+
+        def __init__(self, *args, **kwargs):
+            pass
 
 
 # "str" = HTML #FFFFFF color string.
 
 
-@attr.dataclass(frozen=True)
-class BG:
+class BG(NamedDebug):
     color: str
 
 
-@attr.dataclass(frozen=True)
-class FG:
+class FG(NamedDebug):
     color: str
     draw_fg: bool = True
     line_width: float = 2.0
 
 
-@attr.dataclass(frozen=True)
-class Grid:
+class Grid(NamedDebug):
     line_width: float
     color: Optional[str]
 
 
-@attr.dataclass(frozen=True)
-class Debug:
+class Debug(NamedDebug):
     viewport_width: float = 1
 
 
-bg_black = BG("#000000")
-bg_white = BG("#ffffff")
-bg_blue = BG("#0000aa")
-bg_yellow = BG("#aaaa00")
+bg_black = BG("bg_black", "#000000")
+bg_white = BG("bg_white", "#ffffff")
+bg_blue = BG("bg_blue", "#0000aa")
+bg_yellow = BG("bg_yellow", "#aaaa00")
 
-fg_white = FG("#ffffff")
-fg_white_thick = FG("#ffffff", line_width=10.0)
-fg_black = FG("#000000")
-fg_NONE = FG("#ffffff", draw_fg=False)
-fg_yellow = FG("#aaaa00")
-fg_blue = FG("#0000aa")
-
-
-grid_0 = Grid(0, "#ff00ff")
-grid_1 = Grid(1, "#ff00ff")
-grid_10 = Grid(10, "#ff00ff")
-grid_NONE = Grid(10, None)
+fg_white = FG("fg_white", "#ffffff")
+fg_white_thick = FG("fg_white_thick", "#ffffff", line_width=10.0)
+fg_black = FG("fg_black", "#000000")
+fg_NONE = FG("fg_NONE", "#ffffff", draw_fg=False)
+fg_yellow = FG("fg_yellow", "#aaaa00")
+fg_blue = FG("fg_blue", "#0000aa")
 
 
-debug_NONE = Debug()
-debug_wide = Debug(viewport_width=2)
+grid_0 = Grid("grid_0", 0, "#ff00ff")
+grid_1 = Grid("grid_1", 1, "#ff00ff")
+grid_10 = Grid("grid_10", 10, "#ff00ff")
+grid_NONE = Grid("grid_NONE", 10, None)
+
+
+debug_NONE = Debug("debug_NONE")
+debug_wide = Debug("debug_wide", viewport_width=2)
 
 
 @attr.dataclass(frozen=True)
@@ -114,31 +117,48 @@ class Appearance:
     debug: Debug = debug_NONE
 
 
+def all_colors_to_str(val) -> Optional[str]:
+    """Called once for each `appear` and `data`."""
+
+    if isinstance(val, Appearance):
+        args_tuple = attr.astuple(val, recurse=False)
+        return f"appear=Appearance{args_tuple}"
+
+    if isinstance(val, np.ndarray):
+        data_type = "stereo" if val.shape[1] > 1 else "mono"
+        return "data=" + data_type
+
+    raise ValueError("Unrecognized all_colors parameter, not `appear` or `data`")
+
+
+mono = RENDER_Y_ZEROS
+stereo = RENDER_Y_STEREO
+
 all_colors = pytest.mark.parametrize(
     "appear, data",
     [
         # Test with foreground disabled
-        (Appearance(bg_black, fg_NONE, grid_NONE), RENDER_Y_ZEROS),
-        (Appearance(bg_blue, fg_NONE, grid_1), RENDER_Y_ZEROS),
+        (Appearance(bg_black, fg_NONE, grid_NONE), mono),
+        (Appearance(bg_blue, fg_NONE, grid_1), mono),
         # Test with grid disabled
-        (Appearance(bg_black, fg_white, grid_NONE), RENDER_Y_ZEROS),
-        (Appearance(bg_white, fg_black, grid_NONE), RENDER_Y_ZEROS),
-        (Appearance(bg_blue, fg_yellow, grid_NONE), RENDER_Y_ZEROS),
-        (Appearance(bg_yellow, fg_blue, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_black, fg_white, grid_NONE), mono),
+        (Appearance(bg_white, fg_black, grid_NONE), mono),
+        (Appearance(bg_blue, fg_yellow, grid_NONE), mono),
+        (Appearance(bg_yellow, fg_blue, grid_NONE), mono),
         # Test FG line thickness
-        (Appearance(bg_black, fg_white_thick, grid_NONE), RENDER_Y_ZEROS),
+        (Appearance(bg_black, fg_white_thick, grid_NONE), mono),
         # Test various grid thicknesses
-        (Appearance(bg_white, fg_black, grid_0), RENDER_Y_ZEROS),
-        (Appearance(bg_blue, fg_yellow, grid_1), RENDER_Y_ZEROS),
-        (Appearance(bg_blue, fg_yellow, grid_10), RENDER_Y_ZEROS),
+        (Appearance(bg_white, fg_black, grid_0), mono),
+        (Appearance(bg_blue, fg_yellow, grid_1), mono),
+        (Appearance(bg_blue, fg_yellow, grid_10), mono),
         # Test with stereo
-        (Appearance(bg_black, fg_white, grid_NONE), RENDER_Y_ZEROS),
-        (Appearance(bg_blue, fg_yellow, grid_0), RENDER_Y_STEREO),
-        (Appearance(bg_blue, fg_yellow, grid_10), RENDER_Y_STEREO),
+        (Appearance(bg_black, fg_white, grid_NONE), stereo),
+        (Appearance(bg_blue, fg_yellow, grid_0), stereo),
+        (Appearance(bg_blue, fg_yellow, grid_10), stereo),
         # Test debugging (viewport width)
-        (Appearance(bg_black, fg_white, grid_NONE, debug_wide), RENDER_Y_ZEROS),
+        (Appearance(bg_black, fg_white, grid_NONE, debug_wide), mono),
     ],
-    ids=appearance_to_str,
+    ids=all_colors_to_str,
 )
 
 
