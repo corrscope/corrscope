@@ -106,17 +106,39 @@ class _Trigger(ABC):
     def time2tsamp(self, time: float) -> int:
         return round(time * self._wave.smp_s / self._stride)
 
-    def custom_line(self, name: str, data: np.ndarray, **kwargs):
+    def custom_line(
+        self, name: str, data: np.ndarray, offset: bool, invert: bool = True
+    ):
+        """
+        :param offset:
+        - True, for untriggered wave data:
+            - line will be shifted and triggered (by offset_viewport()).
+        - False, for triggered data and buffers:
+            - line is immune to offset_viewport().
+
+        :param invert:
+        - True, for wave (data and buffers):
+            - If wave data is inverted (edge_direction = -1),
+              data will be plotted inverted.
+        - False, for buffers and autocorrelated wave data:
+            - Data is plotted as-is.
+        """
         if self._renderer is None:
             return
+        data = data / abs_max(data, 0.01) / 2
+        if invert:
+            data *= np.copysign(1, self._wave.amplification)
         self._renderer.update_custom_line(
-            name, self._wave_idx, self._stride, data, **kwargs
+            name, self._wave_idx, self._stride, data, offset=offset
         )
 
-    def custom_vline(self, name: str, x: int):
+    def custom_vline(self, name: str, x: int, offset: bool):
+        """See above for `offset`."""
         if self._renderer is None:
             return
-        self._renderer.update_vline(name, self._wave_idx, self._stride, x)
+        self._renderer.update_vline(
+            name, self._wave_idx, self._stride, x, offset=offset
+        )
 
     def offset_viewport(self, offset: int):
         if self._renderer is None:
