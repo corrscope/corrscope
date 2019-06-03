@@ -770,6 +770,12 @@ class MatplotlibAggRenderer(AbstractMatplotlibRenderer):
         return np.array([round(c * 255) for c in to_rgb(c)], dtype=int)
 
 
+# TODO: PlotConfig
+# - align: left vs mid
+# - shift/offset: bool
+# - invert if trigger is negative: bool
+
+
 class RendererFrontend(_RendererBackend, ABC):
     """Wrapper around _RendererBackend implementations, providing a better interface."""
 
