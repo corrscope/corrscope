@@ -5,7 +5,9 @@ import pytest
 import pytest_mock
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from pytest_cases import pytest_fixture_plus
+
+# Pycharm assumes anything called "fixture" is pytest.fixture.
+from pytest_cases import pytest_fixture_plus as fixture
 
 from corrscope import triggers
 from corrscope.triggers import (
@@ -32,7 +34,7 @@ def trigger_template(**kwargs) -> CorrelationTriggerConfig:
     return attr.evolve(cfg, **kwargs)
 
 
-@pytest_fixture_plus
+@fixture
 @parametrize("trigger_diameter", [None, 0.5])
 @parametrize("pitch_tracking", [None, SpectrumConfig()])
 @parametrize("slope_strength", [0, 100])
