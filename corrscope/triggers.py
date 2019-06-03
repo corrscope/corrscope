@@ -14,6 +14,7 @@ from corrscope.utils.trigger_util import (
     normalize_buffer,
     lerp,
     MIN_AMPLITUDE,
+    abs_max,
 )
 from corrscope.utils.windows import leftpad, midpad, rightpad
 from corrscope.wave import FLOAT
@@ -687,10 +688,6 @@ def sign_times_peak(data: np.ndarray) -> np.ndarray:
     sign_data *= peak
 
     return sign_data
-
-
-def abs_max(data, offset=0):
-    return np.amax(np.abs(data)) + offset
 
 
 #### Post-processing triggers

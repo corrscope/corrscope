@@ -43,3 +43,7 @@ Arithmetic = Union[np.ndarray, float]
 
 def lerp(x: Arithmetic, y: Arithmetic, a: float) -> Arithmetic:
     return x * (1 - a) + y * a
+
+
+def abs_max(data, offset=0):
+    return np.amax(np.abs(data)) + offset
