@@ -30,7 +30,7 @@ import corrscope.settings.global_prefs as gp
 from corrscope import cli
 from corrscope.channel import ChannelConfig, DefaultLabel
 from corrscope.config import CorrError, copy_config, yaml
-from corrscope.corrscope import CorrScope, Config, Arguments, default_config
+from corrscope.corrscope import CorrScope, Config, Arguments, template_config
 from corrscope.gui.history_file_dlg import (
     get_open_file_name,
     get_open_file_list,
@@ -327,7 +327,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     def on_action_new(self):
         if not self.should_close_document(self.tr("New Project")):
             return
-        cfg = default_config()
+        cfg = template_config()
         self.load_cfg(cfg, None)
 
     def on_action_open(self):
@@ -343,7 +343,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     def load_cfg_from_path(self, cfg_path: Path):
         # Bind GUI to dummy config, in case loading cfg_path raises Exception.
         if self.model is None:
-            self.load_cfg(default_config(), None)
+            self.load_cfg(template_config(), None)
 
         assert cfg_path.is_file()
         self.pref.file_dir = str(cfg_path.parent.resolve())

@@ -26,7 +26,7 @@ triggers.SHOW_TRIGGER = False
 
 
 def cfg_template(**kwargs) -> CorrelationTriggerConfig:
-    """ Not identical to default_config() template. """
+    """ Not identical to template_config() template. """
     cfg = CorrelationTriggerConfig(
         edge_strength=2, responsiveness=1, buffer_falloff=0.5
     )
