@@ -11,6 +11,9 @@ from corrscope.config import CorrError
 
 
 def color2hex(color: Any) -> str:
+    if color is None:
+        return ""
+
     try:
         return matplotlib.colors.to_hex(color, keep_alpha=False)
     except ValueError:
