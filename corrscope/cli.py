@@ -9,7 +9,7 @@ import click
 import corrscope
 from corrscope.channel import ChannelConfig
 from corrscope.config import yaml
-from corrscope.corrscope import default_config, CorrScope, Config, Arguments
+from corrscope.corrscope import template_config, CorrScope, Config, Arguments
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig
 from corrscope.settings.paths import MissingFFmpegError
 
@@ -160,7 +160,7 @@ def main(
             break
 
         elif path.suffix in YAML_EXTS:
-            # Load a YAML file to cfg, and skip default_config().
+            # Load a YAML file to cfg, and skip template_config().
             if len(files) > 1:
                 raise click.ClickException(
                     f'Cannot supply multiple arguments when providing config {path}')
@@ -182,7 +182,7 @@ def main(
         # cfg and cfg_dir are always initialized together.
         channels = [ChannelConfig(str(wav_path)) for wav_path in wav_list]
 
-        cfg_or_path = default_config(
+        cfg_or_path = template_config(
             master_audio=audio,
             # fps=default,
             channels=channels,

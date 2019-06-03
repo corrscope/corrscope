@@ -9,7 +9,7 @@ from pytest_mock import MockFixture
 import corrscope.channel
 import corrscope.corrscope
 from corrscope.channel import ChannelConfig, Channel, DefaultLabel
-from corrscope.corrscope import default_config, CorrScope, BenchmarkMode, Arguments
+from corrscope.corrscope import template_config, CorrScope, BenchmarkMode, Arguments
 from corrscope.triggers import NullTriggerConfig
 from corrscope.util import coalesce
 from corrscope.wave import Flatten
@@ -82,7 +82,7 @@ def test_config_channel_integration(
     )
 
     def get_cfg():
-        return default_config(
+        return template_config(
             trigger_ms=trigger_ms,
             render_ms=render_ms,
             trigger_subsampling=tsub,
@@ -177,7 +177,7 @@ def test_per_channel_stereo(
     stereo = coalesce(chan_stereo, global_stereo)
 
     # Test render wave.
-    cfg = default_config(render_stereo=global_stereo)
+    cfg = template_config(render_stereo=global_stereo)
     ccfg = ChannelConfig("tests/stereo in-phase.wav", render_stereo=chan_stereo)
     channel = Channel(ccfg, cfg)
 
