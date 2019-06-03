@@ -16,7 +16,7 @@ from corrscope.utils.trigger_util import (
     MIN_AMPLITUDE,
     abs_max,
 )
-from corrscope.utils.windows import leftpad, midpad, rightpad
+from corrscope.utils.windows import leftpad, midpad, rightpad, gaussian_or_zero
 from corrscope.wave import FLOAT
 
 if TYPE_CHECKING:
@@ -460,7 +460,7 @@ class CorrelationTrigger(MainTrigger):
         # If pitch changed...
         if semitones:
             # Gaussian window
-            period_symmetric_window = windows.gaussian(N, period * cfg.data_falloff)
+            period_symmetric_window = gaussian_or_zero(N, period * cfg.data_falloff)
 
             # Left-sided falloff
             lag_prevention_window = self._lag_prevention_window
@@ -496,8 +496,8 @@ class CorrelationTrigger(MainTrigger):
         else:
             radius = None
 
-        score = correlate_data(data, prev_buffer, radius)
-        peak_offset = score.peak
+        trigger_score = correlate_data(data, prev_buffer, radius)
+        peak_offset = trigger_score.peak
         trigger = index + (stride * peak_offset)
 
         del data
@@ -567,17 +567,29 @@ class CorrelationTrigger(MainTrigger):
             rescale_mut(self._buffer)
 
     def _is_window_invalid(self, period: int) -> Union[bool, float]:
-        """ Returns number of semitones,
-        if pitch has changed more than `recalc_semitones`. """
+        """
+        Returns number of semitones,
+        if pitch has changed more than `recalc_semitones`.
+
+        Preconditions:
+        - self._prev_period is assigned whenever this function returns True.
+        - If period cannot be estimated, period == 0.
+
+        Postconditions:
+        - On frame 0, MUST return True (to initialize self._prev_window).
+            - This is the only way self._prev_period == 0.
+        - Elif period is 0 (cannot be estimated), return False.
+        """
 
         prev = self._prev_period
-
         if prev is None:
             return True
-        elif prev * period == 0:
-            return prev != period
+        elif period == 0:
+            return False
+        elif prev == 0:
+            return True
         else:
-            # If period doubles, semitones are -12.
+            # When period doubles, semitones are -12.
             semitones = np.log(period / prev) / np.log(2) * -12
             # If semitones == recalc_semitones == 0, do NOT recalc.
             if abs(semitones) <= self.cfg.recalc_semitones:
@@ -606,7 +618,7 @@ class CorrelationTrigger(MainTrigger):
         # New waveform
         data -= cache.mean
         normalize_buffer(data)
-        window = windows.gaussian(N, std=(cache.period / self._stride) * buffer_falloff)
+        window = gaussian_or_zero(N, std=(cache.period / self._stride) * buffer_falloff)
         data *= window
 
         # Old buffer
