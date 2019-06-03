@@ -1,15 +1,23 @@
 ## 0.6.0
 
-### Breaking Changes
+### Features
 
-- Rewrite pitch tracking to avoid false negatives
+- Rewrite pitch tracking to avoid false negatives (#274)
     - Previously, we rescaled the *buffer* to maximize spectral similarity between *data 2 frames ago* and data now.
     - Now we rescale the buffer to maximize spectral similarity between the buffer and data now.
 
-### Features
+### Major Changes
+
+- Update default options for new projects (#275)
+    - Stereo grid opacity = 0.25
+    - Render FPS Divisor = 2 (preview-only, faster)
+    - Trigger Width = 60 ms
+- Always enable midline color, remove color checkbox (#291)
+    - Can be disabled separately for h/v
 
 ### Changelog
 
+- Increase GUI maximum Trigger/Render Width to 200 ms
 - Rewrite FPS printing code
 - Add test to ensure cancelling render terminates FFmpeg quickly
 - Add support for excluding fields from always_dump="*" (#268)
