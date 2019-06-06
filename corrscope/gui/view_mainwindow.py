@@ -310,12 +310,20 @@ class MainWindow(QWidget):
             with append_widget(
                 s, QGroupBox, title=tr("Edge Triggering"), layout=QFormLayout
             ):
-                with add_row(s, "", BoundComboBox) as (self.trigger__edge_direction):
-                    pass
-                with add_row(s, "", BoundDoubleSpinBox) as (
-                    self.trigger__edge_strength
+                with add_row(
+                    s,
+                    tr("Edge Direction"),
+                    BoundComboBox,
+                    name="trigger__edge_direction",
                 ):
-                    self.trigger__edge_strength.setMinimum(0.0)
+                    pass
+                with add_row(
+                    s,
+                    tr("Edge Strength"),
+                    BoundDoubleSpinBox,
+                    name="trigger__edge_strength",
+                ):
+                    s.widget.setMinimum(0.0)
 
             with append_widget(
                 s,
@@ -500,9 +508,7 @@ class MainWindow(QWidget):
         self.layout__nrowsL.setText(tr("Rows"))
 
         self.master_audio_browse.setText(tr("&Browse..."))
-        self.trigger__edge_strengthL.setText(tr("Edge Strength"))
         self.trigger__pitch_tracking.setText(tr("Pitch Tracking"))
-        self.trigger__edge_directionL.setText(tr("Edge Direction"))
 
         self.channelAdd.setText(tr("&Add..."))
         self.channelDelete.setText(tr("&Delete"))
