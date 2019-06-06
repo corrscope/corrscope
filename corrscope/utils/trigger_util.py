@@ -62,7 +62,6 @@ def get_period(data: np.ndarray, self: "t.CorrelationTrigger" = None) -> int:
     # But don't return 0 since it's not silence.
 
     is_long_period = temp_peakX > 0.1 * N
-    self.custom_line("owo", np.full(500, is_long_period), False, False)
     if is_long_period:
         # If a long-period wave has strong harmonics,
         # the true peak will be attenuated below the harmonic peaks.
@@ -74,9 +73,6 @@ def get_period(data: np.ndarray, self: "t.CorrelationTrigger" = None) -> int:
 
     else:
         peakX = temp_peakX
-
-    self.custom_vline("peakPeriod", peakX - N // 2, False)
-    self.custom_line("autocorrelation", corr, False, False)
 
     return int(peakX)
 
