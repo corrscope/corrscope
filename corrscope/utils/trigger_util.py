@@ -1,11 +1,13 @@
-from typing import Union, Optional
+from typing import Union, Optional, TYPE_CHECKING
 
 import numpy as np
 
-import corrscope.triggers as t
 import corrscope.utils.scipy.signal as signal
 from corrscope.util import iround
 from corrscope.wave import FLOAT
+
+if TYPE_CHECKING:
+    import corrscope.triggers as t
 
 # 0 = no amplification (estimated period too short).
 # 1 = full area compensation (estimated period too long).
