@@ -215,7 +215,16 @@ UpdateOneLine = Callable[[np.ndarray], Any]
 @attr.dataclass
 class CustomLine:
     stride: int
-    xdata: np.ndarray
+    _xdata: np.ndarray = attr.ib(converter=np.array)
+
+    @property
+    def xdata(self) -> np.ndarray:
+        return self._xdata
+
+    @xdata.setter
+    def xdata(self, value):
+        self._xdata = np.array(value)
+
     set_xdata: UpdateOneLine
     set_ydata: UpdateOneLine
 

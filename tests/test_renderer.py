@@ -20,6 +20,7 @@ from corrscope.renderer import (
     calc_center,
     AbstractMatplotlibRenderer,
     RendererFrontend,
+    CustomLine,
 )
 from corrscope.util import perr
 from corrscope.wave import Flatten
@@ -508,3 +509,19 @@ def test_frontend_overrides_backend(mocker: "pytest_mock.MockFixture"):
 
     assert frontend_get_frame.call_count == 1
     assert backend_get_frame.call_count == 1
+
+
+def test_custom_line():
+    def verify(line: CustomLine, xdata: list):
+        line_xdata = line.xdata
+        assert isinstance(line_xdata, np.ndarray)
+        assert line_xdata.tolist() == xdata
+
+    stride = 1
+    noop = lambda x: None
+
+    line = CustomLine(stride, [3], noop, noop)
+    verify(line, [3])
+
+    line.xdata = [4, 4]
+    verify(line, [4, 4])
