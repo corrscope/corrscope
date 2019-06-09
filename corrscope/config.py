@@ -1,48 +1,6 @@
 """
-The most important class in this module is `DumpableAttrs`. It is subclassed for
-(statically-typed key-value objects which will be dumped/loaded as YAML files).
-
-Using `DumpableAttrs`:
-
-- This class works like `dataclasses` or `attrs.dataclass` decorators,
-  and wraps the latter.
-- Subclass `DumpableAttrs`, then add class-level type annotations.
-  These annotations are converted into `__init__(...)` constructor parameters.
-
-```py
-class Config(DumpableAttrs):
-    path: str
-    priority: int = 0
-```
-
-Unlike many other libraries and usual JSON,
-the YAML string representation of a `DumpableAttrs` object
-encodes what Python type the object is.
-For example, Config("foo.wav", 1) is dumped as:
-
-```yaml
-!Config
-path: foo.wav  # Required
-priority: 1  # If not present, defaults to 0
-# See DumpableAttrs docstring for details.
-```
-
-The YAML file determines what type is loaded,
-so the config type can be used to pick a object type at runtime.
-
-- For example, putting `!CorrelationTriggerConfig` in YAML
-  loads a `CorrelationTriggerConfig` config object,
-  which tells corrscope to create a `CorrelationTrigger` algorithm object.
-- Putting `!NullTriggerConfig` in YAML
-  instead loads a `NullTriggerConfig` config object,
-  which tells corrscope to create a `NullTrigger` algorithm object.
-  (This is only used for unit tests, and is incompatible with GUI.)
-
-`KeywordAttrs` are similar, with 2 differences:
-
-- Subclasses can have non-default arguments after default arguments.
-- Its constructor can only be called with keyword (a=1, b=2) arguments,
-  not positional (1, 2).
+The most important class in this module is `DumpableAttrs`.
+See its docstring for details.
 """
 
 import pickle
@@ -161,11 +119,72 @@ def copy_config(obj: T) -> T:
 class DumpableAttrs:
     """ Marks class as attrs, and enables YAML dumping (excludes default fields).
 
+    It is subclassed for
+    (statically-typed key-value objects which will be dumped/loaded as YAML files).
+
+    ## Subclassing `DumpableAttrs` and converting to YAML
+
+    - This class works like `dataclasses` or `attrs.dataclass` decorators,
+      and wraps the latter.
+    - Subclass `DumpableAttrs`, then add class-level type annotations.
+      These annotations are converted into `__init__(...)` constructor parameters.
+
+    ```py
+    class Config(DumpableAttrs):
+        path: str
+        priority: int = 0
+    ```
+
+    Unlike many other libraries and usual JSON,
+    the YAML string representation of a `DumpableAttrs` object
+    encodes what Python type the object is.
+    For example, Config("foo.wav", 1) is dumped as:
+
+    ```yaml
+    !Config
+    path: foo.wav  # Required
+    priority: 1  # If not present, defaults to 0
+    # See DumpableAttrs docstring for details.
+    ```
+
+    ## Polymorphism
+
+    The YAML file determines what type is loaded,
+    so the config type can be used to pick a object type at runtime.
+
+    - For example, putting `!CorrelationTriggerConfig` in YAML
+      loads a `CorrelationTriggerConfig` config object,
+      which tells corrscope to create a `CorrelationTrigger` algorithm object.
+    - Putting `!NullTriggerConfig` in YAML
+      instead loads a `NullTriggerConfig` config object,
+      which tells corrscope to create a `NullTrigger` algorithm object.
+      (This is only used for unit tests, and is incompatible with GUI.)
+
+    ## `KeywordAttrs` are similar, with 2 differences:
+
+    - Subclasses can have non-default arguments after default arguments.
+    - Its constructor can only be called with keyword (a=1, b=2) arguments,
+      not positional (1, 2).
+
+    ## Optional Parameters
+
     class Config(DumpableAttrs, always_dump="", exclude=""): ...
     - `always_dump` contains whitespace-separated list of fields to always dump
       (if equal to default).
     - If always_dump="*", `exclude` contains whitespace-separated list of fields
       to not dump (if equal to default).
+
+    ## Loading from YAML: Alias and Ignored
+
+    YAML loading uses __getstate__ and __setstate__.
+
+    If `old = Alias("new")`,
+    then loading a YAML file `old: value` initializes `new = value`.
+
+    If `old = Ignored`,
+    then loading a YAML file `old: value` silently discards `value`.
+    Ignored is unused in my code,
+    since __setstate__ automatically discards unrecognized fields (with a warning).
     """
 
     if TYPE_CHECKING:
