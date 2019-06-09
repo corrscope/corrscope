@@ -11,19 +11,20 @@ Using `DumpableAttrs`:
 
 ```py
 class Config(DumpableAttrs):
-    path: str  # path is required in YAML.
-    priority: int = 0  # priority is optional and does not need to be present in YAML.
+    path: str
+    priority: int = 0
 ```
 
 Unlike many other libraries and usual JSON,
 the YAML string representation of a `DumpableAttrs` object
 encodes what Python type the object is.
-For example, `class Config` is dumped as:
+For example, Config("foo.wav", 1) is dumped as:
 
 ```yaml
 !Config
-path: foo.wav
-priority: 0
+path: foo.wav  # Required
+priority: 1  # If not present, defaults to 0
+# See DumpableAttrs docstring for details.
 ```
 
 The YAML file determines what type is loaded,
@@ -159,8 +160,12 @@ def copy_config(obj: T) -> T:
 
 class DumpableAttrs:
     """ Marks class as attrs, and enables YAML dumping (excludes default fields).
-    - Subclass parameter `always_dump` contains
-      whitespace-separated list of fields to always dump.
+
+    class Config(DumpableAttrs, always_dump="", exclude=""): ...
+    - `always_dump` contains whitespace-separated list of fields to always dump
+      (if equal to default).
+    - If always_dump="*", `exclude` contains whitespace-separated list of fields
+      to not dump (if equal to default).
     """
 
     if TYPE_CHECKING:
