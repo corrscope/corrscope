@@ -18,6 +18,9 @@ from corrscope.renderer import (
     calc_limits,
     calc_xs,
     calc_center,
+    AbstractMatplotlibRenderer,
+    RendererFrontend,
+    CustomLine,
 )
 from corrscope.util import perr
 from corrscope.wave import Flatten
@@ -412,7 +415,7 @@ def verify_res_divisor_rounding(
     cfg.before_preview()
 
     if speed_hack:
-        mocker.patch.object(Renderer, "_save_background")
+        mocker.patch.object(AbstractMatplotlibRenderer, "_save_background")
         datas = []
     else:
         datas = [RENDER_Y_ZEROS]
@@ -478,3 +481,47 @@ def test_renderer_knows_stride(mocker: "pytest_mock.MockFixture", integration: b
             corr_cfg.render, corr_cfg.layout, [data], [chan_cfg], [channel]
         )
         assert renderer.render_strides == [subsampling * width_mul]
+
+
+# Multiple inheritance tests
+def test_frontend_overrides_backend(mocker: "pytest_mock.MockFixture"):
+    """
+    class Renderer inherits from (RendererFrontend, backend).
+
+    RendererFrontend.get_frame() is a wrapper around backend.get_frame()
+    and should override it (RendererFrontend should come first in MRO).
+
+    Make sure RendererFrontend methods overshadow backend methods.
+    """
+
+    # If RendererFrontend.get_frame() override is removed, delete this entire test.
+    frontend_get_frame = mocker.spy(RendererFrontend, "get_frame")
+    backend_get_frame = mocker.spy(AbstractMatplotlibRenderer, "get_frame")
+
+    corr_cfg = default_config()
+    chan_cfg = ChannelConfig("tests/sine440.wav")
+    channel = Channel(chan_cfg, corr_cfg, channel_idx=0)
+    data = channel.get_render_around(0)
+
+    renderer = Renderer(corr_cfg.render, corr_cfg.layout, [data], [chan_cfg], [channel])
+    renderer.update_main_lines([data])
+    renderer.get_frame()
+
+    assert frontend_get_frame.call_count == 1
+    assert backend_get_frame.call_count == 1
+
+
+def test_custom_line():
+    def verify(line: CustomLine, xdata: list):
+        line_xdata = line.xdata
+        assert isinstance(line_xdata, np.ndarray)
+        assert line_xdata.tolist() == xdata
+
+    stride = 1
+    noop = lambda x: None
+
+    line = CustomLine(stride, [3], noop, noop)
+    verify(line, [3])
+
+    line.xdata = [4, 4]
+    verify(line, [4, 4])
