@@ -1,9 +1,10 @@
-from typing import Union
+from typing import Union, Optional
 
 import numpy as np
 
 import corrscope.triggers as t
 import corrscope.utils.scipy.signal as signal
+from corrscope.util import iround
 from corrscope.wave import FLOAT
 
 # 0 = no amplification (estimated period too short).
@@ -14,9 +15,14 @@ MAX_AMPLIFICATION = 2
 
 
 # get_trigger()
-def get_period(data: np.ndarray, self: "t.CorrelationTrigger" = None) -> int:
+def get_period(
+    data: np.ndarray,
+    subsmp_s: float,
+    max_freq: float,
+    self: "Optional[t.CorrelationTrigger]" = None,
+) -> int:
     """
-    Use autocorrelation to estimate the period (AKA pitch) of a signal.
+    Use tweaked autocorrelation to estimate the period (AKA pitch) of a signal.
     Loosely inspired by https://github.com/endolith/waveform_analysis
 
     Design principles:
@@ -25,6 +31,8 @@ def get_period(data: np.ndarray, self: "t.CorrelationTrigger" = None) -> int:
         - Overestimation only leads to slightly increased x-distance.
     - When the wave is exiting the field of view,
         do NOT estimate an egregiously large period.
+    - Do not report a tiny period when faced with YM2612 FM feedback/noise.
+        - See get_min_period() docstring.
 
     Return value:
     - Returns 0 if period cannot be estimated.
@@ -45,16 +53,39 @@ def get_period(data: np.ndarray, self: "t.CorrelationTrigger" = None) -> int:
     corr = corr_symmetric[mid:]
     assert len(corr) == len(data)
 
-    # Remove the central peak.
-    zero_crossings = np.where(corr < 0)[0]
-    if len(zero_crossings) == 0:
-        # This can happen given an array of all zeros. Anything else?
+    def get_min_period() -> int:
+        """
+        Avoid picking periods shorter than `max_freq`.
+        - Yamaha FM feedback produces nearly inaudible high frequencies,
+          which tend to produce erroneously short period estimates,
+          causing correlation to fail.
+        - Most music does not go this high.
+        - Overestimating period of high notes is mostly harmless.
+        """
+        max_cyc_s = max_freq
+        min_s_cyc = 1 / max_cyc_s
+        min_subsmp_cyc = subsmp_s * min_s_cyc
+        return iround(min_subsmp_cyc)
+
+    def get_zero_crossing() -> int:
+        """Remove the central peak."""
+        zero_crossings = np.where(corr < 0)[0]
+        if len(zero_crossings) == 0:
+            # This can happen given an array of all zeros. Anything else?
+            return UNKNOWN_PERIOD
+        return zero_crossings[0]
+
+    min_period = get_min_period()
+    zero_crossing = get_zero_crossing()
+    if zero_crossing == UNKNOWN_PERIOD:
         return UNKNOWN_PERIOD
-    crossX = zero_crossings[0]
+
+    # [minX..) = [min_period..) & [zero_crossing..)
+    minX = max(min_period, zero_crossing)
 
     # Remove the zero-correlation peak.
     def calc_peak():
-        return crossX + np.argmax(corr[crossX:])
+        return minX + np.argmax(corr[minX:])
 
     temp_peakX = calc_peak()
     # In the case of uncorrelated noise,

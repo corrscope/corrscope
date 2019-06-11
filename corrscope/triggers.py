@@ -99,12 +99,15 @@ class _Trigger(ABC):
         self._renderer = renderer
         self._wave_idx = wave_idx
 
+        # Subsamples per second
+        self.subsmp_s = self._wave.smp_s / self._stride
+
         frame_dur = 1 / fps
         # Subsamples per frame
         self._tsamp_frame = self.time2tsamp(frame_dur)
 
     def time2tsamp(self, time: float) -> int:
-        return round(time * self._wave.smp_s / self._stride)
+        return round(time * self.subsmp_s)
 
     def custom_line(
         self, name: str, data: np.ndarray, offset: bool, invert: bool = True
@@ -275,6 +278,9 @@ class CorrelationTriggerConfig(
     # _update_buffer
     responsiveness: float
 
+    # Period/frequency estimation (not in GUI)
+    max_freq: float = with_units("Hz", default=4000)
+
     # Pitch tracking = compute spectrum.
     pitch_tracking: Optional["SpectrumConfig"] = None
 
@@ -354,9 +360,7 @@ class CorrelationTrigger(MainTrigger):
 
         if self.scfg:
             self._spectrum_calc = LogFreqSpectrum(
-                scfg=self.scfg,
-                subsmp_s=self._wave.smp_s / self._stride,
-                dummy_data=self._buffer,
+                scfg=self.scfg, subsmp_s=self.subsmp_s, dummy_data=self._buffer
             )
         else:
             self._spectrum_calc = DummySpectrum()
@@ -453,7 +457,7 @@ class CorrelationTrigger(MainTrigger):
         data -= np.add.reduce(data) / N
 
         # Window data
-        period = get_period(data, self)
+        period = get_period(data, self.subsmp_s, self.cfg.max_freq)
         cache.period = period * stride
 
         semitones = self._is_window_invalid(period)
