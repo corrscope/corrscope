@@ -121,7 +121,12 @@ def default_config(**kwargs) -> Config:
         channels=[],
         layout=LayoutConfig(orientation="v", ncols=1),
         render=RendererConfig(
-            1280, 720, res_divisor=4 / 3, v_midline=True, h_midline=True
+            1280,
+            720,
+            res_divisor=4 / 3,
+            grid_color="#55aaff",
+            v_midline=True,
+            h_midline=True,
         ),
     )
     return attr.evolve(cfg, **kwargs)
