@@ -457,7 +457,7 @@ class CorrelationTrigger(MainTrigger):
         data -= np.add.reduce(data) / N
 
         # Window data
-        period = get_period(data, self.subsmp_s, self.cfg.max_freq)
+        period = get_period(data, self.subsmp_s, self.cfg.max_freq, self)
         cache.period = period * stride
 
         semitones = self._is_window_invalid(period)
