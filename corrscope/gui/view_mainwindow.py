@@ -286,7 +286,7 @@ class MainWindow(QWidget):
                     pass
 
             with append_widget(
-                s, QGroupBox, title=tr("Wave Alignment"), layout=QFormLayout
+                s, QGroupBox, title=tr("Wave History Alignment"), layout=QFormLayout
             ):
                 with add_row(
                     s,
