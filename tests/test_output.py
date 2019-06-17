@@ -12,7 +12,7 @@ import attr
 import pytest
 
 from corrscope.channel import ChannelConfig
-from corrscope.corrscope import default_config, Config, CorrScope, Arguments
+from corrscope.corrscope import template_config, Config, CorrScope, Arguments
 from corrscope.outputs import (
     FFmpegOutput,
     FFmpegOutputConfig,
@@ -47,11 +47,11 @@ class DummyException(Exception):
 NULL_FFMPEG_OUTPUT = FFmpegOutputConfig(None, "-f null")
 
 render_cfg = RendererConfig(WIDTH, HEIGHT)
-CFG = default_config(render=render_cfg)
+CFG = template_config(render=render_cfg)
 
 
 def sine440_config():
-    cfg = default_config(
+    cfg = template_config(
         channels=[ChannelConfig("tests/sine440.wav")],
         master_audio="tests/sine440.wav",
         end_time=0.5,  # Reduce test duration
