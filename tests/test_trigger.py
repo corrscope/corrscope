@@ -197,9 +197,9 @@ def test_when_does_trigger_recalc_window():
 
     trigger._prev_period = 100
 
-    for x in [99, 101]:
+    for x in [0, 99, 101]:
         assert not trigger._is_window_invalid(x), x
-    for x in [0, 80, 120]:
+    for x in [80, 120]:
         assert trigger._is_window_invalid(x), x
 
     trigger._prev_period = 0

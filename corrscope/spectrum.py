@@ -34,7 +34,6 @@ class SpectrumConfig(KeywordAttrs):
     divide_by_freq: bool = True
 
     # Spectral alignment and resampling
-    pitch_estimate_boost: float = 1.2
     max_octaves_to_resample: float = 1.0
 
     @property

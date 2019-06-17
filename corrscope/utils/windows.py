@@ -43,3 +43,15 @@ def rightpad(data: np.ndarray, n: int, constant_values=1) -> np.ndarray:
     data = np.pad(data, (0, n - len(data)), "constant", constant_values=constant_values)
 
     return data
+
+
+def gaussian_or_zero(M: int, std: float, sym: bool = True) -> np.ndarray:
+    """
+    Sometimes `std` is computed based on period.
+
+    If period is zero (cannot be estimated), return all zeros.
+    """
+    if std == 0:
+        return np.zeros(M, dtype=FLOAT)
+    else:
+        return windows.gaussian(M, std, sym)
