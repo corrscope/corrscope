@@ -312,7 +312,7 @@ class MainWindow(QWidget):
             ):
                 with add_row(
                     s,
-                    tr("Edge Direction"),
+                    tr("Trigger Direction"),
                     BoundComboBox,
                     name="trigger__edge_direction",
                 ):
@@ -324,16 +324,9 @@ class MainWindow(QWidget):
                     name="trigger__edge_strength",
                 ):
                     s.widget.setMinimum(0.0)
-
-            with append_widget(
-                s,
-                QGroupBox,
-                title=tr("Slope Triggering (for PSG/C64/FM)"),
-                layout=QFormLayout,
-            ):
                 with add_row(
                     s,
-                    tr("Slope Strength"),
+                    tr("Slope Strength\n(for PSG/C64/FM)"),
                     BoundDoubleSpinBox,
                     name="trigger__slope_strength",
                 ):
