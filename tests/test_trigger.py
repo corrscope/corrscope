@@ -5,7 +5,9 @@ import pytest
 import pytest_mock
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from pytest_cases import pytest_fixture_plus
+
+# Pycharm assumes anything called "fixture" is pytest.fixture.
+from pytest_cases import pytest_fixture_plus as fixture
 
 from corrscope import triggers
 from corrscope.triggers import (
@@ -25,21 +27,22 @@ parametrize = pytest.mark.parametrize
 triggers.SHOW_TRIGGER = False
 
 
-def cfg_template(**kwargs) -> CorrelationTriggerConfig:
-    """ Not identical to default_config() template. """
+def trigger_template(**kwargs) -> CorrelationTriggerConfig:
     cfg = CorrelationTriggerConfig(
         edge_strength=2, responsiveness=1, buffer_falloff=0.5
     )
     return attr.evolve(cfg, **kwargs)
 
 
-@pytest_fixture_plus
+@fixture
 @parametrize("trigger_diameter", [None, 0.5])
 @parametrize("pitch_tracking", [None, SpectrumConfig()])
 @parametrize("slope_strength", [0, 100])
 @parametrize("sign_strength", [0, 1])
-def cfg(trigger_diameter, pitch_tracking, slope_strength, sign_strength):
-    return cfg_template(
+def trigger_cfg(
+    trigger_diameter, pitch_tracking, slope_strength, sign_strength
+) -> CorrelationTriggerConfig:
+    return trigger_template(
         trigger_diameter=trigger_diameter,
         pitch_tracking=pitch_tracking,
         slope_strength=slope_strength,
@@ -58,7 +61,7 @@ is_odd = parametrize("is_odd", [False, True])
 
 @is_odd
 @parametrize("post_trigger", [None, ZeroCrossingTriggerConfig()])
-def test_trigger(cfg: CorrelationTriggerConfig, is_odd: bool, post_trigger):
+def test_trigger(trigger_cfg, is_odd: bool, post_trigger):
     """Ensures that trigger can locate
     the first positive sample of a -+ step exactly,
     without off-by-1 errors.
@@ -66,13 +69,15 @@ def test_trigger(cfg: CorrelationTriggerConfig, is_odd: bool, post_trigger):
     See CorrelationTrigger and Wave.get_around() docstrings.
     """
     wave = Wave("tests/step2400.wav")
-    cfg = attr.evolve(cfg, post_trigger=post_trigger)
+    trigger_cfg = attr.evolve(trigger_cfg, post_trigger=post_trigger)
 
     iters = 5
     plot = False
     x0 = 2400
     x = x0 - 50
-    trigger: CorrelationTrigger = cfg(wave, 400 + int(is_odd), stride=1, fps=FPS)
+    trigger: CorrelationTrigger = trigger_cfg(
+        wave, 400 + int(is_odd), stride=1, fps=FPS
+    )
 
     if plot:
         BIG = 0.95
@@ -96,9 +101,7 @@ def test_trigger(cfg: CorrelationTriggerConfig, is_odd: bool, post_trigger):
         plt.show()
 
 
-def test_mean_subtraction(
-    cfg: CorrelationTriggerConfig, mocker: "pytest_mock.MockFixture"
-):
+def test_mean_subtraction(trigger_cfg, mocker: "pytest_mock.MockFixture"):
     """
     Ensure that trigger subtracts mean properly in all configurations.
     -   Due to a regression, mean was not subtracted when sign_strength = 0.
@@ -107,7 +110,7 @@ def test_mean_subtraction(
     wave = Wave("tests/step2400.wav")
 
     get_period = mocker.spy(triggers, "get_period")
-    trigger = cfg(wave, tsamp=100, stride=1, fps=FPS)
+    trigger = trigger_cfg(wave, tsamp=100, stride=1, fps=FPS)
     cache = PerFrameCache()
     trigger.get_trigger(2600, cache)  # step2400.wav
 
@@ -122,7 +125,7 @@ def test_post_stride(post_trigger):
     Test that stride is respected when post_trigger is disabled,
     and ignored when post_trigger is enabled.
     """
-    cfg = cfg_template(post_trigger=post_trigger)
+    cfg = trigger_template(post_trigger=post_trigger)
 
     wave = Wave("tests/sine440.wav")
     iters = 5
@@ -158,9 +161,9 @@ def test_trigger_direction(post_trigger, double_negate):
 
     if double_negate:
         wave.amplification = -1
-        cfg = cfg_template(post_trigger=post_trigger, edge_direction=-1)
+        cfg = trigger_template(post_trigger=post_trigger, edge_direction=-1)
     else:
-        cfg = cfg_template(post_trigger=post_trigger)
+        cfg = trigger_template(post_trigger=post_trigger)
 
     trigger = cfg(wave, 100, 1, FPS)
     cfg.edge_direction = None
@@ -171,14 +174,14 @@ def test_trigger_direction(post_trigger, double_negate):
         assert trigger.get_trigger(index + dx, cache) == index
 
 
-def test_trigger_out_of_bounds(cfg: CorrelationTriggerConfig):
+def test_trigger_out_of_bounds(trigger_cfg):
     """Ensure out-of-bounds triggering with stride does not crash.
     (why does stride matter? IDK.)"""
     wave = Wave("tests/sine440.wav")
     # period = 48000 / 440 = 109.(09)*
 
     stride = 4
-    trigger = cfg(wave, tsamp=100, stride=stride, fps=FPS)
+    trigger = trigger_cfg(wave, tsamp=100, stride=stride, fps=FPS)
     # real window_samp = window_samp*stride
     # period = 109
 
@@ -188,7 +191,7 @@ def test_trigger_out_of_bounds(cfg: CorrelationTriggerConfig):
 
 
 def test_when_does_trigger_recalc_window():
-    cfg = cfg_template(recalc_semitones=1.0)
+    cfg = trigger_template(recalc_semitones=1.0)
     wave = Wave("tests/sine440.wav")
     trigger: CorrelationTrigger = cfg(wave, tsamp=1000, stride=1, fps=FPS)
 

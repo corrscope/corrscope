@@ -7,7 +7,7 @@ import pytest
 from hypothesis import given
 
 from corrscope.channel import ChannelConfig, Channel
-from corrscope.corrscope import CorrScope, default_config, Arguments
+from corrscope.corrscope import CorrScope, template_config, Arguments
 from corrscope.layout import LayoutConfig
 from corrscope.outputs import FFplayOutputConfig
 from corrscope.renderer import (
@@ -375,7 +375,7 @@ def test_stereo_render_integration(mocker: "pytest_mock.MockFixture"):
     mocker.patch.object(FFplayOutputConfig, "cls")
 
     # Render in stereo.
-    cfg = default_config(
+    cfg = template_config(
         channels=[ChannelConfig("tests/stereo in-phase.wav")],
         render_stereo=Flatten.Stereo,
         end_time=0.5,  # Reduce test duration
@@ -466,7 +466,7 @@ def test_renderer_knows_stride(mocker: "pytest_mock.MockFixture", integration: b
     width_mul = 3
 
     chan_cfg = ChannelConfig("tests/sine440.wav", render_width=width_mul)
-    corr_cfg = default_config(
+    corr_cfg = template_config(
         render_subsampling=subsampling, channels=[chan_cfg], end_time=0
     )
 
@@ -498,7 +498,7 @@ def test_frontend_overrides_backend(mocker: "pytest_mock.MockFixture"):
     frontend_get_frame = mocker.spy(RendererFrontend, "get_frame")
     backend_get_frame = mocker.spy(AbstractMatplotlibRenderer, "get_frame")
 
-    corr_cfg = default_config()
+    corr_cfg = template_config()
     chan_cfg = ChannelConfig("tests/sine440.wav")
     channel = Channel(chan_cfg, corr_cfg, channel_idx=0)
     data = channel.get_render_around(0)

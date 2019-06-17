@@ -102,7 +102,7 @@ class Config(
 _FPS = 60  # f_s
 
 
-def default_config(**kwargs) -> Config:
+def template_config(**kwargs) -> Config:
     """ Default template values do NOT indicate optional attributes. """
     cfg = Config(
         master_audio="",
