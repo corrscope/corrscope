@@ -14,8 +14,9 @@ from corrscope.utils.trigger_util import (
     normalize_buffer,
     lerp,
     MIN_AMPLITUDE,
+    abs_max,
 )
-from corrscope.utils.windows import leftpad, midpad, rightpad
+from corrscope.utils.windows import leftpad, midpad, rightpad, gaussian_or_zero
 from corrscope.wave import FLOAT
 
 if TYPE_CHECKING:
@@ -98,24 +99,49 @@ class _Trigger(ABC):
         self._renderer = renderer
         self._wave_idx = wave_idx
 
+        # Subsamples per second
+        self.subsmp_s = self._wave.smp_s / self._stride
+
         frame_dur = 1 / fps
         # Subsamples per frame
         self._tsamp_frame = self.time2tsamp(frame_dur)
 
     def time2tsamp(self, time: float) -> int:
-        return round(time * self._wave.smp_s / self._stride)
+        return round(time * self.subsmp_s)
 
-    def custom_line(self, name: str, data: np.ndarray, **kwargs):
+    def custom_line(
+        self, name: str, data: np.ndarray, offset: bool, invert: bool = True
+    ):
+        """
+        :param offset:
+        - True, for untriggered wave data:
+            - line will be shifted and triggered (by offset_viewport()).
+        - False, for triggered data and buffers:
+            - line is immune to offset_viewport().
+
+        :param invert:
+        - True, for wave (data and buffers):
+            - If wave data is inverted (edge_direction = -1),
+              data will be plotted inverted.
+        - False, for buffers and autocorrelated wave data:
+            - Data is plotted as-is.
+        """
         if self._renderer is None:
             return
+        data = data / abs_max(data, 0.01) / 2
+        if invert:
+            data *= np.copysign(1, self._wave.amplification)
         self._renderer.update_custom_line(
-            name, self._wave_idx, self._stride, data, **kwargs
+            name, self._wave_idx, self._stride, data, offset=offset
         )
 
-    def custom_vline(self, name: str, x: int):
+    def custom_vline(self, name: str, x: int, offset: bool):
+        """See above for `offset`."""
         if self._renderer is None:
             return
-        self._renderer.update_vline(name, self._wave_idx, self._stride, x)
+        self._renderer.update_vline(
+            name, self._wave_idx, self._stride, x, offset=offset
+        )
 
     def offset_viewport(self, offset: int):
         if self._renderer is None:
@@ -252,6 +278,9 @@ class CorrelationTriggerConfig(
     # _update_buffer
     responsiveness: float
 
+    # Period/frequency estimation (not in GUI)
+    max_freq: float = with_units("Hz", default=4000)
+
     # Pitch tracking = compute spectrum.
     pitch_tracking: Optional["SpectrumConfig"] = None
 
@@ -331,9 +360,7 @@ class CorrelationTrigger(MainTrigger):
 
         if self.scfg:
             self._spectrum_calc = LogFreqSpectrum(
-                scfg=self.scfg,
-                subsmp_s=self._wave.smp_s / self._stride,
-                dummy_data=self._buffer,
+                scfg=self.scfg, subsmp_s=self.subsmp_s, dummy_data=self._buffer
             )
         else:
             self._spectrum_calc = DummySpectrum()
@@ -430,14 +457,14 @@ class CorrelationTrigger(MainTrigger):
         data -= np.add.reduce(data) / N
 
         # Window data
-        period = get_period(data)
+        period = get_period(data, self.subsmp_s, self.cfg.max_freq, self)
         cache.period = period * stride
 
         semitones = self._is_window_invalid(period)
         # If pitch changed...
         if semitones:
             # Gaussian window
-            period_symmetric_window = windows.gaussian(N, period * cfg.data_falloff)
+            period_symmetric_window = gaussian_or_zero(N, period * cfg.data_falloff)
 
             # Left-sided falloff
             lag_prevention_window = self._lag_prevention_window
@@ -473,8 +500,8 @@ class CorrelationTrigger(MainTrigger):
         else:
             radius = None
 
-        score = correlate_data(data, prev_buffer, radius)
-        peak_offset = score.peak
+        trigger_score = correlate_data(data, prev_buffer, radius)
+        peak_offset = trigger_score.peak
         trigger = index + (stride * peak_offset)
 
         del data
@@ -544,17 +571,29 @@ class CorrelationTrigger(MainTrigger):
             rescale_mut(self._buffer)
 
     def _is_window_invalid(self, period: int) -> Union[bool, float]:
-        """ Returns number of semitones,
-        if pitch has changed more than `recalc_semitones`. """
+        """
+        Returns number of semitones,
+        if pitch has changed more than `recalc_semitones`.
+
+        Preconditions:
+        - self._prev_period is assigned whenever this function returns True.
+        - If period cannot be estimated, period == 0.
+
+        Postconditions:
+        - On frame 0, MUST return True (to initialize self._prev_window).
+            - This is the only way self._prev_period == 0.
+        - Elif period is 0 (cannot be estimated), return False.
+        """
 
         prev = self._prev_period
-
         if prev is None:
             return True
-        elif prev * period == 0:
-            return prev != period
+        elif period == 0:
+            return False
+        elif prev == 0:
+            return True
         else:
-            # If period doubles, semitones are -12.
+            # When period doubles, semitones are -12.
             semitones = np.log(period / prev) / np.log(2) * -12
             # If semitones == recalc_semitones == 0, do NOT recalc.
             if abs(semitones) <= self.cfg.recalc_semitones:
@@ -583,7 +622,7 @@ class CorrelationTrigger(MainTrigger):
         # New waveform
         data -= cache.mean
         normalize_buffer(data)
-        window = windows.gaussian(N, std=(cache.period / self._stride) * buffer_falloff)
+        window = gaussian_or_zero(N, std=(cache.period / self._stride) * buffer_falloff)
         data *= window
 
         # Old buffer
@@ -687,10 +726,6 @@ def sign_times_peak(data: np.ndarray) -> np.ndarray:
     sign_data *= peak
 
     return sign_data
-
-
-def abs_max(data, offset=0):
-    return np.amax(np.abs(data)) + offset
 
 
 #### Post-processing triggers
