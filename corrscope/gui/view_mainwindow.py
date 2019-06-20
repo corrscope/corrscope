@@ -286,7 +286,7 @@ class MainWindow(QWidget):
                     pass
 
             with append_widget(
-                s, QGroupBox, title=tr("Wave Alignment"), layout=QFormLayout
+                s, QGroupBox, title=tr("Wave History Alignment"), layout=QFormLayout
             ):
                 with add_row(
                     s,
@@ -310,22 +310,23 @@ class MainWindow(QWidget):
             with append_widget(
                 s, QGroupBox, title=tr("Edge Triggering"), layout=QFormLayout
             ):
-                with add_row(s, "", BoundComboBox) as (self.trigger__edge_direction):
-                    pass
-                with add_row(s, "", BoundDoubleSpinBox) as (
-                    self.trigger__edge_strength
-                ):
-                    self.trigger__edge_strength.setMinimum(0.0)
-
-            with append_widget(
-                s,
-                QGroupBox,
-                title=tr("Slope Triggering (for PSG/C64/FM)"),
-                layout=QFormLayout,
-            ):
                 with add_row(
                     s,
-                    tr("Slope Strength"),
+                    tr("Trigger Direction"),
+                    BoundComboBox,
+                    name="trigger__edge_direction",
+                ):
+                    pass
+                with add_row(
+                    s,
+                    tr("Edge Strength"),
+                    BoundDoubleSpinBox,
+                    name="trigger__edge_strength",
+                ):
+                    s.widget.setMinimum(0.0)
+                with add_row(
+                    s,
+                    tr("Slope Strength\n(for PSG/C64/FM)"),
                     BoundDoubleSpinBox,
                     name="trigger__slope_strength",
                 ):
@@ -500,9 +501,7 @@ class MainWindow(QWidget):
         self.layout__nrowsL.setText(tr("Rows"))
 
         self.master_audio_browse.setText(tr("&Browse..."))
-        self.trigger__edge_strengthL.setText(tr("Edge Strength"))
         self.trigger__pitch_tracking.setText(tr("Pitch Tracking"))
-        self.trigger__edge_directionL.setText(tr("Edge Direction"))
 
         self.channelAdd.setText(tr("&Add..."))
         self.channelDelete.setText(tr("&Delete"))
