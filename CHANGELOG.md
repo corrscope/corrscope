@@ -5,6 +5,9 @@
 - Rewrite pitch tracking to avoid false negatives (#274)
     - Previously, we rescaled the *buffer* to maximize spectral similarity between *data 2 frames ago* and data now.
     - Now we rescale the buffer to maximize spectral similarity between the buffer and data now.
+- Improve period calculation, add maximum frequency cap (#294)
+    - Fixes incorrectly high frequency with low bass notes
+    - Fixes incorrectly high frequency with treble-heavy waveforms
 
 ### Major Changes
 
@@ -14,10 +17,12 @@
     - Trigger Width = 60 ms
 - Always enable midline color, remove color checkbox (#291)
     - Can be disabled separately for h/v
+- Enable grid color #55aaff for new projects (#300)
 
 ### Changelog
 
 - Increase GUI maximum Trigger/Render Width to 200 ms
+- Update trigger GUI, merge all edge-related triggers (#299)
 - Rewrite FPS printing code
 - Add test to ensure cancelling render terminates FFmpeg quickly
 - Add support for excluding fields from always_dump="*" (#268)
