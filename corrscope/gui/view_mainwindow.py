@@ -93,9 +93,6 @@ class MainWindow(QWidget):
         # Initializes labels by reference
         self.retranslateUi(MainWindow)
 
-        # Depends on objectName
-        QMetaObject.connectSlotsByName(MainWindow)
-
     def add_general_tab(self, s: LayoutStack) -> QWidget:
         tr = self.tr
         with self.add_tab_stretch(s, tr("&General"), layout=QVBoxLayout) as tab:
