@@ -306,7 +306,7 @@ def verify(r: Renderer, appear: Appearance, datas: List[Optional[np.ndarray]]):
 
 
 # Test label positioning and rendering
-@parametrize("label_position", LabelPosition.__members__.values())
+@parametrize("label_position", list(LabelPosition.__members__.values()))
 @parametrize("data", [RENDER_Y_ZEROS, RENDER_Y_STEREO])
 @parametrize("hide_lines", [True, False])
 def test_label_render(label_position: LabelPosition, data, hide_lines):
