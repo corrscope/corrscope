@@ -43,6 +43,7 @@ build_script:
   - exit
 
 test_script:
+  - 'poetry run black --check .'
   - 'poetry run pytest --tb=short --cov=corrscope'
   - 'poetry run codecov'
 
