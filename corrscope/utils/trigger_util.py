@@ -46,7 +46,7 @@ def get_period(
     N = len(data)
 
     # If no input, return period of 1.
-    if np.add.reduce(np.abs(data)) < MIN_AMPLITUDE * N:
+    if np.max(np.abs(data)) < MIN_AMPLITUDE:
         return UNKNOWN_PERIOD
 
     # Begin.
