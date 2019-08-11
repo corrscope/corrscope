@@ -13,26 +13,30 @@ license = "BSD-2-Clause"
 
 [tool.poetry.dependencies]
 python = "^3.6"
-"ruamel.yaml" = "^0.16.1"
+"ruamel.yaml" = "^0.15.70"
 numpy = "^1.15"
 click = "^7.0"
 matplotlib = "^3.0"
-attrs = "^19.1"
+attrs = "^18.2.0"
 PyQt5 = "^5.11"
 PyQt5-sip = "^4.19"
 appdirs = "^1.4"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.0"
+pytest = "^4.0"
 pytest_mock = "^1.10"
-hypothesis = "^4.32"
-delayed-assert = "^0.3.2"
+hypothesis = "^3.84"
+delayed-assert = "^0.2.3"
+
+# I forked https://github.com/Loran425/pyinstaller,
+# since Loran425 tends to force-push and delete the commit Poetry uses.
+pyinstaller = {git = "https://github.com/jimbo1qaz/pyinstaller.git", branch = "develop"}
 pywin32-ctypes = {version = "^0.2.0",platform = "win32"}
 coverage = "^4.5"
 pytest-cov = "^2.6"
 codecov = "^2.0"
 pytest_cases = "^1.2"
-pyinstaller = "^3.5"
+
 black = {version = "^18.3-alpha.0", allows-prereleases = true}
 [tool.poetry.scripts]
 corr = 'corrscope.cli:main'
