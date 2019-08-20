@@ -7,7 +7,19 @@ import pickle
 import warnings
 from enum import Enum
 from io import StringIO, BytesIO
-from typing import *
+from pathlib import Path
+from typing import (
+    ClassVar,
+    TypeVar,
+    Type,
+    FrozenSet,
+    Optional,
+    TYPE_CHECKING,
+    Dict,
+    Any,
+    TextIO,
+    Union,
+)
 
 import attr
 from ruamel.yaml import (
@@ -18,9 +30,6 @@ from ruamel.yaml import (
     Constructor,
     Node,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 __all__ = [
     "yaml",
@@ -46,15 +55,59 @@ class MyYAML(YAML):
     def dump(
         self, data: Any, stream: "Union[Path, TextIO, None]" = None, **kwargs
     ) -> Optional[str]:
-        """ Allow dumping to str. """
-        inefficient = False
-        if stream is None:
-            inefficient = True
+
+        # On Windows, when dumping to path, ruamel.yaml writes files in locale encoding.
+        # Foreign characters are undumpable. Locale-compatible characters cannot be loaded.
+        # https://bitbucket.org/ruamel/yaml/issues/316/unicode-encoding-decoding-errors-on
+        # Both are bad, so use UTF-8.
+        if isinstance(stream, Path):
+            with stream.open("w", encoding="utf-8") as f:
+                self.dump_without_corrupting(data, f, **kwargs)
+
+        elif isinstance(stream, TextIO):
+            # Nobody actually calls dump(..., open()). This branch is never taken.
+            self.dump_without_corrupting(data, stream, **kwargs)
+
+        elif stream is None:
+            # Possibly only called in unit tests, not in production.
             stream = StringIO()
-        YAML.dump(self, data, stream, **kwargs)
-        if inefficient:
-            return cast(StringIO, stream).getvalue()
-        return None
+            self.dump_without_corrupting(data, stream, **kwargs)
+            return stream.getvalue()
+
+        else:
+            raise TypeError(
+                f"stream must be {{Path, TextIO=open(), None}}, but is {type(stream)}"
+            )
+
+    def dump_without_corrupting(self, *args, **kwargs):
+        YAML.dump(self, *args, **kwargs)
+
+    def load(self, stream):
+        """
+        If a file was dumped by a prior version of corrscope using locale encoding,
+        and contains non-ASCII characters,
+        ruamel.yaml cannot guess the encoding properly (out of UTF-8, 16, or 32).
+        We should instead try loading using the locale.
+        https://bitbucket.org/ruamel/yaml/issues/316/unicode-encoding-decoding-errors-on
+        """
+        if isinstance(stream, Path):
+            try:
+                with stream.open("r", encoding="utf-8") as f:
+                    s = f.read()
+            except UnicodeDecodeError:
+                with stream.open("r") as f:
+                    s = f.read()
+
+            return self.load_without_corrupting(s)
+
+        elif isinstance(stream, str):
+            return self.load_without_corrupting(stream)
+
+        else:
+            raise TypeError
+
+    def load_without_corrupting(self, *args, **kwargs):
+        return YAML.load(self, *args, **kwargs)
 
 
 class NoAliasRepresenter(RoundTripRepresenter):
