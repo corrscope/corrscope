@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import attr
+import click.testing
 import pytest
-from ruamel.yaml import yaml_object
+from ruamel.yaml import YAML
 
 from corrscope.config import (
     yaml,
@@ -12,6 +15,7 @@ from corrscope.config import (
     CorrWarning,
     with_units,
     get_units,
+    _yaml_loadable,
 )
 
 # YAML Idiosyncrasies: https://docs.saltstack.com/en/develop/topics/troubleshooting/yaml_idiosyncrasies.html
@@ -46,7 +50,7 @@ def test_kw_config():
 
 
 def test_yaml_object():
-    @yaml_object(yaml)
+    @_yaml_loadable
     class Bar:
         pass
 
@@ -494,3 +498,40 @@ def test_list_slice_assign():
     lis = yaml.load("[]")
     lis[0:0] = list(range(5))
     lis[2:5] = []
+
+
+def test_unicode_dump_load():
+    """
+    Crashes on latest ruamel.yaml 0.16.5.
+    https://bitbucket.org/ruamel/yaml/issues/316/unicode-encoding-decoding-errors-on
+
+    And affects real users when they save "most recent files" containing Unicode.
+    https://github.com/jimbo1qaz/corrscope/issues/308
+
+    Workaround in MyYAML.dump(), to encode as UTF-8 instead of locale.
+    """
+
+    runner = click.testing.CliRunner()
+    with runner.isolated_filesystem():
+        p = Path("test.yaml")
+
+        before = {"key": "á😂"}
+        yaml.dump(before, p)
+        after = yaml.load(p)
+        assert after == before
+
+
+def test_loading_corrupted_locale_config():
+    """
+    See corrscope.config.MyYAML.load() docstring.
+    """
+    runner = click.testing.CliRunner()
+    with runner.isolated_filesystem():
+        raw_yaml = YAML()
+        p = Path("test.yaml")
+
+        before = {"key": "á"}
+        raw_yaml.dump(before, p)
+
+        after = yaml.load(p)
+        assert after == before
