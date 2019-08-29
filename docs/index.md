@@ -91,13 +91,13 @@ All tabs are located in the left pane.
 - Global
     - `Trigger Width` (also controllable via per-channel "Trigger Width ×")
 - Trigger, Wave Alignment
-    <!-- - `Buffer Strength` -->
+    - `Buffer Strength`
     - `Buffer Responsiveness`
-    - `Mean Responsiveness`
     - `Pitch Tracking`
 - Trigger, Edge Triggering
     - `Edge Direction`
     - `Edge Strength`
+    - `Slope Strength`
 - Trigger, Post Triggering
     - Post Trigger
     - `Post Trigger Radius`
@@ -106,6 +106,7 @@ All tabs are located in the left pane.
 
 - `buffer`: array of samples, containing `Trigger Width` (around 40 milliseconds) recent "trigger outputs". Starts out as all zeros.
 - `mean`: real number, estimated from recent "trigger inputs". Starts out at 0.
+- `edge_finder`: computed once, never changes, reused for every frame.
 
 ### Obtaining Data (each frame)
 
@@ -140,9 +141,14 @@ Pitch Tracking may get confused when `data` moves from 1 note to another over th
 
 ### Correlation Triggering (uses `buffer`)
 
-Precomputed: `edge_finder`, which is computed once and reused for every frame.
+- `Buffer Strength` controls the strength of `buffer` (previous on-screen content), which searches for waves which line up with previous on-screen content.
+  <!-- - Based off of previous few frames of on-screen content, tapered with width proportional to each frame's `period`. -->
+- `Edge Strength` controls the strength of `edge_finder`, which searches for waves which are negative on the left, but positive on the right.
+  <!-- - Precomputed and unchanging. Positive in right half, negative in left half. Value decreases near edges of screen. -->
+- `Slope Strength` controls the strength of `slope_finder`, which searches for waves which steeply increase near the center of the screen.
+  <!-- - Recomputed whenever the wave frequency/`period` changes. Positive at (`Slope Width` * `period` right of center), negative at (`Slope Width` * `period` left of center). -->
 
-Corrscope cross-correlates `data` with `buffer + edge_finder` to produce a "buffer similarity + edge" score for each possible `data` triggering location. Corrscope then picks the location in `data` with the highest score, then sets `position` to be used for rendering.
+Corrscope cross-correlates `data` with `(Buffer Strength * buffer) + (Edge Strength * edge_finder) + (Slope Strength * slope_finder)` to produce a score for each possible `data` triggering location. Locations which line up well with the complex expression (line up well with the previous frame, transition from negative to positive, or increase in value) have high scores. Corrscope then picks the location in `data` with the highest score as the `position` to be used for rendering.
 
 ### (Optional) Post Triggering
 
