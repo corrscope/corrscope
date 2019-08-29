@@ -142,11 +142,11 @@ Pitch Tracking may get confused when `data` moves from 1 note to another over th
 ### Correlation Triggering (uses `buffer`)
 
 - `Buffer Strength` controls the strength of `buffer` (previous on-screen content), which searches for waves which line up with previous on-screen content.
-  <!-- - Based off of previous few frames of on-screen content, tapered with width proportional to each frame's `period`. -->
+  - Based off of previous few frames of on-screen content, tapered with width proportional to each frame's `period`.
 - `Edge Strength` controls the strength of `edge_finder`, which searches for waves which are negative on the left, but positive on the right.
-  <!-- - Precomputed and unchanging. Positive in right half, negative in left half. Value decreases near edges of screen. -->
+  - Precomputed and unchanging. Positive in right half, negative in left half. Value decreases near edges of screen.
 - `Slope Strength` controls the strength of `slope_finder`, which searches for waves which steeply increase near the center of the screen.
-  <!-- - Recomputed whenever the wave frequency/`period` changes. Positive at (`Slope Width` * `period` right of center), negative at (`Slope Width` * `period` left of center). -->
+  - Recomputed whenever the wave frequency/`period` changes. Positive at (`Slope Width` * `period` right of center), negative at (`Slope Width` * `period` left of center).
 
 Corrscope cross-correlates `data` with `(Buffer Strength * buffer) + (Edge Strength * edge_finder) + (Slope Strength * slope_finder)` to produce a score for each possible `data` triggering location. Locations which line up well with the complex expression (line up well with the previous frame, transition from negative to positive, or increase in value) have high scores. Corrscope then picks the location in `data` with the highest score as the `position` to be used for rendering.
 
