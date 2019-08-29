@@ -54,13 +54,15 @@ Either:
 
 ### NES Triangle Waves
 
-NES triangle waves are stair-stepped. In theory, Area Trigger would work and properly locate the best zero-crossing on each frame. However, corrscope subtracts DC from each frame, and the exact amount of DC (positive or negative) fluctuates. Subtracting various amounts of DC causes corrscope to jump between different rising edges located near zero-crossing.
+<!-- TODO add screenshots -->
+
+NES triangle waves are stair-stepped. In theory, Area Trigger would work and properly locate the best zero-crossing on each frame. However, on every frame, corrscope looks at a different portion of the triangle wave, computes the average value (DC offset), and subtracts it from all samples. Unfortunately since the exact amount of DC (positive or negative) fluctuates between frames, corrscope will shift the wave vertically by different amounts, causing it to jump between different rising edges.
 
 Try the following:
 
 - Use any "Trigger Direction" you prefer. Rising and Falling both work equally well.
-- Set "Sign Triggering" to 1 or so. This causes corrscope to preprocess the waveform and enhance edges located near the zero crossing. This occurs before DC is subtracted.
-- Afterwards, set "Edge Strength" to nonzero (and optionally enable "Slope Strength"). This will pick up the newly created steep edges located at zero crossings.
+- Set "Sign Triggering" to 1 or so. This causes corrscope to preprocess the waveform before DC is removed, and add 0.5(peak-to-peak amplitude) to positive samples and subtract 0.5(peak-to-peak amplitude) from negative samples. The resulting steep edges will remain as zero crossings, even after DC is filtered out.
+- Afterwards, set "Edge Strength" to nonzero (and optionally enable "Slope Strength"). Edge Strength will pick up the zero crossings (which match the zero crossings before DC removal), and Slope Strength will pick up the steep edges located at zero crossings.
 
 NES triangle waves have 15 rising/falling edges. The NES high-pass removes DC and low frequencies, causing waveforms to decay towards y=0. As a result, "which edge crosses y=0" changes with pitch.
 
