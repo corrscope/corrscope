@@ -1,3 +1,10 @@
+## 0.6.1
+
+### Changelog
+
+- Fix bug where narrow pulse waves were erroneously detected as silence (#306)
+- Fix Windows-only crash when opening a non-ASCII path and restarting corrscope (#311)
+
 ## 0.6.0
 
 ### Features
