@@ -4,6 +4,7 @@
 
 - Fix bug where narrow pulse waves were erroneously detected as silence (#306)
 - Fix Windows-only crash when opening a non-ASCII path and restarting corrscope (#311)
+- Fix bug where unrecognized fonts would cause corrscope to crash (#313)
 
 ## 0.6.0
 
