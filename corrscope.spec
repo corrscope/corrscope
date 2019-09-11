@@ -49,8 +49,10 @@ a = Analysis(
 # Some dirs are included by PyInstaller hooks and must be removed after the fact.
 _path_excludes = (
     # Matplotlib
+    # Deleting mpl-data/fonts and rendering with an unrecognized font causes matplotlib
+    # to enter an infinite recursive loop of findfont(...DejaVu Sans) and crash.
+    # So don't delete the default fonts.
     """
-    mpl-data/fonts
     mpl-data/images
     mpl-data/sample_data
     """
