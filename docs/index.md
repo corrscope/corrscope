@@ -1,10 +1,10 @@
 # Corrscope Help
 
-Homepage at <https://github.com/jimbo1qaz/corrscope>.
+Homepage at <https://github.com/jimbo1qaz/corrscope>. Report bugs at https://github.com/jimbo1qaz/corrscope/issues/ or https://discord.gg/CCJZCjc.
 
 *Corrscope is named because it cross-correlates the input wave and a history buffer, to maximize wave alignment between frames.*
 
-## Program Layout
+## Tutorial
 
 ![Screenshot of Corrscope and video preview](images/corrscope-screenshot.png?raw=true)
 
@@ -12,24 +12,92 @@ Homepage at <https://github.com/jimbo1qaz/corrscope>.
 - Trigger options: Top-right pane
 - Per-channel options: Bottom-right table
 
-## Correlation Trigger Explanation
+Start by adding channels to be visualized: look at the bottom-right table and click the "Add..." button.
 
-Unlike other triggering algorithms (which only depend on the current frame's worth of data), Corrscope uses a correlation trigger, which remembers several forms of data between frames, to help align future frames.
+To add audio to play in the background, look at the top-right "FFmpeg Options" and click the Master Audio "Browse..." button.
 
-### Options
+To make the waves taller, go to the left panel's General tab and edit Amplification. Afterwards, click the Appearance tab and customize the appearance of the oscilloscope. (Note that colored lines will be discolored and blurred by Youtube's chroma subsampling.)
+
+Click Preview to launch a live preview of the oscilloscope with audio.
+
+Click Render to render the oscilloscope to video.
+
+Click Save to save the current project configuration to a file. These project files can loaded in corrscope, previewed or rendered from the command line, or shared with corrscope's author when reporting issues.
+
+## Configuring the Trigger
+
+Unlike other triggering algorithms (which only depend on the current frame's worth of data), Corrscope uses a correlation trigger, which remembers the waveforms of past frames to help align future frames.
+
+Corrscope's triggering algorithm is configurable, allowing it to track many types of waves well. However it may be intimidating to newcomers. This will provide several types of waves, along with suggestions for how to tune trigger options.
+
+Triggering options are found on the left panel. Trigger Width is located in the General tab. All other options are found on the Trigger tab. (Per-channel triggering options are found in the table.)
+
+### Sampled Trumpets and Trigger Direction (screenshot from [Tales of Phantasia](https://www.youtube.com/watch?v=GdM03JV_Vw0))
+
+![Screenshot of trumpets in corrscope](images/trumpet.png?raw=true)
+
+Sampled trumpets generally consist of a sharp falling edge, followed by gibberish with one or more rising edges.
+
+- Set "Trigger Direction" to "Falling (-1)", which will track the falling edge well. (Using a rising-edge trigger will result in poor results, since the gibberish will vary between notes, especially for SNES SPC music using the echo functionality.)
+- Slope trigger is useful, since the trumpet has a narrow tall positive section, followed by a narrow tall negative section.
+
+### Complex Waves and Trigger Direction (screenshot from [Midori Mizuno - Sinkhole](https://www.youtube.com/watch?v=ElWHUp0BIDw))
+
+![Screenshot of complex wave in corrscope](images/complex-bass.png?raw=true)
+
+Corrscope's standard "edge trigger" does not look for "steep edges" but instead "sign changes". It operates by maximizing `(signed area in right half) - (signed area in left half)`. This waveform has a clear falling edge from positive to negative, but no clear edge from negative to positive.
+
+Either:
+
+- Set "Trigger Direction" to "Falling (-1)".
+- Alternatively set "Trigger Direction" to "Rising (+1)", set "Edge Strength" to 0, and increase "Slope Strength". This will latch onto the small rising edge.
+
+### NES Triangle Waves
+
+<!-- TODO add screenshots -->
+
+NES triangle waves are stair-stepped. In theory, Area Trigger would work and properly locate the best zero-crossing on each frame. However, on every frame, corrscope looks at a different portion of the triangle wave, computes the average value (DC offset), and subtracts it from all samples. Unfortunately since the exact amount of DC (positive or negative) fluctuates between frames, corrscope will shift the wave vertically by different amounts, causing it to jump between different rising edges.
+
+Try the following:
+
+- Use any "Trigger Direction" you prefer. Rising and Falling both work equally well.
+- Set "Sign Triggering" to 1 or so. This causes corrscope to preprocess the waveform before DC is removed, and add 0.5(peak-to-peak amplitude) to positive samples and subtract 0.5(peak-to-peak amplitude) from negative samples. The resulting steep edges will remain as zero crossings, even after DC is filtered out.
+- Afterwards, set "Edge Strength" to nonzero (and optionally enable "Slope Strength"). Edge Strength will pick up the zero crossings (which match the zero crossings before DC removal), and Slope Strength will pick up the steep edges located at zero crossings.
+
+NES triangle waves have 15 rising/falling edges. The NES high-pass removes DC and low frequencies, causing waveforms to decay towards y=0. As a result, "which edge crosses y=0" changes with pitch.
+
+- Reduce "Buffer Strength" to 0 (or up to 0.5). Corrscope's buffer needs to be disabled, to prevent it from remembering "which edge used to cross y=0".
+
+### FDS FM Waves
+
+FDS FM changes the width of waves, but not their height.
+
+The NES high-pass removes DC and low frequencies, causing waveforms to decay towards y=0. If FDS waves contain anything other than pulse/saw, "which part of the wave crosses y=0" may change with FM and pitch.
+
+- Experiment with "Trigger Direction".
+- Use nonzero Slope Strength and low (or zero) Edge Strength, to reliably locate the sharpest edge in a waveform. This is because sharp edges are preserved by FM, whereas the width of waves is not.
+  - If you have multiple steep rising/falling edges,
+
+### Yamaha FM and SNES/sampled Waves
+
+- Experiment with "Trigger Direction".
+- Try using Slope Strength, Edge Strength, or a combination of both.
+- Reduce both relative to Buffer Strength to track evolving waves better (but center new/existing waves less strongly). To restore centering, you can enable Post Triggering and experiment with the radius.
+
+## Options
 
 All tabs are located in the left pane.
 
 - Global
     - `Trigger Width` (also controllable via per-channel "Trigger Width ×")
 - Trigger, Wave Alignment
-    <!-- - `Buffer Strength` -->
+    - `Buffer Strength`
     - `Buffer Responsiveness`
-    - `Mean Responsiveness`
     - `Pitch Tracking`
 - Trigger, Edge Triggering
     - `Edge Direction`
     - `Edge Strength`
+    - `Slope Strength`
 - Trigger, Post Triggering
     - Post Trigger
     - `Post Trigger Radius`
@@ -38,6 +106,7 @@ All tabs are located in the left pane.
 
 - `buffer`: array of samples, containing `Trigger Width` (around 40 milliseconds) recent "trigger outputs". Starts out as all zeros.
 - `mean`: real number, estimated from recent "trigger inputs". Starts out at 0.
+- `edge_finder`: computed once, never changes, reused for every frame.
 
 ### Obtaining Data (each frame)
 
@@ -49,7 +118,7 @@ On each frame, corrscope fetches [from the channel] a buffer of mono `data`, cen
 
 Some waves do not have clear edges. For example, triangle waves do not have clear rising edges (leading to suboptimal triggering), and NES triangles have 15 small rising edges, causing corrscope to jump between them.
 
-If `Sign Triggering` is set to nonzero `strength`, corrscope computes `peak = max(abs(data))`. It adds `peak * strength` to positive parts of `data`, subtracts `peak * strength` from negative parts of `data`, and heavily amplifies parts of the wave near zero. This helps the correlation trigger locate zero-crossings exactly.
+If `Sign Strength` (Sign Triggering on the GUI) is set to nonzero `strength`, corrscope computes `peak = max(abs(data))`. It adds `peak * strength` to positive parts of `data`, subtracts `peak * strength` from negative parts of `data`, and heavily amplifies parts of the wave near zero. This helps the correlation trigger locate zero-crossings exactly.
 
 ### Mean/Period
 
@@ -72,9 +141,14 @@ Pitch Tracking may get confused when `data` moves from 1 note to another over th
 
 ### Correlation Triggering (uses `buffer`)
 
-Precomputed: `edge_finder`, which is computed once and reused for every frame.
+- `Buffer Strength` controls the strength of `buffer` (previous on-screen content), which searches for waves which line up with previous on-screen content.
+  <!-- - Based off of previous few frames of on-screen content, tapered with width proportional to each frame's `period`. -->
+- `Edge Strength` controls the strength of `edge_finder`, which searches for waves which are negative on the left, but positive on the right.
+  <!-- - Precomputed and unchanging. Positive in right half, negative in left half. Value decreases near edges of screen. -->
+- `Slope Strength` controls the strength of `slope_finder`, which searches for waves which steeply increase near the center of the screen.
+  <!-- - Recomputed whenever the wave frequency/`period` changes. Positive at (`Slope Width` * `period` right of center), negative at (`Slope Width` * `period` left of center). -->
 
-Corrscope cross-correlates `data` with `buffer + edge_finder` to produce a "buffer similarity + edge" score for each possible `data` triggering location. Corrscope then picks the location in `data` with the highest score, then sets `position` to be used for rendering.
+Corrscope cross-correlates `data` with `(Buffer Strength * buffer) + (Edge Strength * edge_finder) + (Slope Strength * slope_finder)` to produce a score for each possible `data` triggering location. Locations which line up well with the complex expression (line up well with the previous frame, transition from negative to positive, or increase in value) have high scores. Corrscope then picks the location in `data` with the highest score as the `position` to be used for rendering.
 
 ### (Optional) Post Triggering
 
