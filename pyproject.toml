@@ -19,7 +19,6 @@ click = "^7.0"
 matplotlib = "^3.0"
 attrs = "^18.2.0"
 PyQt5 = "^5.11"
-PyQt5-sip = "^4.19"
 appdirs = "^1.4"
 
 [tool.poetry.dev-dependencies]
