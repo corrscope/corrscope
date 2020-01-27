@@ -37,7 +37,7 @@ pytest-cov = "^2.6"
 codecov = "^2.0"
 pytest_cases = "^1.2"
 
-black = {version = "^18.3-alpha.0", allows-prereleases = true}
+black = {version = "^18.3-alpha.0", allow-prereleases = true}
 [tool.poetry.scripts]
 corr = 'corrscope.cli:main'
 
