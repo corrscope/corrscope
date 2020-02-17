@@ -78,9 +78,6 @@ def get_file_stem(cfg_path: Optional[Path], cfg: Config, default: T) -> Union[st
     return file_path_or_name.stem
 
 
-PROFILE_DUMP_NAME = "cprofile"
-
-
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 # fmt: off
@@ -240,8 +237,7 @@ def main(
             if profile:
                 import cProfile
 
-                # Pycharm can't load CProfile files with dots in the name.
-                first_song_name = Path(files[0]).name.split('.')[0]
+                first_song_name = Path(files[0]).name
                 profile_dump_name = get_profile_dump_name(first_song_name)
                 cProfile.runctx('command()', globals(), locals(), profile_dump_name)
             else:
@@ -253,9 +249,15 @@ def main(
 # fmt: on
 
 
+PROFILE_DUMP_NAME = "cprofile"
+
+
 def get_profile_dump_name(prefix: str) -> str:
     now_date = datetime.datetime.now()
     now_str = now_date.strftime("%Y-%m-%d_T%H-%M-%S")
+
+    # Pycharm can't load CProfile files with dots in the name.
+    prefix = prefix.split(".")[0]
 
     profile_dump_name = f"{prefix}-{PROFILE_DUMP_NAME}-{now_str}"
 
