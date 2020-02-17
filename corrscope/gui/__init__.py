@@ -16,7 +16,6 @@ from typing import (
     Dict,
     Sequence,
     NewType,
-    cast,
 )
 
 import PyQt5.QtCore as qc
@@ -93,15 +92,16 @@ def gui_main(cfg_or_path: Union[Config, Path]):
     QApp = qw.QApplication
     QApp.setAttribute(qc.Qt.AA_EnableHighDpiScaling)
 
+    app = qw.QApplication(sys.argv)
+
+    # On Windows, Qt 5's default system font (MS Shell Dlg 2) is outdated.
+    # Interestingly, the QMenu font is correct and comes from lfMenuFont.
+    # So use it for the entire application.
     # Qt on Windows will finally switch default font to lfMessageFont=Segoe UI
     # (Vista, 2006)... in 2020 (Qt 6.0).
     if qc.QSysInfo.kernelType() == "winnt":
-        # This will be wrong for non-English languages, but it's better than default?
-        font = QFont("Segoe UI", 9)
-        font.setStyleHint(QFont.SansSerif)
-        QApp.setFont(font)
+        QApp.setFont(QApp.font("QMenu"))
 
-    app = qw.QApplication(sys.argv)
     window = MainWindow(cfg_or_path)
 
     # Any exceptions raised within MainWindow() will be caught within exec_.
