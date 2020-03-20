@@ -635,7 +635,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     # Misc.
     @qc.pyqtSlot()
     def on_action_help(self):
-        help_url = r"https://nyanpasu64.github.io/corrscope/"
+        help_url = r"https://corrscope.github.io/corrscope/"
         QDesktopServices.openUrl(qc.QUrl(help_url))
 
 

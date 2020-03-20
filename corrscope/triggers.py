@@ -368,7 +368,7 @@ class CorrelationTrigger(MainTrigger):
     def _calc_lag_prevention(self) -> np.ndarray:
         """ Returns input-data window,
         which zeroes out all data older than 1-ish frame old.
-        See https://github.com/nyanpasu64/corrscope/wiki/Correlation-Trigger
+        See https://github.com/corrscope/corrscope/wiki/Correlation-Trigger
         """
         N = self._buffer_nsamp
         halfN = N // 2
