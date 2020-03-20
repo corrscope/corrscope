@@ -1,11 +1,15 @@
 ## 0.6.1
 
-### Changelog
+### Major Changes
 
 - Fix bug where narrow pulse waves were erroneously detected as silence (#306)
 - Fix Windows-only crash when opening a non-ASCII path and restarting corrscope (#311)
 - Fix bug where unrecognized fonts would cause corrscope to crash (#313)
 - Fix bug where `pip install corrscope` failed on Linux because `PyQt5-sip` was pinned to 4.x (#319)
+
+### Changelog
+
+- On Windows, use locale-specific font, not hard-coded Segoe UI (#322)
 
 ## 0.6.0
 
