@@ -7,7 +7,7 @@ _package = Path(__file__).parent
 
 
 # Version prefix
-base_version = "0.6.1-pre"
+base_version = "0.6.1"
 is_dev = "-" in base_version
 
 

@@ -6,10 +6,15 @@
 
 [tool.poetry]
 name = "corrscope"
-version = "0.6.1-pre"
-description = ""
-authors = ["nyanpasu64 <nyanpasu64@tuta.io>"]
+version = "0.6.1"
+description = "Python program to render wave files into oscilloscope views, featuring advanced correlation-based triggering algorithm"
 license = "BSD-2-Clause"
+authors = ["nyanpasu64 <nyanpasu64@tuta.io>"]
+# maintainers =
+readme = "README.md"
+# homepage =
+repository = "https://github.com/corrscope/corrscope/"
+documentation = "https://corrscope.github.io/corrscope/"
 
 [tool.poetry.dependencies]
 python = "^3.6"
