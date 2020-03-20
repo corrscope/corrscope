@@ -1,9 +1,9 @@
 # Corrscope
 
-[![Appveyor build status](https://ci.appveyor.com/api/projects/status/awiajnwd6a4uhu37/branch/master?svg=true)](https://ci.appveyor.com/project/jimbo1qaz/ovgenpy/branch/master)
-[![Latest release](https://img.shields.io/github/release-pre/jimbo1qaz/corrscope.svg)](https://github.com/jimbo1qaz/corrscope/releases)
-![PyPI release](https://img.shields.io/pypi/v/corrscope.svg)
-[![codecov](https://codecov.io/gh/jimbo1qaz/corrscope/branch/master/graph/badge.svg)](https://codecov.io/gh/jimbo1qaz/corrscope)
+[![Appveyor build status](https://ci.appveyor.com/api/projects/status/awiajnwd6a4uhu37/branch/master?svg=true)](https://ci.appveyor.com/project/nyanpasu64/corrscope/branch/master)
+[![Latest release](https://img.shields.io/github/v/release/corrscope/corrscope?include_prereleases)](https://github.com/corrscope/corrscope/releases)
+[![PyPI release](https://img.shields.io/pypi/v/corrscope.svg)](https://pypi.org/project/corrscope/)
+[![codecov](https://codecov.io/gh/corrscope/corrscope/branch/master/graph/badge.svg)](https://codecov.io/gh/corrscope/corrscope)
 
 Corrscope renders oscilloscope views of WAV files recorded from chiptune (game music from retro sound chips).
 
@@ -11,7 +11,7 @@ Corrscope uses "waveform correlation" to track complex waves (including SNES and
 
 Sample results can be found on my Youtube channel at https://www.youtube.com/nyanpasu64/videos.
 
-Documentation is available at https://jimbo1qaz.github.io/corrscope/.
+Documentation is available at https://corrscope.github.io/corrscope/.
 
 ![Screenshot of Corrscope and video preview](docs/images/corrscope-screenshot.png?raw=true)
 
@@ -21,8 +21,8 @@ Documentation is available at https://jimbo1qaz.github.io/corrscope/.
 
 ## Installation
 
-- Releases (recommended): https://github.com/jimbo1qaz/corrscope/releases
-- Dev Builds: https://ci.appveyor.com/project/jimbo1qaz/ovgenpy/history
+- Releases (recommended): https://github.com/corrscope/corrscope/releases
+- Dev Builds: https://ci.appveyor.com/project/nyanpasu64/corrscope/history
 
 Instructions:
 

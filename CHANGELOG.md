@@ -122,7 +122,7 @@ This is a bugfix release, since master has regressions in pitch tracking.
 - Add pitch-tracking trigger checkbox
     - Waves should no longer jump around when pitch changes.
     - Rapidly repeating pitch changes (less than 6 frames apart) are skipped for performance.
-    - Pitch tracking may increase CPU usage on noise channels. See https://github.com/jimbo1qaz/corrscope/issues/213 for details
+    - Pitch tracking may increase CPU usage on noise channels. See https://github.com/corrscope/corrscope/issues/213 for details
 - Add stereo rendering support
     - Located in stereo tab in GUI
 - Add per-channel amplification support
@@ -138,4 +138,4 @@ This is a bugfix release, since master has regressions in pitch tracking.
 
 ## 0.2.0 and before
 
-See https://github.com/jimbo1qaz/corrscope/releases.
+See https://github.com/corrscope/corrscope/releases.

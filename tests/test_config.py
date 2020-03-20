@@ -506,7 +506,7 @@ def test_unicode_dump_load():
     https://bitbucket.org/ruamel/yaml/issues/316/unicode-encoding-decoding-errors-on
 
     And affects real users when they save "most recent files" containing Unicode.
-    https://github.com/jimbo1qaz/corrscope/issues/308
+    https://github.com/corrscope/corrscope/issues/308
 
     Workaround in MyYAML.dump(), to encode as UTF-8 instead of locale.
     """

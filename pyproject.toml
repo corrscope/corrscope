@@ -8,7 +8,7 @@
 name = "corrscope"
 version = "0.6.1-pre"
 description = ""
-authors = ["jimbo1qaz <jimbo1qaz@gmail.com>"]
+authors = ["nyanpasu64 <nyanpasu64@tuta.io>"]
 license = "BSD-2-Clause"
 
 [tool.poetry.dependencies]
@@ -29,7 +29,7 @@ delayed-assert = "^0.2.3"
 
 # I forked https://github.com/Loran425/pyinstaller,
 # since Loran425 tends to force-push and delete the commit Poetry uses.
-pyinstaller = {git = "https://github.com/jimbo1qaz/pyinstaller.git", branch = "develop"}
+pyinstaller = {git = "https://github.com/nyanpasu64/pyinstaller.git", branch = "develop"}
 pywin32-ctypes = {version = "^0.2.0",platform = "win32"}
 coverage = "^4.5"
 pytest-cov = "^2.6"
