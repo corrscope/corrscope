@@ -6,17 +6,7 @@ from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
 from types import MethodType
-from typing import (
-    Optional,
-    List,
-    Any,
-    Tuple,
-    Callable,
-    Union,
-    Dict,
-    Sequence,
-    NewType,
-)
+from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence, NewType
 
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
