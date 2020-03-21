@@ -1,5 +1,7 @@
 ## 0.6.1
 
+Long delayed... sorry.
+
 ### Major Changes
 
 - Fix bug where narrow pulse waves were erroneously detected as silence (#306)
