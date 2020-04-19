@@ -1,3 +1,7 @@
+## 0.6.2 (unreleased)
+
+...
+
 ## 0.6.1
 
 Long delayed... sorry.
