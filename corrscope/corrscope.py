@@ -13,8 +13,13 @@ from corrscope.channel import Channel, ChannelConfig, DefaultLabel
 from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
 from corrscope.outputs import FFmpegOutputConfig, IOutputConfig
-from corrscope.renderer import Renderer, RendererConfig, RendererFrontend
-from corrscope.triggers import CorrelationTriggerConfig, PerFrameCache, SpectrumConfig
+from corrscope.renderer import Renderer, RendererConfig, RendererFrontend, RenderInput
+from corrscope.triggers import (
+    CorrelationTriggerConfig,
+    PerFrameCache,
+    SpectrumConfig,
+    MainTrigger,
+)
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave, Flatten
 
@@ -286,7 +291,7 @@ class CorrScope:
                     self.arg.progress(rounded)
                     prev = rounded
 
-                render_datas = []
+                render_inputs = []
                 # Get render-data from each wave.
                 for render_wave, channel in zip(self.render_waves, self.channels):
                     sample = round(render_wave.smp_s * time_seconds)
@@ -294,20 +299,26 @@ class CorrScope:
                     # Get trigger.
                     if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
                         cache = PerFrameCache()
-                        trigger_sample = channel.trigger.get_trigger(sample, cache)
+
+                        result = channel.trigger.get_trigger(sample, cache)
+                        trigger_sample = result.result
+                        freq_estimate = result.freq_estimate
+
                     else:
                         trigger_sample = sample
+                        freq_estimate = 0
 
                     # Get render data.
                     if should_render:
-                        render_datas.append(channel.get_render_around(trigger_sample))
+                        data = channel.get_render_around(trigger_sample)
+                        render_inputs.append(RenderInput(data, freq_estimate))
 
                 if not should_render:
                     continue
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
-                    renderer.update_main_lines(render_datas)
+                    renderer.update_main_lines(render_inputs)
                     frame_data = renderer.get_frame()
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:

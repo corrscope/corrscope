@@ -91,7 +91,7 @@ def test_trigger(trigger_cfg, is_odd: bool, post_trigger):
 
     for i, ax in enumerate(axes):
         if i:
-            offset = trigger.get_trigger(x, PerFrameCache())
+            offset = trigger.get_trigger(x, PerFrameCache()).result
             assert offset == x0, offset
         if plot:
             ax.plot(trigger._buffer, label=str(i))
@@ -135,7 +135,7 @@ def test_post_stride(post_trigger):
 
     cache = PerFrameCache()
     for i in range(1, iters):
-        offset = trigger.get_trigger(x0, cache)
+        offset = trigger.get_trigger(x0, cache).result
 
         if not cfg.post_trigger:
             assert (offset - x0) % stride == 0, f"iteration {i}"
@@ -171,7 +171,7 @@ def test_trigger_direction(post_trigger, double_negate):
 
     cache = PerFrameCache()
     for dx in [-10, 10, 0]:
-        assert trigger.get_trigger(index + dx, cache) == index
+        assert trigger.get_trigger(index + dx, cache).result == index
 
 
 def test_trigger_out_of_bounds(trigger_cfg):

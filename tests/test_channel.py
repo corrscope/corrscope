@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 import hypothesis.strategies as hs
 import numpy as np
@@ -10,6 +10,7 @@ import corrscope.channel
 import corrscope.corrscope
 from corrscope.channel import ChannelConfig, Channel, DefaultLabel
 from corrscope.corrscope import template_config, CorrScope, BenchmarkMode, Arguments
+from corrscope.renderer import RenderInput
 from corrscope.triggers import NullTriggerConfig
 from corrscope.util import coalesce
 from corrscope.wave import Flatten
@@ -137,10 +138,10 @@ def test_config_channel_integration(
     assert _subsampling == channel.render_stride
 
     # Inspect arguments to renderer.update_main_lines()
-    # datas: List[np.ndarray]
+    datas: List[RenderInput]
     (datas,), kwargs = renderer.update_main_lines.call_args
-    render_data = datas[0]
-    assert len(render_data) == channel._render_samp
+    render_inputs = datas[0]
+    assert len(render_inputs.data) == channel._render_samp
 
     # Inspect arguments to renderer.add_labels().
     (labels,), kwargs = renderer.add_labels.call_args

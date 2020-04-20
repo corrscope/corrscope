@@ -20,7 +20,7 @@ from corrscope.outputs import (
     FFplayOutputConfig,
     Stop,
 )
-from corrscope.renderer import RendererConfig, Renderer
+from corrscope.renderer import RendererConfig, Renderer, RenderInput
 from tests.test_renderer import RENDER_Y_ZEROS, WIDTH, HEIGHT
 
 if TYPE_CHECKING:
@@ -69,7 +69,7 @@ def test_render_output():
     renderer = Renderer(CFG.render, CFG.layout, datas, None, None)
     out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG)
 
-    renderer.update_main_lines(datas)
+    renderer.update_main_lines(RenderInput.wrap_datas(datas))
     out.write_frame(renderer.get_frame())
 
     assert out.close() == 0

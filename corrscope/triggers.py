@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Type, Optional, ClassVar, Union
+from typing import TYPE_CHECKING, Type, Optional, ClassVar, Union, TypeVar, Generic
 
 import attr
 import numpy as np
@@ -37,6 +37,11 @@ class _TriggerConfig:
 class MainTriggerConfig(
     _TriggerConfig, KeywordAttrs, always_dump="edge_direction post_trigger post_radius"
 ):
+    if TYPE_CHECKING:
+
+        def __call__(self, wave: "Wave", *args, **kwargs) -> "MainTrigger":
+            return self.cls(wave, self, *args, **kwargs)
+
     # Must be 1 or -1.
     # MainTrigger.__init__() multiplies `wave.amplification *= edge_direction`.
     # get_trigger() should ignore `edge_direction` and look for rising edges.
@@ -61,7 +66,11 @@ class MainTriggerConfig(
 
 class PostTriggerConfig(_TriggerConfig, KeywordAttrs):
     parent: MainTriggerConfig = attr.ib(init=False)  # TODO Unused
-    pass
+
+    if TYPE_CHECKING:
+
+        def __call__(self, wave: "Wave", *args, **kwargs) -> "PostTrigger":
+            return self.cls(wave, self, *args, **kwargs)
 
 
 def register_trigger(config_t: Type[_TriggerConfig]):
@@ -76,7 +85,10 @@ def register_trigger(config_t: Type[_TriggerConfig]):
     return inner
 
 
-class _Trigger(ABC):
+result = TypeVar("result")
+
+
+class _Trigger(ABC, Generic[result]):
     def __init__(
         self,
         wave: "Wave",
@@ -149,7 +161,7 @@ class _Trigger(ABC):
         self._renderer.offset_viewport(self._wave_idx, offset)
 
     @abstractmethod
-    def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
+    def get_trigger(self, index: int, cache: "PerFrameCache") -> result:
         """
         :param index: sample index
         :param cache: Information shared across all stacked triggers,
@@ -163,7 +175,16 @@ class _Trigger(ABC):
         pass
 
 
-class MainTrigger(_Trigger, ABC):
+@attr.dataclass
+class TriggerResult:
+    # new sample index, corresponding to rising edge
+    result: int
+
+    # Estimated frequency in cycle/sec (Hertz). None if unknown.
+    freq_estimate: Optional[float]
+
+
+class MainTrigger(_Trigger[TriggerResult], ABC):
     cfg: MainTriggerConfig
     post: Optional["PostTrigger"]
 
@@ -195,7 +216,7 @@ class MainTrigger(_Trigger, ABC):
         pass
 
 
-class PostTrigger(_Trigger, ABC):
+class PostTrigger(_Trigger[int], ABC):
     """ A post-processing trigger should have stride=1,
      and no more post triggers. This is subject to change. """
 
@@ -441,7 +462,7 @@ class CorrelationTrigger(MainTrigger):
     # end setup
 
     # begin per-frame
-    def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
+    def get_trigger(self, index: int, cache: "PerFrameCache") -> TriggerResult:
         N = self._buffer_nsamp
         cfg = self.cfg
 
@@ -525,7 +546,13 @@ class CorrelationTrigger(MainTrigger):
         self.frames_since_spectrum += 1
 
         self.offset_viewport(peak_offset)
-        return trigger
+
+        # period: subsmp/cyc
+        freq_estimate = self.subsmp_s / period if period else None
+        # freq_estimate: cyc/s
+        # If period is 0 (unknown), freq_estimate is None.
+
+        return TriggerResult(trigger, freq_estimate)
 
     def spectrum_rescale_buffer(self, data: np.ndarray) -> None:
         """
@@ -796,5 +823,5 @@ class NullTriggerConfig(MainTriggerConfig):
 
 @register_trigger(NullTriggerConfig)
 class NullTrigger(MainTrigger):
-    def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
-        return index
+    def get_trigger(self, index: int, cache: "PerFrameCache") -> TriggerResult:
+        return TriggerResult(index, None)

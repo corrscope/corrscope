@@ -21,6 +21,7 @@ from corrscope.renderer import (
     AbstractMatplotlibRenderer,
     RendererFrontend,
     CustomLine,
+    RenderInput,
 )
 from corrscope.util import perr
 from corrscope.wave import Flatten
@@ -239,7 +240,7 @@ def verify(r: Renderer, appear: Appearance, datas: List[Optional[np.ndarray]]):
     viewport_width = appear.debug.viewport_width
 
     if draw_fg:
-        r.update_main_lines(datas)
+        r.update_main_lines(RenderInput.wrap_datas(datas))
 
     frame_colors: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
         (-1, BYTES_PER_PIXEL)
@@ -343,7 +344,7 @@ def test_label_render(label_position: LabelPosition, data, hide_lines):
     r = Renderer(cfg, lcfg, datas, None, None)
     r.add_labels(labels)
     if not hide_lines:
-        r.update_main_lines(datas)
+        r.update_main_lines(RenderInput.wrap_datas(datas))
 
     frame_buffer: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
         (r.h, r.w, BYTES_PER_PIXEL)
@@ -423,7 +424,7 @@ def verify_res_divisor_rounding(
     try:
         renderer = Renderer(cfg, LayoutConfig(), datas, None, None)
         if not speed_hack:
-            renderer.update_main_lines(datas)
+            renderer.update_main_lines(RenderInput.wrap_datas(datas))
             renderer.get_frame()
     except Exception:
         perr(cfg.divided_width)
@@ -504,7 +505,7 @@ def test_frontend_overrides_backend(mocker: "pytest_mock.MockFixture"):
     data = channel.get_render_around(0)
 
     renderer = Renderer(corr_cfg.render, corr_cfg.layout, [data], [chan_cfg], [channel])
-    renderer.update_main_lines([data])
+    renderer.update_main_lines([RenderInput.stub_new(data)])
     renderer.get_frame()
 
     assert frontend_get_frame.call_count == 1
