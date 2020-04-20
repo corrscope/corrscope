@@ -41,6 +41,7 @@ class ChannelConfig(DumpableAttrs):
     render_stereo: Optional[Flatten] = None
 
     line_color: Optional[str] = None
+    color_by_pitch: Optional[bool] = None
 
     # region Legacy Fields
     trigger_width_ratio = Alias("trigger_width")

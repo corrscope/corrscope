@@ -970,6 +970,8 @@ class ConfigModel(PresentationModel):
 @attr.dataclass
 class Column:
     key: str
+
+    # fn(str) -> T. If ValueError is thrown, replaced by `default`.
     cls: Union[type, Callable[[str], Any]]
 
     # `default` is written into config,
@@ -990,6 +992,26 @@ def plus_minus_one(value: str) -> int:
 
 
 nope = qc.QVariant()
+
+
+def parse_bool_maybe(s: str) -> Optional[bool]:
+    """Does not throw. But could legally throw ValueError."""
+
+    if not s:
+        return None
+
+    # len(s) >= 1
+    try:
+        return bool(int(s))
+    except ValueError:
+        pass
+
+    s = s.lower()
+    if s[0] in ["t", "y"]:
+        return True
+    if s[0] in ["f", "n"]:
+        return False
+    return None
 
 
 class ChannelModel(qc.QAbstractTableModel):
@@ -1030,6 +1052,7 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("label", str, "", "Label"),
         Column("amplification", float, None, "Amplification\n(override)"),
         Column("line_color", str, None, "Line Color"),
+        Column("color_by_pitch", parse_bool_maybe, None, "Color Lines\nBy Pitch"),
         Column("render_stereo", str, None, "Render Stereo\nDownmix"),
         Column("trigger_width", int, None, "Trigger Width ×"),
         Column("render_width", int, None, "Render Width ×"),

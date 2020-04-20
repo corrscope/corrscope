@@ -8,6 +8,7 @@ Backend implementation does not know about RendererFrontend.
 """
 
 import enum
+import math
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -27,10 +28,12 @@ from typing import (
     MutableSequence,
 )
 
+# DO NOT IMPORT MATPLOTLIB UNTIL WE DELETE mpl_config_dir!
 import attr
 import numpy as np
-from matplotlib.cm import get_cmap
 
+import corrscope.generate
+from corrscope.channel import ChannelConfig, Channel
 from corrscope.config import DumpableAttrs, with_units, TypedEnumDump
 from corrscope.layout import (
     RendererLayout,
@@ -62,7 +65,9 @@ if mpl_config_dir in os.environ:
     del os.environ[mpl_config_dir]
 
 # matplotlib.use() only affects pyplot. We don't use pyplot.
+
 import matplotlib
+import matplotlib.cm
 import matplotlib.colors
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
@@ -75,7 +80,6 @@ if TYPE_CHECKING:
     from matplotlib.lines import Line2D
     from matplotlib.spines import Spine
     from matplotlib.text import Text, Annotation
-    from corrscope.channel import ChannelConfig, Channel
 
 
 # Used by outputs.py.
@@ -164,6 +168,11 @@ class RendererConfig(
     def global_line_color(self) -> str:
         return self.init_line_color
 
+    # Whether to color lines by the pitch of the current note.
+    global_color_by_pitch: bool = False
+    # 12 colors, representing how to color pitches C through B.
+    pitch_colors: List[str] = corrscope.generate.spectral_colors
+
     grid_color: Optional[str] = None
     stereo_grid_opacity: float = 0.25
 
@@ -196,6 +205,7 @@ class RendererConfig(
         # round(np.int32 / float) == np.float32, but we want int.
         assert isinstance(self.width, (int, float))
         assert isinstance(self.height, (int, float))
+        assert len(self.pitch_colors) == 12, len(self.pitch_colors)
 
     # Both before_* functions should be idempotent, AKA calling twice does no harm.
     def before_preview(self) -> None:
@@ -207,9 +217,35 @@ class RendererConfig(
         self.res_divisor = 1
 
 
+def gen_circular_cmap(colors: List[str]):
+    colors = list(colors)
+
+    # `colors` has 12 distinct entries.
+    # LinearSegmentedColormap(colors) takes a real number `x` between 0 and 1,
+    # and maps x=0 to colors[0] and x=1 to colors[-1].
+    # pitch_cmap should be periodic, so `colors[0]` should appear at both x=0 and x=1.
+    colors.append(colors[0])
+
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
+        "12-tone spectrum", colors, N=256, gamma=1.0
+    )
+    return cmap
+
+
+def freq_to_color(cmap, freq: Optional[float], fallback_color: str) -> str:
+    if not freq:
+        return fallback_color
+
+    key_number = 12 * math.log2(freq / 440) + 69
+
+    color = cmap(math.fmod(key_number, 12) / 12)
+    return color
+
+
 @attr.dataclass
 class LineParam:
     color: str
+    color_by_pitch: bool
 
 
 @attr.dataclass
@@ -299,6 +335,9 @@ class _RendererBackend(ABC):
         self.w = cfg.divided_width
         self.h = cfg.divided_height
 
+        # Maps a continuous variable from 0 to 1 (representing one octave) to a color.
+        self.pitch_cmap = gen_circular_cmap(cfg.pitch_colors)
+
         self.nplots = len(dummy_datas)
 
         if self.nplots > 0:
@@ -306,19 +345,20 @@ class _RendererBackend(ABC):
         self.wave_nsamps = [data.shape[0] for data in dummy_datas]
         self.wave_nchans = [data.shape[1] for data in dummy_datas]
 
-        # Load line colors.
-        if channel_cfgs is not None:
-            if len(channel_cfgs) != self.nplots:
-                raise ValueError(
-                    f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
-                )
-            line_colors = [cfg.line_color for cfg in channel_cfgs]
-        else:
-            line_colors = [None] * self.nplots
+        if channel_cfgs is None:
+            channel_cfgs = [ChannelConfig("") for _ in range(self.nplots)]
+
+        if len(channel_cfgs) != self.nplots:
+            raise ValueError(
+                f"cannot assign {len(channel_cfgs)} colors to {self.nplots} plots"
+            )
 
         self._line_params = [
-            LineParam(color=coalesce(color, cfg.global_line_color))
-            for color in line_colors
+            LineParam(
+                color=coalesce(ccfg.line_color, cfg.global_line_color),
+                color_by_pitch=coalesce(ccfg.color_by_pitch, cfg.global_color_by_pitch),
+            )
+            for ccfg in channel_cfgs
         ]
 
         # Load channel strides.
@@ -489,7 +529,7 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
             # List of colors at
             # https://matplotlib.org/gallery/color/colormap_reference.html
             # Discussion at https://github.com/matplotlib/matplotlib/issues/10840
-            cmap: ListedColormap = get_cmap("Accent")
+            cmap: ListedColormap = matplotlib.cm.get_cmap("Accent")
             colors = cmap.colors
             axes.set_prop_cycle(color=colors)
 
@@ -630,9 +670,8 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
 
         return lambda datas: self._update_lines_stereo(lines2d, datas)
 
-    @staticmethod
     def _update_lines_stereo(
-        lines2d: "List[List[Line2D]]", inputs: List[RenderInput]
+        self, lines2d: "List[List[Line2D]]", inputs: List[RenderInput]
     ) -> None:
         """
         Preconditions:
@@ -654,10 +693,23 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
 
             wave_lines = lines2d[wave_idx]
 
+            color_by_pitch = self._line_params[wave_idx].color_by_pitch
+
+            # If we color notes by pitch, then on every frame,
+            # recompute the color based on current pitch.
+            # If no sound is detected, fall back to the default color.
+            # If we don't color notes by pitch,
+            # just keep the initial color and never overwrite it.
+            if color_by_pitch:
+                fallback_color = self._line_params[wave_idx].color
+                color = freq_to_color(self.pitch_cmap, freq_estimate, fallback_color)
+
             # Foreach chan
             for chan_idx, chan_data in enumerate(wave_data.T):
                 chan_line = wave_lines[chan_idx]
                 chan_line.set_ydata(chan_data)
+                if color_by_pitch:
+                    chan_line.set_color(color)
 
     def _add_xy_line_mono(
         self, wave_idx: int, xs: Sequence[float], ys: Sequence[float], stride: int

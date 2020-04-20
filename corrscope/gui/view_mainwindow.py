@@ -167,6 +167,13 @@ class MainWindow(QWidget):
                     self.render__line_width.setMinimum(0.5)
                     self.render__line_width.setSingleStep(0.5)
 
+                with add_row(
+                    s, BoundCheckBox, Both
+                ) as self.render__global_color_by_pitch:
+                    self.render__global_color_by_pitch.setText(
+                        tr("Color Lines By Pitch")
+                    )
+
                 with add_row(s, "", OptionalColorWidget) as self.render__grid_color:
                     pass
 
