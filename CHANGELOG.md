@@ -1,6 +1,8 @@
 ## 0.6.2 (unreleased)
 
-...
+### Major Changes
+
+- Enable chroma subsampling by default (may affect saved projects) (#331)
 
 ## 0.6.1
 
