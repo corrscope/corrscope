@@ -220,7 +220,7 @@ class FFmpegOutputConfig(IOutputConfig):
     path: Optional[str]
     args: str = ""
 
-    video_template: str = "-c:v libx264 -crf 18 -preset superfast -movflags faststart"
+    video_template: str = "-c:v libx264 -crf 18 -preset superfast -pix_fmt yuv420p -movflags faststart"
     audio_template: str = "-c:a aac -b:a 384k"
 
 
