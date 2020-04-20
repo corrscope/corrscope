@@ -1,3 +1,9 @@
+## 0.8.0 (unreleased)
+
+### Features
+
+- Add option to color lines by pitch (#386)
+
 ## 0.7.1
 
 ### Major Changes
