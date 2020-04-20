@@ -212,7 +212,31 @@ class LineParam:
     color: str
 
 
-UpdateLines = Callable[[List[np.ndarray]], Any]
+@attr.dataclass
+class RenderInput:
+    # Should Renderer store a Wave and take an int?
+    # Or take an array on each frame?
+    data: np.ndarray
+    freq_estimate: Optional[float]
+
+    @staticmethod
+    def stub_new(data: np.ndarray) -> "RenderInput":
+        """
+        Stable function to construct a RenderInput given only a data array.
+        Used mainly for tests.
+        """
+        return RenderInput(data, None)
+
+    @staticmethod
+    def wrap_datas(datas: List[np.ndarray]) -> List["RenderInput"]:
+        """
+        Stable function to construct a list of RenderInput given only datas.
+        Used mainly for tests.
+        """
+        return [RenderInput.stub_new(data) for data in datas]
+
+
+UpdateLines = Callable[[List[RenderInput]], Any]
 UpdateOneLine = Callable[[np.ndarray], Any]
 
 
@@ -608,15 +632,15 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
 
     @staticmethod
     def _update_lines_stereo(
-        lines2d: "List[List[Line2D]]", datas: List[np.ndarray]
+        lines2d: "List[List[Line2D]]", inputs: List[RenderInput]
     ) -> None:
         """
         Preconditions:
         - lines2d[wave][chan] = Line2D
-        - datas[wave] = ndarray, [samp][chan] = FLOAT
+        - inputs[wave] = ndarray, [samp][chan] = FLOAT
         """
         nplots = len(lines2d)
-        ndata = len(datas)
+        ndata = len(inputs)
         if nplots != ndata:
             raise ValueError(
                 f"incorrect data to plot: {nplots} plots but {ndata} dummy_datas"
@@ -624,7 +648,10 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
 
         # Draw waveform data
         # Foreach wave
-        for wave_idx, wave_data in enumerate(datas):
+        for wave_idx, input in enumerate(inputs):
+            wave_data = input.data
+            freq_estimate = input.freq_estimate
+
             wave_lines = lines2d[wave_idx]
 
             # Foreach chan
@@ -811,11 +838,13 @@ class RendererFrontend(_RendererBackend, ABC):
     # New methods.
     _update_main_lines: Optional[UpdateLines]
 
-    def update_main_lines(self, datas: List[np.ndarray]) -> None:
+    def update_main_lines(self, inputs: List[RenderInput]) -> None:
+        datas = [input.data for input in inputs]
+
         if self._update_main_lines is None:
             self._update_main_lines = self.add_lines_stereo(datas, self.render_strides)
 
-        self._update_main_lines(datas)
+        self._update_main_lines(inputs)
 
     _offsetable: DefaultDict[int, MutableSequence[CustomLine]]
 
