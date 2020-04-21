@@ -99,6 +99,17 @@ version = "0.4.1"
 
 [[package]]
 category = "dev"
+description = "A powerful, accurate, and easy-to-use Python library for doing colorspace conversions"
+name = "colorspacious"
+optional = false
+python-versions = "*"
+version = "1.1.2"
+
+[package.dependencies]
+numpy = "*"
+
+[[package]]
+category = "dev"
 description = "Code coverage measurement for Python"
 name = "coverage"
 optional = false
@@ -525,7 +536,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["pathlib2", "contextlib2", "unittest2"]
 
 [metadata]
-content-hash = "f392515c6505406542c98e311dcda591669cd47ad6b02a0c84c74d5491b7deb4"
+content-hash = "5b94523d9eb3f519370f98de46cb4dc42376819512a0465e162c190f4a5e484f"
 python-versions = "^3.6"
 
 [metadata.files]
@@ -568,6 +579,10 @@ codecov = [
 colorama = [
     {file = "colorama-0.4.1-py2.py3-none-any.whl", hash = "sha256:f8ac84de7840f5b9c4e3347b3c1eaa50f7e49c2b07596221daec5edaabbd7c48"},
     {file = "colorama-0.4.1.tar.gz", hash = "sha256:05eed71e2e327246ad6b38c540c4a3117230b19679b875190486ddd2d721422d"},
+]
+colorspacious = [
+    {file = "colorspacious-1.1.2-py2.py3-none-any.whl", hash = "sha256:c78befa603cea5dccb332464e7dd29e96469eebf6cd5133029153d1e69e3fd6f"},
+    {file = "colorspacious-1.1.2.tar.gz", hash = "sha256:5e9072e8cdca889dac445c35c9362a22ccf758e97b00b79ff0d5a7ba3e11b618"},
 ]
 coverage = [
     {file = "coverage-4.5.3-cp26-cp26m-macosx_10_12_x86_64.whl", hash = "sha256:a5d8f29e5ec661143621a8f4de51adfb300d7a476224156a39a392254f70687b"},
