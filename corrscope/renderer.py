@@ -160,6 +160,10 @@ class RendererConfig(
     bg_color: str = "#000000"
     init_line_color: str = default_color()
 
+    @property
+    def global_line_color(self) -> str:
+        return self.init_line_color
+
     grid_color: Optional[str] = None
     stereo_grid_opacity: float = 0.25
 
@@ -177,7 +181,7 @@ class RendererConfig(
 
     @property
     def get_label_color(self):
-        return coalesce(self.label_color_override, self.init_line_color)
+        return coalesce(self.label_color_override, self.global_line_color)
 
     antialiasing: bool = True
 
@@ -289,7 +293,7 @@ class _RendererBackend(ABC):
             line_colors = [None] * self.nplots
 
         self._line_params = [
-            LineParam(color=coalesce(color, cfg.init_line_color))
+            LineParam(color=coalesce(color, cfg.global_line_color))
             for color in line_colors
         ]
 
