@@ -1,8 +1,6 @@
-import datetime
 import sys
-from itertools import count
 from pathlib import Path
-from typing import Optional, List, Tuple, Union, Iterator, cast, TypeVar
+from typing import Optional, List, Tuple, Union, cast, TypeVar
 
 import click
 
@@ -12,7 +10,7 @@ from corrscope.config import yaml
 from corrscope.corrscope import template_config, CorrScope, Config, Arguments
 from corrscope.outputs import IOutputConfig, FFplayOutputConfig
 from corrscope.settings.paths import MissingFFmpegError
-
+from corrscope.utils.profile_wrapper import run_profile
 
 Folder = click.Path(exists=True, file_okay=False)
 File = click.Path(exists=True, dir_okay=False)
@@ -196,11 +194,7 @@ def main(
             return gui.gui_main(cast(CfgOrPath, cfg_or_path))
 
         if profile:
-            import cProfile
-
-            # Pycharm can't load CProfile files with dots in the name.
-            profile_dump_name = get_profile_dump_name('gui')
-            cProfile.runctx('command()', globals(), locals(), profile_dump_name)
+            run_profile(command, "gui")
         else:
             command()
 
@@ -235,11 +229,8 @@ def main(
             arg = Arguments(cfg_dir=cfg_dir, outputs=outputs)
             command = lambda: CorrScope(cfg, arg).play()
             if profile:
-                import cProfile
-
                 first_song_name = Path(files[0]).name
-                profile_dump_name = get_profile_dump_name(first_song_name)
-                cProfile.runctx('command()', globals(), locals(), profile_dump_name)
+                run_profile(command, first_song_name)
             else:
                 try:
                     command()
@@ -247,32 +238,3 @@ def main(
                     # Tell user how to install ffmpeg (__str__).
                     print(e, file=sys.stderr)
 # fmt: on
-
-
-PROFILE_DUMP_NAME = "cprofile"
-
-
-def get_profile_dump_name(prefix: str) -> str:
-    now_date = datetime.datetime.now()
-    now_str = now_date.strftime("%Y-%m-%d_T%H-%M-%S")
-
-    # Pycharm can't load CProfile files with dots in the name.
-    prefix = prefix.split(".")[0]
-
-    profile_dump_name = f"{prefix}-{PROFILE_DUMP_NAME}-{now_str}"
-
-    # Write stats to unused filename
-    for name in add_numeric_suffixes(profile_dump_name):
-        abs_path = Path(name).resolve()
-        if not abs_path.exists():
-            return str(abs_path)
-    assert False  # never happens since add_numeric_suffixes is endless.
-
-
-def add_numeric_suffixes(s: str) -> Iterator[str]:
-    """ f('foo')
-    yields 'foo', 'foo2', 'foo3'...
-    """
-    yield s
-    for i in count(2):
-        yield s + str(i)
