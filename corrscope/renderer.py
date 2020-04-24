@@ -66,9 +66,10 @@ if mpl_config_dir in os.environ:
 
 # matplotlib.use() only affects pyplot. We don't use pyplot.
 
-import matplotlib
+import matplotlib as mpl
 import matplotlib.cm
 import matplotlib.colors
+import matplotlib.image
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
@@ -162,6 +163,7 @@ class RendererConfig(
         return round(self.height / self.res_divisor)
 
     bg_color: str = "#000000"
+    bg_image: str = ""
     init_line_color: str = default_color()
 
     @property
@@ -505,6 +507,12 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
 
         # Setup background
         self._fig.set_facecolor(cfg.bg_color)
+
+        if cfg.bg_image:
+            img = mpl.image.imread(cfg.bg_image)
+
+            ax = self._fig.add_axes([0, 0, 1, 1])
+            ax.imshow(img)
 
         # Create Axes (using self.lcfg, wave_nchans)
         # _axes2d[wave][chan] = Axes

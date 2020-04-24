@@ -160,6 +160,12 @@ class MainWindow(QWidget):
                 with add_row(s, "", BoundColorWidget) as self.render__bg_color:
                     pass
 
+                with add_row(s, tr("Background image"), QHBoxLayout):
+                    with append_widget(s, BoundLineEdit) as self.render__bg_image:
+                        pass
+                    with append_widget(s, QPushButton) as self.bg_image_browse:
+                        self.bg_image_browse.setText(tr("&Browse..."))
+
                 with add_row(s, "", BoundColorWidget) as self.render__init_line_color:
                     pass
 
