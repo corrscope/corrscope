@@ -169,16 +169,26 @@ class MainWindow(QWidget):
                 with add_row(s, "", BoundColorWidget) as self.render__init_line_color:
                     pass
 
-                with add_row(s, "", BoundDoubleSpinBox) as self.render__line_width:
-                    self.render__line_width.setMinimum(0.5)
-                    self.render__line_width.setSingleStep(0.5)
-
                 with add_row(
                     s, BoundCheckBox, Both
                 ) as self.render__global_color_by_pitch:
                     self.render__global_color_by_pitch.setText(
                         tr("Color Lines By Pitch")
                     )
+
+                with add_row(s, "", BoundDoubleSpinBox) as self.render__line_width:
+                    self.render__line_width.setMinimum(0.5)
+                    self.render__line_width.setSingleStep(0.5)
+
+                with add_row(
+                    s, tr("Outline Color"), BoundColorWidget
+                ) as self.render__global_line_outline_color:
+                    pass
+
+                with add_row(
+                    s, tr("Outline Width"), BoundDoubleSpinBox
+                ) as self.render__line_outline_width:
+                    self.render__line_outline_width.setSingleStep(0.5)
 
                 with add_row(s, "", OptionalColorWidget) as self.render__grid_color:
                     pass
