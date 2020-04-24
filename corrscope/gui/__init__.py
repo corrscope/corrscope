@@ -52,6 +52,7 @@ from corrscope.util import obj_name, iround, coalesce
 from corrscope.wave import Flatten
 
 FILTER_WAV_FILES = ["WAV files (*.wav)"]
+FILTER_PNG_FILES = ["PNG files (*.png)"]
 
 APP_NAME = f"{corrscope.app_name} {corrscope.__version__}"
 APP_DIR = Path(__file__).parent
@@ -180,6 +181,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         # Bind UI buttons, etc. Functions block main thread, avoiding race conditions.
         self.master_audio_browse.clicked.connect(self.on_master_audio_browse)
+        self.bg_image_browse.clicked.connect(self.on_bg_image_browse)
 
         self.channelUp.add_shortcut(self.channelsGroup, "ctrl+shift+up")
         self.channelDown.add_shortcut(self.channelsGroup, "ctrl+shift+down")
@@ -413,6 +415,15 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             master_audio = "master_audio"
             self.model[master_audio] = name
             self.model.update_all_bound(master_audio)
+
+    def on_bg_image_browse(self):
+        name = get_open_file_name(
+            self, "Open background image file", self.pref.file_dir_ref, FILTER_PNG_FILES
+        )
+        if name:
+            bg_image = "render__bg_image"
+            self.model[bg_image] = name
+            self.model.update_all_bound(bg_image)
 
     def on_separate_render_dir_toggled(self, checked: bool):
         self.pref.separate_render_dir = checked

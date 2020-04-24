@@ -31,6 +31,7 @@ import attr
 import numpy as np
 from matplotlib.cm import get_cmap
 
+
 from corrscope.config import DumpableAttrs, with_units, TypedEnumDump
 from corrscope.layout import (
     RendererLayout,
@@ -64,6 +65,8 @@ if mpl_config_dir in os.environ:
 # matplotlib.use() only affects pyplot. We don't use pyplot.
 import matplotlib
 import matplotlib.colors
+import matplotlib.pyplot as pyplot
+import matplotlib.patheffects as path_effects
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
@@ -158,6 +161,7 @@ class RendererConfig(
         return round(self.height / self.res_divisor)
 
     bg_color: str = "#000000"
+    bg_image: str = ""
     init_line_color: str = default_color()
 
     grid_color: Optional[str] = None
@@ -437,6 +441,12 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
 
         # Setup background
         self._fig.set_facecolor(cfg.bg_color)
+
+        if cfg.bg_image:
+            img = pyplot.imread(cfg.bg_image)
+
+            ax = self._fig.add_axes([0, 0, 1, 1])
+            ax.imshow(img)
 
         # Create Axes (using self.lcfg, wave_nchans)
         # _axes2d[wave][chan] = Axes
