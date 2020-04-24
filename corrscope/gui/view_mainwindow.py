@@ -173,6 +173,13 @@ class MainWindow(QWidget):
                     self.render__line_width.setMinimum(0.5)
                     self.render__line_width.setSingleStep(0.5)
 
+                with add_row(s, "", BoundColorWidget) as self.render__init_line_outline_color:
+                    pass
+
+                with add_row(s, "", BoundDoubleSpinBox) as self.render__line_outline_width:
+                    self.render__line_outline_width.setMinimum(0.0)
+                    self.render__line_outline_width.setSingleStep(0.5)
+
                 with add_row(s, "", OptionalColorWidget) as self.render__grid_color:
                     pass
 
@@ -496,6 +503,8 @@ class MainWindow(QWidget):
         self.render__bg_colorL.setText(tr("Background"))
         self.render__init_line_colorL.setText(tr("Line Color"))
         self.render__line_widthL.setText(tr("Line Width"))
+        self.render__init_line_outline_colorL.setText(tr("Outline Color"))
+        self.render__line_outline_widthL.setText(tr("Outline Width"))
         self.render__grid_colorL.setText(tr("Grid Color"))
         self.render__midline_colorL.setText(tr("Midline Color"))
         self.render__v_midline.setText(tr("Vertical"))

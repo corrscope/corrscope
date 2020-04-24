@@ -150,6 +150,7 @@ class RendererConfig(
     width: int
     height: int
     line_width: float = with_units("px", default=1.5)
+    line_outline_width: float = with_units("px", default=0.0)
     grid_line_width: float = with_units("px", default=1.0)
 
     @property
@@ -163,6 +164,7 @@ class RendererConfig(
     bg_color: str = "#000000"
     bg_image: str = ""
     init_line_color: str = default_color()
+    init_line_outline_color: str = "#000000"
 
     grid_color: Optional[str] = None
     stereo_grid_opacity: float = 0.25
@@ -605,6 +607,11 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
                 chan_line: Line2D = ax.plot(
                     xs, chan_zeros, color=line_color, linewidth=line_width
                 )[0]
+                if cfg.line_outline_width:
+                    chan_line.set_path_effects([
+                        path_effects.Stroke(linewidth=cfg.line_outline_width, foreground=cfg.init_line_outline_color),
+                        path_effects.Normal()]
+                    )
                 wave_lines.append(chan_line)
 
             lines2d.append(wave_lines)
