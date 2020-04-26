@@ -1,8 +1,9 @@
-## 0.6.2 (unreleased)
+## 0.7.0 (unreleased)
 
 ### Major Changes
 
 - Enable chroma subsampling by default (may affect saved projects) (#331)
+- Improve FPS by reducing rendering overhead (#335)
 
 ## 0.6.1
 
