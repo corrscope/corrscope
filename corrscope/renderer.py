@@ -79,7 +79,7 @@ if TYPE_CHECKING:
 
 
 # Used by outputs.py.
-ByteBuffer = Union[bytes, np.ndarray]
+ByteBuffer = Union[bytes, np.ndarray, memoryview]
 
 
 def default_color() -> str:
@@ -758,16 +758,22 @@ class MatplotlibAggRenderer(AbstractMatplotlibRenderer):
 
     @staticmethod
     def _canvas_to_bytes(canvas: FigureCanvasAgg) -> ByteBuffer:
-        return canvas.tostring_rgb()
+        # In matplotlib >= 3.1, canvas.buffer_rgba() returns a zero-copy memoryview.
+        # This is faster to print to screen than the previous bytes.
+        # Also the APIs are incompatible.
+
+        # Flatten all dimensions of the memoryview.
+        return canvas.buffer_rgba().cast("B")
 
     # Implements _RendererBackend.
-    bytes_per_pixel = 3
-    ffmpeg_pixel_format = "rgb24"
+    bytes_per_pixel = 4
+    ffmpeg_pixel_format = "rgb0"
 
     @staticmethod
     def color_to_bytes(c: str) -> np.ndarray:
-        to_rgb = matplotlib.colors.to_rgb
-        return np.array([round(c * 255) for c in to_rgb(c)], dtype=int)
+        from matplotlib.colors import to_rgba
+
+        return np.array([round(c * 255) for c in to_rgba(c)], dtype=int)
 
 
 # TODO: PlotConfig
