@@ -113,9 +113,8 @@ def map_gui(view: "MainWindow", model: PresentationModel) -> None:
     Only <widget>s subclassing BoundWidget will be bound.
     """
 
-    widgets: List[BoundWidget] = view.findChildren(
-        BoundWidget
-    )  # dear pyqt, add generic mypy return types
+    # dear pyqt, add generic mypy return types
+    widgets: List[BoundWidget] = view.findChildren(BoundWidget)
     for widget in widgets:
         path = widget.objectName()
 
