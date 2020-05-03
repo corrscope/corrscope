@@ -449,32 +449,35 @@ class MainWindow(QWidget):
         assert s.widget is MainWindow
         with set_menu_bar(s) as self.menuBar:
             with append_menu(s) as self.menuFile:
-                self.menuFile.addAction(self.actionNew)
-                self.menuFile.addAction(self.actionOpen)
-                self.menuFile.addAction(self.actionSave)
-                self.menuFile.addAction(self.actionSaveAs)
-                self.menuFile.addSeparator()
-                self.menuFile.addAction(self.actionPreview)
-                self.menuFile.addAction(self.actionRender)
-                self.menuFile.addSeparator()
-                self.menuFile.addAction(self.actionExit)
+                w = self.menuFile
+                w.addAction(self.actionNew)
+                w.addAction(self.actionOpen)
+                w.addAction(self.actionSave)
+                w.addAction(self.actionSaveAs)
+                w.addSeparator()
+                w.addAction(self.actionPreview)
+                w.addAction(self.actionRender)
+                w.addSeparator()
+                w.addAction(self.actionExit)
 
             with append_menu(s) as self.menuTools:
-                self.menuTools.addAction(self.action_separate_render_dir)
+                w = self.menuTools
+                w.addAction(self.action_separate_render_dir)
 
-            with append_menu(s, title=tr("&Help")) as w:
-                self.menuHelp = w
+            with append_menu(s, title=tr("&Help")) as self.menuHelp:
+                w = self.menuHelp
                 w.addAction(self.actionHelp)
 
         # Setup toolbar
         with add_toolbar(s, Qt.TopToolBarArea) as self.toolBar:
-            self.toolBar.addAction(self.actionNew)
-            self.toolBar.addAction(self.actionOpen)
-            self.toolBar.addAction(self.actionSave)
-            self.toolBar.addAction(self.actionSaveAs)
-            self.toolBar.addSeparator()
-            self.toolBar.addAction(self.actionPreview)
-            self.toolBar.addAction(self.actionRender)
+            w = self.toolBar
+            w.addAction(self.actionNew)
+            w.addAction(self.actionOpen)
+            w.addAction(self.actionSave)
+            w.addAction(self.actionSaveAs)
+            w.addSeparator()
+            w.addAction(self.actionPreview)
+            w.addAction(self.actionRender)
 
     # noinspection PyUnresolvedReferences
     def retranslateUi(self, MainWindow):
