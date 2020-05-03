@@ -1,0 +1,1 @@
+- [ ] If you are a maintainer (only @nyanpasu64 at the moment), make sure to edit the [changelog](CHANGELOG.md) if needed. Otherwise, a maintainer will edit the changelog.
