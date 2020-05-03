@@ -441,9 +441,18 @@ class MainWindow(QWidget):
         self.actionExit = QAction(MainWindow)
         self.actionPreview = QAction(MainWindow)
         self.actionRender = QAction(MainWindow)
+
+        self.actionWebsite = create_element(
+            QAction, MainWindow, text=tr("corrscope Website")
+        )
         self.actionHelp = create_element(QAction, MainWindow, text=tr("Help"))
-        self.action_separate_render_dir = QAction(MainWindow)
-        self.action_separate_render_dir.setCheckable(True)
+
+        self.action_separate_render_dir = create_element(
+            QAction, MainWindow, text=tr("&Separate Render Folder"), checkable=True
+        )
+        self.action_open_config_dir = create_element(
+            QAction, MainWindow, text=tr("Open &Config Folder")
+        )
 
         # Setup menu_bar
         assert s.widget is MainWindow
@@ -463,9 +472,12 @@ class MainWindow(QWidget):
             with append_menu(s) as self.menuTools:
                 w = self.menuTools
                 w.addAction(self.action_separate_render_dir)
+                w.addSeparator()
+                w.addAction(self.action_open_config_dir)
 
             with append_menu(s, title=tr("&Help")) as self.menuHelp:
                 w = self.menuHelp
+                w.addAction(self.actionWebsite)
                 w.addAction(self.actionHelp)
 
         # Setup toolbar
@@ -523,7 +535,6 @@ class MainWindow(QWidget):
         self.actionPreview.setShortcut(tr("Ctrl+P"))
         self.actionRender.setText(tr("&Render to Video"))
         self.actionRender.setShortcut(tr("Ctrl+R"))
-        self.action_separate_render_dir.setText(tr("&Separate Render Folder"))
 
 
 from corrscope.gui.model_bind import (
