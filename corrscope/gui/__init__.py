@@ -56,6 +56,8 @@ FILTER_WAV_FILES = ["WAV files (*.wav)"]
 APP_NAME = f"{corrscope.app_name} {corrscope.__version__}"
 APP_DIR = Path(__file__).parent
 
+PATH_uri = qc.QUrl.fromLocalFile(paths.PATH_dir)
+
 
 def res(file: str) -> str:
     return str(APP_DIR / file)
@@ -195,13 +197,18 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             self.on_separate_render_dir_toggled
         )
 
+        self.action_open_config_dir.triggered.connect(self.on_open_config_dir)
+
         self.actionNew.triggered.connect(self.on_action_new)
         self.actionOpen.triggered.connect(self.on_action_open)
         self.actionSave.triggered.connect(self.on_action_save)
         self.actionSaveAs.triggered.connect(self.on_action_save_as)
         self.actionPreview.triggered.connect(self.on_action_preview)
         self.actionRender.triggered.connect(self.on_action_render)
+
+        self.actionWebsite.triggered.connect(self.on_action_website)
         self.actionHelp.triggered.connect(self.on_action_help)
+
         self.actionExit.triggered.connect(qw.QApplication.closeAllWindows)
 
         # Initialize CorrScope-thread attribute.
@@ -395,6 +402,8 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     channelDown: "ShortcutButton"
 
     action_separate_render_dir: qw.QAction
+    action_open_config_dir: qw.QAction
+
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
     menuBar: qw.QMenuBar
     actionNew: qw.QAction
@@ -420,6 +429,10 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             self.pref.render_dir = self.pref.file_dir
         else:
             self.pref.render_dir = ""
+
+    def on_open_config_dir(self):
+        appdata_uri = qc.QUrl.fromLocalFile(str(paths.appdata_dir))
+        QDesktopServices.openUrl(appdata_uri)
 
     def on_channel_add(self):
         wavs = get_open_file_list(
@@ -623,6 +636,11 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         return self.model.cfg
 
     # Misc.
+    @qc.pyqtSlot()
+    def on_action_website(self):
+        website_url = r"https://github.com/corrscope/corrscope/"
+        QDesktopServices.openUrl(qc.QUrl(website_url))
+
     @qc.pyqtSlot()
     def on_action_help(self):
         help_url = r"https://corrscope.github.io/corrscope/"
@@ -1195,11 +1213,9 @@ class DownloadFFmpegActivity:
     ffmpeg_url = paths.get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
-    path_uri = qc.QUrl.fromLocalFile(paths.PATH_dir).toString()
-
     required = (
         f"FFmpeg+FFplay must be in PATH or "
-        f'<a href="{path_uri}">corrscope folder</a> in order to use corrscope.<br>'
+        f'<a href="{PATH_uri.toString()}">corrscope folder</a> in order to use corrscope.<br>'
     )
 
     ffmpeg_template = required + (

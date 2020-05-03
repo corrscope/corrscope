@@ -5,6 +5,10 @@
 - Enable chroma subsampling by default (may affect saved projects) (#331)
 - Improve FPS by reducing rendering overhead (#335)
 
+### Changelog
+
+- Add menu items linking to config folder and Github repository (#343)
+
 ## 0.6.1
 
 Long delayed... sorry.
