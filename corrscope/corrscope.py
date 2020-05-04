@@ -16,8 +16,7 @@ from corrscope.outputs import FFmpegOutputConfig, IOutputConfig
 from corrscope.renderer import Renderer, RendererConfig, RendererFrontend
 from corrscope.triggers import CorrelationTriggerConfig, PerFrameCache, SpectrumConfig
 from corrscope.util import pushd, coalesce
-from corrscope.wave import Wave, Flatten
-
+from corrscope.wave import Wave, Flatten, FlattenOrStr
 
 PRINT_TIMESTAMP = True
 
@@ -78,8 +77,8 @@ class Config(
     amplification: float
 
     # Stereo config
-    trigger_stereo: Flatten = Flatten.SumAvg
-    render_stereo: Flatten = Flatten.SumAvg
+    trigger_stereo: FlattenOrStr = Flatten.SumAvg
+    render_stereo: FlattenOrStr = Flatten.SumAvg
 
     trigger: CorrelationTriggerConfig  # Can be overriden per Wave
 

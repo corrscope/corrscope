@@ -143,7 +143,7 @@ class Wave:
         self,
         wave_path: str,
         amplification: float = 1.0,
-        flatten: Flatten = Flatten.SumAvg,
+        flatten: FlattenOrStr = Flatten.SumAvg,
     ):
         self.wave_path = wave_path
         self.amplification = amplification
@@ -191,7 +191,7 @@ class Wave:
         else:
             raise CorrError(f"unexpected wavfile dtype {dtype}")
 
-    def with_flatten(self, flatten: Flatten, return_channels: bool) -> "Wave":
+    def with_flatten(self, flatten: FlattenOrStr, return_channels: bool) -> "Wave":
         new = copy.copy(self)
         new.flatten = flatten
         new.return_channels = return_channels
