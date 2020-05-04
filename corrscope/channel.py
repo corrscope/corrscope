@@ -15,7 +15,7 @@ from corrscope.config import (
 )
 from corrscope.triggers import MainTriggerConfig
 from corrscope.util import coalesce
-from corrscope.wave import Wave, Flatten
+from corrscope.wave import Wave, FlattenOrStr
 
 if TYPE_CHECKING:
     from corrscope.corrscope import Config
@@ -37,8 +37,8 @@ class ChannelConfig(DumpableAttrs):
     amplification: Optional[float] = None
 
     # Stereo config
-    trigger_stereo: Optional[Flatten] = None
-    render_stereo: Optional[Flatten] = None
+    trigger_stereo: Optional[FlattenOrStr] = None
+    render_stereo: Optional[FlattenOrStr] = None
 
     line_color: Optional[str] = None
 
