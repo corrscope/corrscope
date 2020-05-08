@@ -250,7 +250,7 @@ class MainWindow(QWidget):
                     tr("Stereo Orientation"),
                     BoundComboBox,
                     name="layout__stereo_orientation",
-                ):
+                ) as self.layout__stereo_orientation:
                     pass
 
                 with add_row(

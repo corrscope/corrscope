@@ -214,6 +214,14 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         # Initialize CorrScope-thread attribute.
         self.corr_thread: Optional[CorrThread] = None
 
+        # Setup UI.
+        self.model = ConfigModel(template_config())
+        self.model.edited.connect(self.on_model_edited)
+        # Calls self.on_gui_edited() whenever GUI widgets change.
+        map_gui(self, self.model)
+
+        self.model.update_widget["render_stereo"].append(self.on_render_stereo_changed)
+
         # Bind config to UI.
         if isinstance(cfg_or_path, Config):
             self.load_cfg(cfg_or_path, None)
@@ -249,6 +257,11 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     channel_model: "ChannelModel"
     channel_view: "ChannelTableView"
     channelsGroup: qw.QGroupBox
+
+    def on_render_stereo_changed(self):
+        self.layout__stereo_orientation.setEnabled(
+            self.model.cfg.render_stereo is Flatten.Stereo
+        )
 
     # Closing active document
 
@@ -362,13 +375,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self.load_title()
         self.left_tabs.setCurrentIndex(0)
 
-        if self.model is None:
-            self.model = ConfigModel(cfg)
-            self.model.edited.connect(self.on_model_edited)
-            # Calls self.on_gui_edited() whenever GUI widgets change.
-            map_gui(self, self.model)
-        else:
-            self.model.set_cfg(cfg)
+        self.model.set_cfg(cfg)
 
         self.channel_model = ChannelModel(cfg.channels)
         # Calling setModel again disconnects previous model.
