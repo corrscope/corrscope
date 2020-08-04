@@ -15,6 +15,10 @@ Documentation is available at https://corrscope.github.io/corrscope/.
 
 ![Screenshot of Corrscope and video preview](docs/images/corrscope-screenshot.png?raw=true)
 
+## Status
+
+Corrscope is currently in maintenance mode until further notice. The program basically works, but I may not respond to issues. Do not ask for technical support in the issue tracker; instead contact me at Discord (https://discord.gg/CCJZCjc). Pull requests may be accepted if they're clean.
+
 ## Dependencies
 
 - FFmpeg
