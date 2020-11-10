@@ -548,6 +548,13 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             # t.abort -> Locked.set() is thread-safe (hopefully).
             # It can be called from main thread (not just within CorrThread).
             dlg.canceled.connect(t.abort, Qt.DirectConnection)
+
+            # Don't close the dialog when the user presses Cancel.
+            # Ideally we'd gray out the cancel button, but that's not possible
+            # unless we call QProgressDialog::setCancelButton(),
+            # or better yet replace QProgressDialog with a custom dialog.
+            dlg.canceled.disconnect(dlg.cancel)
+
             t.arg = attr.evolve(
                 arg,
                 on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
@@ -726,6 +733,9 @@ class CorrThread(qc.QThread):
 
 
 class CorrProgressDialog(qw.QProgressDialog):
+    """should be replaced with a custom dialog someday, with current timestamp,
+    FPS data, etc."""
+
     def __init__(self, parent: Optional[qw.QWidget], title: str):
         super().__init__(parent)
         self.setMinimumWidth(300)
