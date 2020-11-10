@@ -33,20 +33,11 @@ prepend(os.environ, ["PATH"], PATH_dir + os.pathsep)
 
 
 def get_ffmpeg_url() -> str:
-    linking = "static"
-
     # is_python_64 = sys.maxsize > 2 ** 32
     is_os_64 = platform.machine().endswith("64")
 
-    def url(os_ver: str) -> str:
-        return f"https://ffmpeg.zeranoe.com/builds/{os_ver}/{linking}/ffmpeg-4.2.2-{os_ver}-{linking}.zip"
-
     if sys.platform == "win32" and is_os_64:
-        return url("win64")
-    elif sys.platform == "win32" and not is_os_64:
-        return url("win32")
-    elif sys.platform == "darwin" and is_os_64:
-        return url("macos64")
+        return "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.7z"
     else:
         return ""
 
@@ -60,7 +51,11 @@ class MissingFFmpegError(CorrError, FileNotFoundError):
     )
 
     if can_download:
-        message += f"Download ffmpeg from {ffmpeg_url}."
+        message += (
+            f"Download ffmpeg from {ffmpeg_url}, "
+            f"open in 7-Zip and navigate to the ffmpeg-.../bin folder, "
+            f"and copy all .exe files to the folder above."
+        )
     else:
         message += "Cannot download FFmpeg for your platform."
 
