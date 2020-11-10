@@ -17,7 +17,7 @@ Documentation is available at https://corrscope.github.io/corrscope/.
 
 ## Status
 
-Corrscope is currently in maintenance mode until further notice. The program basically works, but I may not respond to issues. Do not ask for technical support in the issue tracker; instead contact me at Discord (https://discord.gg/CCJZCjc). Pull requests may be accepted if they're clean.
+Corrscope is currently in maintenance mode until further notice. The program basically works, but I may not respond to issues. For technical support, contact me at Discord (https://discord.gg/CCJZCjc), or alternatively in the issue tracker (using the "Support/feedback" template). Pull requests may be accepted if they're clean.
 
 ## Dependencies
 
