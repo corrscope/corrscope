@@ -8,7 +8,7 @@
 ### Changelog
 
 - Add menu items linking to config folder and Github repository (#343)
-- Switch to static ffmepg 4.2.2 to reduce user error and avoid broken ffmpeg builds (#332)
+- Fix FFmpeg URL, switch to static FFmpeg to reduce user error (#332, #358)
 
 ## 0.6.1
 
