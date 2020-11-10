@@ -1,9 +1,10 @@
 import errno
 import shlex
 import subprocess
+import sys
 from abc import ABC, abstractmethod
 from os.path import abspath
-from typing import TYPE_CHECKING, Type, List, Union, Optional, ClassVar, Callable
+from typing import TYPE_CHECKING, Callable, ClassVar, List, Optional, Type, Union
 
 from corrscope.config import DumpableAttrs
 from corrscope.renderer import ByteBuffer, Renderer
@@ -62,7 +63,7 @@ class Output(ABC):
 
 
 def register_output(
-    config_t: Type[IOutputConfig]
+    config_t: Type[IOutputConfig],
 ) -> Callable[[Type[Output]], Type[Output]]:
     def inner(output_t: Type[Output]):
         config_t.cls = output_t
@@ -195,14 +196,23 @@ class PipeOutput(Output):
         # If blocked on reading, must close pipe and terminate from front to back.
         # If blocked on writing, must terminate from back to front.
         # If we terminate everything, both cases should work.
-        for popen in self._pipeline:
-            popen.terminate()
+
+        # (I no longer understand the above comment.)
+
+        # See https://github.com/corrscope/corrscope/issues/362 for discussion.
+        # On Windows, terminate() on ffmpeg will prevent it from writing the MOOV atom
+        # to the mp4, making it unreadable.
+        # So just close the input and wait for ffmpeg to close naturally.
+        # On other platforms, terminate() is fine.
+        if sys.platform != "win32":
+            for popen in self._pipeline:
+                popen.terminate()
 
         exc = None
         for popen in self._pipeline:
             # https://stackoverflow.com/a/49038779/2683842
             try:
-                popen.wait(1)  # timeout=seconds
+                popen.wait(3)  # timeout=seconds
             except subprocess.TimeoutExpired as e:
                 # gee thanks Python, https://stackoverflow.com/questions/45292479/
                 exc = e
