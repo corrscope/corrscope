@@ -44,7 +44,7 @@ pefile = {version = ">=2017.8.1", platform = "win32"}
 
 coverage = "^4.5"
 pytest-cov = "^2.6"
-codecov = "^2.0"
+codecov = "^2.1"
 pytest_cases = "^1.2"
 black = {version = "^18.3-alpha.0", allow-prereleases = true}
 
