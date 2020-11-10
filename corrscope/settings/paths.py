@@ -51,7 +51,11 @@ class MissingFFmpegError(CorrError, FileNotFoundError):
     )
 
     if can_download:
-        message += f"Download ffmpeg from {ffmpeg_url}."
+        message += (
+            f"Download ffmpeg from {ffmpeg_url}, "
+            f"open in 7-Zip and navigate to the ffmpeg-.../bin folder, "
+            f"and copy all .exe files to the folder above."
+        )
     else:
         message += "Cannot download FFmpeg for your platform."
 

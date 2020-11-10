@@ -1138,11 +1138,11 @@ class ChannelModel(qc.QAbstractTableModel):
             return True
         return False
 
-    """So if I understood it correctly you want to reorder the columns by moving the 
-    headers and then want to know how the view looks like. I believe ( 90% certain ) 
-    when you reorder the headers it does not trigger any change in the model! and 
-    then if you just start printing the data of the model you will only see the data 
-    in the order how it was initially before you swapper/reordered some column with 
+    """So if I understood it correctly you want to reorder the columns by moving the
+    headers and then want to know how the view looks like. I believe ( 90% certain )
+    when you reorder the headers it does not trigger any change in the model! and
+    then if you just start printing the data of the model you will only see the data
+    in the order how it was initially before you swapper/reordered some column with
     the header. """
 
     def insertRows(self, row: int, count: int, parent=QModelIndex()) -> bool:
@@ -1222,11 +1222,13 @@ class DownloadFFmpegActivity:
 
     required = (
         f"FFmpeg+FFplay must be in PATH or "
-        f'<a href="{PATH_uri.toString()}">corrscope folder</a> in order to use corrscope.<br>'
+        f'<a href="{PATH_uri.toString()}">corrscope PATH</a> in order to use corrscope.<br>'
     )
 
     ffmpeg_template = required + (
-        f'Download ffmpeg from <a href="{ffmpeg_url}">{ffmpeg_url}</a>.'
+        f'Download ffmpeg from <a href="{ffmpeg_url}">this link</a>, '
+        f"open in 7-Zip and navigate to the ffmpeg-.../bin folder, "
+        f"and copy all .exe files to the folder above."
     )
     fail_template = required + "Cannot download FFmpeg for your platform."
 
