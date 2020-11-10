@@ -237,7 +237,9 @@ class CorrScope:
 
         begin_frame = round(fps * self.cfg.begin_time)
 
-        end_time = coalesce(self.cfg.end_time, self.render_waves[0].get_s())
+        end_time = coalesce(
+            self.cfg.end_time, max(wave.get_s() for wave in self.render_waves)
+        )
         end_frame = fps * end_time
         end_frame = int(end_frame) + 1
 

@@ -9,6 +9,7 @@
 
 - Add menu items linking to config folder and Github repository (#343)
 - Fix FFmpeg URL, switch to static FFmpeg to reduce user error (#332, #358)
+- Fix bug where videos were truncated if first channel was shorter than the rest (#360)
 
 ## 0.6.1
 
