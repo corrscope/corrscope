@@ -8,7 +8,7 @@
 
 [tool.poetry]
 name = "corrscope"
-version = "0.6.2-pre"
+version = "0.7.0"
 description = "Python program to render wave files into oscilloscope views, featuring advanced correlation-based triggering algorithm"
 license = "BSD-2-Clause"
 authors = ["nyanpasu64 <nyanpasu64@tuta.io>"]

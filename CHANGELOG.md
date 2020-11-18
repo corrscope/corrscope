@@ -1,4 +1,6 @@
-## 0.7.0 (unreleased)
+## 0.7.0
+
+Long delayed as well. I haven't been around corrscope in a while. Background images and spectral coloring are not in this release, but I wanted to push this out because it enables chroma subsampling (reduces support queries) and fixes the FFmpeg URL.
 
 ### Major Changes
 
