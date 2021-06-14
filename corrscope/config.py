@@ -170,7 +170,7 @@ def copy_config(obj: T) -> T:
 
 
 class DumpableAttrs:
-    """ Marks class as attrs, and enables YAML dumping (excludes default fields).
+    """Marks class as attrs, and enables YAML dumping (excludes default fields).
 
     It is subclassed for
     (statically-typed key-value objects which will be dumped/loaded as YAML files).
@@ -292,8 +292,8 @@ class DumpableAttrs:
 
     # SafeRepresenter.represent_yaml_object() uses __getstate__ to dump objects.
     def __getstate__(self) -> Dict[str, Any]:
-        """ Removes all fields with default values, but not found in
-        self.always_dump. """
+        """Removes all fields with default values, but not found in
+        self.always_dump."""
 
         always_dump = self.__always_dump
         dump_all = "*" in always_dump
@@ -356,8 +356,8 @@ class DumpableAttrs:
     # If called via instance, cls == type(self).
     @classmethod
     def new_from_state(cls: Type[T], state: Dict[str, Any]) -> T:
-        """ Redirect `Alias(key)=value` to `key=value`.
-        Then call the dataclass constructor (to validate parameters). """
+        """Redirect `Alias(key)=value` to `key=value`.
+        Then call the dataclass constructor (to validate parameters)."""
 
         cls_name = cls.__name__
         fields = attr.fields_dict(cls)
@@ -486,14 +486,14 @@ class TypedEnumDump(Enum):
 
 
 class CorrError(ValueError):
-    """ Error caused by invalid end-user input (via YAML/GUI config).
-    (Should be) caught by GUI and displayed to user. """
+    """Error caused by invalid end-user input (via YAML/GUI config).
+    (Should be) caught by GUI and displayed to user."""
 
     pass
 
 
 class CorrWarning(UserWarning):
-    """ Warning about deprecated end-user config (YAML/GUI).
-    (Should be) caught by GUI and displayed to user. """
+    """Warning about deprecated end-user config (YAML/GUI).
+    (Should be) caught by GUI and displayed to user."""
 
     pass

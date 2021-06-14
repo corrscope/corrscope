@@ -191,7 +191,7 @@ GRID_NPIXEL = WIDTH
 
 @all_colors
 def test_default_colors(appear: Appearance, data):
-    """ Test the default background/foreground colors. """
+    """Test the default background/foreground colors."""
     cfg = get_renderer_config(appear)
     lcfg = LayoutConfig(orientation=ORIENTATION)
     datas = [data] * NPLOTS
@@ -208,7 +208,7 @@ def test_default_colors(appear: Appearance, data):
 
 @all_colors
 def test_line_colors(appear: Appearance, data):
-    """ Test channel-specific line color overrides """
+    """Test channel-specific line color overrides"""
     cfg = get_renderer_config(appear)
     lcfg = LayoutConfig(orientation=ORIENTATION)
     datas = [data] * NPLOTS

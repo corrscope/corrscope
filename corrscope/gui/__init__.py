@@ -490,7 +490,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             return False
 
     def on_action_preview(self):
-        """ Launch CorrScope and ffplay. """
+        """Launch CorrScope and ffplay."""
         if self.corr_thread is not None:
             error_msg = self.tr("Cannot preview, another {} is active").format(
                 self.preview_or_render
@@ -502,7 +502,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self.play_thread(outputs, PreviewOrRender.preview, dlg=None)
 
     def on_action_render(self):
-        """ Get file name. Then show a progress dialog while rendering to file. """
+        """Get file name. Then show a progress dialog while rendering to file."""
         if self.corr_thread is not None:
             error_msg = self.tr("Cannot render to file, another {} is active").format(
                 self.preview_or_render
@@ -750,7 +750,7 @@ class CorrProgressDialog(qw.QProgressDialog):
 def run_on_ui_thread(
     bound_slot: MethodType, types: Tuple[type, ...]
 ) -> Callable[..., None]:
-    """ Runs an object's slot on the object's own thread.
+    """Runs an object's slot on the object's own thread.
     It's terrible code but it works (as long as the slot has no return value).
     """
     qmo = qc.QMetaObject
@@ -1000,13 +1000,13 @@ nope = qc.QVariant()
 
 
 class ChannelModel(qc.QAbstractTableModel):
-    """ Design based off
+    """Design based off
     https://doc.qt.io/qt-5/model-view-programming.html#a-read-only-example-model and
     https://doc.qt.io/qt-5/model-view-programming.html#model-subclassing-reference
     """
 
     def __init__(self, channels: List[ChannelConfig]):
-        """ Mutates `channels` and `line_color` for convenience. """
+        """Mutates `channels` and `line_color` for convenience."""
         super().__init__()
         self.channels = channels
 

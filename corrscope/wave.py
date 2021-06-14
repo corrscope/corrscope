@@ -15,7 +15,7 @@ from corrscope.utils.windows import rightpad
 
 @enum.unique
 class Flatten(str, TypedEnumDump):
-    """ How to flatten a stereo signal. (Channels beyond first 2 are ignored.)
+    """How to flatten a stereo signal. (Channels beyond first 2 are ignored.)
 
     Flatten(0) == Flatten.Stereo == Flatten['Stereo']
     """
@@ -54,7 +54,7 @@ FlattenOrStr = Union[Flatten, str]
 
 
 def calc_flatten_matrix(flatten: FlattenOrStr, stereo_nchan: int) -> np.ndarray:
-    """ Raises CorrError on invalid input.
+    """Raises CorrError on invalid input.
 
     If flatten is Flatten.Stereo, returns shape=(nchan,nchan) identity matrix.
     - (N,nchan) @ (nchan,nchan) = (N,nchan).
@@ -206,7 +206,7 @@ class Wave:
         return new
 
     def __getitem__(self, index: Union[int, slice]) -> np.ndarray:
-        """ Copies self.data[item], converted to a FLOAT within range [-1, 1). """
+        """Copies self.data[item], converted to a FLOAT within range [-1, 1)."""
         # subok=False converts data from memmap (slow) to ndarray (faster).
         data: np.ndarray = self.data[index].astype(FLOAT, subok=False, copy=True)
 
@@ -222,7 +222,7 @@ class Wave:
         return data
 
     def _get(self, begin: int, end: int, subsampling: int) -> np.ndarray:
-        """ Copies self.data[begin:end] with zero-padding. """
+        """Copies self.data[begin:end] with zero-padding."""
         if 0 <= begin and end <= self.nsamp:
             return self[begin:end:subsampling]
 
@@ -258,12 +258,12 @@ class Wave:
         return out
 
     def get_around(self, sample: int, return_nsamp: int, stride: int) -> np.ndarray:
-        """ Returns `return_nsamp` samples, centered around `sample`,
+        """Returns `return_nsamp` samples, centered around `sample`,
         sampled with spacing `stride`.
         result[N//2] == self[sample].
         See designNotes.md and CorrelationTrigger docstring.
 
-        Copies self.data[...]. """
+        Copies self.data[...]."""
 
         begin = sample - (return_nsamp // 2) * stride
         end = begin + return_nsamp * stride

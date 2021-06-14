@@ -240,7 +240,7 @@ def test_wave_subsampling_off_by_1(is_odd: bool):
 
 
 def test_stereo_doesnt_overflow():
-    """ Ensure loud stereo tracks do not overflow. """
+    """Ensure loud stereo tracks do not overflow."""
     wave = Wave("tests/stereo in-phase.wav")
 
     samp = 100

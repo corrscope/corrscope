@@ -63,7 +63,7 @@ def sine440_config():
 ## Begin tests
 # Calls MatplotlibRenderer, FFmpegOutput, FFmpeg.
 def test_render_output():
-    """ Ensure rendering to output does not raise exceptions. """
+    """Ensure rendering to output does not raise exceptions."""
     datas = [RENDER_Y_ZEROS]
 
     renderer = Renderer(CFG.render, CFG.layout, datas, None, None)
@@ -91,7 +91,7 @@ def test_output():
 # Calls FFplayOutput, mocks Popen.
 @pytest.mark.usefixtures("Popen")
 def test_close_output(Popen):
-    """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
+    """FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
     exceptions occur.
     """
 
@@ -107,7 +107,7 @@ def test_close_output(Popen):
 
 # Calls CorrScope, mocks FFmpegOutput.
 def test_corrscope_main_uses_contextmanager(mocker: "pytest_mock.MockFixture"):
-    """ Ensure CorrScope() main wraps output in context manager. """
+    """Ensure CorrScope() main wraps output in context manager."""
     FFmpegOutput = mocker.patch.object(FFmpegOutputConfig, "cls")
     output = FFmpegOutput.return_value
 
@@ -124,7 +124,7 @@ def test_corrscope_main_uses_contextmanager(mocker: "pytest_mock.MockFixture"):
 # Calls FFplayOutput, mocks Popen.
 @pytest.mark.usefixtures("Popen")
 def test_terminate_ffplay(Popen):
-    """ FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
+    """FFplayOutput unit test: Ensure ffmpeg and ffplay are terminated when Python
     exceptions occur.
     """
 
@@ -142,8 +142,8 @@ def test_terminate_ffplay(Popen):
 # Integration: Calls CorrScope, mocks Popen.
 @pytest.mark.usefixtures("Popen")
 def test_corr_terminate_ffplay(Popen, mocker: "pytest_mock.MockFixture"):
-    """ Integration test: Ensure corrscope calls terminate() on ffmpeg and ffplay when
-    Python exceptions occur. """
+    """Integration test: Ensure corrscope calls terminate() on ffmpeg and ffplay when
+    Python exceptions occur."""
 
     cfg = sine440_config()
     corr = CorrScope(cfg, Arguments(".", [FFplayOutputConfig()]))
@@ -227,8 +227,8 @@ def test_corr_terminate_works(test):
 @pytest.mark.usefixtures("Popen")
 @pytest.mark.parametrize("errno_id", [errno.EPIPE, errno.EINVAL])
 def test_closing_ffplay_stops_main(Popen, errno_id):
-    """ Closing FFplay should make FFplayOutput.write_frame() return Stop
-    to main loop. """
+    """Closing FFplay should make FFplayOutput.write_frame() return Stop
+    to main loop."""
 
     # Create mocks.
     exc = OSError(errno_id, "Simulated ffplay-closed error")
@@ -264,7 +264,7 @@ def test_corr_output_without_audio():
 
 # Test framerate subsampling
 def test_render_subfps_one():
-    """ Ensure video gets rendered when render_subfps=1.
+    """Ensure video gets rendered when render_subfps=1.
     This test fails if ceildiv is used to calculate `ahead`.
     """
     from corrscope.outputs import IOutputConfig, Output, register_output
@@ -294,7 +294,7 @@ def test_render_subfps_one():
 
 
 def test_render_subfps_non_integer(mocker: "pytest_mock.MockFixture"):
-    """ Ensure we output non-integer subfps as fractions,
+    """Ensure we output non-integer subfps as fractions,
     and that ffmpeg doesn't crash.
     TODO does ffmpeg understand decimals??
     """
@@ -327,7 +327,7 @@ def test_render_subfps_non_integer(mocker: "pytest_mock.MockFixture"):
 
 ## Tests for Output-dependent performance options
 def cfg_192x108():
-    """ Return config which reduces rendering workload when previewing. """
+    """Return config which reduces rendering workload when previewing."""
     cfg = sine440_config()
 
     # Skip frames.
@@ -357,8 +357,8 @@ NO_FFMPEG = [[], [FFplayOutputConfig()]]
 @pytest.mark.usefixtures("Popen")  # Prevents FFplayOutput from launching processes.
 @pytest.mark.parametrize("outputs", NO_FFMPEG)
 def test_preview_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
-    """ Ensure performance optimizations enabled
-    if all outputs are FFplay or others. """
+    """Ensure performance optimizations enabled
+    if all outputs are FFplay or others."""
     get_frame = mocker.spy(Renderer, "get_frame")
     previews, records = previews_records(mocker)
 
@@ -391,8 +391,8 @@ YES_FFMPEG = [l + [FFmpegOutputConfig(None)] for l in NO_FFMPEG]
 @pytest.mark.usefixtures("Popen")
 @pytest.mark.parametrize("outputs", YES_FFMPEG)
 def test_record_performance(Popen, mocker: "pytest_mock.MockFixture", outputs):
-    """ Ensure performance optimizations disabled
-    if any FFmpegOutputConfig is found. """
+    """Ensure performance optimizations disabled
+    if any FFmpegOutputConfig is found."""
     get_frame = mocker.spy(Renderer, "get_frame")
     previews, records = previews_records(mocker)
 

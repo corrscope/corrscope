@@ -16,19 +16,19 @@ from {module} import {func}
 
 # public:
 def dcover():
-    """ Run coverage and diff-cover."""
+    """Run coverage and diff-cover."""
     cover()
     diff()
 
 
 def rcover():
-    """ Run coverage and report. """
+    """Run coverage and report."""
     cover()
     report()
 
 
 def hcover():
-    """ Run coverage and open HTML. """
+    """Run coverage and open HTML."""
     cover()
     html()
 
