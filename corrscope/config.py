@@ -123,15 +123,42 @@ class NoAliasRepresenter(RoundTripRepresenter):
         return super().ignore_aliases(data)
 
 
-yaml = MyYAML()
-yaml.width = float("inf")
+class yaml:
+    """
+    Using a MyYAML object to load corrupted YAML files used to corrupt the object,
+    causing it to crash when trying to load future files.
+    I don't remember what kinds of YAML files reproduce the issue,
+    nor whether the bug still works.
+    However, making yaml.load()/yaml.dump() construct a new MyYAML object each time
+    means that even if the MyYAML object gets corrupted,
+    it's discarded and doesn't affect future yaml.load()/yaml.dump() operations.
+    """
 
-# Default typ='roundtrip' creates 'ruamel.yaml.comments.CommentedMap' instead of dict.
-# Is isinstance(CommentedMap, dict)? IDK
-assert yaml.Representer == RoundTripRepresenter
-yaml.Representer = NoAliasRepresenter
+    @staticmethod
+    def _get_yaml():
+        yaml = MyYAML()
+        yaml.width = float("inf")
 
-_yaml_loadable = yaml_object(yaml)
+        # Default typ='roundtrip' creates 'ruamel.yaml.comments.CommentedMap' instead of dict.
+        # Is isinstance(CommentedMap, dict)? IDK
+        assert yaml.Representer == RoundTripRepresenter
+        yaml.Representer = NoAliasRepresenter
+
+        return yaml
+
+    @staticmethod
+    def load(*args, **kwargs):
+        return yaml._get_yaml().load(*args, **kwargs)
+
+    @staticmethod
+    def dump(*args, **kwargs):
+        return yaml._get_yaml().dump(*args, **kwargs)
+
+
+# This code is *very* hacky:
+# calling _yaml_loadable(FooConfig) mutates the MyYAML.Representer and
+# MyYAML.Constructor classes, to register FooConfig as serializable as YAML.
+_yaml_loadable = yaml_object(MyYAML())
 
 
 """
