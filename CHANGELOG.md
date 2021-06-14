@@ -1,3 +1,9 @@
+## 0.7.1
+
+### Changelog
+
+- Update NumPy so `poetry install` on Python 3.8+ won't build NumPy from source (#371)
+
 ## 0.7.0
 
 Long delayed as well. I haven't been around corrscope in a while. Background images and spectral coloring are not in this release, but I wanted to push this out because it enables chroma subsampling (reduces support queries) and fixes the FFmpeg URL.
