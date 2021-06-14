@@ -14,7 +14,7 @@ __all__ = ["appdata_dir", "PATH_dir", "get_ffmpeg_url", "MissingFFmpegError"]
 
 
 def prepend(dic: MutableMapping[str, str], _key: List[str], prefix: str) -> None:
-    """ Dubiously readable syntactic sugar for prepending to a string in a dict. """
+    """Dubiously readable syntactic sugar for prepending to a string in a dict."""
     key = _key[0]
     dic[key] = prefix + dic[key]
 

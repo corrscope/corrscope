@@ -76,7 +76,7 @@ class ShortcutButton(qw.QPushButton):
     scoped_shortcut: QShortcut
 
     def add_shortcut(self, scope: qw.QWidget, shortcut: str) -> None:
-        """ Adds shortcut and tooltip. """
+        """Adds shortcut and tooltip."""
         self.scoped_shortcut = new_shortcut(shortcut, scope, self.click)
 
         parsed_keys: QKeySequence = self.scoped_shortcut.key()

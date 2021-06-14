@@ -108,7 +108,7 @@ class LogFreqSpectrum(DummySpectrum):
         self.n_fencepost = len(note_fenceposts)
 
     def calc_spectrum(self, data: np.ndarray) -> np.ndarray:
-        """ Unfortunately converting to FLOAT (single) adds too much overhead.
+        """Unfortunately converting to FLOAT (single) adds too much overhead.
 
         Input: Time-domain signal to be analyzed.
         Output: Frequency-domain spectrum with exponentially-spaced notes.
@@ -144,7 +144,7 @@ class LogFreqSpectrum(DummySpectrum):
 
 
 def split(data: np.ndarray, fenceposts: Sequence[FFTIndex]) -> List[np.ndarray]:
-    """ Based off np.split(), but faster.
+    """Based off np.split(), but faster.
     Unlike np.split, does not include data before fenceposts[0] or after fenceposts[-1].
     """
     sub_arys = []

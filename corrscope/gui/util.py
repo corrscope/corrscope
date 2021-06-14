@@ -26,7 +26,7 @@ T = TypeVar("T")
 
 
 class Locked(Generic[T]):
-    """ Based off https://stackoverflow.com/a/37606669 """
+    """Based off https://stackoverflow.com/a/37606669"""
 
     def __init__(self, obj: T):
         super().__init__()

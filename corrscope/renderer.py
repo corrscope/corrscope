@@ -195,11 +195,11 @@ class RendererConfig(
 
     # Both before_* functions should be idempotent, AKA calling twice does no harm.
     def before_preview(self) -> None:
-        """ Called *once* before preview. Does nothing. """
+        """Called *once* before preview. Does nothing."""
         pass
 
     def before_record(self) -> None:
-        """ Called *once* before recording video. Eliminates res_divisor. """
+        """Called *once* before recording video. Eliminates res_divisor."""
         self.res_divisor = 1
 
 
@@ -730,7 +730,7 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
     bg_cache: Any  # "matplotlib.backends._backend_agg.BufferRegion"
 
     def _save_background(self) -> None:
-        """ Draw static background. """
+        """Draw static background."""
         # https://stackoverflow.com/a/8956211
         # https://matplotlib.org/api/animation_api.html#funcanimation
         fig = self._fig
@@ -739,7 +739,7 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
         self.bg_cache = fig.canvas.copy_from_bbox(fig.bbox)
 
     def _redraw_over_background(self) -> None:
-        """ Redraw animated elements of the image. """
+        """Redraw animated elements of the image."""
 
         # Both FigureCanvasAgg and FigureCanvasCairo, but not FigureCanvasBase,
         # support restore_region().

@@ -34,7 +34,7 @@ def call_main(argv):
 
 
 def yaml_sink(_mocker, command: str):
-    """ Mocks yaml.dump() and returns call args. Also tests dumping and loading. """
+    """Mocks yaml.dump() and returns call args. Also tests dumping and loading."""
     with mock.patch.object(yaml, "dump") as dump:
 
         argv = shlex.split(command) + ["-w"]
@@ -87,7 +87,7 @@ def test_no_files(any_sink, mocker):
 
 @pytest.mark.parametrize("wav_dir", ". tests".split())
 def test_file_dirs(any_sink, mocker, wav_dir):
-    """ Ensure loading files from `dir` places `dir/*.wav` in config. """
+    """Ensure loading files from `dir` places `dir/*.wav` in config."""
     wavs = Path(wav_dir).glob("*.wav")
     wavs = sorted(str(x) for x in wavs)
 
@@ -102,8 +102,8 @@ def q(path: Path) -> str:
 
 
 def test_write_dir(mocker):
-    """ Loading `--audio another/dir` should write YAML to current dir.
-    Writing YAML to audio dir: causes relative paths (relative to pwd) to break. """
+    """Loading `--audio another/dir` should write YAML to current dir.
+    Writing YAML to audio dir: causes relative paths (relative to pwd) to break."""
 
     audio_path = Path("tests/sine440.wav")
     arg_str = f"tests -a {q(audio_path)}"
@@ -125,8 +125,8 @@ def test_write_dir(mocker):
 
 @pytest.mark.usefixtures("Popen")
 def test_load_yaml_another_dir(mocker, Popen):
-    """ YAML file located in `another/dir` should resolve `master_audio`, `channels[].
-    wav_path`, and video `path` from `another/dir`. """
+    """YAML file located in `another/dir` should resolve `master_audio`, `channels[].
+    wav_path`, and video `path` from `another/dir`."""
 
     subdir = "tests"
     wav = "sine440.wav"

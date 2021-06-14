@@ -29,7 +29,7 @@ def separator(s: str) -> str:
 
 
 def test_rgetattr(separator):
-    """ Test to ensure recursive model access works.
+    """Test to ensure recursive model access works.
     GUI elements are named f"prefix{_}" "recursive{_}attr" and bind to recursive.attr.
 
     https://stackoverflow{_}com/a/31174427/

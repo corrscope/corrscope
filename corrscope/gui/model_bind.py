@@ -47,7 +47,7 @@ def _call_all(updaters: List[WidgetUpdater]):
 
 # Data binding presentation-model
 class PresentationModel(qc.QObject):
-    """ Key-value MVP presentation-model.
+    """Key-value MVP presentation-model.
 
     Qt's built-in model-view framework expects all models to
     take the form of a database-style numbered [row, column] structure,
@@ -169,7 +169,7 @@ class BoundWidget(QWidget):
     # TODO unbind_widget(), model.update_widget[path].remove(self.cfg2gui)?
 
     def calc_error_palette(self) -> QPalette:
-        """ Palette with red background, used for widgets with invalid input. """
+        """Palette with red background, used for widgets with invalid input."""
         error_palette = QPalette(self.palette())
 
         bg = error_palette.color(QPalette.Base)
@@ -184,7 +184,7 @@ class BoundWidget(QWidget):
     # Feel free to improve the naming.
 
     def cfg2gui(self) -> None:
-        """ Update the widget without triggering signals.
+        """Update the widget without triggering signals.
 
         When the presentation pmodel updates dependent widget 1,
         the pmodel (not widget 1) is responsible for updating other
@@ -208,7 +208,7 @@ class BoundWidget(QWidget):
 def blend_colors(
     color1: QColor, color2: QColor, ratio: float, gamma: float = 2
 ) -> QColor:
-    """ Blends two colors in linear color space.
+    """Blends two colors in linear color space.
     Produces better results on both light and dark themes,
     than integer blending (which is too dark).
     """
