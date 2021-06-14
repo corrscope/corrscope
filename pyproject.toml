@@ -19,34 +19,30 @@ repository = "https://github.com/corrscope/corrscope/"
 documentation = "https://corrscope.github.io/corrscope/"
 
 [tool.poetry.dependencies]
-python = "^3.6"
-"ruamel.yaml" = "^0.16"
+python = "^3.6.2"
+"ruamel.yaml" = "^0.17"
 numpy = "^1.15"
-click = "^7.0"
+click = "^8.0.1"
 matplotlib = "^3.1"
-attrs = "^18.2.0"
-PyQt5 = "^5.11"
-appdirs = "^1.4"
+attrs = "^21.2.0"
+PyQt5 = "^5.15.4"
+appdirs = "^1.4.4"
 
 [tool.poetry.dev-dependencies]
-pytest = "^4.0"
-pytest_mock = "^1.10"
-hypothesis = "^3.84"
-delayed-assert = "^0.2.3"
+pytest = "^6.2.4"
+pytest-mock = "^3.6.1"
+hypothesis = "^6.14.0"
+delayed-assert = "^0.3.5"
 
-pyinstaller = "^3.6"
+pyinstaller = "^4.3"
 
-# poetry fails to pick up pyinstaller's dependencies.
-# https://github.com/python-poetry/poetry/issues/1431#issuecomment-571661982
-# https://github.com/pyinstaller/pyinstaller/issues/4609 fixed in pyinstaller, but not released yet.
-pywin32-ctypes = {version = ">=0.2.0", platform = "win32"}
-pefile = {version = ">=2017.8.1", platform = "win32"}
+pefile = {version = "^2021.5.24", platform = "win32"}
 
-coverage = "^4.5"
-pytest-cov = "^2.6"
-codecov = "^2.1"
-pytest_cases = "^1.2"
-black = {version = "^18.3-alpha.0", allow-prereleases = true}
+coverage = "^5.5"
+pytest-cov = "^2.12.1"
+codecov = "^2.1.11"
+pytest-cases = "^3.6.1"
+black = "^21.6b0"
 
 [tool.poetry.scripts]
 corr = 'corrscope.cli:main'

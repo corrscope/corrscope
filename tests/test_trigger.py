@@ -7,7 +7,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 # Pycharm assumes anything called "fixture" is pytest.fixture.
-from pytest_cases import pytest_fixture_plus as fixture
+from pytest_cases import fixture
 
 from corrscope import triggers
 from corrscope.triggers import (
