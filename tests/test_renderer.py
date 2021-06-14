@@ -1,4 +1,6 @@
+from contextlib import ExitStack
 from typing import Optional, TYPE_CHECKING, List
+from unittest.mock import patch
 
 import attr
 import hypothesis.strategies as hs
@@ -396,15 +398,14 @@ def test_res_divisor_rounding_fixed(target_int: int, res_divisor: float):
 
 
 @given(target_int=hs.integers(1, 10000), res_divisor=hs.floats(1, 100))
-def test_res_divisor_rounding_hypothesis(target_int: int, res_divisor: float, mocker):
-    verify_res_divisor_rounding(target_int, res_divisor, speed_hack=True, mocker=mocker)
+def test_res_divisor_rounding_hypothesis(target_int: int, res_divisor: float):
+    verify_res_divisor_rounding(target_int, res_divisor, speed_hack=True)
 
 
 def verify_res_divisor_rounding(
     target_int: int,
     res_divisor: float,
     speed_hack: bool,
-    mocker: "pytest_mock.MockFixture" = None,
 ):
     """Ensure that pathological-case float rounding errors
     don't cause inconsistent dimensions and assertion errors."""
@@ -414,20 +415,23 @@ def verify_res_divisor_rounding(
     cfg = RendererConfig(undivided_dim, undivided_dim, res_divisor=res_divisor)
     cfg.before_preview()
 
-    if speed_hack:
-        mocker.patch.object(AbstractMatplotlibRenderer, "_save_background")
-        datas = []
-    else:
-        datas = [RENDER_Y_ZEROS]
+    with ExitStack() as stack:
+        if speed_hack:
+            stack.enter_context(
+                patch.object(AbstractMatplotlibRenderer, "_save_background")
+            )
+            datas = []
+        else:
+            datas = [RENDER_Y_ZEROS]
 
-    try:
-        renderer = Renderer(cfg, LayoutConfig(), datas, None, None)
-        if not speed_hack:
-            renderer.update_main_lines(datas)
-            renderer.get_frame()
-    except Exception:
-        perr(cfg.divided_width)
-        raise
+        try:
+            renderer = Renderer(cfg, LayoutConfig(), datas, None, None)
+            if not speed_hack:
+                renderer.update_main_lines(datas)
+                renderer.get_frame()
+        except Exception:
+            perr(cfg.divided_width)
+            raise
 
 
 # X-axis stride tests

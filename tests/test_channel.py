@@ -1,10 +1,11 @@
+from contextlib import ExitStack
 from typing import Optional
 
 import hypothesis.strategies as hs
 import numpy as np
 import pytest
 from hypothesis import given
-from pytest_mock import MockFixture
+from unittest.mock import patch
 
 import corrscope.channel
 import corrscope.corrscope
@@ -49,7 +50,6 @@ def test_config_channel_integration(
     rsub: int,
     default_label: DefaultLabel,
     override_label: bool,
-    mocker: MockFixture,
 ):
     """(Tautologically) verify:
     - channel.  r_samp (given cfg)
@@ -59,77 +59,80 @@ def test_config_channel_integration(
     - rendered label (channel.label, given cfg, corr_cfg.default_label)
     """
 
-    # region setup test variables
-    corrscope.corrscope.PRINT_TIMESTAMP = False  # Cleanup Hypothesis testing logs
+    with ExitStack() as stack:
+        # region setup test variables
+        corrscope.corrscope.PRINT_TIMESTAMP = False  # Cleanup Hypothesis testing logs
 
-    Wave = mocker.patch.object(corrscope.channel, "Wave")
-    wave = Wave.return_value
+        Wave = stack.enter_context(patch.object(corrscope.channel, "Wave"))
+        wave = Wave.return_value
 
-    def get_around(sample: int, return_nsamp: int, stride: int):
-        return np.zeros(return_nsamp)
+        def get_around(sample: int, return_nsamp: int, stride: int):
+            return np.zeros(return_nsamp)
 
-    wave.get_around.side_effect = get_around
-    wave.with_flatten.return_value = wave
-    wave.nsamp = 10000
-    wave.smp_s = 48000
+        wave.get_around.side_effect = get_around
+        wave.with_flatten.return_value = wave
+        wave.nsamp = 10000
+        wave.smp_s = 48000
 
-    ccfg = ChannelConfig(
-        "tests/sine440.wav",
-        trigger_width=c_trigger_width,
-        render_width=c_render_width,
-        amplification=c_amplification,
-        label="label" if override_label else "",
-    )
-
-    def get_cfg():
-        return template_config(
-            trigger_ms=trigger_ms,
-            render_ms=render_ms,
-            trigger_subsampling=tsub,
-            render_subsampling=rsub,
-            amplification=amplification,
-            channels=[ccfg],
-            default_label=default_label,
-            trigger=NullTriggerConfig(),
-            benchmark_mode=BenchmarkMode.OUTPUT,
+        ccfg = ChannelConfig(
+            "tests/sine440.wav",
+            trigger_width=c_trigger_width,
+            render_width=c_render_width,
+            amplification=c_amplification,
+            label="label" if override_label else "",
         )
 
-    # endregion
+        def get_cfg():
+            return template_config(
+                trigger_ms=trigger_ms,
+                render_ms=render_ms,
+                trigger_subsampling=tsub,
+                render_subsampling=rsub,
+                amplification=amplification,
+                channels=[ccfg],
+                default_label=default_label,
+                trigger=NullTriggerConfig(),
+                benchmark_mode=BenchmarkMode.OUTPUT,
+            )
 
-    cfg = get_cfg()
-    channel = Channel(ccfg, cfg)
+        # endregion
 
-    # Ensure cfg.width_ms etc. are correct
-    assert cfg.trigger_ms == trigger_ms
-    assert cfg.render_ms == render_ms
+        cfg = get_cfg()
+        channel = Channel(ccfg, cfg)
 
-    # Ensure channel.window_samp, trigger_subsampling, render_subsampling are correct.
-    def ideal_samp(width_ms, sub):
-        width_s = width_ms / 1000
-        return pytest.approx(
-            round(width_s * channel.trigger_wave.smp_s / sub), rel=1e-6
-        )
+        # Ensure cfg.width_ms etc. are correct
+        assert cfg.trigger_ms == trigger_ms
+        assert cfg.render_ms == render_ms
 
-    ideal_tsamp = ideal_samp(cfg.trigger_ms, tsub)
-    ideal_rsamp = ideal_samp(cfg.render_ms, rsub)
-    assert channel._render_samp == ideal_rsamp
+        # Ensure channel.window_samp, trigger_subsampling, render_subsampling are correct.
+        def ideal_samp(width_ms, sub):
+            width_s = width_ms / 1000
+            return pytest.approx(
+                round(width_s * channel.trigger_wave.smp_s / sub), rel=1e-6
+            )
 
-    assert channel._trigger_stride == tsub * c_trigger_width
-    assert channel.render_stride == rsub * c_render_width
+        ideal_tsamp = ideal_samp(cfg.trigger_ms, tsub)
+        ideal_rsamp = ideal_samp(cfg.render_ms, rsub)
+        assert channel._render_samp == ideal_rsamp
 
-    # Ensure amplification override works
-    args, kwargs = Wave.call_args
-    assert kwargs["amplification"] == coalesce(c_amplification, amplification)
+        assert channel._trigger_stride == tsub * c_trigger_width
+        assert channel.render_stride == rsub * c_render_width
 
-    ## Ensure trigger uses channel.window_samp and _trigger_stride.
-    trigger = channel.trigger
-    assert trigger._tsamp == ideal_tsamp
-    assert trigger._stride == channel._trigger_stride
+        # Ensure amplification override works
+        args, kwargs = Wave.call_args
+        assert kwargs["amplification"] == coalesce(c_amplification, amplification)
 
-    ## Ensure corrscope calls render using channel._render_samp and _render_stride.
-    corr = CorrScope(cfg, Arguments(cfg_dir=".", outputs=[]))
-    renderer = mocker.patch.object(CorrScope, "_load_renderer").return_value
-    corr.play()
+        ## Ensure trigger uses channel.window_samp and _trigger_stride.
+        trigger = channel.trigger
+        assert trigger._tsamp == ideal_tsamp
+        assert trigger._stride == channel._trigger_stride
+
+        ## Ensure corrscope calls render using channel._render_samp and _render_stride.
+        corr = CorrScope(cfg, Arguments(cfg_dir=".", outputs=[]))
+        renderer = stack.enter_context(
+            patch.object(CorrScope, "_load_renderer")
+        ).return_value
+        corr.play()
 
     # Only Channel.get_render_around() (not NullTrigger) calls wave.get_around().
     (_sample, _return_nsamp, _subsampling), kwargs = wave.get_around.call_args
