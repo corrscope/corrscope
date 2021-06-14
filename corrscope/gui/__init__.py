@@ -175,7 +175,14 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         super().__init__()
 
         # Load settings.
-        self.pref = gp.load_prefs()
+        prefs_error = None
+        try:
+            self.pref = gp.load_prefs()
+            if not isinstance(self.pref, gp.GlobalPrefs):
+                raise TypeError(f"prefs.yaml contains wrong type {type(self.pref)}")
+        except Exception as e:
+            prefs_error = e
+            self.pref = gp.GlobalPrefs()
 
         # Load UI.
         self.setupUi(self)  # sets windowTitle
@@ -236,6 +243,12 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             )
 
         self.show()
+
+        if prefs_error is not None:
+            TracebackDialog(self).showMessage(
+                "Warning: failed to load global preferences, resetting to default.\n"
+                + format_stack_trace(prefs_error)
+            )
 
     _cfg_path: Optional[Path]
 
