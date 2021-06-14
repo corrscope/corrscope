@@ -19,6 +19,7 @@ from typing import (
     Any,
     TextIO,
     Union,
+    IO,
 )
 
 import attr
@@ -64,10 +65,6 @@ class MyYAML(YAML):
             with stream.open("w", encoding="utf-8") as f:
                 self.dump_without_corrupting(data, f, **kwargs)
 
-        elif isinstance(stream, TextIO):
-            # Nobody actually calls dump(..., open()). This branch is never taken.
-            self.dump_without_corrupting(data, stream, **kwargs)
-
         elif stream is None:
             # Possibly only called in unit tests, not in production.
             stream = StringIO()
@@ -75,9 +72,8 @@ class MyYAML(YAML):
             return stream.getvalue()
 
         else:
-            raise TypeError(
-                f"stream must be {{Path, TextIO=open(), None}}, but is {type(stream)}"
-            )
+            # with atomic_write(...) as f: dump(..., f)
+            self.dump_without_corrupting(data, stream, **kwargs)
 
     def dump_without_corrupting(self, *args, **kwargs):
         YAML.dump(self, *args, **kwargs)
