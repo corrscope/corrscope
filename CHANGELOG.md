@@ -6,6 +6,8 @@
 - Fix longstanding crash when prefs.yaml is corrupted, reset settings instead (#377)
 - Atomically save prefs.yaml to prevent file corruption (#377)
 - Fix issue where foobar2000 WAV files fail with message "ValueError: Incomplete wav chunk." (#379)
+- Build Win32 binaries as well as Win64 (#381)
+- Build official Win32/Win64 binaries on Python 3.8 (the last release to support Windows 7) (#381)
 
 ## 0.7.0
 

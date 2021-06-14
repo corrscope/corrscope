@@ -8,15 +8,15 @@ branches:
   only:
     - master
 
-image: Visual Studio 2017
+image: Visual Studio 2019
 shallow_clone: true
 environment:
   matrix:
     # For Python versions available on Appveyor, see
     # https://www.appveyor.com/docs/windows-images-software/ or
     # https://www.appveyor.com/docs/linux-images-software/
-    - pydir: 'C:\Python36'
-    - pydir: 'C:\Python37-x64'
+    - pydir: 'C:\Python38'
+    - pydir: 'C:\Python38-x64'
   global:
     py: '%pydir%\python.exe'
     APPVEYOR_SAVE_CACHE_ON_ERROR: true
@@ -48,9 +48,8 @@ test_script:
   - 'poetry run codecov'
 
 after_test:
-  - 'if not "%pydir%"=="C:\Python37-x64" appveyor exit'
-  # Running pyinstaller is much faster on x64 I think,
-  # but the resulting files are 64-bit only.
+  # Run 32-bit PyInstaller to make CI complete faster.
+  # pyinstaller used to get stuck for minutes on 32-bit builds, but it no longer happens.
   - 'poetry build'
   - 'poetry run pyinstaller corrscope.spec -y'
 
