@@ -1,5 +1,5 @@
 import pytest
-from pytest_cases import pytest_fixture_plus
+from pytest_cases import fixture
 
 from corrscope.gui.model_bind import rgetattr, rsetattr, rhasattr, flatten_attr
 
@@ -22,7 +22,7 @@ class Residence(object):
         self.sqft = sqft
 
 
-@pytest_fixture_plus
+@fixture
 @pytest.mark.parametrize("s", ["__", "."])
 def separator(s: str) -> str:
     return s
