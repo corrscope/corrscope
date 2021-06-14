@@ -3,6 +3,7 @@
 ### Changelog
 
 - Update NumPy so `poetry install` on Python 3.8+ won't build NumPy from source (#371)
+- Fix possible bug where loading a corrupted file would cause future loading operations to fail (#???)
 - Fix longstanding crash when prefs.yaml is corrupted, reset settings instead (#377)
 - Atomically save prefs.yaml to prevent file corruption (#377)
 
