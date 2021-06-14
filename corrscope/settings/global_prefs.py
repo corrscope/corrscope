@@ -1,5 +1,7 @@
 from typing import *
 
+from atomicwrites import atomic_write
+
 from corrscope.config import DumpableAttrs, yaml
 from corrscope.settings import paths
 
@@ -50,4 +52,5 @@ def load_prefs() -> GlobalPrefs:
 
 
 def dump_prefs(pref: GlobalPrefs) -> None:
-    yaml.dump(pref, _PREF_PATH)
+    with atomic_write(_PREF_PATH, overwrite=True) as f:
+        yaml.dump(pref, f)
