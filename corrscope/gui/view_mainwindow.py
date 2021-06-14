@@ -59,7 +59,7 @@ class MainWindow(QWidget):
 
         width = 1280
         height = 0
-        MainWindow.resize(width * scale, height * scale)
+        MainWindow.resize(int(width * scale), int(height * scale))
 
         s = LayoutStack(MainWindow)
 
