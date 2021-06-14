@@ -2,6 +2,7 @@
 
 ### Changelog
 
+- Build official Win64 binaries on Python 3.8 (the last release to support Windows 7) (#376)
 - Update NumPy so `poetry install` on Python 3.8+ won't build NumPy from source (#371)
 - Fix longstanding crash when prefs.yaml is corrupted, reset settings instead (#377)
 - Atomically save prefs.yaml to prevent file corruption (#377)
