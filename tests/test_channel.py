@@ -51,7 +51,7 @@ def test_config_channel_integration(
     override_label: bool,
     mocker: MockFixture,
 ):
-    """ (Tautologically) verify:
+    """(Tautologically) verify:
     - channel.  r_samp (given cfg)
     - channel.t/r_stride (given cfg.*_subsampling/*_width)
     - trigger._tsamp, _stride

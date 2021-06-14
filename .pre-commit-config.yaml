@@ -1,7 +1,7 @@
 repos:
--   repo: https://github.com/ambv/black
-    rev: stable
+  - repo: https://github.com/psf/black
+    rev: 21.6b0 # Replace by any tag/version: https://github.com/psf/black/tags
     hooks:
-    - id: black
-      language_version: python3.6
-      exclude: 'utils/scipy/'
+      - id: black
+        language_version: python3 # Should be a command that runs python3.6+
+        exclude: 'utils/scipy/'

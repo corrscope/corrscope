@@ -41,7 +41,7 @@ class Config(
     trigger_stereo render_stereo
     """,
 ):
-    """ Default values indicate optional attributes. """
+    """Default values indicate optional attributes."""
 
     master_audio: Optional[str]
     begin_time: float = with_units("s", default=0)
@@ -63,11 +63,11 @@ class Config(
 
     # Both before_* functions should be idempotent, AKA calling twice does no harm.
     def before_preview(self) -> None:
-        """ Called *once* before preview. Does nothing. """
+        """Called *once* before preview. Does nothing."""
         self.render.before_preview()
 
     def before_record(self) -> None:
-        """ Called *once* before recording video. Force high-quality rendering. """
+        """Called *once* before recording video. Force high-quality rendering."""
         self.render_subfps = 1
         self.trigger_subsampling = 1
         self.render_subsampling = 1
@@ -102,7 +102,7 @@ _FPS = 60  # f_s
 
 
 def template_config(**kwargs) -> Config:
-    """ Default template values do NOT indicate optional attributes. """
+    """Default template values do NOT indicate optional attributes."""
     cfg = Config(
         master_audio="",
         fps=_FPS,
@@ -149,7 +149,7 @@ class Arguments:
 
 class CorrScope:
     def __init__(self, cfg: Config, arg: Arguments):
-        """ cfg is mutated!
+        """cfg is mutated!
         Recording config is triggered if any FFmpegOutputConfig is found.
         Preview mode is triggered if all outputs are FFplay or others.
         """

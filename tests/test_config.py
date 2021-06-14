@@ -126,10 +126,10 @@ b: b
 
 
 def test_dump_default_factory():
-    """ Ensure default factories are not dumped, unless attribute present
+    """Ensure default factories are not dumped, unless attribute present
     in `always_dump`.
 
-    Based on `attrs.Factory`. """
+    Based on `attrs.Factory`."""
 
     class Config(DumpableAttrs):
         # Equivalent to attr.ib(factory=str)
@@ -233,7 +233,7 @@ c: 3
 
 
 def test_dump_load_aliases():
-    """ Ensure dumping and loading `xx=Alias('x')` works.
+    """Ensure dumping and loading `xx=Alias('x')` works.
     Ensure loading `{x=1, xx=1}` raises an error.
     Does not check constructor `Config(xx=1)`."""
 
@@ -272,7 +272,7 @@ xx: 1
 
 
 def test_dump_load_ignored():
-    """ Ensure loading `xx=Ignored` works.
+    """Ensure loading `xx=Ignored` works.
     Does not check constructor `Config(xx=1)`.
     """
 
@@ -300,7 +300,7 @@ xx: 1
 
 
 def test_load_argument_validation():
-    """ Ensure that loading config via YAML catches missing parameters. """
+    """Ensure that loading config via YAML catches missing parameters."""
 
     class Config(DumpableAttrs):
         a: int
@@ -332,8 +332,8 @@ bar: 2
 
 
 def test_load_post_init():
-    """ yaml.load() does not natively call __init__.
-    So DumpableAttrs modifies __setstate__ to call __attrs_post_init__. """
+    """yaml.load() does not natively call __init__.
+    So DumpableAttrs modifies __setstate__ to call __attrs_post_init__."""
 
     class Foo(DumpableAttrs):
         foo: int

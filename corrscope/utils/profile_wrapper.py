@@ -28,7 +28,7 @@ def get_profile_dump_name(prefix: str) -> str:
 
 
 def add_numeric_suffixes(s: str) -> Iterator[str]:
-    """ f('foo')
+    """f('foo')
     yields 'foo', 'foo2', 'foo3'...
     """
     yield s

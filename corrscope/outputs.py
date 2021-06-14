@@ -49,7 +49,7 @@ class Output(ABC):
 
     @abstractmethod
     def write_frame(self, frame: ByteBuffer) -> Optional[_Stop]:
-        """ Output a Numpy ndarray. """
+        """Output a Numpy ndarray."""
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
@@ -62,7 +62,7 @@ class Output(ABC):
 
 
 def register_output(
-    config_t: Type[IOutputConfig]
+    config_t: Type[IOutputConfig],
 ) -> Callable[[Type[Output]], Type[Output]]:
     def inner(output_t: Type[Output]):
         config_t.cls = output_t
@@ -130,7 +130,7 @@ def ffmpeg_input_audio(audio_path: str) -> List[str]:
 
 class PipeOutput(Output):
     def open(self, *pipeline: subprocess.Popen) -> None:
-        """ Called by __init__ with a Popen pipeline to ffmpeg/ffplay. """
+        """Called by __init__ with a Popen pipeline to ffmpeg/ffplay."""
         if len(pipeline) == 0:
             raise TypeError("must provide at least one Popen argument to popens")
 
@@ -220,7 +220,9 @@ class FFmpegOutputConfig(IOutputConfig):
     path: Optional[str]
     args: str = ""
 
-    video_template: str = "-c:v libx264 -crf 18 -preset superfast -pix_fmt yuv420p -movflags faststart"
+    video_template: str = (
+        "-c:v libx264 -crf 18 -preset superfast -pix_fmt yuv420p -movflags faststart"
+    )
     audio_template: str = "-c:a aac -b:a 384k"
 
 

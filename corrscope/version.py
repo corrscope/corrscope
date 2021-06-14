@@ -25,7 +25,7 @@ metadata_key = "build_metadata"
 
 
 def get_version() -> str:
-    """ Called at runtime (maybe pyinstaller time too).
+    """Called at runtime (maybe pyinstaller time too).
     Depends on pyinstaller_write_version and filesystem.
     """
     is_installer = hasattr(sys, "frozen")
@@ -41,7 +41,7 @@ def get_version() -> str:
 
 
 def pyinstaller_write_version() -> str:
-    """ Returns version.
+    """Returns version.
 
     Called only at pyinstaller time.
     Writes to filesystem, does NOT call get_version().

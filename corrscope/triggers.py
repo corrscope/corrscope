@@ -65,7 +65,7 @@ class PostTriggerConfig(_TriggerConfig, KeywordAttrs):
 
 
 def register_trigger(config_t: Type[_TriggerConfig]):
-    """ @register_trigger(FooTriggerConfig)
+    """@register_trigger(FooTriggerConfig)
     def FooTrigger(): ...
     """
 
@@ -196,8 +196,8 @@ class MainTrigger(_Trigger, ABC):
 
 
 class PostTrigger(_Trigger, ABC):
-    """ A post-processing trigger should have stride=1,
-     and no more post triggers. This is subject to change. """
+    """A post-processing trigger should have stride=1,
+    and no more post triggers. This is subject to change."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -366,7 +366,7 @@ class CorrelationTrigger(MainTrigger):
             self._spectrum_calc = DummySpectrum()
 
     def _calc_lag_prevention(self) -> np.ndarray:
-        """ Returns input-data window,
+        """Returns input-data window,
         which zeroes out all data older than 1-ish frame old.
         See https://github.com/corrscope/corrscope/wiki/Correlation-Trigger
         """
@@ -403,7 +403,7 @@ class CorrelationTrigger(MainTrigger):
         return data_taper
 
     def _calc_step(self) -> np.ndarray:
-        """ Step function used for approximate edge triggering. """
+        """Step function used for approximate edge triggering."""
 
         # Increasing buffer_falloff (width of buffer)
         # causes buffer to affect triggering, more than the step function.
@@ -422,7 +422,7 @@ class CorrelationTrigger(MainTrigger):
         return step
 
     def _calc_slope_finder(self, period: float) -> np.ndarray:
-        """ Called whenever period changes substantially.
+        """Called whenever period changes substantially.
         Returns a kernel to be correlated with input data,
         to find positive slopes."""
 
