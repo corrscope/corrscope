@@ -15,6 +15,7 @@ import struct
 import warnings
 from enum import IntEnum
 
+from typing import Tuple
 
 __all__ = [
     'WavFileWarning',
@@ -538,7 +539,7 @@ def _handle_pad_byte(fid, size):
         fid.seek(1, 1)
 
 
-def read(filename, mmap=False):
+def read(filename: str, mmap: bool = False) -> Tuple[int, numpy.ndarray]:
     """
     Open a WAV file.
 
