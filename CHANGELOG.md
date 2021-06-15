@@ -5,6 +5,7 @@
 - Update NumPy so `poetry install` on Python 3.8+ won't build NumPy from source (#371)
 - Fix longstanding crash when prefs.yaml is corrupted, reset settings instead (#377)
 - Atomically save prefs.yaml to prevent file corruption (#377)
+- Fix issue where foobar2000 WAV files fail with message "ValueError: Incomplete wav chunk." (#379)
 
 ## 0.7.0
 

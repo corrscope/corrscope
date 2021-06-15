@@ -42,6 +42,14 @@ def test_wave(wave_path):
         assert not [str(w) for w in warns]
 
 
+def test_incomplete_wav_chunk():
+    """Tests that WAV files exported from foobar2000 can be loaded properly,
+    without a `ValueError: Incomplete wav chunk.` exception being raised."""
+
+    wave = Wave(prefix + "incomplete-wav-chunk.wav")
+    data = wave[:]
+
+
 # Stereo tests
 
 
