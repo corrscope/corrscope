@@ -48,7 +48,8 @@ test_script:
   - 'poetry run codecov'
 
 after_test:
-  - 'if not "%pydir%"=="C:\Python38-x64" appveyor exit'
+  # Skip 32-bit PyInstaller on pull requests, to make CI complete faster.
+  - 'if not "%pydir%"=="C:\Python38-x64" if defined APPVEYOR_PULL_REQUEST_NUMBER appveyor exit'
   # Running pyinstaller is much faster on x64 I think,
   # but the resulting files are 64-bit only.
   - 'poetry build'
