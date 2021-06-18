@@ -15,7 +15,7 @@ environment:
     # For Python versions available on Appveyor, see
     # https://www.appveyor.com/docs/windows-images-software/ or
     # https://www.appveyor.com/docs/linux-images-software/
-    - pydir: 'C:\Python36'
+    - pydir: 'C:\Python38'
     - pydir: 'C:\Python38-x64'
   global:
     py: '%pydir%\python.exe'
