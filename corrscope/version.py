@@ -1,4 +1,6 @@
 import os
+import platform
+import struct
 import sys
 from pathlib import Path
 
@@ -53,6 +55,15 @@ def pyinstaller_write_version() -> str:
     else:
         build_metadata = ""
         version = base_version
+
+    os = platform.system().lower()
+    if os == "windows":
+        os = "win"
+
+    # 32 or 64 bit
+    arch = str(struct.calcsize("P") * 8)
+
+    version = f"{version}-{os}{arch}"
 
     with version_txt.open("w") as txt:
         txt.write(version)
