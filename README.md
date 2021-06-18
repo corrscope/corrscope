@@ -28,14 +28,13 @@ Corrscope is currently in maintenance mode until further notice. The program bas
 - Releases (recommended): https://github.com/corrscope/corrscope/releases
 - Dev Builds: https://ci.appveyor.com/project/nyanpasu64/corrscope/history
 
-Instructions:
+On Windows, download Windows binary releases (.7z files), then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
 
-- Download Windows binary releases (zip files), then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
-- Download cross-platform Python packages (whl), then install Python 3.6+ and run `pip install *.whl`.
+On other operating systems, download cross-platform Python packages (.whl or .tar.gz), then install Python 3.6+ and run `pip install FILENAME.whl`, then run `corr (args)`.
 
 ## Installing from PyPI via Pip (cross-platform, releases)
 
-Install Python 3.6 or above (3.5 will not work).
+Install Python 3.6 or above (3.5 will not work). Note that Python versions other than 3.8 and 3.9 are untested.
 
 ```shell
 # Installs into per-user Python environment.
