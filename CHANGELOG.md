@@ -1,5 +1,9 @@
 ## 0.7.1 (unreleased)
 
+### Major Changes
+
+- Change `-r/--render` command line flag to take an output path (#382)
+
 ### Changelog
 
 - Update NumPy so `poetry install` on Python 3.8+ won't build NumPy from source (#371)

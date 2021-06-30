@@ -34,7 +34,7 @@ YAML_EXTS = [".yaml"]
 # Default extension when writing Config.
 YAML_NAME = YAML_EXTS[0]
 
-# Default output extension
+# Default output extension, only used in GUI and unit tests
 VIDEO_NAME = ".mp4"
 
 
@@ -85,14 +85,14 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 # Override default .yaml settings (only if YAML file not supplied)
 # Incorrect [option] name order: https://github.com/pallets/click/issues/793
 @click.option('--audio', '-a', type=File, help=
-        'Config: Input path for master audio file')
+        'Input path for master audio file')
 # Disables GUI
 @click.option('--write', '-w', is_flag=True, help=
         "Write config YAML file to current directory (don't open GUI).")
 @click.option('--play', '-p', is_flag=True, help=
         "Preview (don't open GUI).")
-@click.option('--render', '-r', is_flag=True, help=
-        "Render and encode MP4 video (don't open GUI).")
+@click.option('--render', '-r', type=OutFile, help=
+        "Render and encode video to file (don't open GUI).")
 # Debugging
 @click.option('--profile', is_flag=True, help=
         'Debug: Write CProfiler snapshot')
@@ -105,7 +105,7 @@ def main(
     # gui
     write: bool,
     play: bool,
-    render: bool,
+    render: Optional[str],
     profile: bool,
 ):
     """Intelligent oscilloscope visualizer for .wav files.
@@ -227,7 +227,7 @@ def main(
             outputs.append(FFplayOutputConfig())
 
         if render:
-            video_path = _get_file_name(cfg_path, cfg, ext=VIDEO_NAME)
+            video_path = render
             outputs.append(cfg.get_ffmpeg_cfg(video_path))
 
         if outputs:
