@@ -97,16 +97,16 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.option('--profile', is_flag=True, help=
         'Debug: Write CProfiler snapshot')
 @click.version_option(corrscope.__version__)
-# fmt: on is ignored, because of https://github.com/ambv/black/issues/560
+# fmt: on
 def main(
-        files: Tuple[str],
-        # cfg
-        audio: Optional[str],
-        # gui
-        write: bool,
-        play: bool,
-        render: bool,
-        profile: bool,
+    files: Tuple[str],
+    # cfg
+    audio: Optional[str],
+    # gui
+    write: bool,
+    play: bool,
+    render: bool,
+    profile: bool,
 ):
     """Intelligent oscilloscope visualizer for .wav files.
 
@@ -149,8 +149,9 @@ def main(
             if len(files) > 1:
                 # Warning is technically optional, since wav_prefix has been removed.
                 raise click.ClickException(
-                    f'Cannot supply multiple arguments when providing folder {path}')
-            matches = sorted(path.glob('*.wav'))
+                    f"Cannot supply multiple arguments when providing folder {path}"
+                )
+            matches = sorted(path.glob("*.wav"))
             wav_list += matches
             break
 
@@ -158,7 +159,8 @@ def main(
             # Load a YAML file to cfg, and skip template_config().
             if len(files) > 1:
                 raise click.ClickException(
-                    f'Cannot supply multiple arguments when providing config {path}')
+                    f"Cannot supply multiple arguments when providing config {path}"
+                )
             cfg_or_path = path
             cfg_dir = str(path.parent)
             break
@@ -170,7 +172,8 @@ def main(
                 matches = [path]
                 if not path.exists():
                     raise click.ClickException(
-                        f'Supplied nonexistent file or wildcard: {path}')
+                        f"Supplied nonexistent file or wildcard: {path}"
+                    )
             wav_list += matches
 
     if not cfg_or_path:
@@ -184,13 +187,15 @@ def main(
             # width_ms...trigger=default,
             # amplification...render=default,
         )
-        cfg_dir = '.'
+        cfg_dir = "."
 
     assert cfg_or_path is not None
     assert cfg_dir is not None
     if show_gui:
+
         def command():
             from corrscope import gui
+
             return gui.gui_main(cast(CfgOrPath, cfg_or_path))
 
         if profile:
@@ -200,7 +205,7 @@ def main(
 
     else:
         if not files:
-            raise click.UsageError('Must specify files or folders to play')
+            raise click.UsageError("Must specify files or folders to play")
 
         if isinstance(cfg_or_path, Config):
             cfg = cfg_or_path
@@ -237,4 +242,3 @@ def main(
                 except MissingFFmpegError as e:
                     # Tell user how to install ffmpeg (__str__).
                     print(e, file=sys.stderr)
-# fmt: on
