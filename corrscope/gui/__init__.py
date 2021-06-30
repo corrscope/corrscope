@@ -527,7 +527,12 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         # Name and extension (no folder).
         video_filename = self.get_save_filename(cli.VIDEO_NAME)
-        filters = ["MP4 files (*.mp4)", "All files (*)"]
+        filters = [
+            "MP4 files (*.mp4)",
+            "Matroska files (*.mkv)",
+            "WebM files (*.webm)",
+            "All files (*)",
+        ]
 
         # Points to either `file_dir` or `render_dir`.
         # Folder is obtained from `dir_ref`.
