@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os.path
 import time
 from contextlib import ExitStack, contextmanager
 from enum import unique
@@ -91,7 +92,7 @@ class Config(
     ffmpeg_cli: FFmpegOutputConfig = attr.ib(factory=lambda: FFmpegOutputConfig(None))
 
     def get_ffmpeg_cfg(self, video_path: str) -> FFmpegOutputConfig:
-        return attr.evolve(self.ffmpeg_cli, path=video_path)
+        return attr.evolve(self.ffmpeg_cli, path=os.path.abspath(video_path))
 
     benchmark_mode: BenchmarkMode = attr.ib(
         BenchmarkMode.NONE, converter=BenchmarkMode.by_name

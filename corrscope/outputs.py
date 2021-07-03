@@ -22,6 +22,8 @@ class IOutputConfig(DumpableAttrs):
     cls: "ClassVar[Type[Output]]"
 
     def __call__(self, corr_cfg: "Config") -> "Output":
+        """Must be called in the .yaml file's directory.
+        This is used to properly resolve corr_cfg.master_audio."""
         return self.cls(corr_cfg, cfg=self)
 
 
@@ -217,6 +219,25 @@ class PipeOutput(Output):
 
 class FFmpegOutputConfig(IOutputConfig):
     # path=None writes to stdout.
+    #
+    # This parameter is not loaded from disk, but set when the user picks a render path
+    # on the GUI or calls the CLI with `--render out.mp4`.
+    #
+    # It must be an absolute path. How is this ensured?
+    #
+    # - Paths supplied from the GUI are always absolute.
+    # - Paths supplied from the CLI must be resolved before storing in
+    #   FFmpegOutputConfig.
+    #
+    # Why are relative paths not allowed? Currently, to resolve `corr_cfg.master_audio`
+    # relative to the config file, we change directories to the config dir, then call
+    # `abspath(corr_cfg.master_audio)`. As a result, if we called `corr dir/cfg.yaml -r
+    # out.mp4` and corrscope didn't resolve `out.mp4` before passing into
+    # FFmpegOutputConfig, it would mistakenly write to `dir/out.mp4`.
+    #
+    # In the future, relative paths could be allowed by not switching directories to the
+    # config dir, and finding another way to resolve `corr_cfg.master_audio` based on
+    # the config dir.
     path: Optional[str]
     args: str = ""
 

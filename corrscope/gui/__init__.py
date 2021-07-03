@@ -166,9 +166,11 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     - Otherwise empty string.
         - self.get_save_filename() calls cli.get_file_stem().
 
-    CLI filename is the same,
-    but defaults to "corrscope.{yaml, mp4}" instead of empty string.
+    CLI YAML filename is the same,
+    but defaults to "corrscope.yaml" instead of empty string.
     - cli._get_file_name() calls cli.get_file_stem().
+
+    CLI video filename is explicitly specified by the user.
     """
 
     def __init__(self, cfg_or_path: Union[Config, Path]):

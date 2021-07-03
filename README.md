@@ -83,8 +83,8 @@ poetry run corr (args)
 1. Play (requires ffmpeg):
     - `corrscope master.yaml -p/--play`
 
-1. Render and encode MP4 video (requires ffmpeg)
-    - `corrscope master.yaml -r/--render`
+1. Render and encode video (requires ffmpeg)
+    - `corrscope master.yaml -r/--render file.mp4` (other file extensions supported)
 
 ## Contributing
 

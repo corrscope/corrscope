@@ -140,15 +140,19 @@ def test_load_yaml_another_dir(mocker, Popen):
     # Log execution of CorrScope().play()
     Wave = mocker.spy(corrscope.channel, "Wave")
 
-    # Issue: this test does not use cli.main() to compute output path.
-    # Possible solution: Call cli.main() via Click runner.
-    output = FFmpegOutputConfig(cli._get_file_name(None, cfg, cli.VIDEO_NAME))
+    # Same function as used in cli.py and gui/__init__.py.
+    output = cfg.get_ffmpeg_cfg(mp4)
+
     corr = CorrScope(cfg, Arguments(subdir, [output]))
     corr.play()
 
-    # Compute absolute paths
+    # The .wav path (specified in Config) should be resolved relative to the config
+    # file.
     wav_abs = abspath(f"{subdir}/{wav}")
-    mp4_abs = abspath(f"{subdir}/{mp4}")
+
+    # The output video path (specified in CLI --render) should be resolved relative to
+    # the shell's working directory.
+    mp4_abs = abspath(mp4)
 
     # Test `wave_path`
     args, kwargs = Wave.call_args
