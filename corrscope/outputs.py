@@ -242,7 +242,10 @@ class FFmpegOutputConfig(IOutputConfig):
     args: str = ""
 
     video_template: str = (
-        "-c:v libx264 -crf 18 -preset superfast -pix_fmt yuv420p -movflags faststart"
+        "-c:v libx264 -crf 18 -preset superfast "
+        "-pix_fmt yuv420p -vf scale=out_color_matrix=bt709 "
+        "-color_range 1 -colorspace bt709 -color_trc bt709 -color_primaries bt709 "
+        "-movflags faststart"
     )
     audio_template: str = "-c:a aac -b:a 384k"
 
