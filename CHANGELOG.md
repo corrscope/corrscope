@@ -3,6 +3,7 @@
 ### Major Changes
 
 - Change `-r/--render` command line flag to take an output path (#382)
+- Render videos in BT.709 colorspace by default (#384)
 
 ### Changelog
 
