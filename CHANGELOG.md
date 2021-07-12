@@ -1,4 +1,4 @@
-## 0.7.1 (unreleased)
+## 0.7.1
 
 ### Major Changes
 
