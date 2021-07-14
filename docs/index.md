@@ -174,7 +174,10 @@ Setting Post Trigger to "Zero Crossing Trigger" causes corrscope to "slide" towa
 
 Corrscope uses FFmpeg to encode videos. All video encoding settings (both picking an encoder and options) are configured in Corrscope's "Video Template" textbox, which is passed to FFmpeg. By default, it tells FFmpeg to use the x264 video encoder (producing H.264 videos). Tuning video encoders like x264 is a complex task, but this is a brief summary of the default settings:
 
-- Videos are first converted from RGB pixel values to YUV (brightness and color), before being sent to a video codec like x264. `-pix_fmt yuv420p` enables chroma subsampling, which halves the horizontal and vertical resolution of the color channels (blurring color information) before compressing the video. For example, a 1280x720 video only has 640x360 of color information! This improves compatibility with players like web browsers, smartphones, and Windows 10's Videos app, but degrades the quality of colored lines. Removing this argument produces a better-looking video (with a relatively small file size increase), but the quality boost is lost when uploading to YouTube (which transcodes the video to yuv420p).
+- Videos are first converted from RGB pixel values to YUV (brightness and color), before being sent to a video codec like x264.
+- `-pix_fmt yuv420p` enables chroma subsampling, which halves the horizontal and vertical resolution of the color channels (blurring color information) before compressing the video. For example, a 1280x720 video only has 640x360 of color information!
+    - This improves compatibility with players like web browsers, smartphones, and Windows 10's Videos app, but degrades the quality of colored lines.
+    - Removing this argument produces a better-looking video (with a relatively small file size increase), but the quality boost is lost when uploading to YouTube (which transcodes the video to yuv420p).
 - `-crf 18` determines the quality of the compressed video. Higher values discard more information, producing smaller but lower-quality files.
 - `-preset superfast` speeds up the rendering process at a given quality level, at the cost of a larger file size.
 
