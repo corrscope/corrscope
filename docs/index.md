@@ -186,6 +186,8 @@ Afterwards, the video is sent to the video encoder, which has its own arguments:
 - `-crf 18` determines the quality of the compressed video. Higher values discard more information, producing smaller but lower-quality files.
 - `-preset superfast` speeds up the rendering process at a given quality level, at the cost of a larger file size.
 
+### Avoiding Color Artifacts
+
 Video encoding/compression degrades color more than brightness, especially fine color detail. As a result, thin colored lines look desaturated, fuzzy, or discolored. (Thin lines generally arise when rendering at a low resolution, or when YouTube takes a high-resolution video with thick lines and reencodes lower-resolution streams with thinner lines.) To avoid this loss of quality, corrscope defaults to white lines on a black background.
 
 Loss of color information is especially damaging with "Color Lines By Pitch" enabled. At the default settings (720p, 1.5 pixel thick lines), the vibrant line colors seen in the preview lose saturation when rendered, and turn into grayish messes when uploaded to YouTube (blues and purples lose the most color). A workaround is to render at a higher resolution (slower) with thicker lines. This will improve color fidelity for people who watch the resulting videos above 720p.
