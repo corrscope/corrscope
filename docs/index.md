@@ -174,10 +174,15 @@ Setting Post Trigger to "Zero Crossing Trigger" causes corrscope to "slide" towa
 
 Corrscope uses FFmpeg to encode videos. All video encoding settings (both picking an encoder and options) are configured in Corrscope's "Video Template" textbox, which is passed to FFmpeg. By default, it tells FFmpeg to use the x264 video encoder (producing H.264 videos). Tuning video encoders like x264 is a complex task, but this is a brief summary of the default settings:
 
-- Videos are first converted from RGB pixel values to YUV (brightness and color), before being sent to a video codec like x264.
+Videos are first converted from RGB pixel values to YUV (brightness and color).
+
 - `-pix_fmt yuv420p` enables chroma subsampling of the YUV frames, which halves the horizontal and vertical resolution of the color channels (blurring color information) before compressing the video. For example, a 1280x720 video only has 640x360 of color information!
     - This improves compatibility with players like web browsers, smartphones, and Windows 10's Videos app, but degrades the quality of colored lines.
     - Removing this argument produces a better-looking video (with a relatively small file size increase), but the quality boost is lost when uploading to YouTube (which transcodes the video to yuv420p).
+
+Afterwards, the video is sent to the video encoder, which has its own arguments:
+
+- `-c:v libx264` picks libx264 as the video encoder.
 - `-crf 18` determines the quality of the compressed video. Higher values discard more information, producing smaller but lower-quality files.
 - `-preset superfast` speeds up the rendering process at a given quality level, at the cost of a larger file size.
 
@@ -189,6 +194,6 @@ I do not have experience with other encoders (like x265, VP8, VP9, or AV1), but 
 
 ## Audio Encoding
 
-corrscope defaults to rendering to .mp4 files, which support a limited set of audio codecs. MP3 is a "good enough" audio codec. AAC is better in theory, but ffmpeg's AAC encoder (which corrscope uses by default) is *bad*. However, corrscope defaults to 384 kilobits/sec, which should be sufficient to produce good-sounding audio.
+corrscope defaults to rendering to .mp4 files, which support a limited set of audio codecs. MP3 is a "good enough" audio codec. AAC is better in theory, but ffmpeg's AAC encoder (which corrscope uses by default, `-c:a aac`) is *bad*. However, corrscope defaults to 384 kilobits/sec (`-b:a 384k`), which should be sufficient to produce audio without obvious artifacts.
 
-In the future, I may switch the default file format to .mkv, which supports a wider range of potential audio codecs like Vorbis and Opus (which has better quality at any bitrate than even good AAC encoders).
+In the future, I may enable VBR encoding, or switch to an audio codec not supported in .mp4 files, like Vorbis or Opus (which has better quality at any bitrate than even good AAC encoders). This would requires switching to a different file format like .mkv.
