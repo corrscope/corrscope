@@ -190,7 +190,9 @@ Afterwards, the video is sent to the video encoder, which has its own arguments:
 
 Video encoding/compression degrades color more than brightness, especially fine color detail. As a result, thin colored lines look desaturated, fuzzy, or discolored. (Thin lines generally arise when rendering at a low resolution, or when YouTube takes a high-resolution video with thick lines and reencodes lower-resolution streams with thinner lines.) To avoid this loss of quality, corrscope defaults to white lines on a black background.
 
-Loss of color information is especially damaging with "Color Lines By Pitch" enabled. At the default settings (720p, 1.5 pixel thick lines), the vibrant line colors seen in the preview lose saturation when rendered, and turn into grayish messes when uploaded to YouTube (blues and purples lose the most color). A workaround is to render at a higher resolution (slower) with thicker lines. This will improve color fidelity for people who watch the resulting videos above 720p.
+Loss of color information is especially damaging with "Color Lines By Pitch" enabled. At the default settings (720p, 1.5 pixel thick lines), the vibrant line colors seen in the preview lose saturation when rendered, and turn into grayish messes when uploaded to YouTube (blues and purples lose the most color).
+
+**To render colored lines while minimizing quality loss, render at a higher resolution (slower) with thicker lines.** This will improve color fidelity for people who watch the resulting videos above 720p.
 
 I do not have experience with other encoders (like x265, VP8, VP9, or AV1), but the principle of losing fine color detail to chroma subsampling and lossy codecs should remain the same. AV1 should preserve colored lines better due to chroma-from-luma, but AV1 encoders are still impractically slow.
 
