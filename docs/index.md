@@ -169,3 +169,23 @@ Setting Post Trigger to "Zero Crossing Trigger" causes corrscope to "slide" towa
 - Corrscope fetches [from the channel] a buffer of mono `triggered data`, centered at `position`
 - `triggered data` is multiplied by a Gaussian window with width 0.5 × period
 - Corrscope updates `buffer` = `buffer` + `Buffer Responsiveness` × (`triggered data` - `buffer`).
+
+## Video Encoding
+
+Corrscope uses ffmpeg to encode videos, and uses x264 to encode h.264 videos by default. Tuning the x264 encoder is a complex task, but this is a brief summary of the default settings in Corrscope's "Video Template":
+
+- Videos are first converted from RGB pixel values to YUV (brightness and color), before being sent to a video codec like x264. `-pix_fmt yuv420p`, or chroma subsampling, halves the horizontal and vertical resolution of the color channels before compressing the video, blurring color information. For example, a 1280x720 video only has 640x360 of color information! This improves compatibility with players like web browsers, smartphones, and Windows 10's Videos app, but degrades the quality of colored lines. Removing it produces a better-looking video (at some file size cost), but the quality boost is lost when uploading to YouTube (which transcodes the video to yuv420p).
+- `-crf 18` determines the quality of the compressed video (higher values discard more information, producing smaller but lower-quality files).
+- `-preset superfast` speeds up the rendering process at a given quality level, at the cost of a larger file size.
+
+Video encoding/compression degrades color more than brightness, especially for thin lines. As a result, thin colored lines look desaturated, fuzzy, or discolored. (Thin lines generally arise when rendering at a low resolution, or when YouTube takes a high-resolution video with thick lines and generates lower-resolution streams with thin lines.) To prevent this loss of quality, corrscope defaults to white lines on a black background.
+
+Loss of color information is especially damaging with "Color Lines By Pitch" enabled. At the default settings (720p, 1.5 pixel thick lines), the vibrant line colors in the preview lose saturation when rendered, and turn into grayish messes when uploaded to YouTube (blues and purples in particular are destroyed). A workaround is to render at a higher resolution (slower) with thicker lines. This will improve color fidelity for people who watch the resulting videos above 720p.
+
+I do not have experience with other encoders (like x265, VP8, VP9, or AV1), but the principle of losing fine color detail to chroma subsampling and lossy codecs should remain the same. AV1 should preserve colored lines better due to chroma-from-luma, but encoding is still impractically slow.
+
+## Audio Encoding
+
+corrscope defaults to rendering to .mp4 files, which support a limited set of audio codecs. MP3 is a "good enough" audio codec. AAC is better in theory, but ffmpeg's AAC encoder (which corrscope uses by default) is *bad*. However, corrscope defaults to 384 kilobits/sec, which should be sufficient to produce good-sounding audio.
+
+In the future, I may switch the default file format to .mkv, which supports a wider range of potential audio codecs like Vorbis and Opus (which has better quality at any bitrate than even good AAC encoders).
