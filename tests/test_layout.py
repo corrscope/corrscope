@@ -14,7 +14,7 @@ from corrscope.layout import (
     Orientation,
     StereoOrientation,
 )
-from corrscope.renderer import RendererConfig, Renderer
+from corrscope.renderer import RendererConfig, Renderer, RenderInput
 from corrscope.util import ceildiv
 from tests.test_renderer import WIDTH, HEIGHT, RENDER_Y_ZEROS
 
@@ -223,7 +223,7 @@ def test_renderer_layout():
 
     datas = [RENDER_Y_ZEROS] * nplots
     r = Renderer(cfg, lcfg, datas, None, None)
-    r.update_main_lines(datas)
+    r.update_main_lines(RenderInput.wrap_datas(datas))
     layout = r.layout
 
     # 2 columns, 8 rows

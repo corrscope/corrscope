@@ -30,6 +30,7 @@ attrs = "^21.2.0"
 PyQt5 = "^5.15.4"
 appdirs = "^1.4.4"
 atomicwrites = "^1.4.0"
+colorspacious = "^1.1.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"
