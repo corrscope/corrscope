@@ -66,9 +66,11 @@ if mpl_config_dir in os.environ:
 
 # matplotlib.use() only affects pyplot. We don't use pyplot.
 
-import matplotlib
+import matplotlib as mpl
 import matplotlib.cm
 import matplotlib.colors
+import matplotlib.image
+import matplotlib.patheffects
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
@@ -151,6 +153,7 @@ class RendererConfig(
     width: int
     height: int
     line_width: float = with_units("px", default=1.5)
+    line_outline_width: float = with_units("px", default=0.0)
     grid_line_width: float = with_units("px", default=1.0)
 
     @property
@@ -162,7 +165,9 @@ class RendererConfig(
         return round(self.height / self.res_divisor)
 
     bg_color: str = "#000000"
+    bg_image: str = ""
     init_line_color: str = default_color()
+    global_line_outline_color: str = "#000000"
 
     @property
     def global_line_color(self) -> str:
@@ -506,6 +511,12 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
         # Setup background
         self._fig.set_facecolor(cfg.bg_color)
 
+        if cfg.bg_image:
+            img = mpl.image.imread(cfg.bg_image)
+
+            ax = self._fig.add_axes([0, 0, 1, 1])
+            ax.imshow(img)
+
         # Create Axes (using self.lcfg, wave_nchans)
         # _axes2d[wave][chan] = Axes
         self._axes2d = self.layout.arrange(self._axes_factory)
@@ -660,9 +671,22 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
             for chan_idx, chan_zeros in enumerate(wave_zeros.T):
                 ax = wave_axes[chan_idx]
                 line_color = self._line_params[wave_idx].color
+
                 chan_line: Line2D = ax.plot(
                     xs, chan_zeros, color=line_color, linewidth=line_width
                 )[0]
+
+                if cfg.line_outline_width > 0:
+                    chan_line.set_path_effects(
+                        [
+                            mpl.patheffects.Stroke(
+                                linewidth=cfg.line_width + 2 * cfg.line_outline_width,
+                                foreground=cfg.global_line_outline_color,
+                            ),
+                            mpl.patheffects.Normal(),
+                        ]
+                    )
+
                 wave_lines.append(chan_line)
 
             lines2d.append(wave_lines)

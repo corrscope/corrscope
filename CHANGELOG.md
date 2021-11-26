@@ -3,6 +3,8 @@
 ### Features
 
 - Add option to color lines by pitch (#386)
+- Add support for background images (#388, @Sanqui)
+- Add support for line outlines (#388, @Sanqui)
 
 ## 0.7.1
 
