@@ -50,7 +50,7 @@ Install Python 3.6 or above (3.5 will not work), and Poetry.
 # Install Poetry (only do this once)
 curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
 cd path/to/corrscope
-poetry install corrscope  # --develop is implied
+poetry install # --develop is implied
 poetry run corr (args)
 ```
 
