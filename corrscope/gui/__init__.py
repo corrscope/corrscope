@@ -8,11 +8,12 @@ from pathlib import Path
 from types import MethodType
 from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence, NewType
 
-import PyQt5.QtCore as qc
-import PyQt5.QtWidgets as qw
+import PyQt6.QtCore as qc
+import PyQt6.QtWidgets as qw
+import PyQt6.QtGui as qg
 import attr
-from PyQt5.QtCore import QModelIndex, Qt, QVariant
-from PyQt5.QtGui import QFont, QCloseEvent, QDesktopServices
+from PyQt6.QtCore import QModelIndex, Qt, QVariant
+from PyQt6.QtGui import QFont, QCloseEvent, QDesktopServices
 
 import corrscope
 import corrscope.settings.global_prefs as gp
@@ -83,7 +84,6 @@ def gui_main(cfg_or_path: Union[Config, Path]):
 
     # qw.QApplication.setStyle('fusion')
     QApp = qw.QApplication
-    QApp.setAttribute(qc.Qt.AA_EnableHighDpiScaling)
 
     app = qw.QApplication(sys.argv)
 
@@ -100,7 +100,7 @@ def gui_main(cfg_or_path: Union[Config, Path]):
     # Any exceptions raised within MainWindow() will be caught within exec_.
     # exception_as_dialog() turns it into a Qt dialog.
     with exception_as_dialog(window):
-        ret = app.exec_()
+        ret = app.exec()
         # Any exceptions raised after exec_ terminates will call
         # exception_as_dialog().__exit__ before being caught.
         # This produces a Python traceback.
@@ -296,7 +296,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         )
         response = Msg.question(self, title, message, Msg.Yes | Msg.No, Msg.No)
 
-        if response == Msg.Yes:
+        if response == Msg.StandardButton.Yes:
             # Closing ffplay preview (can't cancel render, the dialog is untouchable)
             # will set self.corr_thread to None while the dialog is active.
             # https://www.vikingsoftware.com/how-to-use-qthread-properly/ # QObject thread affinity
@@ -319,12 +319,17 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         message = f"Save changes to {self.title_cache}?"
         should_close = Msg.question(
-            self, title, message, Msg.Save | Msg.Discard | Msg.Cancel
+            self,
+            title,
+            message,
+            Msg.StandardButton.Save
+            | Msg.StandardButton.Discard
+            | Msg.StandardButton.Cancel,
         )
 
-        if should_close == Msg.Cancel:
+        if should_close == Msg.StandardButton.Cancel:
             return False
-        elif should_close == Msg.Discard:
+        elif should_close == Msg.StandardButton.Discard:
             return True
         else:
             return self.on_action_save()
@@ -425,18 +430,18 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     channelUp: "ShortcutButton"
     channelDown: "ShortcutButton"
 
-    action_separate_render_dir: qw.QAction
-    action_open_config_dir: qw.QAction
+    action_separate_render_dir: qg.QAction
+    action_open_config_dir: qg.QAction
 
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
     menuBar: qw.QMenuBar
-    actionNew: qw.QAction
-    actionOpen: qw.QAction
-    actionSave: qw.QAction
-    actionSaveAs: qw.QAction
-    actionPreview: qw.QAction
-    actionRender: qw.QAction
-    actionExit: qw.QAction
+    actionNew: qg.QAction
+    actionOpen: qg.QAction
+    actionSave: qg.QAction
+    actionSaveAs: qg.QAction
+    actionPreview: qg.QAction
+    actionRender: qg.QAction
+    actionExit: qg.QAction
 
     def on_master_audio_browse(self):
         name = get_open_file_name(
@@ -578,7 +583,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         if dlg:
             # t.abort -> Locked.set() is thread-safe (hopefully).
             # It can be called from main thread (not just within CorrThread).
-            dlg.canceled.connect(t.abort, Qt.DirectConnection)
+            dlg.canceled.connect(t.abort, Qt.ConnectionType.DirectConnection)
             t.arg = attr.evolve(
                 arg,
                 on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
@@ -795,7 +800,7 @@ def run_on_ui_thread(
     # Qt::ConnectionType type,
     # QGenericReturnArgument ret,
     # https://riverbankcomputing.com/pipermail/pyqt/2014-December/035223.html
-    conn = Qt.QueuedConnection
+    conn = Qt.ConnectionType.QueuedConnection
 
     @functools.wraps(bound_slot)
     def inner(*args):
@@ -803,7 +808,7 @@ def run_on_ui_thread(
             raise TypeError(f"len(types)={len(types)} != len(args)={len(args)}")
 
         # https://www.qtcentre.org/threads/29156-Calling-a-slot-from-another-thread?p=137140#post137140
-        # QMetaObject.invokeMethod(skypeThread, "startSkypeCall", Qt.QueuedConnection, QtCore.Q_ARG("QString", "someguy"))
+        # QMetaObject.invokeMethod(skypeThread, "startSkypeCall", Qt.ConnectionType.QueuedConnection, QtCore.Q_ARG("QString", "someguy"))
 
         _args = [qc.Q_ARG(typ, typ(arg)) for typ, arg in zip(types, args)]
         return qmo.invokeMethod(obj, member, conn, *_args)
@@ -955,7 +960,7 @@ class ConfigModel(PresentationModel):
     @safe_property
     def render__label_qfont(self) -> QFont:
         qfont = QFont()
-        qfont.setStyleHint(QFont.SansSerif)  # no-op on X11
+        qfont.setStyleHint(QFont.StyleHint.SansSerif)  # no-op on X11
 
         font = self.cfg.render.label_font
         if font.toString:
@@ -1113,10 +1118,13 @@ class ChannelModel(qc.QAbstractTableModel):
         return len(self.col_data)
 
     def headerData(
-        self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
     ) -> Union[str, QVariant]:
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Horizontal:
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
                 col = section
                 try:
                     return self.col_data[col].display_name
@@ -1133,12 +1141,12 @@ class ChannelModel(qc.QAbstractTableModel):
     # data
     TRIGGER = "trigger__"
 
-    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> Any:
+    def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole) -> Any:
         col = index.column()
         row = index.row()
 
         if (
-            role in [Qt.DisplayRole, Qt.EditRole]
+            role in [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole]
             and index.isValid()
             and row < self.rowCount()
         ):
@@ -1153,18 +1161,20 @@ class ChannelModel(qc.QAbstractTableModel):
 
             if not data.always_show and value == data.default:
                 return ""
-            if key == "wav_path" and role == Qt.DisplayRole:
+            if key == "wav_path" and role == Qt.ItemDataRole.DisplayRole:
                 if Path(value).parent != Path():
                     return "..." + Path(value).name
             return str(value)
 
         return nope
 
-    def setData(self, index: QModelIndex, value: str, role=Qt.EditRole) -> bool:
+    def setData(
+        self, index: QModelIndex, value: str, role=Qt.ItemDataRole.EditRole
+    ) -> bool:
         col = index.column()
         row = index.row()
 
-        if index.isValid() and role == Qt.EditRole:
+        if index.isValid() and role == Qt.ItemDataRole.EditRole:
             # type(value) == str
 
             data = self.col_data[col]
@@ -1261,11 +1271,11 @@ class ChannelModel(qc.QAbstractTableModel):
 
     def flags(self, index: QModelIndex):
         if not index.isValid():
-            return Qt.ItemIsEnabled
+            return Qt.ItemFlag.ItemIsEnabled
         return (
             qc.QAbstractItemModel.flags(self, index)
-            | Qt.ItemIsEditable
-            | Qt.ItemNeverHasChildren
+            | Qt.ItemFlag.ItemIsEditable
+            | Qt.ItemFlag.ItemNeverHasChildren
         )
 
 
@@ -1292,7 +1302,9 @@ class DownloadFFmpegActivity:
         Msg = qw.QMessageBox
 
         if not self.can_download:
-            Msg.information(window, self.title, self.fail_template, Msg.Ok)
+            Msg.information(
+                window, self.title, self.fail_template, Msg.StandardButton.Ok
+            )
             return
 
-        Msg.information(window, self.title, self.ffmpeg_template, Msg.Ok)
+        Msg.information(window, self.title, self.ffmpeg_template, Msg.StandardButton.Ok)

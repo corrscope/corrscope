@@ -1,9 +1,8 @@
 from typing import TYPE_CHECKING, List, Callable
 
-from PyQt5 import QtWidgets as qw, QtCore as qc
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QShortcut
+from PyQt6 import QtWidgets as qw, QtCore as qc, QtGui as qg
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QKeySequence
 
 from corrscope.gui.util import find_ranges
 
@@ -73,21 +72,21 @@ class ChannelTableView(qw.QTableView):
 
 
 class ShortcutButton(qw.QPushButton):
-    scoped_shortcut: QShortcut
+    scoped_shortcut: qg.QShortcut
 
     def add_shortcut(self, scope: qw.QWidget, shortcut: str) -> None:
         """Adds shortcut and tooltip."""
         self.scoped_shortcut = new_shortcut(shortcut, scope, self.click)
 
         parsed_keys: QKeySequence = self.scoped_shortcut.key()
-        self.setToolTip(parsed_keys.toString(QKeySequence.NativeText))
+        self.setToolTip(parsed_keys.toString(QKeySequence.SequenceFormat.NativeText))
 
 
-def new_shortcut(shortcut: str, scope: qw.QWidget, slot: Callable) -> qw.QShortcut:
-    parsed_keys = QKeySequence(shortcut, QKeySequence.PortableText)
+def new_shortcut(shortcut: str, scope: qw.QWidget, slot: Callable) -> qg.QShortcut:
+    parsed_keys = QKeySequence(shortcut, QKeySequence.SequenceFormat.PortableText)
 
-    scoped_shortcut = qw.QShortcut(parsed_keys, scope)
-    scoped_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+    scoped_shortcut = qg.QShortcut(parsed_keys, scope)
+    scoped_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
     scoped_shortcut.activated.connect(slot)
     return scoped_shortcut
 
@@ -112,12 +111,12 @@ class TabWidget(qw.QTabWidget):
 class VerticalScrollArea(qw.QScrollArea):
     def __init__(self, parent):
         qw.QScrollArea.__init__(self, parent)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.horizontalScrollBar().setEnabled(False)
 
         # If removed, you will get unused space to the right and bottom.
         self.setWidgetResizable(True)
 
         # Only allow expanding, not shrinking.
-        self.setSizePolicy(qsp(qsp.Minimum, qsp.Minimum))
+        self.setSizePolicy(qsp(qsp.Policy.Minimum, qsp.Policy.Minimum))

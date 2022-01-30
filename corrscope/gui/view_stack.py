@@ -2,8 +2,8 @@ from contextlib import contextmanager
 from typing import *
 
 import attr
-from PyQt5.QtCore import QObject, Qt
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import QObject, Qt
+from PyQt6.QtWidgets import *
 
 from corrscope.util import obj_name
 
@@ -201,7 +201,7 @@ def append_menu(stack: LayoutStack, **kwargs):
     return _new_widget(stack, QMenu, exit_action="addMenu", **kwargs)
 
 
-def add_toolbar(stack: LayoutStack, area=Qt.TopToolBarArea):
+def add_toolbar(stack: LayoutStack, area=Qt.ToolBarArea.TopToolBarArea):
     assert_peek(stack, QMainWindow)
 
     def _add_toolbar(parent: QMainWindow, toolbar):

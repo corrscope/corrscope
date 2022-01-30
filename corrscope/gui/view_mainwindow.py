@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from contextlib import contextmanager
 
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
+import PyQt6.QtGui as qg
+from PyQt6.QtCore import *
+from PyQt6.QtWidgets import *
 
 from corrscope.gui.view_stack import (
     LayoutStack,
@@ -39,7 +40,7 @@ class VLine(QFrame):
 
 
 def fixed_size_policy():
-    return QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+    return QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
 
 # noinspection PyAttributeOutsideInit
@@ -457,24 +458,24 @@ class MainWindow(QWidget):
     def add_actions(self, s: LayoutStack, MainWindow):
         tr = self.tr
         # Setup actions
-        self.actionOpen = QAction(MainWindow)
-        self.actionSave = QAction(MainWindow)
-        self.actionNew = QAction(MainWindow)
-        self.actionSaveAs = QAction(MainWindow)
-        self.actionExit = QAction(MainWindow)
-        self.actionPreview = QAction(MainWindow)
-        self.actionRender = QAction(MainWindow)
+        self.actionOpen = qg.QAction(MainWindow)
+        self.actionSave = qg.QAction(MainWindow)
+        self.actionNew = qg.QAction(MainWindow)
+        self.actionSaveAs = qg.QAction(MainWindow)
+        self.actionExit = qg.QAction(MainWindow)
+        self.actionPreview = qg.QAction(MainWindow)
+        self.actionRender = qg.QAction(MainWindow)
 
         self.actionWebsite = create_element(
-            QAction, MainWindow, text=tr("corrscope Website")
+            qg.QAction, MainWindow, text=tr("corrscope Website")
         )
-        self.actionHelp = create_element(QAction, MainWindow, text=tr("Help"))
+        self.actionHelp = create_element(qg.QAction, MainWindow, text=tr("Help"))
 
         self.action_separate_render_dir = create_element(
-            QAction, MainWindow, text=tr("&Separate Render Folder"), checkable=True
+            qg.QAction, MainWindow, text=tr("&Separate Render Folder"), checkable=True
         )
         self.action_open_config_dir = create_element(
-            QAction, MainWindow, text=tr("Open &Config Folder")
+            qg.QAction, MainWindow, text=tr("Open &Config Folder")
         )
 
         # Setup menu_bar
@@ -504,7 +505,7 @@ class MainWindow(QWidget):
                 w.addAction(self.actionHelp)
 
         # Setup toolbar
-        with add_toolbar(s, Qt.TopToolBarArea) as self.toolBar:
+        with add_toolbar(s, Qt.ToolBarArea.TopToolBarArea) as self.toolBar:
             w = self.toolBar
             w.addAction(self.actionNew)
             w.addAction(self.actionOpen)

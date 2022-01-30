@@ -4,10 +4,10 @@ from collections import defaultdict
 from typing import *
 
 import attr
-from PyQt5 import QtWidgets as qw, QtCore as qc
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtGui import QPalette, QColor, QFont
-from PyQt5.QtWidgets import QWidget
+from PyQt6 import QtWidgets as qw, QtCore as qc
+from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtGui import QPalette, QColor, QFont
+from PyQt6.QtWidgets import QWidget
 
 from corrscope.config import CorrError, DumpableAttrs, get_units
 from corrscope.gui.util import color2hex
@@ -172,11 +172,11 @@ class BoundWidget(QWidget):
         """Palette with red background, used for widgets with invalid input."""
         error_palette = QPalette(self.palette())
 
-        bg = error_palette.color(QPalette.Base)
-        red = QColor(qc.Qt.red)
+        bg = error_palette.color(QPalette.ColorRole.Base)
+        red = QColor(qc.Qt.GlobalColor.red)
 
         red_bg = blend_colors(bg, red, 0.5)
-        error_palette.setColor(QPalette.Base, red_bg)
+        error_palette.setColor(QPalette.ColorRole.Base, red_bg)
         return error_palette
 
     # My class/method naming scheme is inconsistent and unintuitive.
@@ -292,10 +292,14 @@ class BoundCheckBox(qw.QCheckBox, BoundWidget):
     # gui_changed -> set_model(Qt.CheckState).
     @pyqtSlot(CheckState)
     def set_model(self, value: CheckState):
-        """Qt.PartiallyChecked probably should not happen."""
+        """Qt.CheckState.PartiallyChecked probably should not happen."""
         Qt = qc.Qt
-        assert value in [Qt.Unchecked, Qt.PartiallyChecked, Qt.Checked]
-        self.set_bool(value != Qt.Unchecked)
+        assert value in [
+            Qt.CheckState.Unchecked.value,
+            Qt.CheckState.PartiallyChecked.value,
+            Qt.CheckState.Checked.value,
+        ]
+        self.set_bool(value != Qt.CheckState.Unchecked.value)
 
     set_bool = model_setter(bool)
 
@@ -578,10 +582,14 @@ class _ColorCheckBox(qw.QCheckBox):
 
     @pyqtSlot(CheckState)
     def on_check(self, value: CheckState):
-        """Qt.PartiallyChecked probably should not happen."""
+        """Qt.CheckState.PartiallyChecked probably should not happen."""
         Qt = qc.Qt
-        assert value in [Qt.Unchecked, Qt.PartiallyChecked, Qt.Checked]
-        if value != Qt.Unchecked:
+        assert value in [
+            Qt.CheckState.Unchecked.value,
+            Qt.CheckState.PartiallyChecked.value,
+            Qt.CheckState.Checked.value,
+        ]
+        if value != Qt.CheckState.Unchecked.value:
             self.color_text.setText("#ffffff")
         else:
             self.color_text.setText("")

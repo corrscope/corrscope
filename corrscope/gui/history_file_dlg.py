@@ -2,7 +2,7 @@ import os.path
 from pathlib import Path
 from typing import *
 
-import PyQt5.QtWidgets as qw
+import PyQt6.QtWidgets as qw
 import attr
 
 import corrscope.settings.global_prefs as _gp
