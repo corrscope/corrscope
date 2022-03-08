@@ -21,7 +21,7 @@ repository = "https://github.com/corrscope/corrscope/"
 documentation = "https://corrscope.github.io/corrscope/"
 
 [tool.poetry.dependencies]
-python = "^3.6.2"
+python = "^3.8"
 "ruamel.yaml" = "^0.17"
 numpy = "^1.15"
 click = "^8.0.1"
@@ -33,20 +33,24 @@ atomicwrites = "^1.4.0"
 colorspacious = "^1.1.2"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2.4"
+pytest = "^7"
 pytest-mock = "^3.6.1"
 hypothesis = "^6.14.0"
 delayed-assert = "^0.3.5"
 
-pyinstaller = "^4.3"
+# Note: PyInstaller 4.5 and below claim to support all Python versions,
+# and 4.6 and above have maximum Python versions.
+# When upgrading the version of Python (not PyInstaller) used to create binaries,
+# increase the `python = ""` bound.
+pyinstaller = {version = "^4.3", python = "<3.11"}
 
 pefile = {version = "^2021.5.24", platform = "win32"}
 
-coverage = "^5.5"
-pytest-cov = "^2.12.1"
+coverage = "^6"
+pytest-cov = "^3"
 codecov = "^2.1.11"
 pytest-cases = "^3.6.1"
-black = "^21.6b0"
+black = "^22"
 
 [tool.poetry.scripts]
 corr = 'corrscope.cli:main'
