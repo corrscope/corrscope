@@ -4,7 +4,7 @@ import numpy as np
 
 import corrscope.utils.scipy.signal as signal
 from corrscope.config import KeywordAttrs
-from corrscope.wave import FLOAT
+from corrscope.wave import f32
 
 
 class SpectrumConfig(KeywordAttrs):
@@ -87,7 +87,7 @@ class LogFreqSpectrum(DummySpectrum):
             n_fencepost = scfg.notes_per_octave * scfg.octaves + 1
 
             note_fenceposts_hz = np.geomspace(
-                self.min_hz, self.max_hz, n_fencepost, dtype=FLOAT
+                self.min_hz, self.max_hz, n_fencepost, dtype=f32
             )
 
             # Convert fenceposts to FFTIndex
@@ -108,7 +108,7 @@ class LogFreqSpectrum(DummySpectrum):
         self.n_fencepost = len(note_fenceposts)
 
     def calc_spectrum(self, data: np.ndarray) -> np.ndarray:
-        """Unfortunately converting to FLOAT (single) adds too much overhead.
+        """Unfortunately converting to f32 (single) adds too much overhead.
 
         Input: Time-domain signal to be analyzed.
         Output: Frequency-domain spectrum with exponentially-spaced notes.

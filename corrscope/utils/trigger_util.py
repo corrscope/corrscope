@@ -4,7 +4,7 @@ import numpy as np
 
 import corrscope.utils.scipy.signal as signal
 from corrscope.util import iround
-from corrscope.wave import FLOAT
+from corrscope.wave import f32
 
 if TYPE_CHECKING:
     import corrscope.triggers as t
@@ -99,7 +99,7 @@ def get_period(
         # If a long-period wave has strong harmonics,
         # the true peak will be attenuated below the harmonic peaks.
         # Compensate for that.
-        divisor = np.linspace(1, 1 - EDGE_COMPENSATION, N, endpoint=False, dtype=FLOAT)
+        divisor = np.linspace(1, 1 - EDGE_COMPENSATION, N, endpoint=False, dtype=f32)
         divisor = np.maximum(divisor, 1 / MAX_AMPLIFICATION)
         corr /= divisor
         peakX = calc_peak()

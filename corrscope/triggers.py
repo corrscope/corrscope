@@ -17,7 +17,7 @@ from corrscope.utils.trigger_util import (
     abs_max,
 )
 from corrscope.utils.windows import leftpad, midpad, rightpad, gaussian_or_zero
-from corrscope.wave import FLOAT
+from corrscope.wave import f32
 
 if TYPE_CHECKING:
     from corrscope.wave import Wave
@@ -355,19 +355,17 @@ class CorrelationTrigger(MainTrigger):
         # (const) Multiplied by each frame of input audio.
         # Zeroes out all data older than 1 frame old.
         self._lag_prevention_window = self._calc_lag_prevention()
-        assert self._lag_prevention_window.dtype == FLOAT
+        assert self._lag_prevention_window.dtype == f32
 
         # (mutable) Correlated with data (for triggering).
         # Updated with tightly windowed old data at various pitches.
-        self._buffer = np.zeros(
-            self._buffer_nsamp, dtype=FLOAT
-        )  # type: np.ndarray[FLOAT]
+        self._buffer = np.zeros(self._buffer_nsamp, dtype=f32)  # type: np.ndarray[f32]
 
         # (const) Added to self._buffer. Nonzero if edge triggering is nonzero.
         # Left half is -edge_strength, right half is +edge_strength.
         # ASCII art: --._|‾'--
         self._edge_finder = self._calc_step()
-        assert self._edge_finder.dtype == FLOAT
+        assert self._edge_finder.dtype == f32
 
         # Will be overwritten on the first frame.
         self._prev_period: Optional[int] = None
@@ -417,8 +415,8 @@ class CorrelationTrigger(MainTrigger):
 
         # Generate left half-taper to prevent correlating with 1-frame-old data.
         # Right-pad=1 taper to [t-halfN, t-halfN+N]
-        # TODO switch to rightpad()? Does it return FLOAT or not?
-        data_taper = np.ones(N, dtype=FLOAT)
+        # TODO switch to rightpad()? Does it return f32 or not?
+        data_taper = np.ones(N, dtype=f32)
         data_taper[:halfN] = np.minimum(data_taper[:halfN], taper)
 
         return data_taper
@@ -436,7 +434,7 @@ class CorrelationTrigger(MainTrigger):
         N = self._buffer_nsamp
         halfN = N // 2
 
-        step = np.empty(N, dtype=FLOAT)  # type: np.ndarray[FLOAT]
+        step = np.empty(N, dtype=f32)  # type: np.ndarray[f32]
         step[:halfN] = -edge_strength / 2
         step[halfN:] = edge_strength / 2
         step *= windows.gaussian(N, std=halfN / 3)
@@ -685,7 +683,7 @@ def correlate_data(
     - trigger = index + peak_offset
     """
     N = len(data)
-    corr = signal.correlate(data, prev_buffer)  # returns double, not single/FLOAT
+    corr = signal.correlate(data, prev_buffer)  # returns double, not single/f32
     Ncorr = 2 * N - 1
     assert len(corr) == Ncorr
 

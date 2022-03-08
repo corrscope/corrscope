@@ -7,9 +7,9 @@ import numpy as np
 import corrscope.utils.scipy.wavfile as wavfile
 from corrscope.config import CorrError, TypedEnumDump
 
-FLOAT = np.single
+f32 = np.single
 
-# Depends on FLOAT
+# Depends on f32
 from corrscope.utils.windows import rightpad
 
 
@@ -72,11 +72,11 @@ def calc_flatten_matrix(flatten: FlattenOrStr, stereo_nchan: int) -> np.ndarray:
 
     if flatten is Flatten.Stereo:
         # 2D identity (results in 2-dim data)
-        flatten_matrix = np.eye(stereo_nchan, dtype=FLOAT)
+        flatten_matrix = np.eye(stereo_nchan, dtype=f32)
 
     # 1D (results in 1-dim data)
     elif flatten is Flatten.SumAvg:
-        flatten_matrix = np.ones(stereo_nchan, dtype=FLOAT) / stereo_nchan
+        flatten_matrix = np.ones(stereo_nchan, dtype=f32) / stereo_nchan
 
     elif flatten is Flatten.DiffAvg:
         flatten_matrix = calc_flatten_matrix(str(flatten), stereo_nchan)
@@ -85,7 +85,7 @@ def calc_flatten_matrix(flatten: FlattenOrStr, stereo_nchan: int) -> np.ndarray:
     else:
         words = flatten.replace(",", " ").split()
         try:
-            flatten_matrix = np.array([FLOAT(word) for word in words])
+            flatten_matrix = np.array([f32(word) for word in words])
         except ValueError as e:
             raise CorrError("Invalid stereo flattening matrix") from e
 
@@ -95,7 +95,7 @@ def calc_flatten_matrix(flatten: FlattenOrStr, stereo_nchan: int) -> np.ndarray:
 
         flatten_matrix /= flatten_abs_sum
 
-    assert flatten_matrix.dtype == FLOAT, flatten_matrix.dtype
+    assert flatten_matrix.dtype == f32, flatten_matrix.dtype
     return flatten_matrix
 
 
@@ -206,9 +206,9 @@ class Wave:
         return new
 
     def __getitem__(self, index: Union[int, slice]) -> np.ndarray:
-        """Copies self.data[item], converted to a FLOAT within range [-1, 1)."""
+        """Copies self.data[item], converted to a f32 within range [-1, 1)."""
         # subok=False converts data from memmap (slow) to ndarray (faster).
-        data: np.ndarray = self.data[index].astype(FLOAT, subok=False, copy=True)
+        data: np.ndarray = self.data[index].astype(f32, subok=False, copy=True)
 
         # Flatten stereo to mono.
         data = data @ self.flatten_matrix
@@ -251,7 +251,7 @@ class Wave:
         out_end = out_begin + len(data)
         # len(data) == ceil((end_index - begin_index) / subsampling)
 
-        out = np.zeros((out_len, *data.shape[1:]), dtype=FLOAT)
+        out = np.zeros((out_len, *data.shape[1:]), dtype=f32)
 
         out[out_begin:out_end] = data
 
