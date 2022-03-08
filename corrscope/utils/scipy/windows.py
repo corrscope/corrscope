@@ -37,7 +37,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from corrscope.wave import f32
+from corrscope.wave_common import f32
 
 __all__ = ['boxcar', 'triang', 'parzen', 'bohman', 'blackman', 'nuttall',
            'blackmanharris', 'flattop', 'bartlett', 'hanning', 'barthann',

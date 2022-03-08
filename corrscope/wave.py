@@ -6,11 +6,8 @@ import numpy as np
 
 import corrscope.utils.scipy.wavfile as wavfile
 from corrscope.config import CorrError, TypedEnumDump
-
-f32 = np.single
-
-# Depends on f32
 from corrscope.utils.windows import rightpad
+from corrscope.wave_common import f32
 
 
 @enum.unique

@@ -1,7 +1,7 @@
 import numpy as np
 
 from corrscope.utils.scipy import windows
-from corrscope.wave import f32
+from corrscope.wave_common import f32
 
 
 def leftpad(data: np.ndarray, n: int) -> np.ndarray:

@@ -17,7 +17,7 @@ from corrscope.utils.trigger_util import (
     abs_max,
 )
 from corrscope.utils.windows import leftpad, midpad, rightpad, gaussian_or_zero
-from corrscope.wave import f32
+from corrscope.wave_common import f32
 
 if TYPE_CHECKING:
     from corrscope.wave import Wave

@@ -4,7 +4,7 @@ import numpy as np
 
 import corrscope.utils.scipy.signal as signal
 from corrscope.config import KeywordAttrs
-from corrscope.wave import f32
+from corrscope.wave_common import f32
 
 
 class SpectrumConfig(KeywordAttrs):
