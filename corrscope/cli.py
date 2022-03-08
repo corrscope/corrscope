@@ -1,4 +1,5 @@
 import sys
+from glob import glob
 from pathlib import Path
 from typing import Optional, List, Tuple, Union, cast, TypeVar
 
@@ -167,7 +168,7 @@ def main(
 
         else:
             # Load one or more wav files.
-            matches = sorted(Path().glob(name))
+            matches = sorted([Path(s) for s in glob(name)])
             if not matches:
                 matches = [path]
                 if not path.exists():

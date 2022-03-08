@@ -6,6 +6,10 @@
 - Add support for background images (#388, @Sanqui)
 - Add support for line outlines (#388, @Sanqui)
 
+### Changelog
+
+- Fix passing absolute .wav paths into corrscope CLI (#398)
+
 ## 0.7.1
 
 ### Major Changes
