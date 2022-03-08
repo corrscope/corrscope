@@ -83,7 +83,7 @@ class LogFreqSpectrum(DummySpectrum):
         while True:
             # Compute parameters
             self.min_hz = scfg.min_hz
-            self.max_hz = self.min_hz * 2 ** scfg.octaves
+            self.max_hz = self.min_hz * 2**scfg.octaves
             n_fencepost = scfg.notes_per_octave * scfg.octaves + 1
 
             note_fenceposts_hz = np.geomspace(

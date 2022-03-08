@@ -46,7 +46,7 @@ coverage = "^6"
 pytest-cov = "^3"
 codecov = "^2.1.11"
 pytest-cases = "^3.6.1"
-black = "^21.6b0"
+black = "^22"
 
 [tool.poetry.scripts]
 corr = 'corrscope.cli:main'

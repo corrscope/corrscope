@@ -217,7 +217,7 @@ def blend_colors(
     rgb_blend = []
 
     for ch1, ch2 in zip(rgb1, rgb2):
-        blend = lerp(ch1 ** gamma, ch2 ** gamma, ratio) ** (1 / gamma)
+        blend = lerp(ch1**gamma, ch2**gamma, ratio) ** (1 / gamma)
         rgb_blend.append(blend)
 
     return QColor.fromRgbF(*rgb_blend, 1.0)
