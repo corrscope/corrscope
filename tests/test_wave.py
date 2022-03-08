@@ -2,9 +2,9 @@ import warnings
 from typing import Sequence
 
 import numpy as np
-from numpy.testing import assert_allclose
 import pytest
 from delayed_assert import expect, assert_expectations
+from numpy.testing import assert_allclose
 
 from corrscope.config import CorrError
 from corrscope.utils.scipy.wavfile import WavFileWarning
