@@ -2,6 +2,37 @@ from bisect import bisect_left
 
 import numpy as np
 
+def correlate_valid(buffer: np.ndarray, kernel: np.ndarray) -> np.ndarray:
+    """
+    Based on scipy.correlate. buffer must be longer (or equal) to kernel. Returns an
+    array of length (buffer - kernel + 1) without edge effects, much like mode="valid".
+    """
+    buffer = np.asarray(buffer)
+    kernel = np.asarray(kernel)
+
+    assert buffer.ndim == kernel.ndim == 1
+    kernel = _reverse_and_conj(kernel)
+
+    # Taken from scipy fftconvolve()
+
+    kernel_support = len(kernel) - 1
+    out_nsamp = len(buffer) - kernel_support
+
+    # fft_nsamp = 1 << (out_nsamp - 1).bit_length()
+    fft_nsamp = next_fast_len(len(buffer))
+    assert fft_nsamp >= out_nsamp
+
+    # return convolve(in1, _reverse_and_conj(in2), mode, method)
+    sp1 = np.fft.rfft(buffer, fft_nsamp)
+    # Already reversed above.
+    sp2 = np.fft.rfft(kernel, fft_nsamp)
+
+    corr = np.fft.irfft(sp1 * sp2, fft_nsamp)
+    # Slice the returned data to the valid region, for complex math reasons.
+    ret = corr[kernel_support : kernel_support + out_nsamp].copy()
+    return ret
+
+
 
 def correlate(in1: np.ndarray, in2: np.ndarray) -> np.ndarray:
     """
