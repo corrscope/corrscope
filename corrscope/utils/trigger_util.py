@@ -21,7 +21,7 @@ UNKNOWN_PERIOD = 0
 # get_trigger()
 def get_period(
     data: np.ndarray,
-    subsmp_s: float,
+    subsmp_per_s: float,
     max_freq: float,
     self: "Optional[t.CorrelationTrigger]" = None,
 ) -> int:
@@ -64,10 +64,10 @@ def get_period(
         - Most music does not go this high.
         - Overestimating period of high notes is mostly harmless.
         """
-        max_cyc_s = max_freq
-        min_s_cyc = 1 / max_cyc_s
-        min_subsmp_cyc = subsmp_s * min_s_cyc
-        return iround(min_subsmp_cyc)
+        max_cyc_per_s = max_freq
+        min_s_per_cyc = 1 / max_cyc_per_s
+        min_subsmp_per_cyc = subsmp_per_s * min_s_per_cyc
+        return iround(min_subsmp_per_cyc)
 
     def get_zero_crossing() -> int:
         """Remove the central peak."""

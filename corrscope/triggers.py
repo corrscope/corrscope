@@ -102,7 +102,7 @@ class _Trigger(ABC, Generic[result]):
         self.cfg = cfg
         self._wave = wave
 
-        # TODO rename tsamp to buffer_nsamp
+        # TODO rename _tsamp to _trigger_subsmp, tsamp to subsamp
         self._tsamp = tsamp
         self._stride = stride
         self._fps = fps
@@ -112,14 +112,14 @@ class _Trigger(ABC, Generic[result]):
         self._wave_idx = wave_idx
 
         # Subsamples per second
-        self.subsmp_s = self._wave.smp_s / self._stride
+        self.subsmp_per_s = self._wave.smp_s / self._stride
 
         frame_dur = 1 / fps
         # Subsamples per frame
-        self._tsamp_frame = self.time2tsamp(frame_dur)
+        self._tsamp_per_frame = self.seconds_to_tsamp(frame_dur)
 
-    def time2tsamp(self, time: float) -> int:
-        return round(time * self.subsmp_s)
+    def seconds_to_tsamp(self, time: float) -> int:
+        return round(time * self.subsmp_per_s)
 
     def custom_line(
         self, name: str, data: np.ndarray, offset: bool, invert: bool = True
@@ -303,7 +303,7 @@ class CorrelationTriggerConfig(
     max_freq: float = with_units("Hz", default=4000)
 
     # Pitch tracking = compute spectrum.
-    pitch_tracking: Optional["SpectrumConfig"] = None
+    pitch_tracking: Optional[SpectrumConfig] = None
 
     # region Legacy Aliases
     trigger_strength = Alias("edge_strength")
@@ -341,7 +341,7 @@ class CorrelationTrigger(MainTrigger):
     cfg: CorrelationTriggerConfig
 
     @property
-    def scfg(self) -> SpectrumConfig:
+    def scfg(self) -> Optional[SpectrumConfig]:
         return self.cfg.pitch_tracking
 
     def __init__(self, *args, **kwargs):
@@ -379,7 +379,7 @@ class CorrelationTrigger(MainTrigger):
 
         if self.scfg:
             self._spectrum_calc = LogFreqSpectrum(
-                scfg=self.scfg, subsmp_s=self.subsmp_s, dummy_data=self._buffer
+                scfg=self.scfg, subsmp_per_s=self.subsmp_per_s, dummy_data=self._buffer
             )
         else:
             self._spectrum_calc = DummySpectrum()
@@ -398,17 +398,17 @@ class CorrelationTrigger(MainTrigger):
 
         # To avoid cutting off data, use a narrow transition zone (invariant to stride).
         lag_prevention = self.cfg.lag_prevention
-        tsamp_frame = self._tsamp_frame
-        transition_nsamp = round(tsamp_frame * lag_prevention.transition_frames)
+        tsamp_per_frame = self._tsamp_per_frame
+        transition_nsamp = round(tsamp_per_frame * lag_prevention.transition_frames)
 
         # Left half of a Hann cosine taper
         # Width (type=subsample) = min(frame * lag_prevention, 1 frame)
-        assert transition_nsamp <= tsamp_frame
+        assert transition_nsamp <= tsamp_per_frame
         width = transition_nsamp
         taper = windows.hann(width * 2)[:width]
 
         # Right-pad=1 taper to lag_prevention.max_frames long [t-#*f, t]
-        taper = rightpad(taper, iround(tsamp_frame * lag_prevention.max_frames))
+        taper = rightpad(taper, iround(tsamp_per_frame * lag_prevention.max_frames))
 
         # Left-pad=0 taper to left `halfN` of data_taper [t-halfN, t]
         taper = leftpad(taper, halfN)
@@ -476,7 +476,7 @@ class CorrelationTrigger(MainTrigger):
         data -= np.add.reduce(data) / N
 
         # Window data
-        period = get_period(data, self.subsmp_s, self.cfg.max_freq, self)
+        period = get_period(data, self.subsmp_per_s, self.cfg.max_freq, self)
         cache.period = period * stride
 
         semitones = self._is_window_invalid(period)
@@ -546,7 +546,7 @@ class CorrelationTrigger(MainTrigger):
         self.offset_viewport(peak_offset)
 
         # period: subsmp/cyc
-        freq_estimate = self.subsmp_s / period if period else None
+        freq_estimate = self.subsmp_per_s / period if period else None
         # freq_estimate: cyc/s
         # If period is 0 (unknown), freq_estimate is None.
 
