@@ -2,6 +2,7 @@
 - Test command-line parsing and Config generation.
 - Integration tests (see conftest.py).
 """
+import os.path
 import shlex
 from os.path import abspath
 from pathlib import Path
@@ -92,6 +93,50 @@ def test_file_dirs(any_sink, mocker, wav_dir):
     wavs = sorted(str(x) for x in wavs)
 
     cfg = any_sink(mocker, wav_dir)[0]
+    assert isinstance(cfg, Config)
+
+    assert [chan.wav_path for chan in cfg.channels] == wavs
+
+
+@pytest.mark.parametrize("wav_dir", ". tests".split())
+def test_absolute_dir(any_sink, mocker, wav_dir):
+    """Ensure loading files from `abspath(dir)` functions properly."""
+
+    wavs = Path(wav_dir).glob("*.wav")
+    wavs = sorted(abspath(str(x)) for x in wavs)
+
+    cfg = any_sink(mocker, shlex.quote(abspath(wav_dir)))[0]
+    assert isinstance(cfg, Config)
+
+    assert [chan.wav_path for chan in cfg.channels] == wavs
+
+
+def test_absolute_files(any_sink, mocker):
+    """On Linux, the shell expands wildcards. Ensure loading absolute .wav paths
+    functions properly."""
+
+    wav_dir = "tests"
+
+    wavs = Path(wav_dir).glob("*.wav")
+    wavs = sorted(abspath(str(x)) for x in wavs)
+
+    cfg = any_sink(mocker, shlex.join(wavs))[0]
+    assert isinstance(cfg, Config)
+
+    assert [chan.wav_path for chan in cfg.channels] == wavs
+
+
+def test_absolute_wildcard(any_sink, mocker):
+    """On Windows, the program is expected to expand wildcards. Ensure loading
+    absolute paths containing wildcards functions properly."""
+
+    wav_dir = "tests"
+
+    wavs = Path(wav_dir).glob("*.wav")
+    wavs = sorted(abspath(str(x)) for x in wavs)
+
+    wildcard_wav = os.path.join(abspath(wav_dir), "*.wav")
+    cfg = any_sink(mocker, shlex.quote(wildcard_wav))[0]
     assert isinstance(cfg, Config)
 
     assert [chan.wav_path for chan in cfg.channels] == wavs
