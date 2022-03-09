@@ -44,8 +44,7 @@ build_script:
 
 test_script:
   - 'poetry run black --check .'
-  - 'poetry run pytest --tb=short --cov=corrscope'
-  - 'poetry run codecov'
+  - 'poetry run pytest --tb=short'
 
 after_test:
   # Run 32-bit PyInstaller to make CI complete faster.

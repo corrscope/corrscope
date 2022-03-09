@@ -3,7 +3,6 @@
 [![Appveyor build status](https://ci.appveyor.com/api/projects/status/awiajnwd6a4uhu37/branch/master?svg=true)](https://ci.appveyor.com/project/nyanpasu64/corrscope/branch/master)
 [![Latest release](https://img.shields.io/github/v/release/corrscope/corrscope?include_prereleases)](https://github.com/corrscope/corrscope/releases)
 [![PyPI release](https://img.shields.io/pypi/v/corrscope.svg)](https://pypi.org/project/corrscope/)
-[![codecov](https://codecov.io/gh/corrscope/corrscope/branch/master/graph/badge.svg)](https://codecov.io/gh/corrscope/corrscope)
 
 Corrscope renders oscilloscope views of WAV files recorded from chiptune (game music from retro sound chips).
 

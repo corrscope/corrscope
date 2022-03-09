@@ -14,44 +14,6 @@ from {module} import {func}
     )
 
 
-# public:
-def dcover():
-    """Run coverage and diff-cover."""
-    cover()
-    diff()
-
-
-def rcover():
-    """Run coverage and report."""
-    cover()
-    report()
-
-
-def hcover():
-    """Run coverage and open HTML."""
-    cover()
-    html()
-
-
-# public helpers:
-def cover():
-    run("pytest:main", "--tb=short --cov=corrscope")
-
-
-def diff():
-    # argv[0:]
-    run("diff_cover.tool:main", "diff-cover coverage.xml")
-
-
-def report():
-    run("coverage.cmdline:main", "report")
-
-
-def html():
-    run("coverage.cmdline:main", "html")
-    webbrowser.open("htmlcov/index.html")
-
-
 """
 export MONKEYTYPE_TRACE_MODULES=corrscope
 monkeytype run `which pytest`
