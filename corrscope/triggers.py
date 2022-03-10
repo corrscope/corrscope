@@ -416,13 +416,14 @@ class CorrelationTrigger(MainTrigger):
 
         cfg = self.cfg
         if cfg.slope_strength:
-            slope_finder = np.zeros(self.A + self.B)
-
             slope_width = max(iround(cfg.slope_width * period), 1)
             slope_strength = cfg.slope_strength * cfg.buffer_falloff
 
-            slope_finder[self.A - slope_width : self.A] = -slope_strength
-            slope_finder[self.A : self.A + slope_width] = slope_strength
+            slope_finder = np.empty(self.A + self.B, dtype=f32)  # type: np.ndarray[f32]
+            slope_finder[: self.A] = -slope_strength / 2
+            slope_finder[self.A :] = slope_strength / 2
+
+            slope_finder *= windows.gaussian(self.A + self.B, std=slope_width)
             return slope_finder
         else:
             return None
