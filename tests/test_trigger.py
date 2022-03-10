@@ -124,26 +124,34 @@ def test_post_stride(post_trigger):
     Test that stride is respected when post_trigger is disabled,
     and ignored when post_trigger is enabled.
     """
-    cfg = trigger_template(post_trigger=post_trigger)
+    cfg = trigger_template(post_trigger=post_trigger, post_radius=10)
 
     wave = Wave("tests/sine440.wav")
     iters = 5
     x0 = 24000
     stride = 4
-    trigger = cfg(wave, tsamp=100, stride=stride, fps=FPS)
 
-    cache = PerFrameCache()
+    def trigger(pos):
+        # We have to generate a new trigger object each time, because
+        # CorrelationTrigger.get_trigger() never goes backwards, which violates the
+        # stride quantization we're testing for in the "if not cfg.post_trigger" branch.
+
+        trigger = cfg(wave, tsamp=150 // stride, stride=stride, fps=FPS)
+        cache = PerFrameCache()
+        return trigger.get_trigger(pos, cache).result
+
+    init_offset = trigger(x0)
+
     for i in range(1, iters):
-        offset = trigger.get_trigger(x0, cache).result
+        offset = trigger(x0 + i)
 
         if not cfg.post_trigger:
-            assert (offset - x0) % stride == 0, f"iteration {i}"
-            assert abs(offset - x0) < 10, f"iteration {i}"
+            assert (offset - init_offset) % stride == i % stride, f"iteration {i}"
+            assert offset == pytest.approx(x0, abs=9), f"iteration {i}"
 
         else:
-            # If assertion fails, remove it.
-            assert (offset - x0) % stride != 0, f"iteration {i}"
-            assert abs(offset - x0) <= 2, f"iteration {i}"
+            assert offset == pytest.approx(init_offset, abs=1), f"iteration {i}"
+            assert offset == pytest.approx(x0, abs=1), f"iteration {i}"
 
 
 @parametrize("post_trigger", [None, ZeroCrossingTriggerConfig()])
