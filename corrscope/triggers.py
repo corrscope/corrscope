@@ -495,9 +495,46 @@ class CorrelationTrigger(MainTrigger):
         else:
             trigger_radius = None
 
+        def correlate_valid(
+            data: np.ndarray, corr_kernel: np.ndarray, radius: Optional[int]
+        ) -> int:
+            """Returns kernel offset (≥ 0) relative to data, which maximizes correlation.
+            kernel is not allowed to move past the boundaries of data.
+
+            If radius is set, the returned offset is limited to ±radius from the center of
+            correlation.
+            """
+            # returns double, not single/f32
+            corr = signal.correlate_valid(data, corr_kernel)
+            begin_offset = 0
+
+            if radius is not None:
+                Ncorr = len(corr)
+                mid = Ncorr // 2
+
+                left = max(mid - radius, 0)
+                right = min(mid + radius + 1, Ncorr)
+
+                corr = corr[left:right]
+                begin_offset = left
+
+            min_val = np.min(corr)
+
+            # Only permit local maxima. This fixes triggering errors where the edge
+            # of the allowed range has higher correlation than edges in-bounds,
+            # but isn't a rising edge itself (a local maximum of alignment).
+            orig = corr.copy()
+            corr[:-1][orig[:-1] < orig[1:]] = min_val
+            corr[1:][orig[1:] < orig[:-1]] = min_val
+            corr[0] = corr[-1] = min_val
+
+            # Find optimal offset
+            peak_offset = np.argmax(corr) + begin_offset  # type: int
+            return peak_offset
+
         # Find correlation peak.
         peak_offset = correlate_valid(data, corr_kernel, trigger_radius)
-        trigger = trigger_begin + (stride * peak_offset)
+        trigger = trigger_begin + stride * (peak_offset)
 
         del data
 
@@ -630,33 +667,6 @@ class CorrelationTrigger(MainTrigger):
         # Old buffer
         normalize_buffer(self._corr_buffer)
         self._corr_buffer = lerp(self._corr_buffer, data, responsiveness)
-
-
-def correlate_valid(
-    data: np.ndarray, corr_kernel: np.ndarray, radius: Optional[int]
-) -> int:
-    """Returns kernel offset (≥ 0) relative to data, which maximizes correlation.
-    kernel is not allowed to move past the boundaries of data.
-
-    If radius is set, the returned offset is limited to ±radius from the center of
-    correlation.
-    """
-    corr = signal.correlate_valid(data, corr_kernel)  # returns double, not single/f32
-    begin_offset = 0
-
-    if radius is not None:
-        Ncorr = len(corr)
-        mid = Ncorr // 2
-
-        left = max(mid - radius, 0)
-        right = min(mid + radius + 1, Ncorr)
-
-        corr = corr[left:right]
-        begin_offset = left
-
-    # Find optimal offset
-    peak_offset = np.argmax(corr) + begin_offset  # type: int
-    return peak_offset
 
 
 @attr.dataclass
