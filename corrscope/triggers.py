@@ -409,20 +409,23 @@ class CorrelationTrigger(MainTrigger):
         step *= windows.gaussian(self.A + self.B, std=self.A / 3)
         return step
 
-    def _calc_slope_finder(self, period: float) -> np.ndarray:
+    def _calc_slope_finder(self, period: float) -> Optional[np.ndarray]:
         """Called whenever period changes substantially.
         Returns a kernel to be correlated with input data to find positive slopes,
         with length A+B."""
 
-        slope_finder = np.zeros(self.A + self.B)
-
         cfg = self.cfg
-        slope_width = max(iround(cfg.slope_width * period), 1)
-        slope_strength = cfg.slope_strength * cfg.buffer_falloff
+        if cfg.slope_strength:
+            slope_finder = np.zeros(self.A + self.B)
 
-        slope_finder[self.A - slope_width : self.A] = -slope_strength
-        slope_finder[self.A : self.A + slope_width] = slope_strength
-        return slope_finder
+            slope_width = max(iround(cfg.slope_width * period), 1)
+            slope_strength = cfg.slope_strength * cfg.buffer_falloff
+
+            slope_finder[self.A - slope_width : self.A] = -slope_strength
+            slope_finder[self.A : self.A + slope_width] = slope_strength
+            return slope_finder
+        else:
+            return None
 
     # end setup
 
@@ -482,7 +485,8 @@ class CorrelationTrigger(MainTrigger):
         # array[A+B] Amplitude
         corr_kernel: np.ndarray = self._corr_buffer * self.cfg.buffer_strength
         corr_kernel += self._edge_finder
-        corr_kernel += slope_finder
+        if slope_finder is not None:
+            corr_kernel += slope_finder
 
         # Don't pick peaks more than `period * trigger_radius_periods` away from the
         # center.
