@@ -142,7 +142,7 @@ def test_config_channel_integration(
 
     # Inspect arguments to renderer.update_main_lines()
     datas: List[RenderInput]
-    (datas,), kwargs = renderer.update_main_lines.call_args
+    (datas, *args), kwargs = renderer.update_main_lines.call_args
     render_inputs = datas[0]
     assert len(render_inputs.data) == channel._render_samp
 

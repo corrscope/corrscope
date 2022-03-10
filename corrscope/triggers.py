@@ -124,7 +124,12 @@ class _Trigger(ABC, Generic[result]):
         return round(time * self._wave.smp_s)
 
     def custom_line(
-        self, name: str, data: np.ndarray, offset: bool, invert: bool = True
+        self,
+        name: str,
+        data: np.ndarray,
+        xs: np.ndarray,
+        absolute: bool,
+        invert: bool = True,
     ):
         """
         :param offset:
@@ -146,21 +151,16 @@ class _Trigger(ABC, Generic[result]):
         if invert:
             data *= np.copysign(1, self._wave.amplification)
         self._renderer.update_custom_line(
-            name, self._wave_idx, self._stride, data, offset=offset
+            name, self._wave_idx, self._stride, data, xs, absolute
         )
 
-    def custom_vline(self, name: str, x: int, offset: bool):
+    def custom_vline(self, name: str, x: int, absolute: bool):
         """See above for `offset`."""
         if self._renderer is None:
             return
         self._renderer.update_vline(
-            name, self._wave_idx, self._stride, x, offset=offset
+            name, self._wave_idx, self._stride, x, absolute=absolute
         )
-
-    def offset_viewport(self, offset: int):
-        if self._renderer is None:
-            return
-        self._renderer.offset_viewport(self._wave_idx, offset)
 
     @abstractmethod
     def get_trigger(self, index: int, cache: "PerFrameCache") -> result:
@@ -519,8 +519,6 @@ class CorrelationTrigger(MainTrigger):
         self._update_buffer(aligned, cache)
 
         self._frames_since_spectrum += 1
-
-        self.offset_viewport(peak_offset)
 
         # period: subsmp/cyc
         freq_estimate = self.subsmp_per_s / period if period else None
