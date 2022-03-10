@@ -305,7 +305,7 @@ class CorrelationTriggerConfig(
     def __attrs_post_init__(self) -> None:
         MainTriggerConfig.__attrs_post_init__(self)
 
-        validate_param(self, "slope_width", 0, 0.5)
+        # Don't validate slope_width.
 
         validate_param(self, "responsiveness", 0, 1)
         # TODO trigger_falloff >= 0
@@ -416,7 +416,8 @@ class CorrelationTrigger(MainTrigger):
 
         cfg = self.cfg
         if cfg.slope_strength:
-            slope_width = max(iround(cfg.slope_width * period), 1)
+            # noinspection PyTypeChecker
+            slope_width: float = np.clip(cfg.slope_width * period, 1.0, self.A / 3)
             slope_strength = cfg.slope_strength * cfg.buffer_falloff
 
             slope_finder = np.empty(self.A + self.B, dtype=f32)  # type: np.ndarray[f32]

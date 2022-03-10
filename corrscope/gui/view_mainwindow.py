@@ -359,7 +359,7 @@ class MainWindow(QWidget):
                     name="trigger__slope_width",
                 ):
                     s.widget.setMinimum(0)
-                    s.widget.setMaximum(0.5)
+                    s.widget.setMaximum(2)
                     s.widget.setSingleStep(0.02)
 
             with append_widget(
