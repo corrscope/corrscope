@@ -1,7 +1,7 @@
 import numpy as np
 
 from corrscope.utils.scipy import windows
-from corrscope.wave import FLOAT
+from corrscope.wave_common import f32
 
 
 def leftpad(data: np.ndarray, n: int) -> np.ndarray:
@@ -52,6 +52,6 @@ def gaussian_or_zero(M: int, std: float, sym: bool = True) -> np.ndarray:
     If period is zero (cannot be estimated), return all zeros.
     """
     if std == 0:
-        return np.zeros(M, dtype=FLOAT)
+        return np.zeros(M, dtype=f32)
     else:
         return windows.gaussian(M, std, sym)

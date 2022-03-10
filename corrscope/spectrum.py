@@ -4,7 +4,7 @@ import numpy as np
 
 import corrscope.utils.scipy.signal as signal
 from corrscope.config import KeywordAttrs
-from corrscope.wave import FLOAT
+from corrscope.wave_common import f32
 
 
 class SpectrumConfig(KeywordAttrs):
@@ -74,10 +74,12 @@ class LogFreqSpectrum(DummySpectrum):
     note_fenceposts: FFTIndexArray
     n_fencepost: int
 
-    def __init__(self, scfg: SpectrumConfig, subsmp_s: float, dummy_data: np.ndarray):
+    def __init__(
+        self, scfg: SpectrumConfig, subsmp_per_s: float, dummy_data: np.ndarray
+    ):
         self.scfg = scfg
 
-        n_fftindex: FFTIndex = signal.next_fast_len(len(dummy_data))
+        n_fftindex = FFTIndex(signal.next_fast_len(len(dummy_data)))
 
         # Increase n_fftindex until every note has nonzero width.
         while True:
@@ -87,18 +89,20 @@ class LogFreqSpectrum(DummySpectrum):
             n_fencepost = scfg.notes_per_octave * scfg.octaves + 1
 
             note_fenceposts_hz = np.geomspace(
-                self.min_hz, self.max_hz, n_fencepost, dtype=FLOAT
+                self.min_hz, self.max_hz, n_fencepost, dtype=f32
             )
 
             # Convert fenceposts to FFTIndex
-            fft_from_hertz = n_fftindex / subsmp_s
+            fft_from_hertz = n_fftindex / subsmp_per_s
             note_fenceposts: FFTIndexArray = (
                 fft_from_hertz * note_fenceposts_hz
             ).astype(np.int32)
             note_widths = np.diff(note_fenceposts)
 
             if np.any(note_widths == 0):
-                n_fftindex = signal.next_fast_len(n_fftindex + n_fftindex // 5 + 1)
+                n_fftindex = FFTIndex(
+                    signal.next_fast_len(n_fftindex + n_fftindex // 5 + 1)
+                )
                 continue
             else:
                 break
@@ -108,7 +112,7 @@ class LogFreqSpectrum(DummySpectrum):
         self.n_fencepost = len(note_fenceposts)
 
     def calc_spectrum(self, data: np.ndarray) -> np.ndarray:
-        """Unfortunately converting to FLOAT (single) adds too much overhead.
+        """Unfortunately converting to f32 (single) adds too much overhead.
 
         Input: Time-domain signal to be analyzed.
         Output: Frequency-domain spectrum with exponentially-spaced notes.

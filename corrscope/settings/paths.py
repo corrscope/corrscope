@@ -1,8 +1,8 @@
 import os
 import platform
 import sys
-from typing import MutableMapping, List
 from pathlib import Path
+from typing import MutableMapping, List
 
 from appdirs import user_data_dir
 

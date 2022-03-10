@@ -700,7 +700,7 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
         """
         Preconditions:
         - lines2d[wave][chan] = Line2D
-        - inputs[wave] = ndarray, [samp][chan] = FLOAT
+        - inputs[wave] = ndarray, [samp][chan] = f32
         """
         nplots = len(lines2d)
         ndata = len(inputs)

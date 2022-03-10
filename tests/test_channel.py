@@ -1,11 +1,11 @@
 from contextlib import ExitStack
 from typing import Optional, List
+from unittest.mock import patch
 
 import hypothesis.strategies as hs
 import numpy as np
 import pytest
 from hypothesis import given
-from unittest.mock import patch
 
 import corrscope.channel
 import corrscope.corrscope

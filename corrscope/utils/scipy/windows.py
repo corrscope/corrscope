@@ -37,7 +37,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from corrscope.wave import FLOAT
+from corrscope.wave_common import f32
 
 __all__ = ['boxcar', 'triang', 'parzen', 'bohman', 'blackman', 'nuttall',
            'blackmanharris', 'flattop', 'bartlett', 'hanning', 'barthann',
@@ -139,11 +139,11 @@ def general_cosine(M: int, a: List[float], sym: bool = True) -> np.ndarray:
     >>> plt.show()
     """
     if _len_guards(M):
-        return np.ones(M, dtype=FLOAT)
+        return np.ones(M, dtype=f32)
     M, needs_trunc = _extend(M, sym)
 
-    fac = np.linspace(-np.pi, np.pi, M, dtype=FLOAT)
-    w = np.zeros(M, dtype=FLOAT)
+    fac = np.linspace(-np.pi, np.pi, M, dtype=f32)
+    w = np.zeros(M, dtype=f32)
     for k in range(len(a)):
         w += a[k] * np.cos(k * fac)
 
@@ -1180,10 +1180,10 @@ def gaussian(M: int, std: float, sym: bool = True) -> np.ndarray:
 
     """
     if _len_guards(M):
-        return np.ones(M, dtype=FLOAT)
+        return np.ones(M, dtype=f32)
     M, needs_trunc = _extend(M, sym)
 
-    n = np.arange(0, M, dtype=FLOAT) - (M - 1.0) / 2.0
+    n = np.arange(0, M, dtype=f32) - (M - 1.0) / 2.0
     sig2 = 2 * std * std
     w = np.exp(-n ** 2 / sig2)
 
