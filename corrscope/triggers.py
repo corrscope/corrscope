@@ -487,17 +487,25 @@ class CorrelationTrigger(MainTrigger):
         else:
             edge_score = None
 
+        corr_enabled = bool(cfg.buffer_strength) and bool(cfg.responsiveness)
         # array[A+B] Amplitude
         corr_kernel: np.ndarray = self._corr_buffer * cfg.buffer_strength
         if slope_finder is not None:
             corr_kernel += slope_finder
 
+        peak_kernel = self._corr_buffer
+
         # `corr[x]` = correlation of kernel placed at position `x` in data.
         # `corr_kernel` is not allowed to move past the boundaries of `data`.
         corr = signal.correlate_valid(data, corr_kernel)
 
+        peaks = (
+            signal.correlate_valid(data, peak_kernel)
+            if corr_enabled
+            else np.zeros_like(corr)
+        )
         if edge_score is not None:
-            corr += edge_score
+            peaks += edge_score
 
         # Don't pick peaks more than `period * trigger_radius_periods` away from the
         # center.
@@ -506,10 +514,13 @@ class CorrelationTrigger(MainTrigger):
         else:
             trigger_radius = None
 
-        def find_peak(corr: np.ndarray, radius: Optional[int]) -> int:
+        def find_peak(
+            corr: np.ndarray, peaks: np.ndarray, radius: Optional[int]
+        ) -> int:
             """If radius is set, the returned offset is limited to ±radius from the
             center of correlation.
             """
+            assert len(corr) == len(peaks) == self._trigger_diameter + 1
             # returns double, not single/f32
             begin_offset = 0
 
@@ -521,24 +532,24 @@ class CorrelationTrigger(MainTrigger):
                 right = min(mid + radius + 1, Ncorr)
 
                 corr = corr[left:right]
+                peaks = peaks[left:right]
                 begin_offset = left
 
-            min_val = np.min(corr)
+            min_corr = np.min(corr)
 
             # Only permit local maxima. This fixes triggering errors where the edge
             # of the allowed range has higher correlation than edges in-bounds,
             # but isn't a rising edge itself (a local maximum of alignment).
-            orig = corr.copy()
-            corr[:-1][orig[:-1] < orig[1:]] = min_val
-            corr[1:][orig[1:] < orig[:-1]] = min_val
-            corr[0] = corr[-1] = min_val
+            corr[:-1][peaks[:-1] < peaks[1:]] = min_corr
+            corr[1:][peaks[1:] < peaks[:-1]] = min_corr
+            corr[0] = corr[-1] = min_corr
 
             # Find optimal offset
             peak_offset = np.argmax(corr) + begin_offset  # type: int
             return peak_offset
 
         # Find correlation peak.
-        peak_offset = find_peak(corr, trigger_radius)
+        peak_offset = find_peak(corr, peaks, trigger_radius)
         trigger = trigger_begin + stride * (peak_offset)
 
         del data
