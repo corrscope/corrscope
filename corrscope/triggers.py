@@ -653,22 +653,25 @@ class CorrelationTrigger(MainTrigger):
         buffer_falloff = self.cfg.buffer_falloff
         responsiveness = self.cfg.responsiveness
 
-        N = len(data)
-        if N != self._corr_buffer.size:
-            raise ValueError(
-                f"invalid data length {len(data)} does not match "
-                f"CorrelationTrigger {self._corr_buffer.size}"
+        if self.cfg.buffer_strength and responsiveness:
+            N = len(data)
+            if N != self._corr_buffer.size:
+                raise ValueError(
+                    f"invalid data length {len(data)} does not match "
+                    f"CorrelationTrigger {self._corr_buffer.size}"
+                )
+
+            # New waveform
+            data -= cache.mean
+            normalize_buffer(data)
+            window = gaussian_or_zero(
+                N, std=(cache.period / self._stride) * buffer_falloff
             )
+            data *= window
 
-        # New waveform
-        data -= cache.mean
-        normalize_buffer(data)
-        window = gaussian_or_zero(N, std=(cache.period / self._stride) * buffer_falloff)
-        data *= window
-
-        # Old buffer
-        normalize_buffer(self._corr_buffer)
-        self._corr_buffer = lerp(self._corr_buffer, data, responsiveness)
+            # Old buffer
+            normalize_buffer(self._corr_buffer)
+            self._corr_buffer = lerp(self._corr_buffer, data, responsiveness)
 
 
 @attr.dataclass
