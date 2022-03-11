@@ -1095,6 +1095,7 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("render_stereo", str, None, "Render Stereo\nDownmix"),
         Column("trigger_width", int, 1, "Trigger Width ×", always_show=True),
         Column("render_width", int, 1, "Render Width ×", always_show=True),
+        Column("trigger__mean_responsiveness", float, None, "DC Removal\nRate"),
         Column("trigger__sign_strength", float, None),
         Column("trigger__buffer_strength", float, None),
         Column("trigger__responsiveness", float, None, "Buffer\nResponsiveness"),

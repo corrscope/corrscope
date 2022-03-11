@@ -258,6 +258,7 @@ class PerFrameCache:
 class CorrelationTriggerConfig(
     MainTriggerConfig,
     always_dump="""
+    mean_responsiveness
     pitch_tracking
     slope_strength slope_width
     """
@@ -267,6 +268,7 @@ class CorrelationTriggerConfig(
     # get_trigger()
     # Edge/area finding
     sign_strength: float = 0
+    mean_responsiveness: float = 1.0
     edge_strength: float
 
     # Slope detection
@@ -348,6 +350,7 @@ class CorrelationTrigger(MainTrigger):
     _edge_finder: "npt.NDArray[f32]"
     """(const) [A+B] Amplitude"""
 
+    _prev_mean: float
     _prev_period: Optional[int]
     _prev_slope_finder: "Optional[npt.NDArray[f32]]"
     """(mutable) [A+B] Amplitude"""
@@ -375,6 +378,7 @@ class CorrelationTrigger(MainTrigger):
         self._edge_finder = self._calc_step()
         assert self._edge_finder.dtype == f32
 
+        self._prev_mean = 0.0
         # Will be overwritten on the first frame.
         self._prev_period = None
         self._prev_slope_finder = None
@@ -461,12 +465,20 @@ class CorrelationTrigger(MainTrigger):
             signs = sign_times_peak(data)
             data += cfg.sign_strength * signs
 
-        # Remove mean from data
-        data -= np.add.reduce(data) / data.size
+        # Remove mean from data, if enabled.
+        mean = np.add.reduce(data) / data.size
+        period_data = data - mean
+
+        if cfg.mean_responsiveness:
+            self._prev_mean += cfg.mean_responsiveness * (mean - self._prev_mean)
+            if cfg.mean_responsiveness != 1:
+                data -= self._prev_mean
+            else:
+                data = period_data
 
         # Use period to recompute slope finder (if enabled) and restrict trigger
         # diameter.
-        period = get_period(data, self.subsmp_per_s, self.cfg.max_freq, self)
+        period = get_period(period_data, self.subsmp_per_s, cfg.max_freq, self)
         cache.period = period * stride
 
         semitones = self._is_window_invalid(period)
@@ -485,7 +497,7 @@ class CorrelationTrigger(MainTrigger):
             slope_finder = self._prev_slope_finder
 
         # array[A+B] Amplitude
-        corr_kernel: np.ndarray = self._corr_buffer * self.cfg.buffer_strength
+        corr_kernel: np.ndarray = self._corr_buffer * cfg.buffer_strength
         corr_kernel += self._edge_finder
         if slope_finder is not None:
             corr_kernel += slope_finder
