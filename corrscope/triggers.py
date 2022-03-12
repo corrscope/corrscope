@@ -665,7 +665,7 @@ class CorrelationTrigger(MainTrigger):
             data -= cache.mean
             normalize_buffer(data)
             window = gaussian_or_zero(
-                N, std=(cache.period / self._stride) * buffer_falloff
+                N, std=(cache.period / self._stride or N) * buffer_falloff
             )
             data *= window
 
