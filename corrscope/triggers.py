@@ -278,15 +278,16 @@ class CorrelationTriggerConfig(
     # Correlation detection
     buffer_strength: float = 1
 
-    # _update_buffer()
+    # _update_buffer() (not in GUI)
     buffer_falloff: float = 0.5
 
-    # Maximum distance to move (in terms of trigger_ms/trigger_samp)
+    # Maximum distance to move (in terms of trigger_ms/trigger_samp) (not in GUI)
     trigger_diameter: float = 0.5
 
-    # Maximum distance to move (in terms of estimated wave period)
+    # Maximum distance to move (in terms of estimated wave period) (not in GUI)
     trigger_radius_periods: Optional[float] = 1.5
 
+    # (not in GUI)
     recalc_semitones: float = 1.0
 
     # _update_buffer
@@ -295,7 +296,7 @@ class CorrelationTriggerConfig(
     # Period/frequency estimation (not in GUI)
     max_freq: float = with_units("Hz", default=4000)
 
-    # Pitch tracking = compute spectrum.
+    # Pitch tracking = compute spectrum. (GUI only has a checkbox)
     pitch_tracking: Optional[SpectrumConfig] = None
 
     # region Legacy Aliases
