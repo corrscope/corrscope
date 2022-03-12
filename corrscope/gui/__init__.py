@@ -36,6 +36,7 @@ from corrscope.gui.model_bind import (
     BoundComboBox,
 )
 from corrscope.gui.util import color2hex, Locked, find_ranges, TracebackDialog
+from corrscope.gui.version_common import QT6
 from corrscope.gui.view_mainwindow import MainWindow as Ui_MainWindow
 from corrscope.gui.widgets import ChannelTableView, ShortcutButton
 from corrscope.layout import Orientation, StereoOrientation
@@ -83,7 +84,8 @@ def gui_main(cfg_or_path: Union[Config, Path]):
 
     # qw.QApplication.setStyle('fusion')
     QApp = qw.QApplication
-    QApp.setAttribute(qc.Qt.AA_EnableHighDpiScaling)
+    if not QT6:
+        QApp.setAttribute(qc.Qt.AA_EnableHighDpiScaling)
 
     app = qw.QApplication(sys.argv)
 
@@ -674,12 +676,12 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         return self.model.cfg
 
     # Misc.
-    @qc.pyqtSlot()
+    @qc.Slot()
     def on_action_website(self):
         website_url = r"https://github.com/corrscope/corrscope/"
         QDesktopServices.openUrl(qc.QUrl(website_url))
 
-    @qc.pyqtSlot()
+    @qc.Slot()
     def on_action_help(self):
         help_url = r"https://corrscope.github.io/corrscope/"
         QDesktopServices.openUrl(qc.QUrl(help_url))
@@ -711,7 +713,7 @@ class PreviewOrRender(Enum):
 class CorrThread(qc.QThread):
     is_aborted: Locked[bool]
 
-    @qc.pyqtSlot()
+    @qc.Slot()
     def abort(self):
         self.is_aborted.set(True)
 
@@ -722,8 +724,8 @@ class CorrThread(qc.QThread):
             for output in self.corr.outputs:
                 output.terminate(from_same_thread=False)
 
-    error = qc.pyqtSignal(str)
-    ffmpeg_missing = qc.pyqtSignal()
+    error = qc.Signal(str)
+    ffmpeg_missing = qc.Signal()
 
     def __init__(self, cfg: Config, arg: Arguments, mode: PreviewOrRender):
         qc.QThread.__init__(self)
@@ -772,7 +774,7 @@ class CorrProgressDialog(qw.QProgressDialog):
         # Close after CorrScope finishes.
         self.setAutoClose(True)
 
-    @qc.pyqtSlot(float, float)
+    @qc.Slot(float, float)
     def on_begin(self, begin_time, end_time):
         self.setRange(iround(begin_time), iround(end_time))
         # self.setValue is called by CorrScope, on the first frame.
