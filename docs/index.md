@@ -84,6 +84,10 @@ The NES high-pass removes DC and low frequencies, causing waveforms to decay tow
 - Try using Slope Strength, Edge Strength, or a combination of both.
 - Reduce both relative to Buffer Strength to track evolving waves better (but center new/existing waves less strongly). To restore centering, you can enable Post Triggering and experiment with the radius.
 
+### Managing DC Offsets
+
+For waves with high DC offsets, if you want to trigger based on the current vertical of the wave, set the global or track-specific "DC Removal Rate" (`mean_responsiveness`) to 0.5-1. If you want to trigger based on the actual zero level, set it to 0.
+
 ## Options
 
 All tabs are located in the left pane.
@@ -109,6 +113,8 @@ All tabs are located in the left pane.
 - `edge_finder`: computed once, never changes, reused for every frame.
 
 ### Obtaining Data (each frame)
+
+*TODO rewrite this; it's no longer accurate ever since `separate-peak-and-score`*
 
 On each frame, corrscope fetches [from the channel] a buffer of mono `data`, centered at the current time. The amount of data used is controlled by `Trigger Width`, which should be increased to keep low bass stable.
 
