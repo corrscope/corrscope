@@ -127,6 +127,12 @@ class LayoutStack:
 
 def set_layout(stack: LayoutStack, layout_type: Type[QLayout]) -> QLayout:
     layout = layout_type(stack.peek().widget)
+
+    # On macOS our desired FieldGrowthPolicy.AllNonFixedFieldsGrow
+    # is not the default one, therefore we have to explicitly set it:
+    if layout_type == QFormLayout:
+        layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+
     stack.peek().layout = layout
     return layout
 
