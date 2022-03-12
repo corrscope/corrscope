@@ -435,6 +435,7 @@ class CorrelationTrigger(MainTrigger):
         data_begin = trigger_begin - stride * self.A
 
         # Get subsampled data (1D, downmixed to mono)
+        # [data_nsubsmp = A + _trigger_diameter + B] Amplitude
         data = self._wave.get_padded(
             data_begin, data_begin + stride * data_nsubsmp, stride
         )
@@ -488,8 +489,18 @@ class CorrelationTrigger(MainTrigger):
             edge_score = None
 
         corr_enabled = bool(cfg.buffer_strength) and bool(cfg.responsiveness)
+
+        # Buffer sizes:
+        # data_nsubsmp = A + _trigger_diameter + B
+        buffer_size = self.A + self.B
+        trigger_nsamp = self._trigger_diameter + 1
+        assert trigger_nsamp == data_nsubsmp - buffer_size + 1
         # array[A+B] Amplitude
-        corr_kernel: np.ndarray = self._corr_buffer * cfg.buffer_strength
+        corr_kernel: np.ndarray = (
+            self._corr_buffer * cfg.buffer_strength
+            if corr_enabled
+            else np.zeros(trigger_nsamp, f32)
+        )
         if slope_finder is not None:
             corr_kernel += slope_finder
 
@@ -520,7 +531,7 @@ class CorrelationTrigger(MainTrigger):
             """If radius is set, the returned offset is limited to ±radius from the
             center of correlation.
             """
-            assert len(corr) == len(peaks) == self._trigger_diameter + 1
+            assert len(corr) == len(peaks) == trigger_nsamp
             # returns double, not single/f32
             begin_offset = 0
 
@@ -554,10 +565,9 @@ class CorrelationTrigger(MainTrigger):
 
         del data
 
-        Ntrigger = self.A + self.B
         if self.post:
-            new_data = self._wave.get_around(trigger, Ntrigger, stride)
-            cache.mean = np.add.reduce(new_data) / Ntrigger
+            new_data = self._wave.get_around(trigger, buffer_size, stride)
+            cache.mean = np.add.reduce(new_data) / buffer_size
 
             # Apply post trigger (before updating correlation buffer)
             trigger = self.post.get_trigger(trigger, cache)
@@ -566,9 +576,9 @@ class CorrelationTrigger(MainTrigger):
         self._prev_trigger = trigger = max(trigger, self._prev_trigger)
 
         # Update correlation buffer (distinct from visible area)
-        aligned = self._wave.get_around(trigger, Ntrigger, stride)
+        aligned = self._wave.get_around(trigger, buffer_size, stride)
         if cache.mean is None:
-            cache.mean = np.add.reduce(aligned) / Ntrigger
+            cache.mean = np.add.reduce(aligned) / buffer_size
         self._update_buffer(aligned, cache)
 
         self._frames_since_spectrum += 1
