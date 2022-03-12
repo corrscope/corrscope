@@ -22,35 +22,45 @@ Corrscope is currently in semi-active development. The program basically works a
 
 - FFmpeg
 
-## Installation
+## Installing Prebuilt Windows Binaries
 
-- Releases (recommended): https://github.com/corrscope/corrscope/releases
-- Dev Builds: https://ci.appveyor.com/project/nyanpasu64/corrscope/history
+On Windows, download Windows binary releases (.7z files) from the [Releases page](https://github.com/corrscope/corrscope/releases), then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
 
-On Windows, download Windows binary releases (.7z files), then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
+## Installing through Python
 
-On other operating systems, download cross-platform Python packages (.whl or .tar.gz), then install Python 3.6+ and run `pip install FILENAME.whl`, then run `corr (args)`.
+Install Python 3.8 or above, then install corrscope using your method of choice. Afterwards, open a terminal and run `corr (args)`.
 
-## Installing from PyPI via Pip (cross-platform, releases)
+### Installing from PyPI via pipx (cross-platform, releases)
 
-Install Python 3.6 or above (3.5 will not work). Note that Python versions other than 3.8 and 3.9 are untested.
+pipx creates an isolated environment for each program, and adds their binaries into PATH. I find this most reliable in practice, though it runs into issues after upgrading system Python in-place.
 
-```shell
-# Installs into per-user Python environment.
-pip3 install --user corrscope
-corr (args)
-```
+- Install pipx using either your Linux package manager, `pip3 install --user pipx`, or `pip install --user pipx`.
+- Run `pipx install corrscope[qt5]`
+    - On Linux, to add support for native Qt themes, instead run `pipx install --system-site-packages corrscope[qt5]`
+    - On M1 Mac, instead run `pipx install corrscope[qt6]`
+
+### Installing from PyPI via Pip (cross-platform, releases)
+
+pip installs packages into a per-user Python environment. This has the disadvantage that each program you install influences the packages seen by other programs. It might run into issues when upgrading system Python in-place; I haven't tested.
+
+- If necessary, install pip using your Linux package manager.
+- Run `pip3 install --user corrscope[qt5]`
+    - On M1 Mac, instead run `pip3 install --user corrscope[qt6]`
+
+## Dev builds (Windows)
+
+Windows dev builds are compiled automatically, and available at https://ci.appveyor.com/project/nyanpasu64/corrscope/history.
+
+Installing dev builds on non-Windows platforms without cloning the repo (eg. Git URLs or .whl files) is not supported yet. Fixes are welcome.
 
 ## Running from Source Code (cross-platform, dev master)
 
-Install Python 3.6 or above (3.5 will not work), and Poetry.
+Install Python 3.8 or above, and Poetry. My preference is to run `pipx install poetry`. You can alternatively use the Poetry installer via `curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python`, but in the past, updating via `poetry self update` has broken and left me with no Poetry at all, requiring reinstalling.
 
 ```shell
-# Installs into an isolated environment.
-# Install Poetry (only do this once)
-curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
 cd path/to/corrscope
-poetry install corrscope  # --develop is implied
+poetry install -E qt5  # --develop is implied
+# On M1 Mac, instead run `poetry install -E qt6`.
 poetry run corr (args)
 ```
 
