@@ -281,7 +281,7 @@ class CorrelationTriggerConfig(
     edge_strength: float
 
     # Slope detection
-    slope_width: float = with_units("period", default=0.07)
+    slope_width: float = with_units("period", default=0.25)
 
     # Correlation detection
     buffer_strength: float = 1
