@@ -69,7 +69,7 @@ def test_render_output():
     renderer = Renderer(CFG.render, CFG.layout, datas, None, None)
     out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG)
 
-    renderer.update_main_lines(RenderInput.wrap_datas(datas))
+    renderer.update_main_lines(RenderInput.wrap_datas(datas), [0])
     out.write_frame(renderer.get_frame())
 
     assert out.close() == 0

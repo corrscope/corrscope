@@ -113,7 +113,7 @@ def template_config(**kwargs) -> Config:
         master_audio="",
         fps=_FPS,
         amplification=1,
-        trigger_ms=60,
+        trigger_ms=40,
         render_ms=40,
         trigger_subsampling=1,
         render_subsampling=2,
@@ -294,6 +294,7 @@ class CorrScope:
                     prev = rounded
 
                 render_inputs = []
+                trigger_samples = []
                 # Get render-data from each wave.
                 for render_wave, channel in zip(self.render_waves, self.channels):
                     sample = round(render_wave.smp_s * time_seconds)
@@ -312,6 +313,7 @@ class CorrScope:
 
                     # Get render data.
                     if should_render:
+                        trigger_samples.append(trigger_sample)
                         data = channel.get_render_around(trigger_sample)
                         render_inputs.append(RenderInput(data, freq_estimate))
 
@@ -320,7 +322,7 @@ class CorrScope:
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
-                    renderer.update_main_lines(render_inputs)
+                    renderer.update_main_lines(render_inputs, trigger_samples)
                     frame_data = renderer.get_frame()
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:

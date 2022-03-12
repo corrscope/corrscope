@@ -16,7 +16,6 @@ from corrscope.triggers import (
     PerFrameCache,
     ZeroCrossingTriggerConfig,
     SpectrumConfig,
-    correlate_data,
     correlate_spectrum,
 )
 from corrscope.wave import Wave
@@ -35,7 +34,7 @@ def trigger_template(**kwargs) -> CorrelationTriggerConfig:
 
 
 @fixture
-@parametrize("trigger_diameter", [None, 0.5])
+@parametrize("trigger_diameter", [0.5, 1.0])
 @parametrize("pitch_tracking", [None, SpectrumConfig()])
 @parametrize("slope_strength", [0, 100])
 @parametrize("sign_strength", [0, 1])
@@ -94,7 +93,7 @@ def test_trigger(trigger_cfg, is_odd: bool, post_trigger):
             offset = trigger.get_trigger(x, PerFrameCache()).result
             assert offset == x0, offset
         if plot:
-            ax.plot(trigger._buffer, label=str(i))
+            ax.plot(trigger._corr_buffer, label=str(i))
             ax.grid()
 
     if plot:
@@ -125,26 +124,34 @@ def test_post_stride(post_trigger):
     Test that stride is respected when post_trigger is disabled,
     and ignored when post_trigger is enabled.
     """
-    cfg = trigger_template(post_trigger=post_trigger)
+    cfg = trigger_template(post_trigger=post_trigger, post_radius=10)
 
     wave = Wave("tests/sine440.wav")
     iters = 5
     x0 = 24000
     stride = 4
-    trigger = cfg(wave, tsamp=100, stride=stride, fps=FPS)
 
-    cache = PerFrameCache()
+    def trigger(pos):
+        # We have to generate a new trigger object each time, because
+        # CorrelationTrigger.get_trigger() never goes backwards, which violates the
+        # stride quantization we're testing for in the "if not cfg.post_trigger" branch.
+
+        trigger = cfg(wave, tsamp=150 // stride, stride=stride, fps=FPS)
+        cache = PerFrameCache()
+        return trigger.get_trigger(pos, cache).result
+
+    init_offset = trigger(x0)
+
     for i in range(1, iters):
-        offset = trigger.get_trigger(x0, cache).result
+        offset = trigger(x0 + i)
 
         if not cfg.post_trigger:
-            assert (offset - x0) % stride == 0, f"iteration {i}"
-            assert abs(offset - x0) < 10, f"iteration {i}"
+            assert (offset - init_offset) % stride == i % stride, f"iteration {i}"
+            assert offset == pytest.approx(x0, abs=9), f"iteration {i}"
 
         else:
-            # If assertion fails, remove it.
-            assert (offset - x0) % stride != 0, f"iteration {i}"
-            assert abs(offset - x0) <= 2, f"iteration {i}"
+            assert offset == pytest.approx(init_offset, abs=1), f"iteration {i}"
+            assert offset == pytest.approx(x0, abs=1), f"iteration {i}"
 
 
 @parametrize("post_trigger", [None, ZeroCrossingTriggerConfig()])
@@ -241,8 +248,7 @@ def test_post_trigger_radius():
 # Test pitch-tracking (spectrum)
 
 
-@parametrize("correlate", [correlate_data, correlate_spectrum])
-def test_correlate_offset(correlate):
+def test_correlate_offset():
     """
     Catches bug where writing N instead of Ncorr
     prevented function from returning positive numbers.
@@ -256,7 +262,7 @@ def test_correlate_offset(correlate):
     # Ensure autocorrelation on random data returns peak at 0.
     N = 100
     spectrum = np.random.random(N)
-    assert correlate(spectrum, spectrum, 12).peak == approx(0)
+    assert correlate_spectrum(spectrum, spectrum, 12).peak == approx(0)
 
     # Ensure cross-correlation of time-shifted impulses works.
     # Assume wave where y=[i==99].
@@ -267,10 +273,12 @@ def test_correlate_offset(correlate):
 
     # We need to slide `left` to the right by 10 samples, and vice versa.
     for radius in [None, 12]:
-        assert correlate(data=left, prev_buffer=right, radius=radius).peak == approx(10)
-        assert correlate(data=right, prev_buffer=left, radius=radius).peak == approx(
-            -10
-        )
+        assert correlate_spectrum(
+            data=left, prev_buffer=right, radius=radius
+        ).peak == approx(10)
+        assert correlate_spectrum(
+            data=right, prev_buffer=left, radius=radius
+        ).peak == approx(-10)
 
 
 # Test the ability to load legacy TriggerConfig

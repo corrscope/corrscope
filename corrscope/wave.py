@@ -218,7 +218,7 @@ class Wave:
             data = data.reshape(-1, 1)
         return data
 
-    def _get(self, begin: int, end: int, subsampling: int) -> np.ndarray:
+    def get_padded(self, begin: int, end: int, subsampling: int) -> np.ndarray:
         """Copies self.data[begin:end] with zero-padding."""
         if 0 <= begin and end <= self.nsamp:
             return self[begin:end:subsampling]
@@ -264,7 +264,7 @@ class Wave:
 
         begin = sample - (return_nsamp // 2) * stride
         end = begin + return_nsamp * stride
-        return self._get(begin, end, stride)
+        return self.get_padded(begin, end, stride)
 
     def get_s(self) -> float:
         """
