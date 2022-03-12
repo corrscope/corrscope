@@ -21,7 +21,7 @@ repository = "https://github.com/corrscope/corrscope/"
 documentation = "https://corrscope.github.io/corrscope/"
 
 [tool.poetry.dependencies]
-python = "^3.9.1"
+python = "^3.8"
 "ruamel.yaml" = "^0.17"
 numpy = "^1.21"
 click = "^8.0.1"

@@ -517,8 +517,8 @@ python-versions = ">=3.6"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.9.1"
-content-hash = "820712bd064a96f48b52f1c26764cc7dc40bb939d30fe614bc52fce56175f7a6"
+python-versions = "^3.8"
+content-hash = "c654f0f8988b21dbe9af5d318defb52782ee6f21efbbcc3549f96247b8c41ae6"
 
 [metadata.files]
 altgraph = [
