@@ -351,6 +351,10 @@ def validate_param(self, key: str, begin: float, end: float) -> None:
         raise CorrError(f"Invalid {key}={value} (should be within [{begin}, {end}])")
 
 
+def A(*args):
+    return np.array(args)
+
+
 @register_trigger(CorrelationTriggerConfig)
 class CorrelationTrigger(MainTrigger):
     """
@@ -452,6 +456,7 @@ class CorrelationTrigger(MainTrigger):
 
     # begin per-frame
     def get_trigger(self, pos: int, cache: "PerFrameCache") -> TriggerResult:
+        print()
         cfg = self.cfg
 
         stride = self._stride
@@ -496,7 +501,17 @@ class CorrelationTrigger(MainTrigger):
         # Use period to recompute slope finder (if enabled) and restrict trigger
         # diameter.
         period = get_period(period_data, self.subsmp_per_s, cfg.max_freq, self)
+        if period == 0:
+            print("Warning: period=0!")
         cache.period = period * stride
+
+        self.custom_line(
+            "period",
+            A(-0.9, -0.9),
+            A(-cache.period / 2, cache.period / 2),
+            False,
+            False,
+        )
 
         semitones = self._is_window_invalid(period)
         # If pitch changed...
@@ -532,16 +547,51 @@ class CorrelationTrigger(MainTrigger):
                 peak_quality = corr_quality[peak_idx]
 
                 data_slice = data[peak_idx : peak_idx + kernel_size]
+                # self.custom_line(
+                #     "data_slice",
+                #     data_slice,
+                #     np.arange(-self.A, self.B),
+                #     False,
+                # )
+                self.custom_line(
+                    "corr_buffer",
+                    self._corr_buffer,
+                    np.arange(-self.A, self.B),
+                    False,
+                    False,
+                )
 
                 # Keep in sync with _update_buffer()!
                 windowed_slice = data_slice - mean
                 normalize_buffer(windowed_slice)
                 windowed_slice *= self._prev_window
+                self.custom_line(
+                    "windowed slice",
+                    windowed_slice,
+                    np.arange(-self.A, self.B),
+                    False,
+                )
                 self_quality = np.add.reduce(data_slice * windowed_slice)
 
                 relative_quality = peak_quality / (self_quality + 0.001)
                 should_reset = relative_quality < cfg.reset_below
+                self.custom_line(
+                    "quality",
+                    A(self_quality, 0 if should_reset else self_quality, peak_quality),
+                    A(-self.A, 0, self.B),
+                    False,
+                    False,
+                )
+                print(
+                    f"buffer range={np.ptp(self._corr_buffer):.5f}, "
+                    f"slice range={np.ptp(data_slice):.5f}"
+                )
+                print(
+                    f"relative quality = {peak_quality:.3f}/{self_quality:.3f} "
+                    f"= {relative_quality:.5f} of {cfg.reset_below:.5f}"
+                )
                 if should_reset:
+                    print("resetting correlation buffer")
                     corr_quality[:] = 0
                     self._corr_buffer[:] = 0
                     corr_enabled = False
@@ -675,6 +725,7 @@ class CorrelationTrigger(MainTrigger):
             new_len = iround(Ntrigger / 2 ** (resample_notes / scfg.notes_per_octave))
 
             def rescale_mut(corr_kernel_mut):
+                print(f"rescale_mut by {resample_notes} notes")
                 buf = np.interp(
                     np.linspace(0, 1, new_len),
                     np.linspace(0, 1, Ntrigger),
@@ -740,6 +791,7 @@ class CorrelationTrigger(MainTrigger):
             # New waveform
             data -= cache.result_mean
             normalize_buffer(data)
+            print(f"updating buffer with period {cache.period}")
             window = gaussian_or_zero(
                 N, std=self.calc_buffer_std(cache.period / self._stride)
             )

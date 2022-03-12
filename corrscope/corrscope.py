@@ -347,8 +347,8 @@ class CorrScope:
         self.renderer = renderer  # only used for unit tests
 
         # For debugging only
-        # for trigger in self.triggers:
-        #     trigger.set_renderer(renderer)
+        for trigger in self.triggers:
+            trigger.set_renderer(renderer)
 
         if PRINT_TIMESTAMP:
             begin = time.perf_counter()
