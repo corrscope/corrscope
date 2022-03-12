@@ -15,6 +15,7 @@
 ### Changelog
 
 - Fix passing absolute .wav paths into corrscope CLI (#398)
+- Fix preview error when clearing "Trigger/Render Width" table cells (#407)
 
 ## 0.7.1
 
