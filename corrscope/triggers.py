@@ -498,23 +498,24 @@ class CorrelationTrigger(MainTrigger):
             corr_quality = signal.correlate_valid(data, self._corr_buffer)
             assert len(corr_quality) == corr_nsamp
 
-            peak_idx = np.argmax(corr_quality)
-            peak_quality = corr_quality[peak_idx]
+            if cfg.reset_below > 0:
+                peak_idx = np.argmax(corr_quality)
+                peak_quality = corr_quality[peak_idx]
 
-            data_slice = data[peak_idx : peak_idx + kernel_size]
+                data_slice = data[peak_idx : peak_idx + kernel_size]
 
-            # Keep in sync with _update_buffer()!
-            windowed_slice = data_slice - mean
-            normalize_buffer(windowed_slice)
-            windowed_slice *= self._prev_window
-            self_quality = np.add.reduce(data_slice * windowed_slice)
+                # Keep in sync with _update_buffer()!
+                windowed_slice = data_slice - mean
+                normalize_buffer(windowed_slice)
+                windowed_slice *= self._prev_window
+                self_quality = np.add.reduce(data_slice * windowed_slice)
 
-            relative_quality = peak_quality / (self_quality + 0.001)
-            should_reset = relative_quality < cfg.reset_below
-            if relative_quality < cfg.reset_below:
-                corr_quality[:] = 0
-                self._corr_buffer[:] = 0
-                corr_enabled = False
+                relative_quality = peak_quality / (self_quality + 0.001)
+                should_reset = relative_quality < cfg.reset_below
+                if should_reset:
+                    corr_quality[:] = 0
+                    self._corr_buffer[:] = 0
+                    corr_enabled = False
 
         # array[A+B] Amplitude
         corr_kernel: np.ndarray = (
