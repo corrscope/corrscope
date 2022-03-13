@@ -4,6 +4,7 @@ import sys
 import traceback
 from contextlib import contextmanager
 from enum import Enum
+from threading import Thread
 from pathlib import Path
 from types import MethodType
 from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence, NewType
@@ -112,8 +113,8 @@ def gui_main(cfg_or_path: Union[Config, Path]):
     # ffmpeg receives SIGPIPE and terminates by itself (according to strace).
     corr_thread = window.corr_thread
     if corr_thread is not None:
-        corr_thread.abort_terminate()
-        corr_thread.wait()
+        corr_thread.job.abort_terminate()
+        corr_thread.join()
 
     sys.exit(ret)
 
@@ -580,23 +581,23 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         if dlg:
             # t.abort -> Locked.set() is thread-safe (hopefully).
             # It can be called from main thread (not just within CorrThread).
-            dlg.canceled.connect(t.abort, Qt.DirectConnection)
-            t.arg = attr.evolve(
+            dlg.canceled.connect(t.job.abort, Qt.DirectConnection)
+            t.job.arg = attr.evolve(
                 arg,
                 on_begin=run_on_ui_thread(dlg.on_begin, (float, float)),
                 progress=run_on_ui_thread(dlg.setValue, (int,)),
                 on_end=run_on_ui_thread(dlg.reset, ()),  # TODO dlg.close
             )
 
-        t.finished.connect(self.on_play_thread_finished)
-        t.error.connect(self.on_play_thread_error)
-        t.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
+        t.job.finished.connect(self.on_play_thread_finished)
+        t.job.error.connect(self.on_play_thread_error)
+        t.job.ffmpeg_missing.connect(self.on_play_thread_ffmpeg_missing)
         t.start()
 
     @safe_property
     def preview_or_render(self) -> str:
         if self.corr_thread is not None:
-            return self.tr(self.corr_thread.mode.value)
+            return self.tr(self.corr_thread.job.mode.value)
         return "neither preview nor render"
 
     def _get_args(self, outputs: List[IOutputConfig]):
@@ -710,7 +711,7 @@ class PreviewOrRender(Enum):
     render = qc.QT_TRANSLATE_NOOP("MainWindow", "render")
 
 
-class CorrThread(qc.QThread):
+class CorrJob(qc.QObject):
     is_aborted: Locked[bool]
 
     @qc.Slot()
@@ -724,11 +725,12 @@ class CorrThread(qc.QThread):
             for output in self.corr.outputs:
                 output.terminate(from_same_thread=False)
 
+    finished = qc.Signal()
     error = qc.Signal(str)
     ffmpeg_missing = qc.Signal()
 
     def __init__(self, cfg: Config, arg: Arguments, mode: PreviewOrRender):
-        qc.QThread.__init__(self)
+        qc.QObject.__init__(self)
         self.is_aborted = Locked(False)
 
         self.cfg = cfg
@@ -756,6 +758,21 @@ class CorrThread(qc.QThread):
 
         else:
             arg.on_end()
+
+
+class CorrThread(Thread):
+    job: CorrJob
+
+    def __init__(self, cfg: Config, arg: Arguments, mode: PreviewOrRender):
+        Thread.__init__(self)
+        self.job = CorrJob(cfg, arg, mode)
+
+    def run(self):
+        """Callback invoked on new thread."""
+        try:
+            self.job.run()
+        finally:
+            self.job.finished.emit()
 
 
 class CorrProgressDialog(qw.QProgressDialog):
