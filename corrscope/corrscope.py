@@ -119,7 +119,7 @@ def template_config(**kwargs) -> Config:
         render_subsampling=2,
         trigger=CorrelationTriggerConfig(
             mean_responsiveness=0.0,
-            edge_strength=2,
+            edge_strength=1.0,
             responsiveness=0.5,
             pitch_tracking=SpectrumConfig(),
             # post_trigger=ZeroCrossingTriggerConfig(),
