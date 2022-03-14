@@ -79,34 +79,40 @@ NES triangle waves have 15 rising/falling edges. The NES high-pass removes DC an
 
 ### FDS FM Waves
 
-FDS FM changes the width of waves, but not their height.
+FDS FM changes the width of waves, but not their height. The NES high-pass removes DC and low frequencies, continually offsetting waveforms to move the current input amplitude towards y=0. If FDS waves contain anything other than pulse/saw, "which part of the wave crosses y=0" may change with FM and pitch.
 
-The NES high-pass removes DC and low frequencies, causing waveforms to decay towards y=0. If FDS waves contain anything other than pulse/saw, "which part of the wave crosses y=0" may change with FM and pitch.
-
-- Experiment with "Trigger Direction".
-- Use nonzero Slope Strength and low (or zero) Edge Strength, to reliably locate the sharpest edge in a waveform. This is because sharp edges are preserved by FM, whereas the width of waves is not.
-  - If you have multiple steep rising/falling edges,
+- Experiment with "Trigger Direction", "Slope Width", and "Edge Strength" vs. "Buffer Strength".
 
 ### Yamaha FM and SNES/sampled Waves
 
-- Experiment with "Trigger Direction".
-- Try using Slope Strength, Edge Strength, or a combination of both.
-- Reduce both relative to Buffer Strength to track evolving waves better (but center new/existing waves less strongly). To restore centering, you can enable Post Triggering and experiment with the radius.
+Newer consoles have complex waveforms which evolve over time, presenting challenges for triggering.
+
+- Experiment with "Trigger Direction", "Slope Width", and "Edge Strength" vs. "Buffer Strength".
+
+Increasing "Edge Strength" relative to "Buffer Strength" tracks new notes better, but causes corrscope to snap around more often in existing notes. Decreasing it tracks sustained evolving notes better, but causes corrscope to pick poor starting points on new notes.
+
+- Reduce "Edge Strength" to track sustained notes better, then increase "Reset Below Match" to 0.5-1.0 to reset the buffer upon new notes (when the waveform doesn't match the buffer well).
+  - Tuning "Reset Below Match" is difficult; set it too low and corrscope won't reset the buffer on new notes, set it too high and it will reset mid-note.
+  - Try boosting "Buffer Responsiveness" to 1.0 or so; this may allow increasing "Reset Below Match" further without resetting during sustained notes.
+- To better track evolving notes without jumping to new positions, you can enable Post Triggering and experiment with the radius.
 
 ## Options
+
+*TODO rewrite this; it's no longer accurate ever since `separate-peak-and-score`*
 
 All tabs are located in the left pane.
 
 - Global
     - `Trigger Width` (also controllable via per-channel "Trigger Width ×")
+- Trigger, Edge Triggering
+    - `Trigger Direction`
+    - `Edge Strength`
+    - `Slope Width`
 - Trigger, Wave Alignment
     - `Buffer Strength`
     - `Buffer Responsiveness`
+    - `Reset Below Match`
     - `Pitch Tracking`
-- Trigger, Edge Triggering
-    - `Edge Direction`
-    - `Edge Strength`
-    - `Slope Strength`
 - Trigger, Post Triggering
     - Post Trigger
     - `Post Trigger Radius`
@@ -118,8 +124,6 @@ All tabs are located in the left pane.
 - `edge_finder`: computed once, never changes, reused for every frame.
 
 ### Obtaining Data (each frame)
-
-*TODO rewrite this; it's no longer accurate ever since `separate-peak-and-score`*
 
 On each frame, corrscope fetches [from the channel] a buffer of mono `data`, centered at the current time. The amount of data used is controlled by `Trigger Width`, which should be increased to keep low bass stable.
 
