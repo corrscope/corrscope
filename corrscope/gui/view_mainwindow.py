@@ -297,6 +297,17 @@ class MainWindow(QWidget):
             ):
                 with add_row(
                     s,
+                    tr("DC Removal Rate"),
+                    BoundDoubleSpinBox,
+                    name="trigger__mean_responsiveness",
+                    minimum=0,
+                    maximum=1,
+                    singleStep=0.25,
+                ):
+                    pass
+
+                with add_row(
+                    s,
                     tr("Sign Triggering\n(for triangle waves)"),
                     BoundDoubleSpinBox,
                     name="trigger__sign_strength",

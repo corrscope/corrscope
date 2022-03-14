@@ -8,7 +8,7 @@
 
 ### Major Changes
 
-- Rewrite the trigger algorithm to enhance determinism (#403)
+- Rewrite the trigger algorithm to enhance determinism and reduce errors when DC offset varies within a frame (#403, #408)
     - Triggering still makes mistakes, especially when DC offset varies within a frame (eg. NES 75% pulse changing volumes). This may be addressed in the future.
     - Changed default triggering settings as well.
 
@@ -16,6 +16,7 @@
 
 - Fix passing absolute .wav paths into corrscope CLI (#398)
 - Fix preview error when clearing "Trigger/Render Width" table cells (#407)
+- Add control for DC removal rate (#408)
 
 ## 0.7.1
 

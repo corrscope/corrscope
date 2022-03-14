@@ -258,6 +258,7 @@ class PerFrameCache:
 class CorrelationTriggerConfig(
     MainTriggerConfig,
     always_dump="""
+    mean_responsiveness
     pitch_tracking
     slope_strength slope_width
     """
@@ -267,6 +268,7 @@ class CorrelationTriggerConfig(
     # get_trigger()
     # Edge/area finding
     sign_strength: float = 0
+    mean_responsiveness: float = 1.0
     edge_strength: float
 
     # Slope detection
@@ -348,6 +350,7 @@ class CorrelationTrigger(MainTrigger):
     _edge_finder: "npt.NDArray[f32]"
     """(const) [A+B] Amplitude"""
 
+    _prev_mean: float
     _prev_period: Optional[int]
     _prev_slope_finder: "Optional[npt.NDArray[f32]]"
     """(mutable) [A+B] Amplitude"""
@@ -369,12 +372,7 @@ class CorrelationTrigger(MainTrigger):
         # Updated with tightly windowed old data at various pitches.
         self._corr_buffer = np.zeros(self.A + self.B, dtype=f32)
 
-        # (const) Added to self._buffer. Nonzero if edge triggering is nonzero.
-        # Left half is -edge_strength, right half is +edge_strength.
-        # ASCII art: --._|‾'--
-        self._edge_finder = self._calc_step()
-        assert self._edge_finder.dtype == f32
-
+        self._prev_mean = 0.0
         # Will be overwritten on the first frame.
         self._prev_period = None
         self._prev_slope_finder = None
@@ -392,22 +390,6 @@ class CorrelationTrigger(MainTrigger):
             )
         else:
             self._spectrum_calc = DummySpectrum()
-
-    def _calc_step(self) -> np.ndarray:
-        """Step function used for approximate edge triggering. Has length A+B."""
-
-        # Increasing buffer_falloff (width of buffer)
-        # causes buffer to affect triggering, more than the step function.
-        # So we multiply edge_strength (step function height) by buffer_falloff.
-
-        cfg = self.cfg
-        edge_strength = cfg.edge_strength * cfg.buffer_falloff
-
-        step = np.empty(self.A + self.B, dtype=f32)  # type: np.ndarray[f32]
-        step[: self.A] = -edge_strength / 2
-        step[self.A :] = edge_strength / 2
-        step *= windows.gaussian(self.A + self.B, std=self.A / 3)
-        return step
 
     def _calc_slope_finder(self, period: float) -> Optional[np.ndarray]:
         """Called whenever period changes substantially.
@@ -440,7 +422,7 @@ class CorrelationTrigger(MainTrigger):
         # Convert sizes to full samples (not trigger subsamples) when indexing into
         # _wave.
 
-        # _trigger_diameter is defined as inclusive. The length of correlate_valid()'s
+        # _trigger_diameter is defined as inclusive. The length of find_peak()'s
         # corr variable is (A + _trigger_diameter + B) - (A + B) + 1, or
         # _trigger_diameter + 1. This gives us a possible triggering range of
         # _trigger_diameter inclusive, which is what we want.
@@ -461,12 +443,20 @@ class CorrelationTrigger(MainTrigger):
             signs = sign_times_peak(data)
             data += cfg.sign_strength * signs
 
-        # Remove mean from data
-        data -= np.add.reduce(data) / data.size
+        # Remove mean from data, if enabled.
+        mean = np.add.reduce(data) / data.size
+        period_data = data - mean
+
+        if cfg.mean_responsiveness:
+            self._prev_mean += cfg.mean_responsiveness * (mean - self._prev_mean)
+            if cfg.mean_responsiveness != 1:
+                data -= self._prev_mean
+            else:
+                data = period_data
 
         # Use period to recompute slope finder (if enabled) and restrict trigger
         # diameter.
-        period = get_period(data, self.subsmp_per_s, self.cfg.max_freq, self)
+        period = get_period(period_data, self.subsmp_per_s, cfg.max_freq, self)
         cache.period = period * stride
 
         semitones = self._is_window_invalid(period)
@@ -484,11 +474,29 @@ class CorrelationTrigger(MainTrigger):
         else:
             slope_finder = self._prev_slope_finder
 
+        if cfg.edge_strength:
+            # I want a half-open cumsum, where edge_score[0] = 0, [1] = data[A], [2] =
+            # data[A] + data[A+1], etc. But cumsum is inclusive, which causes tests to
+            # fail. So subtract 1 from the input range.
+            edge_score = np.cumsum(data[self.A - 1 : len(data) - self.B])
+
+            # The optimal edge alignment is the *minimum* cumulative sum, so invert
+            # the cumsum so the minimum amplitude maps to the highest score.
+            edge_score *= -cfg.edge_strength
+        else:
+            edge_score = None
+
         # array[A+B] Amplitude
-        corr_kernel: np.ndarray = self._corr_buffer * self.cfg.buffer_strength
-        corr_kernel += self._edge_finder
+        corr_kernel: np.ndarray = self._corr_buffer * cfg.buffer_strength
         if slope_finder is not None:
             corr_kernel += slope_finder
+
+        # `corr[x]` = correlation of kernel placed at position `x` in data.
+        # `corr_kernel` is not allowed to move past the boundaries of `data`.
+        corr = signal.correlate_valid(data, corr_kernel)
+
+        if edge_score is not None:
+            corr += edge_score
 
         # Don't pick peaks more than `period * trigger_radius_periods` away from the
         # center.
@@ -497,17 +505,11 @@ class CorrelationTrigger(MainTrigger):
         else:
             trigger_radius = None
 
-        def correlate_valid(
-            data: np.ndarray, corr_kernel: np.ndarray, radius: Optional[int]
-        ) -> int:
-            """Returns kernel offset (≥ 0) relative to data, which maximizes correlation.
-            kernel is not allowed to move past the boundaries of data.
-
-            If radius is set, the returned offset is limited to ±radius from the center of
-            correlation.
+        def find_peak(corr: np.ndarray, radius: Optional[int]) -> int:
+            """If radius is set, the returned offset is limited to ±radius from the
+            center of correlation.
             """
             # returns double, not single/f32
-            corr = signal.correlate_valid(data, corr_kernel)
             begin_offset = 0
 
             if radius is not None:
@@ -535,7 +537,7 @@ class CorrelationTrigger(MainTrigger):
             return peak_offset
 
         # Find correlation peak.
-        peak_offset = correlate_valid(data, corr_kernel, trigger_radius)
+        peak_offset = find_peak(corr, trigger_radius)
         trigger = trigger_begin + stride * (peak_offset)
 
         del data
