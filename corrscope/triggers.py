@@ -1,5 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Type, Optional, ClassVar, Union, TypeVar, Generic
+from typing import (
+    TYPE_CHECKING,
+    Type,
+    Optional,
+    ClassVar,
+    Union,
+    TypeVar,
+    Generic,
+    cast,
+)
 
 import attr
 import numpy as np
@@ -260,7 +269,7 @@ class CorrelationTriggerConfig(
     always_dump="""
     mean_responsiveness
     pitch_tracking
-    slope_strength slope_width
+    slope_width
     """
     # deprecated
     " buffer_falloff ",
@@ -272,7 +281,6 @@ class CorrelationTriggerConfig(
     edge_strength: float
 
     # Slope detection
-    slope_strength: float = 0
     slope_width: float = with_units("period", default=0.07)
 
     # Correlation detection
@@ -356,6 +364,7 @@ class CorrelationTrigger(MainTrigger):
 
     _prev_mean: float
     _prev_period: Optional[int]
+    _prev_buffer_std: float
     _prev_slope_finder: "Optional[npt.NDArray[f32]]"
     """(mutable) [A+B] Amplitude"""
     _prev_window: "npt.NDArray[f32]"
@@ -369,6 +378,10 @@ class CorrelationTrigger(MainTrigger):
     def scfg(self) -> Optional[SpectrumConfig]:
         return self.cfg.pitch_tracking
 
+    def calc_buffer_std(self, period: float) -> float:
+        period = period or (self.A + self.B)
+        return period * self.cfg.buffer_falloff
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.A = self.B = self._tsamp // 2
@@ -381,6 +394,7 @@ class CorrelationTrigger(MainTrigger):
         self._prev_mean = 0.0
         # Will be overwritten on the first frame.
         self._prev_period = None
+        self._prev_buffer_std = self.calc_buffer_std(0)
         self._prev_slope_finder = None
         self._prev_window = np.zeros(self.A + self.B, f32)
 
@@ -404,19 +418,33 @@ class CorrelationTrigger(MainTrigger):
         with length A+B."""
 
         cfg = self.cfg
-        if cfg.slope_strength:
-            # noinspection PyTypeChecker
-            slope_width: float = np.clip(cfg.slope_width * period, 1.0, self.A / 3)
-            slope_strength = cfg.slope_strength * cfg.buffer_falloff
+        # noinspection PyTypeChecker
+        slope_width: float = np.clip(cfg.slope_width * period, 1.0, self.A / 3)
 
-            slope_finder = np.empty(self.A + self.B, dtype=f32)  # type: np.ndarray[f32]
-            slope_finder[: self.A] = -slope_strength / 2
-            slope_finder[self.A :] = slope_strength / 2
+        # We want:
+        #   abs_area(slope) / abs_area(buffer) = (E=edge_strength) / (B=B)
+        #
+        # Assume:
+        #   abs_area(slope) ∝ w(slope) * h(slope)
+        #   abs_area(buffer) ∝ w(buffer) * (B=h(buffer))
+        #   w(buffer) = _prev_buffer_std
+        #   w(slope) = slope_width
+        #
+        # Solve for h(slope)=slope_strength:
+        #   abs_area(slope) / abs_area(buffer) = E / B
+        #   abs_area(slope) / E            = abs_area(buffer) / B
+        #   (w(slope) * h(slope)) / E      = (w(buffer) * B) / B
+        #   slope_width * h(slope) / E     = _prev_buffer_std
+        #   h(slope)                       = E * _prev_buffer_std / slope_width
+        slope_strength = cfg.edge_strength * self._prev_buffer_std / slope_width
+        # slope_width is 1.0 or greater, so this doesn't divide by 0.
 
-            slope_finder *= windows.gaussian(self.A + self.B, std=slope_width)
-            return slope_finder
-        else:
-            return None
+        slope_finder = np.empty(self.A + self.B, dtype=f32)  # type: np.ndarray[f32]
+        slope_finder[: self.A] = -slope_strength / 2
+        slope_finder[self.A :] = slope_strength / 2
+
+        slope_finder *= windows.gaussian(self.A + self.B, std=slope_width)
+        return slope_finder
 
     # end setup
 
@@ -480,7 +508,7 @@ class CorrelationTrigger(MainTrigger):
             self._prev_period = period
             self._prev_slope_finder = slope_finder
         else:
-            slope_finder = self._prev_slope_finder
+            slope_finder = cast(np.ndarray, self._prev_slope_finder)
 
         corr_enabled = bool(cfg.buffer_strength) and bool(cfg.responsiveness)
 
@@ -518,13 +546,10 @@ class CorrelationTrigger(MainTrigger):
                     corr_enabled = False
 
         # array[A+B] Amplitude
-        corr_kernel: np.ndarray = (
-            self._corr_buffer * cfg.buffer_strength
-            if corr_enabled
-            else np.zeros(kernel_size, f32)
-        )
-        if slope_finder is not None:
-            corr_kernel += slope_finder
+        corr_kernel = slope_finder
+        del slope_finder
+        if corr_enabled:
+            corr_kernel += self._corr_buffer * cfg.buffer_strength
 
         # `corr[x]` = correlation of kernel placed at position `x` in data.
         # `corr_kernel` is not allowed to move past the boundaries of `data`.
@@ -702,10 +727,10 @@ class CorrelationTrigger(MainTrigger):
         """
         assert cache.mean is not None
         assert cache.period is not None
-        buffer_falloff = self.cfg.buffer_falloff
         responsiveness = self.cfg.responsiveness
 
         if self.cfg.buffer_strength and responsiveness:
+            # N should equal self.A + self.B.
             N = len(data)
             if N != self._corr_buffer.size:
                 raise ValueError(
@@ -716,9 +741,8 @@ class CorrelationTrigger(MainTrigger):
             # New waveform
             data -= cache.mean
             normalize_buffer(data)
-            window = gaussian_or_zero(
-                N, std=(cache.period / self._stride or N) * buffer_falloff
-            )
+            self._prev_buffer_std = self.calc_buffer_std(cache.period / self._stride)
+            window = gaussian_or_zero(N, std=self._prev_buffer_std)
             data *= window
             self._prev_window = window
 
