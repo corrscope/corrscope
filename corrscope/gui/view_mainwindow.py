@@ -317,6 +317,33 @@ class MainWindow(QWidget):
                     pass
 
             with append_widget(
+                s, QGroupBox, title=tr("Edge Triggering"), layout=QFormLayout
+            ):
+                with add_row(
+                    s,
+                    tr("Trigger Direction"),
+                    BoundComboBox,
+                    name="trigger__edge_direction",
+                ):
+                    pass
+                with add_row(
+                    s,
+                    tr("Edge Strength"),
+                    BoundDoubleSpinBox,
+                    name="trigger__edge_strength",
+                ):
+                    s.widget.setMinimum(0.0)
+                with add_row(
+                    s,
+                    tr("Slope Width"),
+                    BoundDoubleSpinBox,
+                    name="trigger__slope_width",
+                ):
+                    s.widget.setMinimum(0)
+                    s.widget.setMaximum(2)
+                    s.widget.setSingleStep(0.02)
+
+            with append_widget(
                 s, QGroupBox, title=tr("Wave History Alignment"), layout=QFormLayout
             ):
                 with add_row(
@@ -346,33 +373,6 @@ class MainWindow(QWidget):
                     pass
                 with add_row(s, BoundCheckBox, Both) as (self.trigger__pitch_tracking):
                     assert isinstance(self.trigger__pitch_tracking, QWidget)
-
-            with append_widget(
-                s, QGroupBox, title=tr("Edge Triggering"), layout=QFormLayout
-            ):
-                with add_row(
-                    s,
-                    tr("Trigger Direction"),
-                    BoundComboBox,
-                    name="trigger__edge_direction",
-                ):
-                    pass
-                with add_row(
-                    s,
-                    tr("Edge Strength"),
-                    BoundDoubleSpinBox,
-                    name="trigger__edge_strength",
-                ):
-                    s.widget.setMinimum(0.0)
-                with add_row(
-                    s,
-                    tr("Slope Width"),
-                    BoundDoubleSpinBox,
-                    name="trigger__slope_width",
-                ):
-                    s.widget.setMinimum(0)
-                    s.widget.setMaximum(2)
-                    s.widget.setSingleStep(0.02)
 
             with append_widget(
                 s, QGroupBox, title=tr("Post Triggering"), layout=QFormLayout
