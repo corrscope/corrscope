@@ -32,6 +32,20 @@ Corrscope's triggering algorithm is configurable, allowing it to track many type
 
 Triggering options are found on the left panel. Trigger Width is located in the General tab. All other options are found on the Trigger tab. (Per-channel triggering options are found in the table.)
 
+### Bass and Treble
+
+For low bass notes, increase global "Trigger Width" or channel-specific "Trigger Width ×". For treble notes, longer trigger width *should* not negatively affect triggering; if it does, let me know so I can fix corrscope!
+
+### Managing DC Offsets
+
+"DC Removal Rate" (`mean_responsiveness`) affects how corrscope removes DC from data used for triggering. Setting it to 0.0 makes corrscope not subtract DC from the waveform. Setting it to 0.5 makes corrscope estimate the DC offset by averaging the current frame's DC offset and the previous frame's estimate, and subtract the estimate from the data. Setting it to 1.0 makes corrscope estimate the DC offset independently on each frame, and subtract the estimate from the data.
+
+In most cases, you can leave "DC Removal Rate" to 0. If this causes problems in practice, let me know so I can update these guidelines!
+
+For waves with high DC offsets, if you want to trigger based on the current estimated center of the wave, set the global or track-specific "DC Removal Rate" to 0.5-1. If you want to trigger based on the zero-amplitude baseline, set it to 0.
+
+For NES triangle waves where you want to trigger based on the zero-amplitude baseline exactly, set "DC Removal Rate" to 0.
+
 ### Sampled Trumpets and Trigger Direction (screenshot from [Tales of Phantasia](https://www.youtube.com/watch?v=GdM03JV_Vw0))
 
 ![Screenshot of trumpets in corrscope](images/trumpet.png?raw=true)
@@ -39,34 +53,29 @@ Triggering options are found on the left panel. Trigger Width is located in the 
 Sampled trumpets generally consist of a sharp falling edge, followed by gibberish with one or more rising edges.
 
 - Set "Trigger Direction" to "Falling (-1)", which will track the falling edge well. (Using a rising-edge trigger will result in poor results, since the gibberish will vary between notes, especially for SNES SPC music using the echo functionality.)
-- Slope trigger is useful, since the trumpet has a narrow tall positive section, followed by a narrow tall negative section.
 
 ### Complex Waves and Trigger Direction (screenshot from [Midori Mizuno - Sinkhole](https://www.youtube.com/watch?v=ElWHUp0BIDw))
 
 ![Screenshot of complex wave in corrscope](images/complex-bass.png?raw=true)
 
-Corrscope's standard "edge trigger" does not look for "steep edges" but instead "sign changes". It operates by maximizing `(signed area in right half) - (signed area in left half)`. This waveform has a clear falling edge from positive to negative, but no clear edge from negative to positive.
-
-Either:
+~~Corrscope's standard "edge trigger" does not look for "steep edges" but instead "sign changes". It operates by maximizing `(signed area in right half) - (signed area in left half)`~~ TODO fix this explanation. This waveform has a clear falling edge from positive to negative, but no clear edge from negative to positive.
 
 - Set "Trigger Direction" to "Falling (-1)".
-- Alternatively set "Trigger Direction" to "Rising (+1)", set "Edge Strength" to 0, and increase "Slope Strength". This will latch onto the small rising edge.
+- If you want rising-edge triggering, you could try setting "Trigger Direction" to "Rising (+1)", experimenting with "DC Removal Rate" and "Slope Width", and possibly decreasing "Buffer Strength" to 0. This may or may not work well.
 
 ### NES Triangle Waves
 
 <!-- TODO add screenshots -->
 
-NES triangle waves are stair-stepped. In theory, Area Trigger would work and properly locate the best zero-crossing on each frame. However, on every frame, corrscope looks at a different portion of the triangle wave, computes the average value (DC offset), and subtracts it from all samples. Unfortunately since the exact amount of DC (positive or negative) fluctuates between frames, corrscope will shift the wave vertically by different amounts, causing it to jump between different rising edges.
-
-Try the following:
+NES triangle waves are stair-stepped. If "DC Removal Rate" is nonzero, on every frame, corrscope looks at a different portion of the triangle wave, computes the average value (DC offset), and subtracts it from all samples. Unfortunately since the exact amount of DC (positive or negative) fluctuates between frames, corrscope will shift the wave vertically by different amounts, causing it to jump between different rising edges.
 
 - Use any "Trigger Direction" you prefer. Rising and Falling both work equally well.
-- Set "Sign Triggering" to 1 or so. This causes corrscope to preprocess the waveform before DC is removed, and add 0.5(peak-to-peak amplitude) to positive samples and subtract 0.5(peak-to-peak amplitude) from negative samples. The resulting steep edges will remain as zero crossings, even after DC is filtered out.
-- Afterwards, set "Edge Strength" to nonzero (and optionally enable "Slope Strength"). Edge Strength will pick up the zero crossings (which match the zero crossings before DC removal), and Slope Strength will pick up the steep edges located at zero crossings.
+- Set "DC Removal Rate" to 0. This causes corrscope to look at the actual zero crossings instead of subtracting an estimated DC offset on each frame.
+- Alternatively, set "Sign Triggering" to 1 or so. This causes corrscope to preprocess the waveform before DC is removed, and add 0.5(peak-to-peak amplitude) to positive samples and subtract 0.5(peak-to-peak amplitude) from negative samples. The resulting steep edges will remain as zero crossings, even after DC is filtered out.
 
 NES triangle waves have 15 rising/falling edges. The NES high-pass removes DC and low frequencies, causing waveforms to decay towards y=0. As a result, "which edge crosses y=0" changes with pitch.
 
-- Reduce "Buffer Strength" to 0 (or up to 0.5). Corrscope's buffer needs to be disabled, to prevent it from remembering "which edge used to cross y=0".
+- Reduce "Buffer Strength" to 0. Corrscope's buffer needs to be disabled, to prevent it from remembering "which edge used to cross y=0".
 
 ### FDS FM Waves
 
@@ -83,10 +92,6 @@ The NES high-pass removes DC and low frequencies, causing waveforms to decay tow
 - Experiment with "Trigger Direction".
 - Try using Slope Strength, Edge Strength, or a combination of both.
 - Reduce both relative to Buffer Strength to track evolving waves better (but center new/existing waves less strongly). To restore centering, you can enable Post Triggering and experiment with the radius.
-
-### Managing DC Offsets
-
-For waves with high DC offsets, if you want to trigger based on the current vertical of the wave, set the global or track-specific "DC Removal Rate" (`mean_responsiveness`) to 0.5-1. If you want to trigger based on the actual zero level, set it to 0.
 
 ## Options
 
