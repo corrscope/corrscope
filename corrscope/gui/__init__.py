@@ -1121,7 +1121,6 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("trigger__reset_below", float, None, "Reset Below\nMatch"),
         Column("trigger__edge_direction", plus_minus_one, None),
         Column("trigger__edge_strength", float, None),
-        Column("trigger__slope_strength", float, None),
         Column("trigger__slope_width", float, None),
     ]
 

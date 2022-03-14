@@ -366,14 +366,6 @@ class MainWindow(QWidget):
                     s.widget.setMinimum(0.0)
                 with add_row(
                     s,
-                    tr("Slope Strength\n(for PSG/C64/FM)"),
-                    BoundDoubleSpinBox,
-                    name="trigger__slope_strength",
-                ):
-                    s.widget.setSingleStep(10)
-                    s.widget.setMaximum(200)
-                with add_row(
-                    s,
                     tr("Slope Width"),
                     BoundDoubleSpinBox,
                     name="trigger__slope_width",
