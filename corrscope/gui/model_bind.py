@@ -278,7 +278,9 @@ class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
     set_model = model_setter(float)
 
 
-CheckState = int
+# CheckState inherits from int on PyQt5 and Enum on PyQt6. To compare integers with
+# CheckState on both PyQt5 and 6, we have to call CheckState(int).
+CheckState = qc.Qt.CheckState
 
 
 class BoundCheckBox(qw.QCheckBox, BoundWidget):
@@ -290,12 +292,16 @@ class BoundCheckBox(qw.QCheckBox, BoundWidget):
     gui_changed = alias("stateChanged")
 
     # gui_changed -> set_model(Qt.CheckState).
-    @Slot(CheckState)
-    def set_model(self, value: CheckState):
-        """Qt.PartiallyChecked probably should not happen."""
-        Qt = qc.Qt
-        assert value in [Qt.Unchecked, Qt.PartiallyChecked, Qt.Checked]
-        self.set_bool(value != Qt.Unchecked)
+    @Slot(int)
+    def set_model(self, value: int):
+        """Qt.CheckState.PartiallyChecked probably should not happen."""
+        value = CheckState(value)
+        assert value in [
+            CheckState.Unchecked,
+            CheckState.PartiallyChecked,
+            CheckState.Checked,
+        ]
+        self.set_bool(value != CheckState.Unchecked)
 
     set_bool = model_setter(bool)
 
@@ -576,12 +582,16 @@ class _ColorCheckBox(qw.QCheckBox):
         with qc.QSignalBlocker(self):
             self.setChecked(bool(hex_color))
 
-    @Slot(CheckState)
-    def on_check(self, value: CheckState):
-        """Qt.PartiallyChecked probably should not happen."""
-        Qt = qc.Qt
-        assert value in [Qt.Unchecked, Qt.PartiallyChecked, Qt.Checked]
-        if value != Qt.Unchecked:
+    @Slot(int)
+    def on_check(self, value: int):
+        """Qt.CheckState.PartiallyChecked probably should not happen."""
+        value = CheckState(value)
+        assert value in [
+            CheckState.Unchecked,
+            CheckState.PartiallyChecked,
+            CheckState.Checked,
+        ]
+        if value != CheckState.Unchecked:
             self.color_text.setText("#ffffff")
         else:
             self.color_text.setText("")
