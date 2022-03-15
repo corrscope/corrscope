@@ -4,10 +4,10 @@ from collections import defaultdict
 from typing import *
 
 import attr
-from PyQt5 import QtWidgets as qw, QtCore as qc
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtGui import QPalette, QColor, QFont
-from PyQt5.QtWidgets import QWidget
+from qtpy import QtWidgets as qw, QtCore as qc
+from qtpy.QtCore import pyqtSlot
+from qtpy.QtGui import QPalette, QColor, QFont
+from qtpy.QtWidgets import QWidget
 
 from corrscope.config import CorrError, DumpableAttrs, get_units
 from corrscope.gui.util import color2hex

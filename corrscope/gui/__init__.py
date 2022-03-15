@@ -8,11 +8,11 @@ from pathlib import Path
 from types import MethodType
 from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence, NewType
 
-import PyQt5.QtCore as qc
-import PyQt5.QtWidgets as qw
+import qtpy.QtCore as qc
+import qtpy.QtWidgets as qw
 import attr
-from PyQt5.QtCore import QModelIndex, Qt, QVariant
-from PyQt5.QtGui import QFont, QCloseEvent, QDesktopServices
+from qtpy.QtCore import QModelIndex, Qt, QVariant
+from qtpy.QtGui import QFont, QCloseEvent, QDesktopServices
 
 import corrscope
 import corrscope.settings.global_prefs as gp

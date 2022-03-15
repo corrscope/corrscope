@@ -2,8 +2,8 @@ from contextlib import contextmanager
 from typing import *
 
 import attr
-from PyQt5.QtCore import QObject, Qt
-from PyQt5.QtWidgets import *
+from qtpy.QtCore import QObject, Qt
+from qtpy.QtWidgets import *
 
 from corrscope.util import obj_name
 

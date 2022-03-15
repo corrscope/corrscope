@@ -4,8 +4,8 @@ from operator import itemgetter
 from typing import TypeVar, Iterable, Generic, Tuple, Any, Optional
 
 import matplotlib.colors
-from PyQt5.QtCore import QMutex
-from PyQt5.QtWidgets import QErrorMessage, QWidget
+from qtpy.QtCore import QMutex
+from qtpy.QtWidgets import QErrorMessage, QWidget
 
 from corrscope.config import CorrError
 
