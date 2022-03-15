@@ -103,6 +103,8 @@ Increasing "Edge Strength" and decreasing "Buffer Strength" tracks new notes bet
 
 ### High-level Overview
 
+Corrscope saves a history buffer of size `Trigger Width` between frames. On each frame, we fetch input data of size `1.5 * Trigger Width`, then sweep the history buffer (size `Trigger Width`) within the input data, picking the optimal alignment (resulting in a triggering range of `0.5 * Trigger Width`). As a result, to properly trigger a wave of frequency <50 Hz (period >20 ms), you need a `Trigger Width` of >40 ms (not 20 ms)!
+
 On each frame, corrscope's trigger scans across input data near the currently playing point in the audio. For each point, corrscope computes `Edge Strength` * "total waveform to the right" (maximized at each rising edge) + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we keep points lying at a local maximum. If `Buffer Strength` is set to 0, this locate all rising edges.
 
 For each local maximum of the buffer/edge locator, we score the correlation by summing  `Edge Strength` * "slope around the point" + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we use the edge/correlation peak with the highest slope/correlation score.
@@ -112,7 +114,8 @@ For each local maximum of the buffer/edge locator, we score the correlation by s
 All tabs are located in the left pane.
 
 - Global
-    - `Trigger Width` (also controllable via per-channel "Trigger Width ×")
+    - `Trigger Width` (combined with per-channel "Trigger Width ×")
+    - `DC Removal Rate` (`mean_responsiveness`)
 - Trigger, Edge Triggering
     - `Trigger Direction`
     - `Edge Strength`
@@ -134,7 +137,7 @@ All tabs are located in the left pane.
 
 ### Obtaining Data (each frame)
 
-On each frame, corrscope fetches [from the channel] a buffer of mono `data`, ~~centered at the current time~~ **TODO**. The amount of data used is controlled by `Trigger Width` **TODO 1.5x**, which should be increased to keep low bass stable.
+On each frame, corrscope fetches (from the channel) a buffer of mono `data` with length 1.5 times `Trigger Width`. `data[0]` corresponds to the current time in the channel, minus 1 frame or half of `data`'s width (whichever one is less).
 
 - If `Edge Direction` is "Falling (-1)", then both the main and post trigger will receive negated data from the wave, causing both to search for falling edges (instead of rising edges).
 
@@ -144,11 +147,9 @@ Some waves do not have clear edges. For example, triangle waves do not have clea
 
 If `Sign Strength` (Sign Triggering on the GUI) is set to nonzero `strength`, corrscope computes `peak = max(abs(data))`. It adds `peak * strength` to positive parts of `data`, subtracts `peak * strength` from negative parts of `data`, and heavily amplifies parts of the wave near zero. This helps the correlation trigger locate zero-crossings exactly, and is necessary if you enable DC removal (which offsets the wave by a variable distance vertically).
 
-### Mean/Period
+### Mean and Period
 
-**TODO document mean responsiveness, used for data but always set to 1 for period calculation**
-
-To remove DC offset from the wave, corrscope calculates the `mean` of input `data` and subtracts this averaged `mean` from `data`.
+To remove DC offset from the wave, corrscope optionally calculates the `mean` of input `data`, smooths it over time, and subtracts this averaged `mean` from `data`. For more details on this smoothing process (`DC Removal Rate`), see "Managing DC Offsets" above.
 
 Corrscope then estimates the fundamental `period` of the waveform, using autocorrelation.
 
@@ -165,7 +166,7 @@ Pitch Tracking may get confused when `data` moves from 1 note to another over th
 
 ### Correlation Triggering (uses `buffer`)
 
-On each frame, we use a combination of edge detection and history comparison (each optional) to pick a triggering point. For details, see "High-level Overview" above.
+On each frame, we use a combination of edge detection and history comparison (each optional) to pick a triggering point within a possible range of `0.5 * Trigger Width`. For details, see "High-level Overview" above.
 
 - `Edge Strength` controls how strongly corrscope prioritizes searching for rising edges, and picking strong edges with high slope.
   - `Slope Width` controls how much data around each candidate trigger point is used to evaluate edge strength (or slope).
@@ -177,6 +178,9 @@ On each frame, we use a combination of edge detection and history comparison (ea
 
 If post triggering is enabled:
 - We recalculate the `post mean` of data around our new `position` value. If `position` is a good trigger position (and there are no nearby discontinuities like note changes), then `post mean` should be stable and not jitter.
+  - **TODO don't force mean removal for post triggering**
+  - **TODO decouple variables storing trigger and post mean**
+
 - The post trigger is called with `position` and returns a new `position`, which overwrites the original variable.
 
 #### Zero Crossing Trigger
