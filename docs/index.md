@@ -167,10 +167,10 @@ Pitch Tracking may get confused when `data` moves from 1 note to another over th
 
 On each frame, we use a combination of edge detection and history comparison (each optional) to pick a triggering point. For details, see "High-level Overview" above.
 
-- `Edge Strength` controls how strongly corrscope prioritizes rising edges.
-  - `Slope Width` controls the duration of data taken into account when searching for strong edges with high slope.
+- `Edge Strength` controls how strongly corrscope prioritizes searching for rising edges, and picking strong edges with high slope.
+  - `Slope Width` controls how much data around each candidate trigger point is used to evaluate edge strength (or slope).
 
-- `Buffer Strength` controls how strongly corrscope prioritizes similarity with `buffer` (searches for waves which line up with previous on-screen content).
+- `Buffer Strength` controls how strongly corrscope prioritizes similarity with `buffer` (and searches for waves which line up with previous on-screen content).
   <!-- - Based off of previous few frames of on-screen content, tapered with width proportional to each frame's `period`. -->
 
 ### (Optional) Post Triggering
