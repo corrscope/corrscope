@@ -38,11 +38,11 @@ For low bass notes, increase global "Trigger Width" or channel-specific "Trigger
 
 ### Managing DC Offsets
 
-"DC Removal Rate" (`mean_responsiveness`) affects how corrscope removes DC from data used for triggering. Setting it to 0.0 makes corrscope not subtract DC from the waveform. Setting it to 0.5 makes corrscope estimate the DC offset by averaging the current frame's DC offset and the previous frame's estimate, and subtract the estimate from the data. Setting it to 1.0 makes corrscope estimate the DC offset independently on each frame, and subtract the estimate from the data.
+"DC Removal Rate" (`mean_responsiveness`) affects how corrscope removes DC from data used for triggering. Setting it to 0.0 makes corrscope not subtract DC from the waveform. Setting it to 0.5 makes corrscope estimate the DC offset by averaging the current frame's average amplitude and the previous frame's estimate, and subtract the estimate from the data. Setting it to 1.0 makes corrscope estimate the DC offset independently on each frame, and subtract the estimate from the data.
 
 In most cases, you can leave "DC Removal Rate" to 0. If this causes problems in practice, let me know so I can update these guidelines!
 
-For waves with high DC offsets, if you want to trigger based on the current estimated center of the wave, set the global or track-specific "DC Removal Rate" to 0.5-1. If you want to trigger based on the zero-amplitude baseline, set it to 0.
+For waves with high DC offsets, if you want to trigger based on the current DC offset of the wave, set the global or track-specific "DC Removal Rate" to 0.5-1. If you want to trigger based on the zero-amplitude baseline, set it to 0.
 
 For NES triangle waves where you want to trigger based on the zero-amplitude baseline exactly, set "DC Removal Rate" to 0.
 
@@ -58,9 +58,9 @@ Sampled trumpets generally consist of a sharp falling edge, followed by gibberis
 
 ![Screenshot of complex wave in corrscope](images/complex-bass.png?raw=true)
 
-~~Corrscope's standard "edge trigger" does not look for "steep edges" but instead "sign changes". It operates by maximizing `(signed area in right half) - (signed area in left half)`~~ TODO fix this explanation. This waveform has a clear falling edge from positive to negative, but no clear edge from negative to positive.
+The best settings for triggering complex waves varies on a case-by-case basis. This particular waveform has a clear falling edge from positive to negative, but no clear rising edge from negative to positive.
 
-- Set "Trigger Direction" to "Falling (-1)".
+- Set "Trigger Direction" to "Falling (-1)". This will produce good results. You can also decrease "Buffer Strength" to 0 to prevent possible triggering errors upon new notes.
 - If you want rising-edge triggering, you could try setting "Trigger Direction" to "Rising (+1)", experimenting with "DC Removal Rate" and "Slope Width", and possibly decreasing "Buffer Strength" to 0. This may or may not work well.
 
 ### NES Triangle Waves
@@ -72,6 +72,8 @@ NES triangle waves are stair-stepped. If "DC Removal Rate" is nonzero, on every 
 - Use any "Trigger Direction" you prefer. Rising and Falling both work equally well.
 - Set "DC Removal Rate" to 0. This causes corrscope to look at the actual zero crossings instead of subtracting an estimated DC offset on each frame.
 - Alternatively, set "Sign Triggering" to 1 or so. This causes corrscope to preprocess the waveform before DC is removed, and add 0.5(peak-to-peak amplitude) to positive samples and subtract 0.5(peak-to-peak amplitude) from negative samples. The resulting steep edges will remain as zero crossings, even after DC is filtered out.
+  - Both techniques can be combined if you want.
+
 
 NES triangle waves have 15 rising/falling edges. The NES high-pass removes DC and low frequencies, causing waveforms to decay towards y=0. As a result, "which edge crosses y=0" changes with pitch.
 
@@ -82,23 +84,30 @@ NES triangle waves have 15 rising/falling edges. The NES high-pass removes DC an
 FDS FM changes the width of waves, but not their height. The NES high-pass removes DC and low frequencies, continually offsetting waveforms to move the current input amplitude towards y=0. If FDS waves contain anything other than pulse/saw, "which part of the wave crosses y=0" may change with FM and pitch.
 
 - Experiment with "Trigger Direction", "Slope Width", and "Edge Strength" vs. "Buffer Strength".
+- If you have multiple steep rising/falling edges, it may be impossible to reliably pick the same edge every time. See the next section for more ideas.
 
 ### Yamaha FM and SNES/sampled Waves
 
-Newer consoles have complex waveforms which evolve over time, presenting challenges for triggering.
+Newer consoles have complex waveforms which evolve over time. If a waveform evolves *and* has multiple rising/falling edges, corrscope and other oscilloscope programs will frequently struggle.
 
 - Experiment with "Trigger Direction", "Slope Width", and "Edge Strength" vs. "Buffer Strength".
 
-Increasing "Edge Strength" relative to "Buffer Strength" tracks new notes better, but causes corrscope to snap around more often in existing notes. Decreasing it tracks sustained evolving notes better, but causes corrscope to pick poor starting points on new notes.
+Increasing "Edge Strength" and decreasing "Buffer Strength" tracks new notes better, but causes corrscope to jump around more within notes. Decreasing "Edge Strength" tracks sustained evolving notes better, but causes corrscope to pick poor starting points on new notes.
 
 - Reduce "Edge Strength" to track sustained notes better, then increase "Reset Below Match" to 0.5-1.0 to reset the buffer upon new notes (when the waveform doesn't match the buffer well).
   - Tuning "Reset Below Match" is difficult; set it too low and corrscope won't reset the buffer on new notes, set it too high and it will reset mid-note.
   - Try boosting "Buffer Responsiveness" to 1.0 or so; this may allow increasing "Reset Below Match" further without resetting during sustained notes.
-- To better track evolving notes without jumping to new positions, you can enable Post Triggering and experiment with the radius.
+- To better track evolving notes without jumping between positions, you can enable Post Triggering and experiment with the radius.
 
-## Options
+## Technical Explanation
 
-*TODO rewrite this; it's no longer accurate ever since `separate-peak-and-score`*
+### High-level Overview
+
+On each frame, corrscope's trigger scans across input data near the currently playing point in the audio. For each point, corrscope computes `Edge Strength` * "total waveform to the right" (maximized at each rising edge) + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we keep points lying at a local maximum. If `Buffer Strength` is set to 0, this locate all rising edges.
+
+For each local maximum of the buffer/edge locator, we score the correlation by summing  `Edge Strength` * "slope around the point" + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we use the edge/correlation peak with the highest slope/correlation score.
+
+### Options
 
 All tabs are located in the left pane.
 
@@ -121,11 +130,11 @@ All tabs are located in the left pane.
 
 - `buffer`: array of samples, containing `Trigger Width` (around 40 milliseconds) recent "trigger outputs". Starts out as all zeros.
 - `mean`: real number, estimated from recent "trigger inputs". Starts out at 0.
-- `edge_finder`: computed once, never changes, reused for every frame.
+- `slope_finder`: recomputed whenever the wave frequency/`period` changes. <!-- Positive at (`Slope Width` * `period` right of center), negative at (`Slope Width` * `period` left of center). -->
 
 ### Obtaining Data (each frame)
 
-On each frame, corrscope fetches [from the channel] a buffer of mono `data`, centered at the current time. The amount of data used is controlled by `Trigger Width`, which should be increased to keep low bass stable.
+On each frame, corrscope fetches [from the channel] a buffer of mono `data`, ~~centered at the current time~~ **TODO**. The amount of data used is controlled by `Trigger Width` **TODO 1.5x**, which should be increased to keep low bass stable.
 
 - If `Edge Direction` is "Falling (-1)", then both the main and post trigger will receive negated data from the wave, causing both to search for falling edges (instead of rising edges).
 
@@ -133,15 +142,15 @@ On each frame, corrscope fetches [from the channel] a buffer of mono `data`, cen
 
 Some waves do not have clear edges. For example, triangle waves do not have clear rising edges (leading to suboptimal triggering), and NES triangles have 15 small rising edges, causing corrscope to jump between them.
 
-If `Sign Strength` (Sign Triggering on the GUI) is set to nonzero `strength`, corrscope computes `peak = max(abs(data))`. It adds `peak * strength` to positive parts of `data`, subtracts `peak * strength` from negative parts of `data`, and heavily amplifies parts of the wave near zero. This helps the correlation trigger locate zero-crossings exactly.
+If `Sign Strength` (Sign Triggering on the GUI) is set to nonzero `strength`, corrscope computes `peak = max(abs(data))`. It adds `peak * strength` to positive parts of `data`, subtracts `peak * strength` from negative parts of `data`, and heavily amplifies parts of the wave near zero. This helps the correlation trigger locate zero-crossings exactly, and is necessary if you enable DC removal (which offsets the wave by a variable distance vertically).
 
 ### Mean/Period
+
+**TODO document mean responsiveness, used for data but always set to 1 for period calculation**
 
 To remove DC offset from the wave, corrscope calculates the `mean` of input `data` and subtracts this averaged `mean` from `data`.
 
 Corrscope then estimates the fundamental `period` of the waveform, using autocorrelation.
-
-Corrscope multiplies `data` by `data window` to taper off the edges towards zero, and avoid using data over 1 frame old.
 
 ### (optional) Pitch Tracking
 
@@ -156,14 +165,15 @@ Pitch Tracking may get confused when `data` moves from 1 note to another over th
 
 ### Correlation Triggering (uses `buffer`)
 
+See "High-level Overview".
+
+***TODO rewrite this**; it's no longer accurate ever since `separate-peak-and-score`*
+
+- `Edge Strength` controls the strength of the edge detection running sum, which searches for points on waves which are negative on the left, but positive on the right. It also controls the strength of the slope finder (TODO).
 - `Buffer Strength` controls the strength of `buffer` (previous on-screen content), which searches for waves which line up with previous on-screen content.
   <!-- - Based off of previous few frames of on-screen content, tapered with width proportional to each frame's `period`. -->
-- `Edge Strength` controls the strength of `edge_finder`, which searches for waves which are negative on the left, but positive on the right.
-  <!-- - Precomputed and unchanging. Positive in right half, negative in left half. Value decreases near edges of screen. -->
-- `Slope Strength` controls the strength of `slope_finder`, which searches for waves which steeply increase near the center of the screen.
-  <!-- - Recomputed whenever the wave frequency/`period` changes. Positive at (`Slope Width` * `period` right of center), negative at (`Slope Width` * `period` left of center). -->
 
-Corrscope cross-correlates `data` with `(Buffer Strength * buffer) + (Edge Strength * edge_finder) + (Slope Strength * slope_finder)` to produce a score for each possible `data` triggering location. Locations which line up well with the complex expression (line up well with the previous frame, transition from negative to positive, or increase in value) have high scores. Corrscope then picks the location in `data` with the highest score as the `position` to be used for rendering.
+Corrscope cross-correlates `data` with `???` to produce a score for each possible `data` triggering location. ??? See "High-level Overview". ~~Locations which line up well with the complex expression (line up well with the previous frame, transition from negative to positive, or increase in value) have high scores. Corrscope then picks the location in `data` with the highest score as the `position` to be used for rendering.~~
 
 ### (Optional) Post Triggering
 
@@ -209,7 +219,7 @@ Loss of color information is especially damaging with "Color Lines By Pitch" ena
 
 **To render colored lines while minimizing quality loss, render at a higher resolution (slower) with thicker lines.** This will improve color fidelity for people who watch the resulting videos above 720p.
 
-I do not have experience with other encoders (like x265, VP8, VP9, or AV1), but the principle of losing fine color detail to chroma subsampling and lossy codecs should remain the same. AV1 should preserve colored lines better due to chroma-from-luma, but AV1 encoders are still impractically slow.
+I do not have experience with other encoders (like x265, VP8, VP9, or AV1), but all codecs supported by browsers lose color detail to chroma subsampling, and I think most lose color detail to lossy compression as well. AV1 should preserve colored lines better because it has chroma-from-luma, but AV1 encoders are slow, and many people watching YouTube receive a transcoded h.264 feed instead, which drops color detail anyway.
 
 ## Audio Encoding
 
