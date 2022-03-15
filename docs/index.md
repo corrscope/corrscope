@@ -138,7 +138,7 @@ On each frame, corrscope fetches [from the channel] a buffer of mono `data`, ~~c
 
 - If `Edge Direction` is "Falling (-1)", then both the main and post trigger will receive negated data from the wave, causing both to search for falling edges (instead of rising edges).
 
-### Sign Triggering
+### Sign Enhancement
 
 Some waves do not have clear edges. For example, triangle waves do not have clear rising edges (leading to suboptimal triggering), and NES triangles have 15 small rising edges, causing corrscope to jump between them.
 
@@ -165,15 +165,13 @@ Pitch Tracking may get confused when `data` moves from 1 note to another over th
 
 ### Correlation Triggering (uses `buffer`)
 
-See "High-level Overview".
+On each frame, we use a combination of edge detection and history comparison (each optional) to pick a triggering point. For details, see "High-level Overview" above.
 
-***TODO rewrite this**; it's no longer accurate ever since `separate-peak-and-score`*
+- `Edge Strength` controls how strongly corrscope prioritizes rising edges.
+  - `Slope Width` controls the duration of data taken into account when searching for strong edges with high slope.
 
-- `Edge Strength` controls the strength of the edge detection running sum, which searches for points on waves which are negative on the left, but positive on the right. It also controls the strength of the slope finder (TODO).
-- `Buffer Strength` controls the strength of `buffer` (previous on-screen content), which searches for waves which line up with previous on-screen content.
+- `Buffer Strength` controls how strongly corrscope prioritizes similarity with `buffer` (searches for waves which line up with previous on-screen content).
   <!-- - Based off of previous few frames of on-screen content, tapered with width proportional to each frame's `period`. -->
-
-Corrscope cross-correlates `data` with `???` to produce a score for each possible `data` triggering location. ??? See "High-level Overview". ~~Locations which line up well with the complex expression (line up well with the previous frame, transition from negative to positive, or increase in value) have high scores. Corrscope then picks the location in `data` with the highest score as the `position` to be used for rendering.~~
 
 ### (Optional) Post Triggering
 
