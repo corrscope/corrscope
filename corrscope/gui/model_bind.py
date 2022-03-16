@@ -4,10 +4,10 @@ from collections import defaultdict
 from typing import *
 
 import attr
-from PyQt5 import QtWidgets as qw, QtCore as qc
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtGui import QPalette, QColor, QFont
-from PyQt5.QtWidgets import QWidget
+from qtpy import QtWidgets as qw, QtCore as qc
+from qtpy.QtCore import Slot
+from qtpy.QtGui import QPalette, QColor, QFont
+from qtpy.QtWidgets import QWidget
 
 from corrscope.config import CorrError, DumpableAttrs, get_units
 from corrscope.gui.util import color2hex
@@ -66,7 +66,7 @@ class PresentationModel(qc.QObject):
     # These fields are specific to each subclass, and assigned there.
     # Although less explicit, these can be assigned using __init_subclass__.
     combo_symbol_text: Dict[str, Sequence[SymbolText]]
-    edited = qc.pyqtSignal()
+    edited = qc.Signal()
 
     def __init__(self, cfg: DumpableAttrs):
         super().__init__()
@@ -227,7 +227,7 @@ def blend_colors(
 # PyCharm expects -> Callable[[Any], None].
 # I give up.
 def model_setter(value_type: type) -> Callable[..., None]:
-    @pyqtSlot(value_type)
+    @Slot(value_type)
     def set_model(self: BoundWidget, value):
         assert isinstance(value, value_type)
         try:
@@ -278,7 +278,9 @@ class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
     set_model = model_setter(float)
 
 
-CheckState = int
+# CheckState inherits from int on PyQt5 and Enum on PyQt6. To compare integers with
+# CheckState on both PyQt5 and 6, we have to call CheckState(int).
+CheckState = qc.Qt.CheckState
 
 
 class BoundCheckBox(qw.QCheckBox, BoundWidget):
@@ -290,12 +292,16 @@ class BoundCheckBox(qw.QCheckBox, BoundWidget):
     gui_changed = alias("stateChanged")
 
     # gui_changed -> set_model(Qt.CheckState).
-    @pyqtSlot(CheckState)
-    def set_model(self, value: CheckState):
-        """Qt.PartiallyChecked probably should not happen."""
-        Qt = qc.Qt
-        assert value in [Qt.Unchecked, Qt.PartiallyChecked, Qt.Checked]
-        self.set_bool(value != Qt.Unchecked)
+    @Slot(int)
+    def set_model(self, value: int):
+        """Qt.CheckState.PartiallyChecked probably should not happen."""
+        value = CheckState(value)
+        assert value in [
+            CheckState.Unchecked,
+            CheckState.PartiallyChecked,
+            CheckState.Checked,
+        ]
+        self.set_bool(value != CheckState.Unchecked)
 
     set_bool = model_setter(bool)
 
@@ -348,7 +354,7 @@ class BoundComboBox(qw.QComboBox, BoundWidget):
     gui_changed = alias("currentIndexChanged")
 
     # pmodel.attr = combobox.index
-    @pyqtSlot(int)
+    @Slot(int)
     def set_model(self, combo_index: int):
         assert isinstance(combo_index, int)
         combo_symbol, _ = self.combo_symbol_text[combo_index]
@@ -394,7 +400,7 @@ class BoundFontButton(qw.QPushButton, BoundWidget):
         preview_font.setPointSizeF(self.font().pointSizeF())
         self.setFont(preview_font)
 
-    @pyqtSlot()
+    @Slot()
     def on_clicked(self):
         old_font: QFont = self.pmodel[self.path]
 
@@ -405,7 +411,7 @@ class BoundFontButton(qw.QPushButton, BoundWidget):
             self.set_gui(new_font)
             self.gui_changed.emit(new_font)
 
-    gui_changed = qc.pyqtSignal(QFont)
+    gui_changed = qc.Signal(QFont)
 
     set_model = model_setter(QFont)
 
@@ -457,7 +463,7 @@ class BoundColorWidget(BoundWidget, qw.QWidget):
 
     # impl BoundWidget
     # Never gets emitted. self.text.set_model is responsible for updating model.
-    gui_changed = qc.pyqtSignal(str)
+    gui_changed = qc.Signal(str)
 
     # impl BoundWidget
     # Never gets called.
@@ -482,7 +488,7 @@ class _ColorText(BoundLineEdit):
         self.setObjectName(SKIP_BINDING)
         self.optional = optional
 
-    hex_color = qc.pyqtSignal(str)
+    hex_color = qc.Signal(str)
 
     def set_gui(self, value: Optional[str]):
         """model2gui"""
@@ -500,7 +506,7 @@ class _ColorText(BoundLineEdit):
         # Write to other GUI widgets immediately.
         self.hex_color.emit(value)  # calls button.set_color()
 
-    @pyqtSlot(str)
+    @Slot(str)
     def set_model(self: BoundWidget, value: str):
         """gui2model"""
 
@@ -536,7 +542,7 @@ class _ColorButton(qw.QPushButton):
         self.color_text = text
         text.hex_color.connect(self.set_color)
 
-    @pyqtSlot()
+    @Slot()
     def on_clicked(self):
         # https://bugreports.qt.io/browse/QTBUG-38537
         # On Windows, QSpinBox height is wrong if stylesheets are enabled.
@@ -549,7 +555,7 @@ class _ColorButton(qw.QPushButton):
 
         self.color_text.setText(color.name())  # textChanged calls self.set_color()
 
-    @pyqtSlot(str)
+    @Slot(str)
     def set_color(self, hex_color: str):
         color = QColor(hex_color)
         self.curr_color = color
@@ -571,17 +577,21 @@ class _ColorCheckBox(qw.QCheckBox):
         self.color_text = text
         text.hex_color.connect(self.set_color)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def set_color(self, hex_color: str):
         with qc.QSignalBlocker(self):
             self.setChecked(bool(hex_color))
 
-    @pyqtSlot(CheckState)
-    def on_check(self, value: CheckState):
-        """Qt.PartiallyChecked probably should not happen."""
-        Qt = qc.Qt
-        assert value in [Qt.Unchecked, Qt.PartiallyChecked, Qt.Checked]
-        if value != Qt.Unchecked:
+    @Slot(int)
+    def on_check(self, value: int):
+        """Qt.CheckState.PartiallyChecked probably should not happen."""
+        value = CheckState(value)
+        assert value in [
+            CheckState.Unchecked,
+            CheckState.PartiallyChecked,
+            CheckState.Checked,
+        ]
+        if value != CheckState.Unchecked:
             self.color_text.setText("#ffffff")
         else:
             self.color_text.setText("")

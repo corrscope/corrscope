@@ -1,4 +1,4 @@
-import PyQt5.QtWidgets as qw
+import qtpy.QtWidgets as qw
 
 from corrscope import gui
 from corrscope.corrscope import template_config

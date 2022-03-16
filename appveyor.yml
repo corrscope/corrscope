@@ -37,7 +37,7 @@ install:
 
   # Prevents: "The current Python version (2.7.15) is not supported by the project (^3.6)"
   - 'set PATH=%pydir%;%pydir%\bin;%pydir%\Scripts;%PATH%'
-  - 'poetry install -v'  # don't pass --no-dev
+  - 'poetry install -v -E qt5'  # don't pass --no-dev
 
 build_script:
   - exit

@@ -4,8 +4,8 @@ from operator import itemgetter
 from typing import TypeVar, Iterable, Generic, Tuple, Any, Optional
 
 import matplotlib.colors
-from PyQt5.QtCore import QMutex
-from PyQt5.QtWidgets import QErrorMessage, QWidget
+from qtpy.QtCore import QMutex, QMutexLocker
+from qtpy.QtWidgets import QErrorMessage, QWidget
 
 from corrscope.config import CorrError
 
@@ -31,22 +31,17 @@ class Locked(Generic[T]):
     def __init__(self, obj: T):
         super().__init__()
         self.obj = obj
-        self.lock = QMutex(QMutex.Recursive)
-
-    def __enter__(self) -> T:
-        self.lock.lock()
-        return self.obj
-
-    def __exit__(self, *args) -> None:
-        self.lock.unlock()
+        self.lock = QMutex()
 
     def set(self, value: T) -> T:
-        with self:
+        # We don't actually need a mutex since Python holds the GIL during reads and
+        # writes. But keep it anyway.
+        with QMutexLocker(self.lock):
             self.obj = value
         return value
 
     def get(self) -> T:
-        with self:
+        with QMutexLocker(self.lock):
             return self.obj
 
 

@@ -2,8 +2,8 @@ from contextlib import contextmanager
 from typing import *
 
 import attr
-from PyQt5.QtCore import QObject, Qt
-from PyQt5.QtWidgets import *
+from qtpy.QtCore import QObject, Qt
+from qtpy.QtWidgets import *
 
 from corrscope.util import obj_name
 
@@ -127,6 +127,12 @@ class LayoutStack:
 
 def set_layout(stack: LayoutStack, layout_type: Type[QLayout]) -> QLayout:
     layout = layout_type(stack.peek().widget)
+
+    # On macOS there is a different FieldGrowthPolicy used by default
+    # than on other OSes, therefore let's set a desired one here:
+    if layout_type == QFormLayout:
+        layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+
     stack.peek().layout = layout
     return layout
 
