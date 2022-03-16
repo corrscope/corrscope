@@ -107,9 +107,10 @@ def get_period(
     else:
         peakX = temp_peakX
 
-    # self.custom_line(
-    #     "autocorr", corr, np.arange(len(corr)) * self._stride, False, False
-    # )
+    self.custom_vline("minX", minX, False)
+    self.custom_line(
+        "autocorr", corr, np.arange(len(corr)) * self._stride, False, False
+    )
     return int(peakX)
 
 
