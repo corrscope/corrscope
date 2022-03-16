@@ -376,7 +376,6 @@ class CorrelationTrigger(MainTrigger):
         return self.cfg.pitch_tracking
 
     def calc_buffer_std(self, period: float) -> float:
-        period = period or (self.A + self.B)
         return period * self.cfg.buffer_falloff
 
     def __init__(self, *args, **kwargs):
@@ -421,6 +420,7 @@ class CorrelationTrigger(MainTrigger):
         # noinspection PyTypeChecker
         slope_width: float = np.clip(cfg.slope_width * period, 1.0, self.A / 3)
 
+        buffer_std = self._prev_buffer_std or kernel_size
         # We want:
         #   abs_area(slope) / abs_area(buffer) = (E=edge_strength) / (B=B)
         #
@@ -436,7 +436,7 @@ class CorrelationTrigger(MainTrigger):
         #   (w(slope) * h(slope)) / E      = (w(buffer) * B) / B
         #   slope_width * h(slope) / E     = _prev_buffer_std
         #   h(slope)                       = E * _prev_buffer_std / slope_width
-        slope_strength = cfg.edge_strength * self._prev_buffer_std / slope_width
+        slope_strength = cfg.edge_strength * buffer_std / slope_width
         # slope_width is 1.0 or greater, so this doesn't divide by 0.
 
         slope_finder = np.empty(kernel_size, dtype=f32)  # type: np.ndarray[f32]
