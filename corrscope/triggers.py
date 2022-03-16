@@ -379,7 +379,6 @@ class CorrelationTrigger(MainTrigger):
         return self.cfg.pitch_tracking
 
     def calc_buffer_std(self, period: float) -> float:
-        period = period or (self.A + self.B)
         return period * self.cfg.buffer_falloff
 
     def __init__(self, *args, **kwargs):
