@@ -22,38 +22,40 @@ Corrscope is currently in semi-active development. The program basically works a
 
 - FFmpeg
 
-## Installing Prebuilt Windows Binaries
+## Installation
+
+### Installing Prebuilt Windows Binaries
 
 On Windows, download Windows binary releases (.7z files) from the [Releases page](https://github.com/corrscope/corrscope/releases), then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
-
-## Installing through Python
-
-Install Python 3.8 or above, then install corrscope using your method of choice. Afterwards, open a terminal and run `corr (args)`.
 
 ### Installing from PyPI via pipx (cross-platform, releases)
 
 pipx creates an isolated environment for each program, and adds their binaries into PATH. I find this most reliable in practice, though it runs into issues after upgrading system Python in-place.
 
+- Install Python 3.8 or above.
 - Install pipx using either your Linux package manager, `pip3 install --user pipx`, or `pip install --user pipx`.
 - Run `pipx install corrscope[qt5]`
     - On Linux, to add support for native Qt themes, instead run `pipx install --system-site-packages corrscope[qt5]`
     - On M1 Mac, instead run `pipx install corrscope[qt6]`
+- Open a terminal and run `corr (args)`.
 
 ### Installing from PyPI via Pip (cross-platform, releases)
 
 pip installs packages into a per-user Python environment. This has the disadvantage that each program you install influences the packages seen by other programs. It might run into issues when upgrading system Python in-place; I haven't tested.
 
+- Install Python 3.8 or above.
 - If necessary, install pip using your Linux package manager.
 - Run `pip3 install --user corrscope[qt5]`
     - On M1 Mac, instead run `pip3 install --user corrscope[qt6]`
+- Open a terminal and run `corr (args)`.
 
-## Dev builds (Windows)
+### Dev builds (Windows)
 
 Windows dev builds are compiled automatically, and available at https://ci.appveyor.com/project/nyanpasu64/corrscope/history.
 
 Installing dev builds on non-Windows platforms without cloning the repo (eg. Git URLs or .whl files) is not supported yet. Fixes are welcome.
 
-## Running from Source Code (cross-platform, dev master)
+### Running from Source Code (cross-platform, dev master)
 
 Install Python 3.8 or above, and Poetry. My preference is to run `pipx install poetry`. You can alternatively use the Poetry installer via `curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python`, but in the past, updating via `poetry self update` has broken and left me with no Poetry at all, requiring reinstalling.
 
@@ -94,6 +96,18 @@ poetry run corr (args)
 
 1. Render and encode video (requires ffmpeg)
     - `corrscope master.yaml -r/--render file.mp4` (other file extensions supported)
+
+## Mac-specific Issues
+
+### M1 Slowdown
+
+On M1 processors, if you open preview, after 40 or so seconds, the preview may suddenly slow down and audio will stop playing. This is because macOS thinks ffplay is the active app, and Corrscope is a background job burning CPU, so it moves Corrscope to an Efficiency core, slowing it down.
+
+There is no fix for this issue at the moment. As a workaround, you can click on Corrscope's window to avoid the slowdown, and drag it aside so it doesn't obstruct the preview.
+
+### Gatekeeper
+
+On Mac, if you render a video file, in some cases (eg. IINA video player) you may not be able to open the resulting files. Gatekeeper will print an error saying '"filename.mp4" cannot be opened because it is from an unidentified developer.'. If you see this message, try opening the file again. Once you silence the error once, it should not reappear.
 
 ## Contributing
 
