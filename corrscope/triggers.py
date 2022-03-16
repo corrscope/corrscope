@@ -361,7 +361,6 @@ class CorrelationTrigger(MainTrigger):
 
     _prev_mean: float
     _prev_period: Optional[int]
-    _prev_buffer_std: float
     _prev_slope_finder: "Optional[npt.NDArray[f32]]"
     """(mutable) [A+B] Amplitude"""
     _prev_window: "npt.NDArray[f32]"
@@ -391,7 +390,6 @@ class CorrelationTrigger(MainTrigger):
         self._prev_mean = 0.0
         # Will be overwritten on the first frame.
         self._prev_period = None
-        self._prev_buffer_std = self.calc_buffer_std(0)
         self._prev_slope_finder = None
         self._prev_window = np.zeros(kernel_size, f32)
 
@@ -420,23 +418,8 @@ class CorrelationTrigger(MainTrigger):
         # noinspection PyTypeChecker
         slope_width: float = np.clip(cfg.slope_width * period, 1.0, self.A / 3)
 
-        buffer_std = self._prev_buffer_std or kernel_size
-        # We want:
-        #   abs_area(slope) / abs_area(buffer) = (E=edge_strength) / (B=B)
-        #
-        # Assume:
-        #   abs_area(slope) ∝ w(slope) * h(slope)
-        #   abs_area(buffer) ∝ w(buffer) * (B=h(buffer))
-        #   w(buffer) = _prev_buffer_std
-        #   w(slope) = slope_width
-        #
-        # Solve for h(slope)=slope_strength:
-        #   abs_area(slope) / abs_area(buffer) = E / B
-        #   abs_area(slope) / E            = abs_area(buffer) / B
-        #   (w(slope) * h(slope)) / E      = (w(buffer) * B) / B
-        #   slope_width * h(slope) / E     = _prev_buffer_std
-        #   h(slope)                       = E * _prev_buffer_std / slope_width
-        slope_strength = cfg.edge_strength * buffer_std / slope_width
+        # This is a fudge factor. Adjust it until it feels right.
+        slope_strength = cfg.edge_strength * 5
         # slope_width is 1.0 or greater, so this doesn't divide by 0.
 
         slope_finder = np.empty(kernel_size, dtype=f32)  # type: np.ndarray[f32]
@@ -741,8 +724,9 @@ class CorrelationTrigger(MainTrigger):
             # New waveform
             data -= cache.mean
             normalize_buffer(data)
-            self._prev_buffer_std = self.calc_buffer_std(cache.period / self._stride)
-            window = gaussian_or_zero(N, std=self._prev_buffer_std)
+            window = gaussian_or_zero(
+                N, std=self.calc_buffer_std(cache.period / self._stride)
+            )
             data *= window
             self._prev_window = window
 
