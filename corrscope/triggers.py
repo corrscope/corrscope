@@ -382,18 +382,19 @@ class CorrelationTrigger(MainTrigger):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.A = self.B = self._tsamp // 2
-        self._trigger_diameter = int((self.A + self.B) * self.cfg.trigger_diameter)
+        kernel_size = self.A + self.B
+        self._trigger_diameter = int(kernel_size * self.cfg.trigger_diameter)
 
         # (mutable) Correlated with data (for triggering).
         # Updated with tightly windowed old data at various pitches.
-        self._corr_buffer = np.zeros(self.A + self.B, dtype=f32)
+        self._corr_buffer = np.zeros(kernel_size, dtype=f32)
 
         self._prev_mean = 0.0
         # Will be overwritten on the first frame.
         self._prev_period = None
         self._prev_buffer_std = self.calc_buffer_std(0)
         self._prev_slope_finder = None
-        self._prev_window = np.zeros(self.A + self.B, f32)
+        self._prev_window = np.zeros(kernel_size, f32)
 
         self._prev_trigger = 0
 
@@ -415,6 +416,8 @@ class CorrelationTrigger(MainTrigger):
         with length A+B."""
 
         cfg = self.cfg
+        kernel_size = self.A + self.B
+
         # noinspection PyTypeChecker
         slope_width: float = np.clip(cfg.slope_width * period, 1.0, self.A / 3)
 
@@ -436,11 +439,11 @@ class CorrelationTrigger(MainTrigger):
         slope_strength = cfg.edge_strength * self._prev_buffer_std / slope_width
         # slope_width is 1.0 or greater, so this doesn't divide by 0.
 
-        slope_finder = np.empty(self.A + self.B, dtype=f32)  # type: np.ndarray[f32]
+        slope_finder = np.empty(kernel_size, dtype=f32)  # type: np.ndarray[f32]
         slope_finder[: self.A] = -slope_strength / 2
         slope_finder[self.A :] = slope_strength / 2
 
-        slope_finder *= windows.gaussian(self.A + self.B, std=slope_width)
+        slope_finder *= windows.gaussian(kernel_size, std=slope_width)
         return slope_finder
 
     # end setup
