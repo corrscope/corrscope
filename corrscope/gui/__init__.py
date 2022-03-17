@@ -1116,12 +1116,12 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("render_width", int, 1, "Render Width ×", always_show=True),
         Column("trigger__mean_responsiveness", float, None, "DC Removal\nRate"),
         Column("trigger__sign_strength", float, None),
-        Column("trigger__buffer_strength", float, None),
-        Column("trigger__responsiveness", float, None, "Buffer\nResponsiveness"),
         Column("trigger__edge_direction", plus_minus_one, None),
         Column("trigger__edge_strength", float, None),
-        Column("trigger__slope_strength", float, None),
         Column("trigger__slope_width", float, None),
+        Column("trigger__buffer_strength", float, None),
+        Column("trigger__responsiveness", float, None, "Buffer\nResponsiveness"),
+        Column("trigger__reset_below", float, None, "Reset Below\nMatch"),
     ]
 
     idx_of_key = {}

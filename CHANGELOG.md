@@ -9,15 +9,17 @@
 
 ### Major Changes
 
-- Rewrite the trigger algorithm to enhance determinism and reduce errors when DC offset varies within a frame (#403, #408)
-    - Triggering still makes mistakes, especially when DC offset varies within a frame (eg. NES 75% pulse changing volumes). This may be addressed in the future.
-    - Changed default triggering settings as well.
+- Rewrite the trigger algorithm to enhance determinism and reduce errors when DC offset varies within a frame (#403, #408, #416)
+    - Slope strength has been removed and folded into edge strength (#416). This should *usually* not reduce the ability to fine-tune triggering; if it does, let me know so I can reconsider this decision!
+    - Add control for DC removal rate (#408)
+    - Add control to reset buffer on new notes, when wave lines up poorly with buffer (#416)
+    - For more information, see help page ([link](https://corrscope.github.io/corrscope/)).
 
 ### Changelog
 
 - Fix passing absolute .wav paths into corrscope CLI (#398)
 - Fix preview error when clearing "Trigger/Render Width" table cells (#407)
-- Add control for DC removal rate (#408)
+- Reorganize GUI with edge triggering options before buffer (#416)
 
 ## 0.7.1
 

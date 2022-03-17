@@ -317,28 +317,6 @@ class MainWindow(QWidget):
                     pass
 
             with append_widget(
-                s, QGroupBox, title=tr("Wave History Alignment"), layout=QFormLayout
-            ):
-                with add_row(
-                    s,
-                    tr("Buffer Strength"),
-                    BoundDoubleSpinBox,
-                    name="trigger__buffer_strength",
-                ):
-                    pass
-                with add_row(
-                    s,
-                    tr("Buffer Responsiveness"),
-                    BoundDoubleSpinBox,
-                    name="trigger__responsiveness",
-                    maximum=1.0,
-                    singleStep=0.1,
-                ):
-                    pass
-                with add_row(s, BoundCheckBox, Both) as (self.trigger__pitch_tracking):
-                    assert isinstance(self.trigger__pitch_tracking, QWidget)
-
-            with append_widget(
                 s, QGroupBox, title=tr("Edge Triggering"), layout=QFormLayout
             ):
                 with add_row(
@@ -357,14 +335,6 @@ class MainWindow(QWidget):
                     s.widget.setMinimum(0.0)
                 with add_row(
                     s,
-                    tr("Slope Strength\n(for PSG/C64/FM)"),
-                    BoundDoubleSpinBox,
-                    name="trigger__slope_strength",
-                ):
-                    s.widget.setSingleStep(10)
-                    s.widget.setMaximum(200)
-                with add_row(
-                    s,
                     tr("Slope Width"),
                     BoundDoubleSpinBox,
                     name="trigger__slope_width",
@@ -372,6 +342,37 @@ class MainWindow(QWidget):
                     s.widget.setMinimum(0)
                     s.widget.setMaximum(2)
                     s.widget.setSingleStep(0.02)
+
+            with append_widget(
+                s, QGroupBox, title=tr("Wave History Alignment"), layout=QFormLayout
+            ):
+                with add_row(
+                    s,
+                    tr("Buffer Strength"),
+                    BoundDoubleSpinBox,
+                    name="trigger__buffer_strength",
+                ):
+                    pass
+                with add_row(
+                    s,
+                    tr("Buffer Responsiveness"),
+                    BoundDoubleSpinBox,
+                    name="trigger__responsiveness",
+                    maximum=1.0,
+                    singleStep=0.1,
+                ):
+                    pass
+                with add_row(
+                    s,
+                    tr("Reset Below Match"),
+                    BoundDoubleSpinBox,
+                    name="trigger__reset_below",
+                    maximum=1.0,
+                    singleStep=0.1,
+                ):
+                    pass
+                with add_row(s, BoundCheckBox, Both) as (self.trigger__pitch_tracking):
+                    assert isinstance(self.trigger__pitch_tracking, QWidget)
 
             with append_widget(
                 s, QGroupBox, title=tr("Post Triggering"), layout=QFormLayout

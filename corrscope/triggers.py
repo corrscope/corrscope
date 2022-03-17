@@ -1,5 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Type, Optional, ClassVar, Union, TypeVar, Generic
+from typing import (
+    TYPE_CHECKING,
+    Type,
+    Optional,
+    ClassVar,
+    Union,
+    TypeVar,
+    Generic,
+    cast,
+)
 
 import attr
 import numpy as np
@@ -260,7 +269,7 @@ class CorrelationTriggerConfig(
     always_dump="""
     mean_responsiveness
     pitch_tracking
-    slope_strength slope_width
+    slope_width
     """
     # deprecated
     " buffer_falloff ",
@@ -272,21 +281,24 @@ class CorrelationTriggerConfig(
     edge_strength: float
 
     # Slope detection
-    slope_strength: float = 0
-    slope_width: float = with_units("period", default=0.07)
+    slope_width: float = with_units("period", default=0.25)
 
     # Correlation detection
     buffer_strength: float = 1
 
-    # _update_buffer()
+    # Below a specific correlation quality, discard the buffer entirely.
+    reset_below: float = 0
+
+    # _update_buffer() (not in GUI)
     buffer_falloff: float = 0.5
 
-    # Maximum distance to move (in terms of trigger_ms/trigger_samp)
+    # Maximum distance to move (in terms of trigger_ms/trigger_samp) (not in GUI)
     trigger_diameter: float = 0.5
 
-    # Maximum distance to move (in terms of estimated wave period)
+    # Maximum distance to move (in terms of estimated wave period) (not in GUI)
     trigger_radius_periods: Optional[float] = 1.5
 
+    # (not in GUI)
     recalc_semitones: float = 1.0
 
     # _update_buffer
@@ -295,7 +307,7 @@ class CorrelationTriggerConfig(
     # Period/frequency estimation (not in GUI)
     max_freq: float = with_units("Hz", default=4000)
 
-    # Pitch tracking = compute spectrum.
+    # Pitch tracking = compute spectrum. (GUI only has a checkbox)
     pitch_tracking: Optional[SpectrumConfig] = None
 
     # region Legacy Aliases
@@ -347,12 +359,11 @@ class CorrelationTrigger(MainTrigger):
     _corr_buffer: "npt.NDArray[f32]"
     """(mutable) [A+B] Amplitude"""
 
-    _edge_finder: "npt.NDArray[f32]"
-    """(const) [A+B] Amplitude"""
-
     _prev_mean: float
     _prev_period: Optional[int]
     _prev_slope_finder: "Optional[npt.NDArray[f32]]"
+    """(mutable) [A+B] Amplitude"""
+    _prev_window: "npt.NDArray[f32]"
     """(mutable) [A+B] Amplitude"""
 
     _prev_trigger: int
@@ -363,19 +374,24 @@ class CorrelationTrigger(MainTrigger):
     def scfg(self) -> Optional[SpectrumConfig]:
         return self.cfg.pitch_tracking
 
+    def calc_buffer_std(self, period: float) -> float:
+        return period * self.cfg.buffer_falloff
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.A = self.B = self._tsamp // 2
-        self._trigger_diameter = int((self.A + self.B) * self.cfg.trigger_diameter)
+        kernel_size = self.A + self.B
+        self._trigger_diameter = int(kernel_size * self.cfg.trigger_diameter)
 
         # (mutable) Correlated with data (for triggering).
         # Updated with tightly windowed old data at various pitches.
-        self._corr_buffer = np.zeros(self.A + self.B, dtype=f32)
+        self._corr_buffer = np.zeros(kernel_size, dtype=f32)
 
         self._prev_mean = 0.0
         # Will be overwritten on the first frame.
         self._prev_period = None
         self._prev_slope_finder = None
+        self._prev_window = np.zeros(kernel_size, f32)
 
         self._prev_trigger = 0
 
@@ -391,25 +407,27 @@ class CorrelationTrigger(MainTrigger):
         else:
             self._spectrum_calc = DummySpectrum()
 
-    def _calc_slope_finder(self, period: float) -> Optional[np.ndarray]:
+    def _calc_slope_finder(self, period: float) -> np.ndarray:
         """Called whenever period changes substantially.
         Returns a kernel to be correlated with input data to find positive slopes,
         with length A+B."""
 
         cfg = self.cfg
-        if cfg.slope_strength:
-            # noinspection PyTypeChecker
-            slope_width: float = np.clip(cfg.slope_width * period, 1.0, self.A / 3)
-            slope_strength = cfg.slope_strength * cfg.buffer_falloff
+        kernel_size = self.A + self.B
 
-            slope_finder = np.empty(self.A + self.B, dtype=f32)  # type: np.ndarray[f32]
-            slope_finder[: self.A] = -slope_strength / 2
-            slope_finder[self.A :] = slope_strength / 2
+        # noinspection PyTypeChecker
+        slope_width: float = np.clip(cfg.slope_width * period, 1.0, self.A / 3)
 
-            slope_finder *= windows.gaussian(self.A + self.B, std=slope_width)
-            return slope_finder
-        else:
-            return None
+        # This is a fudge factor. Adjust it until it feels right.
+        slope_strength = cfg.edge_strength * 5
+        # slope_width is 1.0 or greater, so this doesn't divide by 0.
+
+        slope_finder = np.empty(kernel_size, dtype=f32)  # type: np.ndarray[f32]
+        slope_finder[: self.A] = -slope_strength / 2
+        slope_finder[self.A :] = slope_strength / 2
+
+        slope_finder *= windows.gaussian(kernel_size, std=slope_width)
+        return slope_finder
 
     # end setup
 
@@ -434,6 +452,7 @@ class CorrelationTrigger(MainTrigger):
         data_begin = trigger_begin - stride * self.A
 
         # Get subsampled data (1D, downmixed to mono)
+        # [data_nsubsmp = A + _trigger_diameter + B] Amplitude
         data = self._wave.get_padded(
             data_begin, data_begin + stride * data_nsubsmp, stride
         )
@@ -472,7 +491,57 @@ class CorrelationTrigger(MainTrigger):
             self._prev_period = period
             self._prev_slope_finder = slope_finder
         else:
-            slope_finder = self._prev_slope_finder
+            slope_finder = cast(np.ndarray, self._prev_slope_finder)
+
+        corr_enabled = bool(cfg.buffer_strength) and bool(cfg.responsiveness)
+
+        # Buffer sizes:
+        # data_nsubsmp = A + _trigger_diameter + B
+        kernel_size = self.A + self.B
+        corr_nsamp = self._trigger_diameter + 1
+        assert corr_nsamp == data_nsubsmp - kernel_size + 1
+
+        # Check if buffer still lines up well with data.
+        if corr_enabled:
+            # array[corr_nsamp] Amplitude
+            corr_quality = signal.correlate_valid(data, self._corr_buffer)
+            assert len(corr_quality) == corr_nsamp
+
+            if cfg.reset_below > 0:
+                peak_idx = np.argmax(corr_quality)
+                peak_quality = corr_quality[peak_idx]
+
+                data_slice = data[peak_idx : peak_idx + kernel_size]
+
+                # Keep in sync with _update_buffer()!
+                windowed_slice = data_slice - mean
+                normalize_buffer(windowed_slice)
+                windowed_slice *= self._prev_window
+                self_quality = np.add.reduce(data_slice * windowed_slice)
+
+                relative_quality = peak_quality / (self_quality + 0.001)
+                should_reset = relative_quality < cfg.reset_below
+                if should_reset:
+                    corr_quality[:] = 0
+                    self._corr_buffer[:] = 0
+                    corr_enabled = False
+        else:
+            corr_quality = np.zeros(corr_nsamp, f32)
+
+        # array[A+B] Amplitude
+        corr_kernel = slope_finder
+        del slope_finder
+        if corr_enabled:
+            corr_kernel += self._corr_buffer * cfg.buffer_strength
+
+        # `corr[x]` = correlation of kernel placed at position `x` in data.
+        # `corr_kernel` is not allowed to move past the boundaries of `data`.
+        corr = signal.correlate_valid(data, corr_kernel)
+        assert len(corr) == corr_nsamp
+
+        peaks = corr_quality
+        del corr_quality
+        peaks *= cfg.buffer_strength
 
         if cfg.edge_strength:
             # I want a half-open cumsum, where edge_score[0] = 0, [1] = data[A], [2] =
@@ -483,20 +552,7 @@ class CorrelationTrigger(MainTrigger):
             # The optimal edge alignment is the *minimum* cumulative sum, so invert
             # the cumsum so the minimum amplitude maps to the highest score.
             edge_score *= -cfg.edge_strength
-        else:
-            edge_score = None
-
-        # array[A+B] Amplitude
-        corr_kernel: np.ndarray = self._corr_buffer * cfg.buffer_strength
-        if slope_finder is not None:
-            corr_kernel += slope_finder
-
-        # `corr[x]` = correlation of kernel placed at position `x` in data.
-        # `corr_kernel` is not allowed to move past the boundaries of `data`.
-        corr = signal.correlate_valid(data, corr_kernel)
-
-        if edge_score is not None:
-            corr += edge_score
+            peaks += edge_score
 
         # Don't pick peaks more than `period * trigger_radius_periods` away from the
         # center.
@@ -505,10 +561,13 @@ class CorrelationTrigger(MainTrigger):
         else:
             trigger_radius = None
 
-        def find_peak(corr: np.ndarray, radius: Optional[int]) -> int:
+        def find_peak(
+            corr: np.ndarray, peaks: np.ndarray, radius: Optional[int]
+        ) -> int:
             """If radius is set, the returned offset is limited to ±radius from the
             center of correlation.
             """
+            assert len(corr) == len(peaks) == corr_nsamp
             # returns double, not single/f32
             begin_offset = 0
 
@@ -520,32 +579,31 @@ class CorrelationTrigger(MainTrigger):
                 right = min(mid + radius + 1, Ncorr)
 
                 corr = corr[left:right]
+                peaks = peaks[left:right]
                 begin_offset = left
 
-            min_val = np.min(corr)
+            min_corr = np.min(corr)
 
             # Only permit local maxima. This fixes triggering errors where the edge
             # of the allowed range has higher correlation than edges in-bounds,
             # but isn't a rising edge itself (a local maximum of alignment).
-            orig = corr.copy()
-            corr[:-1][orig[:-1] < orig[1:]] = min_val
-            corr[1:][orig[1:] < orig[:-1]] = min_val
-            corr[0] = corr[-1] = min_val
+            corr[:-1][peaks[:-1] < peaks[1:]] = min_corr
+            corr[1:][peaks[1:] < peaks[:-1]] = min_corr
+            corr[0] = corr[-1] = min_corr
 
             # Find optimal offset
             peak_offset = np.argmax(corr) + begin_offset  # type: int
             return peak_offset
 
         # Find correlation peak.
-        peak_offset = find_peak(corr, trigger_radius)
+        peak_offset = find_peak(corr, peaks, trigger_radius)
         trigger = trigger_begin + stride * (peak_offset)
 
         del data
 
-        Ntrigger = self.A + self.B
         if self.post:
-            new_data = self._wave.get_around(trigger, Ntrigger, stride)
-            cache.mean = np.add.reduce(new_data) / Ntrigger
+            new_data = self._wave.get_around(trigger, kernel_size, stride)
+            cache.mean = np.add.reduce(new_data) / kernel_size
 
             # Apply post trigger (before updating correlation buffer)
             trigger = self.post.get_trigger(trigger, cache)
@@ -554,9 +612,9 @@ class CorrelationTrigger(MainTrigger):
         self._prev_trigger = trigger = max(trigger, self._prev_trigger)
 
         # Update correlation buffer (distinct from visible area)
-        aligned = self._wave.get_around(trigger, Ntrigger, stride)
+        aligned = self._wave.get_around(trigger, kernel_size, stride)
         if cache.mean is None:
-            cache.mean = np.add.reduce(aligned) / Ntrigger
+            cache.mean = np.add.reduce(aligned) / kernel_size
         self._update_buffer(aligned, cache)
 
         self._frames_since_spectrum += 1
@@ -652,10 +710,10 @@ class CorrelationTrigger(MainTrigger):
         """
         assert cache.mean is not None
         assert cache.period is not None
-        buffer_falloff = self.cfg.buffer_falloff
         responsiveness = self.cfg.responsiveness
 
         if self.cfg.buffer_strength and responsiveness:
+            # N should equal self.A + self.B.
             N = len(data)
             if N != self._corr_buffer.size:
                 raise ValueError(
@@ -667,9 +725,10 @@ class CorrelationTrigger(MainTrigger):
             data -= cache.mean
             normalize_buffer(data)
             window = gaussian_or_zero(
-                N, std=(cache.period / self._stride) * buffer_falloff
+                N, std=self.calc_buffer_std(cache.period / self._stride)
             )
             data *= window
+            self._prev_window = window
 
             # Old buffer
             normalize_buffer(self._corr_buffer)

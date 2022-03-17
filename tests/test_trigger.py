@@ -36,15 +36,13 @@ def trigger_template(**kwargs) -> CorrelationTriggerConfig:
 @fixture
 @parametrize("trigger_diameter", [0.5, 1.0])
 @parametrize("pitch_tracking", [None, SpectrumConfig()])
-@parametrize("slope_strength", [0, 100])
 @parametrize("sign_strength", [0, 1])
 def trigger_cfg(
-    trigger_diameter, pitch_tracking, slope_strength, sign_strength
+    trigger_diameter, pitch_tracking, sign_strength
 ) -> CorrelationTriggerConfig:
     return trigger_template(
         trigger_diameter=trigger_diameter,
         pitch_tracking=pitch_tracking,
-        slope_strength=slope_strength,
         sign_strength=sign_strength,
         slope_width=0.14,
     )
