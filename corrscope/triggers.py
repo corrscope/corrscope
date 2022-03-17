@@ -347,9 +347,6 @@ class CorrelationTrigger(MainTrigger):
     _corr_buffer: "npt.NDArray[f32]"
     """(mutable) [A+B] Amplitude"""
 
-    _edge_finder: "npt.NDArray[f32]"
-    """(const) [A+B] Amplitude"""
-
     _prev_mean: float
     _prev_period: Optional[int]
     _prev_slope_finder: "Optional[npt.NDArray[f32]]"
