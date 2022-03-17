@@ -1118,6 +1118,7 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("trigger__sign_strength", float, None),
         Column("trigger__buffer_strength", float, None),
         Column("trigger__responsiveness", float, None, "Buffer\nResponsiveness"),
+        Column("trigger__reset_below", float, None, "Reset Below\nMatch"),
         Column("trigger__edge_direction", plus_minus_one, None),
         Column("trigger__edge_strength", float, None),
         Column("trigger__slope_strength", float, None),

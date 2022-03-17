@@ -278,6 +278,9 @@ class CorrelationTriggerConfig(
     # Correlation detection
     buffer_strength: float = 1
 
+    # Below a specific correlation quality, discard the buffer entirely.
+    reset_below: float = 0
+
     # _update_buffer() (not in GUI)
     buffer_falloff: float = 0.5
 
@@ -352,6 +355,8 @@ class CorrelationTrigger(MainTrigger):
     _prev_period: Optional[int]
     _prev_slope_finder: "Optional[npt.NDArray[f32]]"
     """(mutable) [A+B] Amplitude"""
+    _prev_window: "npt.NDArray[f32]"
+    """(mutable) [A+B] Amplitude"""
 
     _prev_trigger: int
     _frames_since_spectrum: int
@@ -374,6 +379,7 @@ class CorrelationTrigger(MainTrigger):
         # Will be overwritten on the first frame.
         self._prev_period = None
         self._prev_slope_finder = None
+        self._prev_window = np.zeros(self.A + self.B, f32)
 
         self._prev_trigger = 0
 
@@ -473,18 +479,6 @@ class CorrelationTrigger(MainTrigger):
         else:
             slope_finder = self._prev_slope_finder
 
-        if cfg.edge_strength:
-            # I want a half-open cumsum, where edge_score[0] = 0, [1] = data[A], [2] =
-            # data[A] + data[A+1], etc. But cumsum is inclusive, which causes tests to
-            # fail. So subtract 1 from the input range.
-            edge_score = np.cumsum(data[self.A - 1 : len(data) - self.B])
-
-            # The optimal edge alignment is the *minimum* cumulative sum, so invert
-            # the cumsum so the minimum amplitude maps to the highest score.
-            edge_score *= -cfg.edge_strength
-        else:
-            edge_score = None
-
         corr_enabled = bool(cfg.buffer_strength) and bool(cfg.responsiveness)
 
         # Buffer sizes:
@@ -492,6 +486,34 @@ class CorrelationTrigger(MainTrigger):
         kernel_size = self.A + self.B
         corr_nsamp = self._trigger_diameter + 1
         assert corr_nsamp == data_nsubsmp - kernel_size + 1
+
+        # Check if buffer still lines up well with data.
+        if corr_enabled:
+            # array[corr_nsamp] Amplitude
+            corr_quality = signal.correlate_valid(data, self._corr_buffer)
+            assert len(corr_quality) == corr_nsamp
+
+            if cfg.reset_below > 0:
+                peak_idx = np.argmax(corr_quality)
+                peak_quality = corr_quality[peak_idx]
+
+                data_slice = data[peak_idx : peak_idx + kernel_size]
+
+                # Keep in sync with _update_buffer()!
+                windowed_slice = data_slice - mean
+                normalize_buffer(windowed_slice)
+                windowed_slice *= self._prev_window
+                self_quality = np.add.reduce(data_slice * windowed_slice)
+
+                relative_quality = peak_quality / (self_quality + 0.001)
+                should_reset = relative_quality < cfg.reset_below
+                if should_reset:
+                    corr_quality[:] = 0
+                    self._corr_buffer[:] = 0
+                    corr_enabled = False
+        else:
+            corr_quality = np.zeros(corr_nsamp, f32)
+
         # array[A+B] Amplitude
         corr_kernel: np.ndarray = (
             self._corr_buffer * cfg.buffer_strength
@@ -501,18 +523,24 @@ class CorrelationTrigger(MainTrigger):
         if slope_finder is not None:
             corr_kernel += slope_finder
 
-        peak_kernel = self._corr_buffer
-
         # `corr[x]` = correlation of kernel placed at position `x` in data.
         # `corr_kernel` is not allowed to move past the boundaries of `data`.
         corr = signal.correlate_valid(data, corr_kernel)
+        assert len(corr) == corr_nsamp
 
-        peaks = (
-            signal.correlate_valid(data, peak_kernel)
-            if corr_enabled
-            else np.zeros_like(corr)
-        )
-        if edge_score is not None:
+        peaks = corr_quality
+        del corr_quality
+        peaks *= cfg.buffer_strength
+
+        if cfg.edge_strength:
+            # I want a half-open cumsum, where edge_score[0] = 0, [1] = data[A], [2] =
+            # data[A] + data[A+1], etc. But cumsum is inclusive, which causes tests to
+            # fail. So subtract 1 from the input range.
+            edge_score = np.cumsum(data[self.A - 1 : len(data) - self.B])
+
+            # The optimal edge alignment is the *minimum* cumulative sum, so invert
+            # the cumsum so the minimum amplitude maps to the highest score.
+            edge_score *= -cfg.edge_strength
             peaks += edge_score
 
         # Don't pick peaks more than `period * trigger_radius_periods` away from the
@@ -689,6 +717,7 @@ class CorrelationTrigger(MainTrigger):
                 N, std=(cache.period / self._stride or N) * buffer_falloff
             )
             data *= window
+            self._prev_window = window
 
             # Old buffer
             normalize_buffer(self._corr_buffer)

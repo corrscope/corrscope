@@ -335,6 +335,15 @@ class MainWindow(QWidget):
                     singleStep=0.1,
                 ):
                     pass
+                with add_row(
+                    s,
+                    tr("Reset Below Match"),
+                    BoundDoubleSpinBox,
+                    name="trigger__reset_below",
+                    maximum=1.0,
+                    singleStep=0.1,
+                ):
+                    pass
                 with add_row(s, BoundCheckBox, Both) as (self.trigger__pitch_tracking):
                     assert isinstance(self.trigger__pitch_tracking, QWidget)
 
