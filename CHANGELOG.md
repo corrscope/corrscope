@@ -20,6 +20,7 @@
 - Fix passing absolute .wav paths into corrscope CLI (#398)
 - Fix preview error when clearing "Trigger/Render Width" table cells (#407)
 - Reorganize GUI with edge triggering options before buffer (#416)
+- Reorganize YAML field order based on GUI (#421)
 
 ## 0.7.1
 

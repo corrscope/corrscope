@@ -275,46 +275,58 @@ class CorrelationTriggerConfig(
     MainTriggerConfig,
     always_dump="""
     mean_responsiveness
-    pitch_tracking
     slope_width
+    pitch_tracking
     """
     # deprecated
     " buffer_falloff ",
 ):
-    # get_trigger()
-    # Edge/area finding
-    sign_strength: float = 0
+    ## General parameters ##
+
+    # Whether to subtract the mean from each frame
     mean_responsiveness: float = 1.0
+
+    # Sign enhancement
+    sign_strength: float = 0
+
+    # Maximum distance to move, in terms of trigger_ms/trigger_samp (not in GUI)
+    trigger_diameter: float = 0.5
+
+    # Maximum distance to move, in terms of estimated wave period (not in GUI)
+    trigger_radius_periods: Optional[float] = 1.5
+
+    ## Period/frequency estimation (not in GUI) ##
+
+    # Minimum pitch change to recalculate _prev_slope_finder (not in GUI)
+    recalc_semitones: float = 1.0
+
+    # (not in GUI)
+    max_freq: float = with_units("Hz", default=4000)
+
+    ## Edge triggering ##
+
+    # Competes against buffer_strength.
     edge_strength: float
 
-    # Slope detection
     slope_width: float = with_units("period", default=0.25)
 
-    # Correlation detection
+    ## Correlation ##
+
+    # Competes against edge_strength.
     buffer_strength: float = 1
+
+    # How much to update the buffer *after* each frame.
+    responsiveness: float
+
+    # Standard deviation of buffer window, in terms of estimated wave period. Used by
+    # _update_buffer() *after* each frame. (not in GUI)
+    buffer_falloff: float = 0.5
 
     # Below a specific correlation quality, discard the buffer entirely.
     reset_below: float = 0
 
-    # _update_buffer() (not in GUI)
-    buffer_falloff: float = 0.5
-
-    # Maximum distance to move (in terms of trigger_ms/trigger_samp) (not in GUI)
-    trigger_diameter: float = 0.5
-
-    # Maximum distance to move (in terms of estimated wave period) (not in GUI)
-    trigger_radius_periods: Optional[float] = 1.5
-
-    # (not in GUI)
-    recalc_semitones: float = 1.0
-
-    # _update_buffer
-    responsiveness: float
-
-    # Period/frequency estimation (not in GUI)
-    max_freq: float = with_units("Hz", default=4000)
-
-    # Pitch tracking = compute spectrum. (GUI only has a checkbox)
+    # Whether to compute a spectrum to rescale correlation buffer in response to pitch
+    # changes. (GUI only has a checkbox)
     pitch_tracking: Optional[SpectrumConfig] = None
 
     # region Legacy Aliases
