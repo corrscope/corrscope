@@ -27,24 +27,27 @@ triggers.SHOW_TRIGGER = False
 
 
 def trigger_template(**kwargs) -> CorrelationTriggerConfig:
-    cfg = CorrelationTriggerConfig(
-        edge_strength=2, responsiveness=1, buffer_falloff=0.5
-    )
+    cfg = CorrelationTriggerConfig(edge_strength=2, responsiveness=1)
     return attr.evolve(cfg, **kwargs)
 
 
+# Ideally I'd test mean_responsiveness as well, but that makes the test suite too slow.
+# Perhaps I could change 1-3 parameters at a time, rather than the cross product of all
+# parameters (https://smarie.github.io/python-pytest-cases/pytest_goodies/#fixture_union)?
 @fixture
-@parametrize("trigger_diameter", [0.5, 1.0])
-@parametrize("pitch_tracking", [None, SpectrumConfig()])
 @parametrize("sign_strength", [0, 1])
+@parametrize("buffer_strength", [0, 1])
+@parametrize("reset_below", [0, 1])
+@parametrize("pitch_tracking", [None, SpectrumConfig()])
 def trigger_cfg(
-    trigger_diameter, pitch_tracking, sign_strength
+    sign_strength, buffer_strength, reset_below, pitch_tracking
 ) -> CorrelationTriggerConfig:
     return trigger_template(
-        trigger_diameter=trigger_diameter,
-        pitch_tracking=pitch_tracking,
         sign_strength=sign_strength,
         slope_width=0.14,
+        buffer_strength=buffer_strength,
+        reset_below=reset_below,
+        pitch_tracking=pitch_tracking,
     )
 
 
