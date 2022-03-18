@@ -175,8 +175,8 @@ class _Trigger(ABC, Generic[result]):
     def get_trigger(self, index: int, cache: "PerFrameCache") -> result:
         """
         :param index: sample index
-        :param cache: Information shared across all stacked triggers,
-            May be mutated by function.
+        :param cache: Information shared across all stacked triggers. result_mean is
+            None. May be mutated by function.
         :return: new sample index, corresponding to rising edge
         """
         ...
@@ -258,7 +258,14 @@ class PerFrameCache:
     # NOTE: period is a *non-subsampled* period.
     # The period of subsampled data must be multiplied by stride.
     period: Optional[int] = None
-    mean: Optional[float] = None
+
+    # The mean of the trigger input, smoothed by mean_responsiveness, used for regular
+    # and post triggering.
+    smoothed_mean: Optional[float] = None
+
+    # The mean of the wave around the trigger result. The same segment of the wave is
+    # also used to update the buffer.
+    result_mean: Optional[float] = None
 
 
 # CorrelationTrigger
@@ -472,6 +479,7 @@ class CorrelationTrigger(MainTrigger):
                 data -= self._prev_mean
             else:
                 data = period_data
+        cache.smoothed_mean = self._prev_mean
 
         # Use period to recompute slope finder (if enabled) and restrict trigger
         # diameter.
@@ -602,9 +610,6 @@ class CorrelationTrigger(MainTrigger):
         del data
 
         if self.post:
-            new_data = self._wave.get_around(trigger, kernel_size, stride)
-            cache.mean = np.add.reduce(new_data) / kernel_size
-
             # Apply post trigger (before updating correlation buffer)
             trigger = self.post.get_trigger(trigger, cache)
 
@@ -613,8 +618,7 @@ class CorrelationTrigger(MainTrigger):
 
         # Update correlation buffer (distinct from visible area)
         aligned = self._wave.get_around(trigger, kernel_size, stride)
-        if cache.mean is None:
-            cache.mean = np.add.reduce(aligned) / kernel_size
+        cache.result_mean = np.add.reduce(aligned) / kernel_size
         self._update_buffer(aligned, cache)
 
         self._frames_since_spectrum += 1
@@ -708,7 +712,7 @@ class CorrelationTrigger(MainTrigger):
 
         :param data: Wave data. WILL BE MODIFIED.
         """
-        assert cache.mean is not None
+        assert cache.result_mean is not None
         assert cache.period is not None
         responsiveness = self.cfg.responsiveness
 
@@ -722,7 +726,7 @@ class CorrelationTrigger(MainTrigger):
                 )
 
             # New waveform
-            data -= cache.mean
+            data -= cache.result_mean
             normalize_buffer(data)
             window = gaussian_or_zero(
                 N, std=self.calc_buffer_std(cache.period / self._stride)
@@ -838,7 +842,7 @@ class ZeroCrossingTrigger(PostTrigger):
     def get_trigger(self, index: int, cache: "PerFrameCache") -> int:
         radius = self._tsamp
 
-        wave = self._wave.with_offset(-cache.mean)
+        wave = self._wave.with_offset(-cache.smoothed_mean)
 
         if not 0 <= index < wave.nsamp:
             return index

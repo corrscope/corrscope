@@ -9,7 +9,7 @@
 
 ### Major Changes
 
-- Rewrite the trigger algorithm to enhance determinism and reduce errors when DC offset varies within a frame (#403, #408, #416)
+- Rewrite the trigger algorithm to enhance determinism and reduce errors when DC offset varies within a frame (#403, #408, #416, #420)
     - Slope strength has been removed and folded into edge strength (#416). This should *usually* not reduce the ability to fine-tune triggering; if it does, let me know so I can reconsider this decision!
     - Add control for DC removal rate (#408)
     - Add control to reset buffer on new notes, when wave lines up poorly with buffer (#416)

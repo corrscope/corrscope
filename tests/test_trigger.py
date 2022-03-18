@@ -233,7 +233,7 @@ def test_post_trigger_radius():
     cfg = ZeroCrossingTriggerConfig()
     post = cfg(wave, radius, 1, FPS)
 
-    cache = PerFrameCache(mean=0)
+    cache = PerFrameCache(smoothed_mean=0)
 
     for offset in range(-radius, radius + 1):
         assert post.get_trigger(center + offset, cache) == center, offset
