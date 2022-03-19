@@ -308,7 +308,7 @@ class MainWindow(QWidget):
 
                 with add_row(
                     s,
-                    tr("Sign Triggering\n(for triangle waves)"),
+                    tr("Sign Enhancement\n(for triangle waves)"),
                     BoundDoubleSpinBox,
                     name="trigger__sign_strength",
                     minimum=0,

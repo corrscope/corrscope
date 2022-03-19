@@ -71,7 +71,7 @@ NES triangle waves are stair-stepped. If "DC Removal Rate" is nonzero, on every 
 
 - Use any "Trigger Direction" you prefer. Rising and Falling both work equally well.
 - Set "DC Removal Rate" to 0. This causes corrscope to look at the actual zero crossings instead of subtracting an estimated DC offset on each frame.
-- Alternatively, set "Sign Triggering" to 1 or so. This causes corrscope to preprocess the waveform before DC is removed, and add 0.5(peak-to-peak amplitude) to positive samples and subtract 0.5(peak-to-peak amplitude) from negative samples. The resulting steep edges will remain as zero crossings, even after DC is filtered out.
+- Alternatively, set "Sign Enhancement" to 1 or so. This causes corrscope to preprocess the waveform before DC is removed, and add 0.5(peak-to-peak amplitude) to positive samples and subtract 0.5(peak-to-peak amplitude) from negative samples. The resulting steep edges will remain as zero crossings, even after DC is filtered out.
   - Both techniques can be combined if you want.
 
 
@@ -145,7 +145,7 @@ On each frame, corrscope fetches (from the channel) a buffer of mono `data` with
 
 Some waves do not have clear edges. For example, triangle waves do not have clear rising edges (leading to suboptimal triggering), and NES triangles have 15 small rising edges, causing corrscope to jump between them.
 
-If `Sign Strength` (Sign Triggering on the GUI) is set to nonzero `strength`, corrscope computes `peak = max(abs(data))`. It adds `peak * strength` to positive parts of `data`, subtracts `peak * strength` from negative parts of `data`, and heavily amplifies parts of the wave near zero. This helps the correlation trigger locate zero-crossings exactly, and is necessary if you enable DC removal (which offsets the wave by a variable distance vertically).
+If `Sign Enhancement` is set to nonzero `strength`, corrscope computes `peak = max(abs(data))`. It adds `peak * strength` to positive parts of `data`, subtracts `peak * strength` from negative parts of `data`, and heavily amplifies parts of the wave near zero. This helps the correlation trigger locate zero-crossings exactly, and is necessary if you enable DC removal (which offsets the wave by a variable distance vertically).
 
 ### Mean and Period
 
