@@ -286,7 +286,7 @@ class CorrelationTriggerConfig(
     # Whether to subtract the mean from each frame
     mean_responsiveness: float = 1.0
 
-    # Sign enhancement
+    # Sign amplification
     sign_strength: float = 0
 
     # Maximum distance to move, in terms of trigger_ms/trigger_samp (not in GUI)
