@@ -477,10 +477,10 @@ class MainWindow(QWidget):
         self.actionPreview = QAction(MainWindow)
         self.actionRender = QAction(MainWindow)
 
+        self.actionHelp = create_element(QAction, MainWindow, text=tr("&Help Tutorial"))
         self.actionWebsite = create_element(
-            QAction, MainWindow, text=tr("corrscope Website")
+            QAction, MainWindow, text=tr("&Project Homepage")
         )
-        self.actionHelp = create_element(QAction, MainWindow, text=tr("Help"))
 
         self.action_separate_render_dir = create_element(
             QAction, MainWindow, text=tr("&Separate Render Folder"), checkable=True
@@ -512,8 +512,8 @@ class MainWindow(QWidget):
 
             with append_menu(s, title=tr("&Help")) as self.menuHelp:
                 w = self.menuHelp
-                w.addAction(self.actionWebsite)
                 w.addAction(self.actionHelp)
+                w.addAction(self.actionWebsite)
 
         # Setup toolbar
         with add_toolbar(s, Qt.TopToolBarArea) as self.toolBar:
