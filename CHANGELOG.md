@@ -1,4 +1,12 @@
-## 0.8.0 (unreleased)
+## 0.8.1 (unreleased)
+
+No changes yet.
+
+## 0.8.0
+
+This major release introduces new visual options (pitch coloring and background images), Mac and M1 support, and a triggering rewrite based on new and improved algorithms. This release is partly incompatible with previous config files (slope triggering strength was removed, triggering will not behave in the same way). Be sure to check out the updated help and tutorial ([link](https://corrscope.github.io/corrscope/))!
+
+Note that when corrscope is running on M1 Mac processors, corrscope's preview will slow down if you focus the preview window rather than the corrscope window. There is no fix for this issue at the moment. As a workaround, you can click on Corrscope's window to avoid the slowdown, and drag it aside so it doesn't obstruct the preview.
 
 ### Features
 
