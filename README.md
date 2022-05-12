@@ -99,12 +99,6 @@ poetry run corr (args)
 
 ## Mac-specific Issues
 
-### M1 Slowdown
-
-On M1 processors, if you open preview, after 40 or so seconds, the preview may suddenly slow down and audio will stop playing. This is because macOS thinks ffplay is the active app, and Corrscope is a background job burning CPU, so it moves Corrscope to an Efficiency core, slowing it down.
-
-There is no fix for this issue at the moment. As a workaround, you can click on Corrscope's window to avoid the slowdown, and drag it aside so it doesn't obstruct the preview.
-
 ### Gatekeeper
 
 On Mac, if you render a video file, in some cases (eg. IINA video player) you may not be able to open the resulting files. Gatekeeper will print an error saying '"filename.mp4" cannot be opened because it is from an unidentified developer.'. If you see this message, try opening the file again. Once you silence the error once, it should not reappear.
