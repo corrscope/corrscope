@@ -33,6 +33,7 @@ colorspacious = "^1.1.2"
 QtPy = "^2.0.1"
 PyQt5 = {version = "^5.15", optional = true}
 PyQt6 = {version = "^6.2", optional = true}
+appnope = "^0.1.3"
 
 [tool.poetry.extras]
 qt5 = ["PyQt5"]
