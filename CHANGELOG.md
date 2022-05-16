@@ -1,6 +1,8 @@
 ## 0.8.1 (unreleased)
 
-No changes yet.
+### Changelog
+
+- Fix slowdown on (M1?) Macs around 40 seconds after preview/render starts (#428)
 
 ## 0.8.0
 

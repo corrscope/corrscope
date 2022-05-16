@@ -99,11 +99,11 @@ poetry run corr (args)
 
 ## Mac-specific Issues
 
-### M1 Slowdown
+### Preview audio cutting out
 
-On M1 processors, if you open preview, after 40 or so seconds, the preview may suddenly slow down and audio will stop playing. This is because macOS thinks ffplay is the active app, and Corrscope is a background job burning CPU, so it moves Corrscope to an Efficiency core, slowing it down.
+When you preview a video in Corrscope, it sends video frames to ffplay, which opens a video player window and also plays synchronized audio. On Mac (at least my M1 MacBook Air running macOS 12.3), switching windows can cause ffplay to stutter and temporarily or semi-permanently stop playing audio (until you restart the preview). There is no fix for this issue at the moment.
 
-There is no fix for this issue at the moment. As a workaround, you can click on Corrscope's window to avoid the slowdown, and drag it aside so it doesn't obstruct the preview.
+Rendering does not stutter on M1, since neither corrscope nor ffmpeg are affected by app switching, or App Nap.
 
 ### Gatekeeper
 

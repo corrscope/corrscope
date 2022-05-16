@@ -9,6 +9,7 @@ from pathlib import Path
 from types import MethodType
 from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence, NewType
 
+import appnope
 import qtpy.QtCore as qc
 import qtpy.QtWidgets as qw
 import attr
@@ -743,21 +744,22 @@ class CorrJob(qc.QObject):
         """Called in separate thread."""
         cfg = self.cfg
         arg = self.arg
-        try:
-            self.corr = CorrScope(cfg, arg)
-            self.corr.play()
+        with appnope.nope_scope(reason="corrscope preview/render active"):
+            try:
+                self.corr = CorrScope(cfg, arg)
+                self.corr.play()
 
-        except paths.MissingFFmpegError:
-            arg.on_end()
-            self.ffmpeg_missing.emit()
+            except paths.MissingFFmpegError:
+                arg.on_end()
+                self.ffmpeg_missing.emit()
 
-        except Exception as e:
-            arg.on_end()
-            stack_trace = format_stack_trace(e)
-            self.error.emit(stack_trace)
+            except Exception as e:
+                arg.on_end()
+                stack_trace = format_stack_trace(e)
+                self.error.emit(stack_trace)
 
-        else:
-            arg.on_end()
+            else:
+                arg.on_end()
 
 
 class CorrThread(Thread):
