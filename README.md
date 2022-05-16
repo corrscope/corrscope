@@ -99,6 +99,12 @@ poetry run corr (args)
 
 ## Mac-specific Issues
 
+### Preview audio cutting out
+
+When you preview a video in Corrscope, it sends video frames to ffplay, which opens a video player window and also plays synchronized audio. On Mac (at least my M1 MacBook Air running macOS 12.3), switching windows can cause ffplay to stutter and temporarily or semi-permanently stop playing audio (until you restart the preview). There is no fix for this issue at the moment.
+
+Rendering does not stutter on M1, since neither corrscope nor ffmpeg are affected by app switching, or App Nap.
+
 ### Gatekeeper
 
 On Mac, if you render a video file, in some cases (eg. IINA video player) you may not be able to open the resulting files. Gatekeeper will print an error saying '"filename.mp4" cannot be opened because it is from an unidentified developer.'. If you see this message, try opening the file again. Once you silence the error once, it should not reappear.
