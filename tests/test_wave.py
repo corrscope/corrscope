@@ -50,6 +50,20 @@ def test_incomplete_wav_chunk():
     data = wave[:]
 
 
+def test_24_bit_wav():
+    """Tests that WAV files exported from foobar2000 can be loaded properly,
+    without a `ValueError: Incomplete wav chunk.` exception being raised."""
+
+    try:
+        wave = Wave(prefix + "s24-impulse1000.wav")
+    except ValueError as e:
+        assert e.args == (f"24-bit WAV is not supported.",)
+    except Exception as e:
+        pytest.fail(f"Unexpected exception {e}")
+    else:
+        pytest.fail(f"Expected exception loading 24-bit wav, none found")
+
+
 # Stereo tests
 
 
