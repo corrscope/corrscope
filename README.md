@@ -34,9 +34,9 @@ pipx creates an isolated environment for each program, and adds their binaries i
 
 - Install Python 3.8 or above.
 - Install pipx using either your Linux package manager, `pip3 install --user pipx`, or `pip install --user pipx`.
-- Run `pipx install corrscope[qt5]`
-    - On Linux, to add support for native Qt themes, instead run `pipx install --system-site-packages corrscope[qt5]`
-    - On M1 Mac, instead run `pipx install corrscope[qt6]`
+- Run `pipx install 'corrscope[qt5]'`
+    - On Linux, to add support for native Qt themes, instead run `pipx install --system-site-packages 'corrscope[qt5]'`
+    - On M1 Mac, instead run `pipx install 'corrscope[qt6]'`
 - Open a terminal and run `corr (args)`.
 
 ### Installing from PyPI via Pip (cross-platform, releases)
@@ -45,8 +45,8 @@ pip installs packages into a per-user Python environment. This has the disadvant
 
 - Install Python 3.8 or above.
 - If necessary, install pip using your Linux package manager.
-- Run `pip3 install --user corrscope[qt5]`
-    - On M1 Mac, instead run `pip3 install --user corrscope[qt6]`
+- Run `pip3 install --user 'corrscope[qt5]'`
+    - On M1 Mac, instead run `pip3 install --user 'corrscope[qt6]'`
 - Open a terminal and run `corr (args)`.
 
 ### Dev builds (Windows)
