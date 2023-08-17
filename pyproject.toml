@@ -3,9 +3,7 @@
 # "No apps associated with package UNKNOWN or its dependencies."
 
 [build-system]
-# "setuptools" is required to make `pip install .` work, due to
-# https://github.com/python-poetry/poetry/issues/3153#issuecomment-727196619 .
-requires = ["setuptools", "poetry_core>=1.0.0"]
+requires = ["poetry_core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
