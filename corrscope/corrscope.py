@@ -150,7 +150,7 @@ class Arguments:
     outputs: List[outputs_.IOutputConfig]
 
     on_begin: BeginFunc = lambda begin_time, end_time: None
-    progress: ProgressFunc = lambda p: print(p,flush=True)
+    progress: ProgressFunc = lambda p: print(p, flush=True)
     is_aborted: IsAborted = lambda: False
     on_end: Callable[[], None] = lambda: None
 
