@@ -6,6 +6,7 @@ from typing import Optional, List, Tuple, Union, cast, TypeVar
 import click
 
 import corrscope
+import corrscope.settings.global_prefs as gp
 from corrscope.channel import ChannelConfig
 from corrscope.config import yaml
 from corrscope.corrscope import template_config, CorrScope, Config, Arguments
@@ -78,6 +79,7 @@ def get_file_stem(cfg_path: Optional[Path], cfg: Config, default: T) -> Union[st
 
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+
 
 # fmt: off
 @click.command(context_settings=CONTEXT_SETTINGS)
@@ -232,7 +234,13 @@ def main(
             outputs.append(cfg.get_ffmpeg_cfg(video_path))
 
         if outputs:
-            arg = Arguments(cfg_dir=cfg_dir, outputs=outputs)
+            try:
+                pref = gp.load_prefs()
+            except Exception as e:
+                print(e)
+                pref = gp.GlobalPrefs()
+
+            arg = Arguments(cfg_dir=cfg_dir, outputs=outputs, parallel=pref.parallel)
             command = lambda: CorrScope(cfg, arg).play()
             if profile:
                 first_song_name = Path(files[0]).name

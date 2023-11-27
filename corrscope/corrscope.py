@@ -6,6 +6,7 @@ from enum import unique
 from fractions import Fraction
 from pathlib import Path
 from typing import Iterator, Optional, List, Callable
+from multiprocessing.pool import Pool
 
 import attr
 
@@ -148,6 +149,7 @@ IsAborted = Callable[[], bool]
 class Arguments:
     cfg_dir: str
     outputs: List[outputs_.IOutputConfig]
+    parallel: bool = False
 
     on_begin: BeginFunc = lambda begin_time, end_time: None
     progress: ProgressFunc = lambda p: print(p, flush=True)
@@ -268,7 +270,8 @@ class CorrScope:
         benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
-        with self._load_outputs():
+        def play_impl():
+            nonlocal end_frame
             prev = -1
 
             # When subsampling FPS, render frames from the future to alleviate lag.
@@ -338,6 +341,12 @@ class CorrScope:
                             # Outputting frame happens after most computation finished.
                             end_frame = frame + 1
                             break
+
+        with self._load_outputs():
+            if self.arg.parallel:
+                pass
+            else:
+                play_impl()
 
         if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable

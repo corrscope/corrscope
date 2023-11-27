@@ -185,8 +185,6 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         prefs_error = None
         try:
             self.pref = gp.load_prefs()
-            if not isinstance(self.pref, gp.GlobalPrefs):
-                raise TypeError(f"prefs.yaml contains wrong type {type(self.pref)}")
         except Exception as e:
             prefs_error = e
             self.pref = gp.GlobalPrefs()
@@ -608,7 +606,10 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             )
 
         arg = Arguments(
-            cfg_dir=self.cfg_dir, outputs=outputs, is_aborted=raise_exception
+            cfg_dir=self.cfg_dir,
+            outputs=outputs,
+            parallel=self.pref.parallel,
+            is_aborted=raise_exception,
         )
         return arg
 
