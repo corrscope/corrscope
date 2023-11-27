@@ -442,6 +442,8 @@ class CorrScope:
 
                 render_to_output.put(None)
 
+            global worker_render_frame  # hack to allow pickling function
+
             def worker_render_frame(
                 render_inputs: List[RenderInput], trigger_samples: List[int]
             ) -> ByteBuffer:
@@ -449,7 +451,7 @@ class CorrScope:
                 renderer = WORKER_RENDERER
                 renderer.update_main_lines(render_inputs, trigger_samples)
                 frame_data = renderer.get_frame()
-                return frame_data
+                return bytes(frame_data)
 
             def output_thread():
                 while True:
