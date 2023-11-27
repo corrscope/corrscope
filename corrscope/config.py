@@ -56,7 +56,6 @@ class MyYAML(YAML):
     def dump(
         self, data: Any, stream: "Union[Path, TextIO, None]" = None, **kwargs
     ) -> Optional[str]:
-
         # On Windows, when dumping to path, ruamel.yaml writes files in locale encoding.
         # Foreign characters are undumpable. Locale-compatible characters cannot be loaded.
         # https://bitbucket.org/ruamel/yaml/issues/316/unicode-encoding-decoding-errors-on
@@ -153,6 +152,7 @@ T = TypeVar("T")
 #     with StringIO() as stream:
 #         yaml.dump(obj, stream)
 #         return yaml.load(stream)
+
 
 # AKA pickle_copy
 def copy_config(obj: T) -> T:

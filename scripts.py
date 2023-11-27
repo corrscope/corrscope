@@ -2,6 +2,7 @@
 import shlex
 import webbrowser
 
+
 # Obtain path from package.dist-info/entry_points.txt
 def run(path, arg_str):
     module, func = path.split(":")

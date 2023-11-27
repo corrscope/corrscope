@@ -37,7 +37,6 @@ def call_main(argv):
 def yaml_sink(_mocker, command: str):
     """Mocks yaml.dump() and returns call args. Also tests dumping and loading."""
     with mock.patch.object(yaml, "dump") as dump:
-
         argv = shlex.split(command) + ["-w"]
         call_main(argv)
 
