@@ -7,7 +7,7 @@ from contextlib import ExitStack, contextmanager
 from enum import unique
 from fractions import Fraction
 from pathlib import Path
-from queue import Queue
+from queue import Queue, Empty
 from threading import Thread
 from typing import Iterator, Optional, List, Callable, Tuple
 
@@ -390,9 +390,6 @@ class CorrScope:
                         # Only count output-displayed frames, not rendered.
                         # # Used for FPS calculation
                         # thread_shared.end_frame = frame
-
-                        for output in self.outputs:
-                            output.terminate()
                         break
 
                     time_seconds = frame / fps
@@ -441,6 +438,7 @@ class CorrScope:
                     )
 
                 render_to_output.put(None)
+                print("exit render")
 
             global worker_render_frame  # hack to allow pickling function
 
@@ -455,6 +453,11 @@ class CorrScope:
 
             def output_thread():
                 while True:
+                    if is_aborted():
+                        for output in self.outputs:
+                            output.terminate()
+                        break
+
                     msg = render_to_output.get()  # blocking
                     if msg is None:
                         break
@@ -471,6 +474,19 @@ class CorrScope:
                             # Outputting frame happens after most computation finished.
                             thread_shared.end_frame = frame + 1
                             break
+
+                if is_aborted():
+                    # If is_aborted() is True but render_thread() is blocked on
+                    # render_to_output.put(), then we need to clear the queue so
+                    # render_thread() can return from put(), then check is_aborted()
+                    # = True and terminate.
+                    while True:
+                        try:
+                            render_to_output.get(block=False)
+                        except Empty:
+                            break
+
+                print("exit output")
 
             with ProcessPoolExecutor(
                 ncores, initializer=worker_create_renderer, initargs=(renderer,)
