@@ -253,6 +253,14 @@ class CorrScope:
         end_frame = fps * end_time
         end_frame = int(end_frame) + 1
 
+        @attr.dataclass
+        class ThreadShared:
+            # mutex? i hardly knew 'er!
+            end_frame: int
+
+        thread_shared = ThreadShared(end_frame)
+        del end_frame
+
         self.arg.on_begin(self.cfg.begin_time, end_time)
 
         renderer = self._load_renderer()
@@ -270,21 +278,22 @@ class CorrScope:
         benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
-        def play_impl():
-            nonlocal end_frame
-            prev = -1
+        # When subsampling FPS, render frames from the future to alleviate lag.
+        # subfps=1, ahead=0.
+        # subfps=2, ahead=1.
+        render_subfps = self.cfg.render_subfps
+        ahead = render_subfps // 2
 
-            # When subsampling FPS, render frames from the future to alleviate lag.
-            # subfps=1, ahead=0.
-            # subfps=2, ahead=1.
-            render_subfps = self.cfg.render_subfps
-            ahead = render_subfps // 2
+        # Single-process
+        def play_impl():
+            end_frame = thread_shared.end_frame
+            prev = -1
 
             # For each frame, render each wave
             for frame in range(begin_frame, end_frame):
                 if self.arg.is_aborted():
                     # Used for FPS calculation
-                    end_frame = frame
+                    thread_shared.end_frame = frame
 
                     for output in self.outputs:
                         output.terminate()
@@ -339,7 +348,7 @@ class CorrScope:
                                 break
                         if aborted:
                             # Outputting frame happens after most computation finished.
-                            end_frame = frame + 1
+                            thread_shared.end_frame = frame + 1
                             break
 
         with self._load_outputs():
@@ -351,7 +360,7 @@ class CorrScope:
         if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
             dtime_sec = time.perf_counter() - begin
-            dframe = end_frame - begin_frame
+            dframe = thread_shared.end_frame - begin_frame
 
             frame_per_sec = dframe / dtime_sec
             try:
