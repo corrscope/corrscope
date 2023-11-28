@@ -720,7 +720,7 @@ class CorrScope:
                 # and have substantially higher jitter) when we spawn one per
                 # hyper-thread rather than one per core.
                 ncores = psutil.cpu_count(logical=False)
-                return ncores
+                return min(ncores, 2)
 
             nthread = _nthread()
 
