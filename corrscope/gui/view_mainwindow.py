@@ -482,7 +482,7 @@ class MainWindow(QWidget):
             QAction, MainWindow, text=tr("&Separate Render Folder"), checkable=True
         )
         self.action_parallel = create_element(
-            QAction, MainWindow, text=tr("&Parallel Rendering"), checkable=True
+            QAction, MainWindow, text=tr("&Multi-Core Rendering"), checkable=True
         )
         self.action_open_config_dir = create_element(
             QAction, MainWindow, text=tr("Open &Config Folder")
