@@ -460,15 +460,16 @@ class CorrScope:
                 shmem: SharedMemory
                 completion: "Future[None]"
 
-            # Same size as ProcessPoolExecutor, so threads won't starve if they all
-            # finish a job at the same time.
-            render_to_output: "Queue[RenderToOutput | None]" = Queue(nthread)
+            # Rely on avail_shmems for backpressure.
+            render_to_output: "Queue[RenderToOutput | None]" = Queue()
 
             # Release all shmems after finishing rendering.
             all_shmems: List[SharedMemory] = [
                 SharedMemory(create=True, size=framebuffer_nbyte)
-                for _ in range(nthread)
+                for _ in range(2 * nthread)
             ]
+
+            is_submitting = [False, 0]
 
             # Only send unused shmems to a worker process, and wait for it to be
             # returned before reusing.
@@ -524,11 +525,16 @@ class CorrScope:
 
                     # blocks until frames get rendered and shmem is returned by
                     # output_thread().
+                    t = time.perf_counter()
                     shmem = avail_shmems.get()
+                    t = time.perf_counter() - t
+                    if t >= 0.001:
+                        print("get shmem", t)
                     if is_aborted():
                         break
 
                     # blocking
+                    t = time.perf_counter()
                     render_to_output.put(
                         RenderToOutput(
                             frame,
@@ -541,6 +547,9 @@ class CorrScope:
                             ),
                         )
                     )
+                    t = time.perf_counter() - t
+                    if t >= 0.001:
+                        print("send to render", t)
 
                 # TODO if is_aborted(), should we insert class CancellationToken,
                 #  rather than having output_thread() poll it too?
