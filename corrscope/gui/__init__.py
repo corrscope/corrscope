@@ -210,6 +210,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             self.on_separate_render_dir_toggled
         )
 
+        self.action_parallel.setChecked(self.pref.parallel)
+        self.action_parallel.toggled.connect(self.on_parallel_toggled)
+
         self.action_open_config_dir.triggered.connect(self.on_open_config_dir)
 
         self.actionNew.triggered.connect(self.on_action_new)
@@ -464,6 +467,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             self.pref.render_dir = self.pref.file_dir
         else:
             self.pref.render_dir = ""
+
+    def on_parallel_toggled(self, checked: bool):
+        self.pref.parallel = checked
 
     def on_open_config_dir(self):
         appdata_uri = qc.QUrl.fromLocalFile(str(paths.appdata_dir))

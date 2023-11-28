@@ -481,6 +481,9 @@ class MainWindow(QWidget):
         self.action_separate_render_dir = create_element(
             QAction, MainWindow, text=tr("&Separate Render Folder"), checkable=True
         )
+        self.action_parallel = create_element(
+            QAction, MainWindow, text=tr("&Parallel Rendering"), checkable=True
+        )
         self.action_open_config_dir = create_element(
             QAction, MainWindow, text=tr("Open &Config Folder")
         )
@@ -503,6 +506,7 @@ class MainWindow(QWidget):
             with append_menu(s) as self.menuTools:
                 w = self.menuTools
                 w.addAction(self.action_separate_render_dir)
+                w.addAction(self.action_parallel)
                 w.addSeparator()
                 w.addAction(self.action_open_config_dir)
 
