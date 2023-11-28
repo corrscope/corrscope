@@ -407,7 +407,7 @@ class CorrScope:
                 max_safe_threads = nbyte_available // framebuffer_nbyte // 3
                 return min(ncores, max_safe_threads)
 
-            nthread = _nthread()
+            nthread = 8
 
             # setup threading
             abort_from_thread = threading.Event()
