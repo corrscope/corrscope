@@ -13,6 +13,7 @@ from threading import Thread
 from typing import Iterator, Optional, List, Callable, Tuple, Dict, Union, Any
 
 import attr
+import numpy as np
 
 from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig, DefaultLabel
@@ -22,9 +23,9 @@ from corrscope.outputs import FFmpegOutputConfig, IOutputConfig
 from corrscope.renderer import (
     Renderer,
     RendererConfig,
+    RendererParams,
     RendererFrontend,
     RenderInput,
-    ByteBuffer,
 )
 from corrscope.triggers import (
     CorrelationTriggerConfig,
@@ -222,6 +223,16 @@ class Arguments:
     on_end: Callable[[], None] = lambda: None
 
 
+def worker_create_renderer(renderer_params: RendererParams, shmem_names: List[str]):
+    global WORKER_RENDERER
+    global SHMEMS
+
+    WORKER_RENDERER = Renderer(renderer_params)
+    SHMEMS = {
+        name: SharedMemory(name) for name in shmem_names
+    }  # type: Dict[str, SharedMemory]
+
+
 class CorrScope:
     def __init__(self, cfg: Config, arg: Arguments):
         """cfg is mutated!
@@ -290,16 +301,19 @@ class CorrScope:
                 ]
                 yield
 
-    def _load_renderer(self) -> RendererFrontend:
+    def _renderer_params(self) -> RendererParams:
         dummy_datas = [channel.get_render_around(0) for channel in self.channels]
-        renderer = Renderer(
+        return RendererParams.from_obj(
             self.cfg.render,
             self.cfg.layout,
             dummy_datas,
             self.cfg.channels,
             self.channels,
         )
-        return renderer
+
+    # def _load_renderer(self) -> Renderer:
+    #     # only kept for unit tests I'm too lazy to rewrite.
+    #     return Renderer(self._renderer_params())
 
     def play(self) -> None:
         if self.has_played:
@@ -328,7 +342,8 @@ class CorrScope:
 
         self.arg.on_begin(self.cfg.begin_time, end_time)
 
-        renderer = self._load_renderer()
+        renderer_params = self._renderer_params()
+        renderer = Renderer(renderer_params)
         self.renderer = renderer  # only used for unit tests
 
         renderer.add_labels([channel.label for channel in self.channels])
@@ -465,17 +480,6 @@ class CorrScope:
             avail_shmems: "Queue[SharedMemory]" = Queue()
             for shmem in all_shmems:
                 avail_shmems.put(shmem)
-
-            def worker_create_renderer(
-                renderer: RendererFrontend, shmem_names: List[str]
-            ):
-                global WORKER_RENDERER
-                global SHMEMS
-                # TODO del self.renderer and recreate Renderer if it can't be pickled?
-                WORKER_RENDERER = renderer
-                SHMEMS = {
-                    name: SharedMemory(name) for name in shmem_names
-                }  # type: Dict[str, SharedMemory]
 
             # TODO https://stackoverflow.com/questions/2829329/catch-a-threads-exception-in-the-caller-thread
             def _render_thread():
@@ -674,10 +678,11 @@ class CorrScope:
                     raise e
 
             shmem_names: List[str] = [shmem.name for shmem in all_shmems]
+
             with ProcessPoolExecutor(
                 nthread,
                 initializer=worker_create_renderer,
-                initargs=(renderer, shmem_names),
+                initargs=(renderer_params, shmem_names),
             ) as pool:
                 render_handle = PropagatingThread(
                     target=render_thread, name="render_thread"

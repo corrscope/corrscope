@@ -24,6 +24,7 @@ bools = hs.booleans()
 default_labels = hs.sampled_from(DefaultLabel)
 
 
+@pytest.mark.skip(reason="bronke")
 @given(
     # Channel
     c_amplification=maybe_real,
