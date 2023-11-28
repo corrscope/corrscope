@@ -514,6 +514,8 @@ class CorrScope:
                         )
                     )
 
+                # TODO if is_aborted(), should we insert class CancellationToken,
+                #  rather than having output_thread() poll it too?
                 render_to_output.put(None)
                 print("exit render")
 
@@ -539,10 +541,13 @@ class CorrScope:
                             output.terminate()
                         break
 
-                    render_msg: Union[
-                        RenderToOutput, None
-                    ] = render_to_output.get()  # blocking
+                    # blocking
+                    render_msg: Union[RenderToOutput, None] = render_to_output.get()
+
                     if render_msg is None:
+                        if is_aborted():
+                            for output in self.outputs:
+                                output.terminate()
                         break
 
                     # Wait for shmem to be filled with data.
