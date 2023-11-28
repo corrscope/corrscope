@@ -14,6 +14,7 @@ from typing import Iterator, Optional, List, Callable, Tuple, Dict, Union, Any
 
 import attr
 import numpy as np
+import psutil
 
 from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig, DefaultLabel
@@ -713,10 +714,12 @@ class CorrScope:
         if self.arg.parallel:
             # determine thread count
             def _nthread():
-                try:
-                    ncores = len(os.sched_getaffinity(0))
-                except AttributeError:
-                    ncores = os.cpu_count() or 1
+                # Spawn one process per physical core (not hyper-thread).
+                #
+                # On a Ryzen 5 5600X, the render processes are over twice as slow (
+                # and have substantially higher jitter) when we spawn one per
+                # hyper-thread rather than one per core.
+                ncores = psutil.cpu_count(logical=False)
                 return ncores
 
             nthread = _nthread()
