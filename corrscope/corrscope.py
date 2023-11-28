@@ -6,10 +6,11 @@ from concurrent.futures import ProcessPoolExecutor, Future
 from contextlib import ExitStack, contextmanager
 from enum import unique
 from fractions import Fraction
+from multiprocessing.shared_memory import SharedMemory
 from pathlib import Path
 from queue import Queue, Empty
 from threading import Thread
-from typing import Iterator, Optional, List, Callable, Tuple
+from typing import Iterator, Optional, List, Callable, Tuple, Dict, Union
 
 import attr
 
@@ -63,6 +64,7 @@ def named_threads():
 
 
 named_threads()
+
 
 # Placing Enum before any other superclass results in errors.
 # Placing DumpEnumAsStr before IntEnum or (int, Enum) results in errors on Python 3.6:
@@ -389,22 +391,61 @@ class CorrScope:
 
         # Multiprocess
         def play_parallel():
-            ncores = len(os.sched_getaffinity(0))
+            framebuffer_nbyte = len(renderer.get_frame())
 
+            # determine thread count
+            def _nthread():
+                import psutil
+
+                ncores = len(os.sched_getaffinity(0))
+                stats = psutil.virtual_memory()  # returns a named tuple
+                nbyte_available = getattr(stats, "available")
+
+                # Don't create more threads than can take up 1/3 of remaining free
+                # memory in shmem framebuffers. (matplotlib will take up as much
+                # memory internally, and ffmpeg/other apps will take up more still.)
+                max_safe_threads = nbyte_available // framebuffer_nbyte // 3
+                return min(ncores, max_safe_threads)
+
+            nthread = _nthread()
+
+            # setup threading
             abort_from_thread = threading.Event()
             # self.arg.is_aborted() from GUI, abort_from_thread.is_set() from thread
             is_aborted = lambda: self.arg.is_aborted() or abort_from_thread.is_set()
 
+            @attr.dataclass
+            class RenderToOutput:
+                frame_idx: int
+                shmem: SharedMemory
+                completion: "Future[None]"
+
             # Same size as ProcessPoolExecutor, so threads won't starve if they all
             # finish a job at the same time.
-            render_to_output: "Queue[Tuple[int, Future[ByteBuffer]] | None]" = Queue(
-                ncores
-            )
+            render_to_output: "Queue[RenderToOutput | None]" = Queue(nthread)
 
-            def worker_create_renderer(renderer: RendererFrontend):
+            # Release all shmems after finishing rendering.
+            all_shmems: List[SharedMemory] = [
+                SharedMemory(create=True, size=framebuffer_nbyte)
+                for _ in range(nthread)
+            ]
+
+            # Only send unused shmems to a worker process, and wait for it to be
+            # returned before reusing.
+            avail_shmems: "Queue[SharedMemory]" = Queue()
+            for shmem in all_shmems:
+                avail_shmems.put(shmem)
+
+            def worker_create_renderer(
+                renderer: RendererFrontend, shmem_names: List[str]
+            ):
                 global WORKER_RENDERER
+                global SHMEMS
                 # TODO del self.renderer and recreate Renderer if it can't be pickled?
                 WORKER_RENDERER = renderer
+                SHMEMS = {
+                    name: SharedMemory(name) for name in shmem_names
+                }  # type: Dict[str, SharedMemory]
 
             # TODO https://stackoverflow.com/questions/2829329/catch-a-threads-exception-in-the-caller-thread
             def render_thread():
@@ -455,12 +496,20 @@ class CorrScope:
                     if not should_render:
                         continue
 
+                    # blocks until frames get rendered and shmem is returned by
+                    # output_thread().
+                    shmem = avail_shmems.get()
+
                     # blocking
                     render_to_output.put(
-                        (
+                        RenderToOutput(
                             frame,
+                            shmem,
                             pool.submit(
-                                worker_render_frame, render_inputs, trigger_samples
+                                worker_render_frame,
+                                render_inputs,
+                                trigger_samples,
+                                shmem.name,
                             ),
                         )
                     )
@@ -471,13 +520,17 @@ class CorrScope:
             global worker_render_frame  # hack to allow pickling function
 
             def worker_render_frame(
-                render_inputs: List[RenderInput], trigger_samples: List[int]
-            ) -> ByteBuffer:
-                global WORKER_RENDERER
+                render_inputs: List[RenderInput],
+                trigger_samples: List[int],
+                shmem_name: str,
+            ):
+                global WORKER_RENDERER, SHMEMS
                 renderer = WORKER_RENDERER
                 renderer.update_main_lines(render_inputs, trigger_samples)
                 frame_data = renderer.get_frame()
-                return bytes(frame_data)
+
+                shmem = SHMEMS[shmem_name]
+                shmem.buf[:] = frame_data
 
             def output_thread():
                 while True:
@@ -486,11 +539,15 @@ class CorrScope:
                             output.terminate()
                         break
 
-                    msg = render_to_output.get()  # blocking
-                    if msg is None:
+                    render_msg: Union[
+                        RenderToOutput, None
+                    ] = render_to_output.get()  # blocking
+                    if render_msg is None:
                         break
-                    frame, render_future = msg
-                    frame_data: ByteBuffer = render_future.result()
+
+                    # Wait for shmem to be filled with data.
+                    render_msg.completion.result()
+                    frame_data = render_msg.shmem.buf
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
                         # Output frame
@@ -500,8 +557,10 @@ class CorrScope:
                                 break
                         if is_aborted():
                             # Outputting frame happens after most computation finished.
-                            thread_shared.end_frame = frame + 1
+                            thread_shared.end_frame = render_msg.frame_idx + 1
                             break
+
+                    avail_shmems.put(render_msg.shmem)
 
                 if is_aborted():
                     # If is_aborted() is True but render_thread() is blocked on
@@ -510,14 +569,21 @@ class CorrScope:
                     # = True and terminate.
                     while True:
                         try:
-                            render_to_output.get(block=False)
+                            render_msg = render_to_output.get(block=False)
+                            if render_msg is None:
+                                continue  # probably empty?
+
+                            avail_shmems.put(render_msg.shmem)
                         except Empty:
                             break
 
                 print("exit output")
 
+            shmem_names: List[str] = [shmem.name for shmem in all_shmems]
             with ProcessPoolExecutor(
-                ncores, initializer=worker_create_renderer, initargs=(renderer,)
+                nthread,
+                initializer=worker_create_renderer,
+                initargs=(renderer, shmem_names),
             ) as pool:
                 render_handle = Thread(target=render_thread, name="render_thread")
                 output_handle = Thread(target=output_thread, name="output_thread")
@@ -527,6 +593,16 @@ class CorrScope:
 
                 render_handle.join()
                 output_handle.join()
+
+                # TODO is it a problem that ProcessPoolExecutor's
+                #  worker_create_renderer() creates SharedMemory handles, which are
+                #  never closed when the process terminates?
+                #
+                # Do we have to construct a new SharedMemory on every
+                # worker_render_frame()? Does this thrash the page tables?
+
+            for shmem in all_shmems:
+                shmem.unlink()
 
         with self._load_outputs():
             if self.arg.parallel:
