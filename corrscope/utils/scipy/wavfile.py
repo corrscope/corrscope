@@ -482,8 +482,7 @@ def _read_data_chunk(fid, format_tag, channels, bit_depth, is_big_endian,
                                 shape=(n_samples,))
             fid.seek(start + size)
         else:
-            raise ValueError("mmap=True not compatible with "
-                             f"{bytes_per_sample}-byte container size.")
+            raise ValueError(f"{bytes_per_sample * 8}-bit WAV is not supported.")
 
     _handle_pad_byte(fid, size)
 
