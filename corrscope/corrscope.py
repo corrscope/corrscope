@@ -440,12 +440,8 @@ class CorrScope:
                 renderer: RendererFrontend, shmem_names: List[str]
             ):
                 global WORKER_RENDERER
-                global SHMEMS
                 # TODO del self.renderer and recreate Renderer if it can't be pickled?
                 WORKER_RENDERER = renderer
-                SHMEMS = {
-                    name: SharedMemory(name) for name in shmem_names
-                }  # type: Dict[str, SharedMemory]
 
             # TODO https://stackoverflow.com/questions/2829329/catch-a-threads-exception-in-the-caller-thread
             def render_thread():
@@ -526,13 +522,14 @@ class CorrScope:
                 trigger_samples: List[int],
                 shmem_name: str,
             ):
-                global WORKER_RENDERER, SHMEMS
+                global WORKER_RENDERER
                 renderer = WORKER_RENDERER
                 renderer.update_main_lines(render_inputs, trigger_samples)
                 frame_data = renderer.get_frame()
 
-                shmem = SHMEMS[shmem_name]
+                shmem = SharedMemory(shmem_name)
                 shmem.buf[:] = frame_data
+                shmem.close()
 
             def output_thread():
                 while True:
