@@ -483,9 +483,6 @@ class CorrScope:
                 # For each frame, render each wave
                 for frame in range(begin_frame, end_frame):
                     if is_aborted():
-                        # Only count output-displayed frames, not rendered.
-                        # # Used for FPS calculation
-                        # thread_shared.end_frame = frame
                         break
 
                     time_seconds = frame / fps
@@ -526,6 +523,8 @@ class CorrScope:
                     # blocks until frames get rendered and shmem is returned by
                     # output_thread().
                     shmem = avail_shmems.get()
+                    if is_aborted():
+                        break
 
                     # blocking
                     render_to_output.put(
@@ -547,6 +546,18 @@ class CorrScope:
                 print("exit render")
 
             def render_thread():
+                """
+                How do we know that if render_thread() crashes, output_thread() will
+                not block?
+
+                - `_render_thread()` does not return early, and will always
+                  `render_to_output.put(None)` before returning.
+
+                - If `_render_thread()` crashes, `render_thread()` will call
+                  `abort_from_thread.set()` before writing `render_to_output.put(
+                  None)`. When the output thread reads None, it will see that it is
+                  aborted.
+                """
                 try:
                     _render_thread()
                 except BaseException as e:
@@ -570,6 +581,8 @@ class CorrScope:
                 shmem.buf[:] = frame_data
 
             def _output_thread():
+                thread_shared.end_frame = begin_frame
+
                 while True:
                     if is_aborted():
                         for output in self.outputs:
@@ -595,10 +608,7 @@ class CorrScope:
                             if output.write_frame(frame_data) is outputs_.Stop:
                                 abort_from_thread.set()
                                 break
-                        if is_aborted():
-                            # Outputting frame happens after most computation finished.
-                            thread_shared.end_frame = render_msg.frame_idx + 1
-                            break
+                        thread_shared.end_frame = render_msg.frame_idx + 1
 
                     avail_shmems.put(render_msg.shmem)
 
@@ -612,17 +622,47 @@ class CorrScope:
                 render_to_output.put(), then we need to clear the queue so
                 render_thread() can return from put(), then check is_aborted() = True
                 and terminate."""
+
+                # It is an error to call output_on_error() when not aborted. If so,
+                # force an abort so we can print the error without deadlock.
+                was_aborted = is_aborted()
+                if not was_aborted:
+                    abort_from_thread.set()
+
                 while True:
                     try:
                         render_msg = render_to_output.get(block=False)
                         if render_msg is None:
                             continue  # probably empty?
 
+                        # To avoid deadlock, we must return the shmem to
+                        # _render_thread() in case it's blocked waiting for it. We do
+                        # not need to wait for the shmem to be no longer written to (
+                        # `render_msg.completion.result()`), since if we set
+                        # is_aborted() to true before returning a shmem,
+                        # `_render_thread()` will ignore the acquired shmem without
+                        # writing to it.
+
                         avail_shmems.put(render_msg.shmem)
                     except Empty:
                         break
 
+                assert was_aborted
+
             def output_thread():
+                """
+                How do we know that if output_thread() crashes, render_thread() will
+                not block?
+
+                - `_output_thread()` does not return early. If it is aborted, it will
+                  call `output_on_error()` to unblock `_render_thread()`.
+
+                - If `_output_thread()` crashes, `output_thread()` will call
+                  `abort_from_thread.set()` before calling `output_on_error()` to
+                  unblock `_render_thread()`.
+
+                I miss being able to poll()/WaitForMultipleObjects().
+                """
                 try:
                     _output_thread()
                 except BaseException as e:
