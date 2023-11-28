@@ -389,6 +389,7 @@ class CorrScope:
         def play_impl():
             end_frame = thread_shared.end_frame
             prev = -1
+            pt = 0.0
 
             # For each frame, render each wave
             for frame in range(begin_frame, end_frame):
@@ -437,8 +438,13 @@ class CorrScope:
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
+
+                    t = time.perf_counter() * 1000.0
                     renderer.update_main_lines(render_inputs, trigger_samples)
                     frame_data = renderer.get_frame()
+                    t1 = time.perf_counter() * 1000.0
+                    print(f"idle = {t - pt}, dt1 = {t1 - t}")
+                    pt = t1
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
                         # Output frame
