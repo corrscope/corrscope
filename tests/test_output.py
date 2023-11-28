@@ -193,8 +193,10 @@ def test_corr_terminate_works(test):
 
     @register_output(StayOpenOutputConfig)
     class StayOpenOutput(PipeOutput):
-        def __init__(self, corr_cfg: "Config", cfg: StayOpenOutputConfig):
-            super().__init__(corr_cfg, cfg)
+        def __init__(
+            self, corr_cfg: "Config", cfg: StayOpenOutputConfig, frames_to_buffer
+        ):
+            super().__init__(corr_cfg, cfg, frames_to_buffer)
 
             sleep_process = subprocess.Popen(
                 [sys.executable, "-c", "import time; time.sleep(10)"],

@@ -306,11 +306,11 @@ class CorrScope:
             self.nchan = len(self.channels)
 
     @contextmanager
-    def _load_outputs(self) -> Iterator[None]:
+    def _load_outputs(self, frames_to_buffer: Optional[int] = None) -> Iterator[None]:
         with pushd(self.arg.cfg_dir):
             with ExitStack() as stack:
                 self.outputs = [
-                    stack.enter_context(output_cfg(self.cfg))
+                    stack.enter_context(output_cfg(self.cfg, frames_to_buffer))
                     for output_cfg in self.output_cfgs
                 ]
                 yield
@@ -446,27 +446,8 @@ class CorrScope:
                             break
 
         # Multiprocess
-        def play_parallel():
+        def play_parallel(nthread: int):
             framebuffer_nbyte = len(renderer.get_frame())
-
-            # determine thread count
-            def _nthread():
-                import psutil
-
-                try:
-                    ncores = len(os.sched_getaffinity(0))
-                except AttributeError:
-                    ncores = os.cpu_count() or 1
-                stats = psutil.virtual_memory()  # returns a named tuple
-                nbyte_available = getattr(stats, "available")
-
-                # Don't create more threads than can take up 1/3 of remaining free
-                # memory in shmem framebuffers. (matplotlib will take up as much
-                # memory internally, and ffmpeg/other apps will take up more still.)
-                max_safe_threads = nbyte_available // framebuffer_nbyte // 3
-                return min(ncores, max_safe_threads)
-
-            nthread = _nthread()
 
             # setup threading
             abort_from_thread = threading.Event()
@@ -707,10 +688,21 @@ class CorrScope:
             for shmem in all_shmems:
                 shmem.unlink()
 
-        with self._load_outputs():
-            if self.arg.parallel:
-                play_parallel()
-            else:
+        if self.arg.parallel:
+            # determine thread count
+            def _nthread():
+                try:
+                    ncores = len(os.sched_getaffinity(0))
+                except AttributeError:
+                    ncores = os.cpu_count() or 1
+                return ncores
+
+            nthread = _nthread()
+
+            with self._load_outputs(nthread):
+                play_parallel(nthread)
+        else:
+            with self._load_outputs():
                 play_impl()
 
         if PRINT_TIMESTAMP:
