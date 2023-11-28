@@ -767,7 +767,7 @@ class CorrThread(Thread):
     job: CorrJob
 
     def __init__(self, cfg: Config, arg: Arguments, mode: PreviewOrRender):
-        Thread.__init__(self)
+        Thread.__init__(self, name="CorrThread")
         self.job = CorrJob(cfg, arg, mode)
 
     def run(self):
