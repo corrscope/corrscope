@@ -312,7 +312,8 @@ class RendererParams:
     lcfg: LayoutConfig
     data_shapes: List[tuple]
     channel_cfgs: Optional[List[ChannelConfig]]
-    render_strides: List[int]
+    render_strides: Optional[List[int]]
+    labels: Optional[List[str]]
 
     @staticmethod
     def from_obj(
@@ -324,8 +325,10 @@ class RendererParams:
     ):
         if channels is not None:
             render_strides = [channel.render_stride for channel in channels]
+            labels = [channel.label for channel in channels]
         else:
             render_strides = None
+            labels = None
 
         return RendererParams(
             cfg,
@@ -333,6 +336,7 @@ class RendererParams:
             [data.shape for data in dummy_datas],
             channel_cfgs,
             render_strides,
+            labels,
         )
 
 
@@ -487,6 +491,9 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
         )
 
         self._setup_axes(self.wave_nchans)
+
+        if params.labels is not None:
+            self.add_labels(params.labels)
 
         self._artists: List["Artist"] = []
 

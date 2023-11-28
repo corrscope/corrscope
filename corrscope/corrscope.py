@@ -369,8 +369,6 @@ class CorrScope:
         renderer = Renderer(renderer_params)
         self.renderer = renderer  # only used for unit tests
 
-        renderer.add_labels([channel.label for channel in self.channels])
-
         # For debugging only
         # for trigger in self.triggers:
         #     trigger.set_renderer(renderer)
