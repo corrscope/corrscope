@@ -233,6 +233,20 @@ def worker_create_renderer(renderer_params: RendererParams, shmem_names: List[st
     }  # type: Dict[str, SharedMemory]
 
 
+def worker_render_frame(
+    render_inputs: List[RenderInput],
+    trigger_samples: List[int],
+    shmem_name: str,
+):
+    global WORKER_RENDERER, SHMEMS
+    renderer = WORKER_RENDERER
+    renderer.update_main_lines(render_inputs, trigger_samples)
+    frame_data = renderer.get_frame()
+
+    shmem = SHMEMS[shmem_name]
+    shmem.buf[:] = frame_data
+
+
 class CorrScope:
     def __init__(self, cfg: Config, arg: Arguments):
         """cfg is mutated!
@@ -571,21 +585,6 @@ class CorrScope:
                     abort_from_thread.set()
                     render_to_output.put(None)
                     raise e
-
-            global worker_render_frame  # hack to allow pickling function
-
-            def worker_render_frame(
-                render_inputs: List[RenderInput],
-                trigger_samples: List[int],
-                shmem_name: str,
-            ):
-                global WORKER_RENDERER, SHMEMS
-                renderer = WORKER_RENDERER
-                renderer.update_main_lines(render_inputs, trigger_samples)
-                frame_data = renderer.get_frame()
-
-                shmem = SHMEMS[shmem_name]
-                shmem.buf[:] = frame_data
 
             def _output_thread():
                 thread_shared.end_frame = begin_frame
