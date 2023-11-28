@@ -233,18 +233,27 @@ def worker_create_renderer(renderer_params: RendererParams, shmem_names: List[st
     }  # type: Dict[str, SharedMemory]
 
 
+prev = 0.0
+
+
 def worker_render_frame(
     render_inputs: List[RenderInput],
     trigger_samples: List[int],
     shmem_name: str,
 ):
-    global WORKER_RENDERER, SHMEMS
+    global WORKER_RENDERER, SHMEMS, prev
+    t = time.perf_counter() * 1000.0
+
     renderer = WORKER_RENDERER
     renderer.update_main_lines(render_inputs, trigger_samples)
     frame_data = renderer.get_frame()
+    t1 = time.perf_counter() * 1000.0
 
     shmem = SHMEMS[shmem_name]
     shmem.buf[:] = frame_data
+    t2 = time.perf_counter() * 1000.0
+    print(f"idle = {t - prev}, dt1 = {t1 - t}, dt2 = {t2 - t1}")
+    prev = t2
 
 
 class CorrScope:
