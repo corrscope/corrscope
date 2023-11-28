@@ -424,7 +424,10 @@ class CorrScope:
             def _nthread():
                 import psutil
 
-                ncores = len(os.sched_getaffinity(0))
+                try:
+                    ncores = len(os.sched_getaffinity(0))
+                except AttributeError:
+                    ncores = os.cpu_count() or 1
                 stats = psutil.virtual_memory()  # returns a named tuple
                 nbyte_available = getattr(stats, "available")
 
