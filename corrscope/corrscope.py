@@ -528,8 +528,8 @@ class CorrScope:
                     t = time.perf_counter()
                     shmem = avail_shmems.get()
                     t = time.perf_counter() - t
-                    if t >= 0.001:
-                        print("get shmem", t)
+                    # if t >= 0.001:
+                    #     print("get shmem", t)
                     if is_aborted():
                         break
 
@@ -548,8 +548,8 @@ class CorrScope:
                         )
                     )
                     t = time.perf_counter() - t
-                    if t >= 0.001:
-                        print("send to render", t)
+                    # if t >= 0.001:
+                    #     print("send to render", t)
 
                 # TODO if is_aborted(), should we insert class CancellationToken,
                 #  rather than having output_thread() poll it too?
