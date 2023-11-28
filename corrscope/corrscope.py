@@ -608,7 +608,7 @@ class CorrScope:
                             if output.write_frame(frame_data) is outputs_.Stop:
                                 abort_from_thread.set()
                                 break
-                        thread_shared.end_frame = render_msg.frame_idx + 1
+                    thread_shared.end_frame = render_msg.frame_idx + 1
 
                     avail_shmems.put(render_msg.shmem)
 
