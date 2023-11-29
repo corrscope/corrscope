@@ -10,11 +10,9 @@ from multiprocessing.shared_memory import SharedMemory
 from pathlib import Path
 from queue import Queue, Empty
 from threading import Thread
-from typing import Iterator, Optional, List, Callable, Tuple, Dict, Union, Any
+from typing import Iterator, Optional, List, Callable, Dict, Union, Any
 
 import attr
-import numpy as np
-import psutil
 
 from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig, DefaultLabel
@@ -25,7 +23,6 @@ from corrscope.renderer import (
     Renderer,
     RendererConfig,
     RendererParams,
-    RendererFrontend,
     RenderInput,
 )
 from corrscope.settings.global_prefs import Parallelism
@@ -715,17 +712,7 @@ class CorrScope:
 
         parallelism = self.arg.parallelism
         if parallelism and parallelism.parallel:
-            # determine thread count
-            def _nthread():
-                # Spawn one process per physical core (not hyper-thread).
-                #
-                # On a Ryzen 5 5600X, the render processes are over twice as slow (
-                # and have substantially higher jitter) when we spawn one per
-                # hyper-thread rather than one per core.
-                ncores = psutil.cpu_count(logical=False)
-                return min(ncores, parallelism.max_render_cores)
-
-            nthread = _nthread()
+            nthread = parallelism.max_render_cores
 
             with self._load_outputs(nthread):
                 play_parallel(nthread)
