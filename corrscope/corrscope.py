@@ -253,7 +253,7 @@ def worker_render_frame(
     shmem = SHMEMS[shmem_name]
     shmem.buf[:] = frame_data
     t2 = time.perf_counter() * 1000.0
-    print(f"idle = {t - prev}, dt1 = {t1 - t}, dt2 = {t2 - t1}")
+    # print(f"idle = {t - prev}, dt1 = {t1 - t}, dt2 = {t2 - t1}")
     prev = t2
 
 
@@ -444,7 +444,7 @@ class CorrScope:
                     renderer.update_main_lines(render_inputs, trigger_samples)
                     frame_data = renderer.get_frame()
                     t1 = time.perf_counter() * 1000.0
-                    print(f"idle = {t - pt}, dt1 = {t1 - t}")
+                    # print(f"idle = {t - pt}, dt1 = {t1 - t}")
                     pt = t1
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
@@ -462,6 +462,7 @@ class CorrScope:
         # Multiprocess
         def play_parallel(nthread: int):
             framebuffer_nbyte = len(renderer.get_frame())
+            print(f"framebuffer_nbyte = {framebuffer_nbyte}")
 
             # setup threading
             abort_from_thread = threading.Event()
