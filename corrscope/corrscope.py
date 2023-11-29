@@ -28,6 +28,7 @@ from corrscope.renderer import (
     RendererFrontend,
     RenderInput,
 )
+from corrscope.settings.global_prefs import Parallelism
 from corrscope.triggers import (
     CorrelationTriggerConfig,
     PerFrameCache,
@@ -216,7 +217,7 @@ IsAborted = Callable[[], bool]
 class Arguments:
     cfg_dir: str
     outputs: List[outputs_.IOutputConfig]
-    parallel: bool = False
+    parallelism: Optional[Parallelism] = None
 
     on_begin: BeginFunc = lambda begin_time, end_time: None
     progress: ProgressFunc = lambda p: print(p, flush=True)
@@ -712,7 +713,8 @@ class CorrScope:
             for shmem in all_shmems:
                 shmem.unlink()
 
-        if self.arg.parallel:
+        parallelism = self.arg.parallelism
+        if parallelism and parallelism.parallel:
             # determine thread count
             def _nthread():
                 # Spawn one process per physical core (not hyper-thread).
@@ -721,7 +723,7 @@ class CorrScope:
                 # and have substantially higher jitter) when we spawn one per
                 # hyper-thread rather than one per core.
                 ncores = psutil.cpu_count(logical=False)
-                return min(ncores, 2)
+                return min(ncores, parallelism.max_render_cores)
 
             nthread = _nthread()
 

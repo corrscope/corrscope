@@ -240,7 +240,9 @@ def main(
                 print(e)
                 pref = gp.GlobalPrefs()
 
-            arg = Arguments(cfg_dir=cfg_dir, outputs=outputs, parallel=pref.parallel)
+            arg = Arguments(
+                cfg_dir=cfg_dir, outputs=outputs, parallelism=pref.parallelism()
+            )
             command = lambda: CorrScope(cfg, arg).play()
             if profile:
                 first_song_name = Path(files[0]).name

@@ -614,7 +614,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         arg = Arguments(
             cfg_dir=self.cfg_dir,
             outputs=outputs,
-            parallel=self.pref.parallel,
+            parallelism=self.pref.parallelism(),
             is_aborted=raise_exception,
         )
         return arg
