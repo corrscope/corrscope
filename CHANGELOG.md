@@ -7,6 +7,7 @@
 ### Changelog
 
 - Improve error messages for 24-bit WAV files (#443)
+- Add end time field to GUI (#451)
 
 ## 0.8.1
 
