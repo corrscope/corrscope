@@ -278,6 +278,26 @@ class BoundDoubleSpinBox(qw.QDoubleSpinBox, BoundWidget):
     set_model = model_setter(float)
 
 
+class BoundDoubleOrNone(qw.QDoubleSpinBox, BoundWidget):
+    bind_widget = BoundSpinBox.bind_widget
+
+    def set_gui(self, value):
+        self.setValue(value or 0.0)
+
+    gui_changed = alias("valueChanged")
+
+    @Slot(float)
+    def set_model(self: BoundWidget, value: float):
+        value = value or None
+        try:
+            self.pmodel[self.path] = value
+        except CorrError:
+            self.setPalette(self.error_palette)
+        else:
+            BoundWidget.set_model(self, value)
+            self.setPalette(self.default_palette)
+
+
 # CheckState inherits from int on PyQt5 and Enum on PyQt6. To compare integers with
 # CheckState on both PyQt5 and 6, we have to call CheckState(int).
 CheckState = qc.Qt.CheckState

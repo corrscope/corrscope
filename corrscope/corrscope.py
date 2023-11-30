@@ -90,7 +90,7 @@ class Config(
 
     master_audio: Optional[str]
     begin_time: float = with_units("s", default=0)
-    end_time: Optional[float] = None
+    end_time: Optional[float] = with_units("s", default=None)
 
     fps: int
 
