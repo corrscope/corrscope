@@ -75,7 +75,6 @@ class MainWindow(QWidget):
 
             # Right-hand channel list
             with append_widget(s, QVBoxLayout) as self.audioColumn:
-
                 # Top bar (master audio, trigger)
                 self.add_top_bar(s)
 
@@ -96,7 +95,6 @@ class MainWindow(QWidget):
     def add_general_tab(self, s: LayoutStack) -> QWidget:
         tr = self.tr
         with self.add_tab_stretch(s, tr("&General"), layout=QVBoxLayout) as tab:
-
             # Global group
             with append_widget(s, QGroupBox) as self.optionGlobal:
                 set_layout(s, QFormLayout)
@@ -161,7 +159,6 @@ class MainWindow(QWidget):
         with add_tab(
             s, VerticalScrollArea, tr("&Appearance")
         ) as tab, fill_scroll_stretch(s, layout=QVBoxLayout):
-
             with append_widget(
                 s, QGroupBox, title=tr("Appearance"), layout=QFormLayout
             ):
@@ -431,7 +428,6 @@ class MainWindow(QWidget):
         tr = self.tr
         with append_widget(s, QHBoxLayout):
             with append_widget(s, QVBoxLayout):
-
                 with append_widget(s, QGroupBox):
                     s.widget.setTitle(tr("FFmpeg Options"))
                     set_layout(s, QFormLayout)
@@ -496,6 +492,9 @@ class MainWindow(QWidget):
         self.action_separate_render_dir = create_element(
             QAction, MainWindow, text=tr("&Separate Render Folder"), checkable=True
         )
+        self.action_parallel = create_element(
+            QAction, MainWindow, text=tr("&Multi-Core Rendering"), checkable=True
+        )
         self.action_open_config_dir = create_element(
             QAction, MainWindow, text=tr("Open &Config Folder")
         )
@@ -518,6 +517,7 @@ class MainWindow(QWidget):
             with append_menu(s) as self.menuTools:
                 w = self.menuTools
                 w.addAction(self.action_separate_render_dir)
+                w.addAction(self.action_parallel)
                 w.addSeparator()
                 w.addAction(self.action_open_config_dir)
 

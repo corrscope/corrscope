@@ -222,7 +222,7 @@ def test_renderer_layout():
     nplots = 15
 
     datas = [RENDER_Y_ZEROS] * nplots
-    r = Renderer(cfg, lcfg, datas, None, None)
+    r = Renderer.from_obj(cfg, lcfg, datas, None, None)
     r.update_main_lines(RenderInput.wrap_datas(datas), [0] * nplots)
     layout = r.layout
 

@@ -304,6 +304,42 @@ def abstract_classvar(self) -> Any:
     """A ClassVar to be overriden by a subclass."""
 
 
+@attr.dataclass
+class RendererParams:
+    """Serializable between processes."""
+
+    cfg: RendererConfig
+    lcfg: LayoutConfig
+    data_shapes: List[tuple]
+    channel_cfgs: Optional[List[ChannelConfig]]
+    render_strides: Optional[List[int]]
+    labels: Optional[List[str]]
+
+    @staticmethod
+    def from_obj(
+        cfg: RendererConfig,
+        lcfg: "LayoutConfig",
+        dummy_datas: List[np.ndarray],
+        channel_cfgs: Optional[List["ChannelConfig"]],
+        channels: List["Channel"],
+    ):
+        if channels is not None:
+            render_strides = [channel.render_stride for channel in channels]
+            labels = [channel.label for channel in channels]
+        else:
+            render_strides = None
+            labels = None
+
+        return RendererParams(
+            cfg,
+            lcfg,
+            [data.shape for data in dummy_datas],
+            channel_cfgs,
+            render_strides,
+            labels,
+        )
+
+
 class _RendererBackend(ABC):
     """
     Renderer backend which takes data and produces images.
@@ -325,17 +361,15 @@ class _RendererBackend(ABC):
         Only used for tests/test_renderer.py.
         """
 
+    @classmethod
+    def from_obj(cls, *args, **kwargs):
+        return cls(RendererParams.from_obj(*args, **kwargs))
+
     # Instance initializer
-    def __init__(
-        self,
-        cfg: RendererConfig,
-        lcfg: "LayoutConfig",
-        dummy_datas: List[np.ndarray],
-        channel_cfgs: Optional[List["ChannelConfig"]],
-        channels: List["Channel"],
-    ):
+    def __init__(self, params: RendererParams):
+        cfg = params.cfg
         self.cfg = cfg
-        self.lcfg = lcfg
+        self.lcfg = params.lcfg
 
         self.w = cfg.divided_width
         self.h = cfg.divided_height
@@ -343,13 +377,15 @@ class _RendererBackend(ABC):
         # Maps a continuous variable from 0 to 1 (representing one octave) to a color.
         self.pitch_cmap = gen_circular_cmap(cfg.pitch_colors)
 
-        self.nplots = len(dummy_datas)
+        data_shapes = params.data_shapes
+        self.nplots = len(data_shapes)
 
         if self.nplots > 0:
-            assert len(dummy_datas[0].shape) == 2, dummy_datas[0].shape
-        self.wave_nsamps = [data.shape[0] for data in dummy_datas]
-        self.wave_nchans = [data.shape[1] for data in dummy_datas]
+            assert len(data_shapes[0]) == 2, data_shapes[0]
+        self.wave_nsamps = [shape[0] for shape in data_shapes]
+        self.wave_nchans = [shape[1] for shape in data_shapes]
 
+        channel_cfgs = params.channel_cfgs
         if channel_cfgs is None:
             channel_cfgs = [ChannelConfig("") for _ in range(self.nplots)]
 
@@ -367,12 +403,13 @@ class _RendererBackend(ABC):
         ]
 
         # Load channel strides.
-        if channels is not None:
-            if len(channels) != self.nplots:
+        render_strides = params.render_strides
+        if render_strides is not None:
+            if len(render_strides) != self.nplots:
                 raise ValueError(
-                    f"cannot assign {len(channels)} channels to {self.nplots} plots"
+                    f"cannot assign {len(render_strides)} channels to {self.nplots} plots"
                 )
-            self.render_strides = [channel.render_stride for channel in channels]
+            self.render_strides = render_strides
         else:
             self.render_strides = [1] * self.nplots
 
@@ -446,14 +483,17 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
     def _canvas_to_bytes(canvas: "FigureCanvasBase") -> ByteBuffer:
         pass
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, params: RendererParams):
+        super().__init__(params)
 
         dict.__setitem__(
             matplotlib.rcParams, "lines.antialiased", self.cfg.antialiasing
         )
 
         self._setup_axes(self.wave_nchans)
+
+        if params.labels is not None:
+            self.add_labels(params.labels)
 
         self._artists: List["Artist"] = []
 
@@ -892,8 +932,8 @@ class MatplotlibAggRenderer(AbstractMatplotlibRenderer):
 class RendererFrontend(_RendererBackend, ABC):
     """Wrapper around _RendererBackend implementations, providing a better interface."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, params: RendererParams):
+        super().__init__(params)
 
         self._update_main_lines = None
         self._custom_lines = {}  # type: Dict[Any, CustomLine]

@@ -2,6 +2,8 @@
 
 ### Features
 
+- Add multi-core rendering for increased preview/render speed (#450)
+
 ### Major Changes
 
 ### Changelog
