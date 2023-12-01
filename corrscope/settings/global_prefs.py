@@ -46,7 +46,11 @@ _PREF_PATH = paths.appdata_dir / "prefs.yaml"
 
 def load_prefs() -> GlobalPrefs:
     try:
-        return yaml.load(_PREF_PATH)
+        pref = yaml.load(_PREF_PATH)
+        if not isinstance(pref, GlobalPrefs):
+            raise TypeError(f"prefs.yaml contains wrong type {type(pref)}")
+        return pref
+
     except FileNotFoundError:
         return GlobalPrefs()
 
