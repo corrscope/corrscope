@@ -26,6 +26,35 @@ from corrscope.wave import Wave, Flatten, FlattenOrStr
 
 PRINT_TIMESTAMP = True
 
+NAMED_THREADS = False
+
+
+def named_threads():
+    global NAMED_THREADS
+    if NAMED_THREADS:
+        return
+    NAMED_THREADS = True
+
+    LIB = "libcap.so.2"
+    try:
+        import ctypes
+
+        libcap = ctypes.CDLL(LIB)
+    except OSError:
+        print("Library {} not found. Unable to set thread name.".format(LIB))
+    else:
+
+        def _name_hack(self):
+            # PR_SET_NAME = 15
+            libcap.prctl(15, self.name.encode())
+            threading.Thread._bootstrap_original(self)
+
+        threading.Thread._bootstrap_original = threading.Thread._bootstrap
+        threading.Thread._bootstrap = _name_hack
+
+
+named_threads()
+
 
 # Placing Enum before any other superclass results in errors.
 # Placing DumpEnumAsStr before IntEnum or (int, Enum) results in errors on Python 3.6:
