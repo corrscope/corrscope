@@ -7,7 +7,7 @@ from typing import Iterator, Union, Callable, Any
 __all__ = ["run_profile"]
 
 
-PROFILE_DUMP_NAME = "cprofile"
+PROFILE_DUMP_NAME = "yappi"
 
 
 def get_profile_dump_name(prefix: str) -> str:
@@ -17,7 +17,7 @@ def get_profile_dump_name(prefix: str) -> str:
     # Pycharm can't load CProfile files with dots in the name.
     prefix = prefix.split(".")[0]
 
-    profile_dump_name = f"{prefix}-{PROFILE_DUMP_NAME}-{now_str}"
+    profile_dump_name = f"callgrind.out.{prefix}-{PROFILE_DUMP_NAME}-{now_str}"
 
     # Write stats to unused filename
     for name in add_numeric_suffixes(profile_dump_name):
@@ -37,15 +37,16 @@ def add_numeric_suffixes(s: str) -> Iterator[str]:
 
 
 def run_profile(command: Callable[[], Any], dump_prefix: Union[str, Path]):
-    import cProfile
+    import yappi
 
     profile_dump_name = get_profile_dump_name(str(dump_prefix))
 
-    prof = cProfile.Profile()
+    yappi.start()
     try:
-        prof.runcall(command)
-    except SystemExit:
-        # Copied from profile._Utils.run(). But why is SystemExit caught and ignored?
-        pass
+        command()
     finally:
-        prof.dump_stats(profile_dump_name)
+        yappi.stop()
+
+        prof = yappi.get_func_stats()
+        prof.print_all()
+        prof.save(profile_dump_name, "CALLGRIND")
