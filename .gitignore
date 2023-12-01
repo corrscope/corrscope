@@ -169,6 +169,7 @@ fabric.properties
 
 # Project-specific
 *-cprofile-*
+*-yappi-*
 *.ipynb
 .directory
 *.orig
