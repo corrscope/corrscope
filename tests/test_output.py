@@ -66,7 +66,7 @@ def test_render_output():
     """Ensure rendering to output does not raise exceptions."""
     datas = [RENDER_Y_ZEROS]
 
-    renderer = Renderer(CFG.render, CFG.layout, datas, None, None)
+    renderer = Renderer.from_obj(CFG.render, CFG.layout, datas, None, None)
     out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG)
 
     renderer.update_main_lines(RenderInput.wrap_datas(datas), [0])
@@ -193,8 +193,10 @@ def test_corr_terminate_works(test):
 
     @register_output(StayOpenOutputConfig)
     class StayOpenOutput(PipeOutput):
-        def __init__(self, corr_cfg: "Config", cfg: StayOpenOutputConfig):
-            super().__init__(corr_cfg, cfg)
+        def __init__(
+            self, corr_cfg: "Config", cfg: StayOpenOutputConfig, frames_to_buffer
+        ):
+            super().__init__(corr_cfg, cfg, frames_to_buffer)
 
             sleep_process = subprocess.Popen(
                 [sys.executable, "-c", "import time; time.sleep(10)"],

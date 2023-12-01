@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from corrscope.corrscope import Config
 
 
-FRAMES_TO_BUFFER = 2
+DEFAULT_FRAMES_TO_BUFFER = 2
 
 FFMPEG_QUIET = "-nostats -hide_banner -loglevel error".split()
 
@@ -21,10 +21,16 @@ FFMPEG_QUIET = "-nostats -hide_banner -loglevel error".split()
 class IOutputConfig(DumpableAttrs):
     cls: "ClassVar[Type[Output]]"
 
-    def __call__(self, corr_cfg: "Config") -> "Output":
+    def __call__(
+        self, corr_cfg: "Config", frames_to_buffer: Optional[int] = None
+    ) -> "Output":
         """Must be called in the .yaml file's directory.
         This is used to properly resolve corr_cfg.master_audio."""
-        return self.cls(corr_cfg, cfg=self)
+        return self.cls(
+            corr_cfg,
+            cfg=self,
+            frames_to_buffer=frames_to_buffer or DEFAULT_FRAMES_TO_BUFFER,
+        )
 
 
 class _Stop:
@@ -35,7 +41,7 @@ Stop = _Stop()
 
 
 class Output(ABC):
-    def __init__(self, corr_cfg: "Config", cfg: IOutputConfig):
+    def __init__(self, corr_cfg: "Config", cfg: IOutputConfig, frames_to_buffer: int):
         self.corr_cfg = corr_cfg
         self.cfg = cfg
 
@@ -44,7 +50,7 @@ class Output(ABC):
         frame_bytes = (
             rcfg.divided_height * rcfg.divided_width * Renderer.bytes_per_pixel
         )
-        self.bufsize = frame_bytes * FRAMES_TO_BUFFER
+        self.bufsize = frame_bytes * frames_to_buffer
 
     def __enter__(self):
         return self
@@ -255,8 +261,13 @@ FFMPEG = "ffmpeg"
 
 @register_output(FFmpegOutputConfig)
 class FFmpegOutput(PipeOutput):
-    def __init__(self, corr_cfg: "Config", cfg: FFmpegOutputConfig):
-        super().__init__(corr_cfg, cfg)
+    def __init__(
+        self,
+        corr_cfg: "Config",
+        cfg: FFmpegOutputConfig,
+        frames_to_buffer: int = DEFAULT_FRAMES_TO_BUFFER,
+    ):
+        super().__init__(corr_cfg, cfg, frames_to_buffer)
 
         ffmpeg = _FFmpegProcess([FFMPEG, "-y"], corr_cfg)
         ffmpeg.add_output(cfg)
@@ -283,8 +294,13 @@ FFPLAY = "ffplay"
 
 @register_output(FFplayOutputConfig)
 class FFplayOutput(PipeOutput):
-    def __init__(self, corr_cfg: "Config", cfg: FFplayOutputConfig):
-        super().__init__(corr_cfg, cfg)
+    def __init__(
+        self,
+        corr_cfg: "Config",
+        cfg: FFplayOutputConfig,
+        frames_to_buffer: int = DEFAULT_FRAMES_TO_BUFFER,
+    ):
+        super().__init__(corr_cfg, cfg, frames_to_buffer)
 
         ffmpeg = _FFmpegProcess([FFMPEG, *FFMPEG_QUIET], corr_cfg)
         ffmpeg.add_output(cfg)

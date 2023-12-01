@@ -1,5 +1,6 @@
 from typing import *
 
+import attr
 from atomicwrites import atomic_write
 
 from corrscope.config import DumpableAttrs, yaml
@@ -21,6 +22,12 @@ class Ref(Generic[Attrs]):
         setattr(self.obj, self.key, value)
 
 
+@attr.dataclass
+class Parallelism:
+    parallel: bool = True
+    max_render_cores: int = 2
+
+
 class GlobalPrefs(DumpableAttrs, always_dump="*"):
     # Most recent YAML or audio file opened
     file_dir: str = ""
@@ -39,6 +46,12 @@ class GlobalPrefs(DumpableAttrs, always_dump="*"):
             return Ref(self, "render_dir")
         else:
             return self.file_dir_ref
+
+    parallel: bool = True
+    max_render_cores: int = 2
+
+    def parallelism(self) -> Parallelism:
+        return Parallelism(self.parallel, self.max_render_cores)
 
 
 _PREF_PATH = paths.appdata_dir / "prefs.yaml"

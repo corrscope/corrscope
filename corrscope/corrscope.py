@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 import os.path
+import threading
 import time
+from concurrent.futures import ProcessPoolExecutor, Future
 from contextlib import ExitStack, contextmanager
 from enum import unique
 from fractions import Fraction
+from multiprocessing.shared_memory import SharedMemory
 from pathlib import Path
-from typing import Iterator, Optional, List, Callable
+from queue import Queue, Empty
+from threading import Thread
+from typing import Iterator, Optional, List, Callable, Dict, Union, Any
 
 import attr
 
@@ -14,12 +19,17 @@ from corrscope.channel import Channel, ChannelConfig, DefaultLabel
 from corrscope.config import KeywordAttrs, DumpEnumAsStr, CorrError, with_units
 from corrscope.layout import LayoutConfig
 from corrscope.outputs import FFmpegOutputConfig, IOutputConfig
-from corrscope.renderer import Renderer, RendererConfig, RendererFrontend, RenderInput
+from corrscope.renderer import (
+    Renderer,
+    RendererConfig,
+    RendererParams,
+    RenderInput,
+)
+from corrscope.settings.global_prefs import Parallelism
 from corrscope.triggers import (
     CorrelationTriggerConfig,
     PerFrameCache,
     SpectrumConfig,
-    MainTrigger,
 )
 from corrscope.util import pushd, coalesce
 from corrscope.wave import Wave, Flatten, FlattenOrStr
@@ -168,6 +178,33 @@ def template_config(**kwargs) -> Config:
     return attr.evolve(cfg, **kwargs)
 
 
+class PropagatingThread(Thread):
+    # Based off https://stackoverflow.com/a/31614591 and Thread source code.
+    def run(self):
+        self.exc = None
+        try:
+            if self._target is not None:
+                self.ret = self._target(*self._args, **self._kwargs)
+        except BaseException as e:
+            self.exc = e
+        finally:
+            # Avoid a refcycle if the thread is running a function with
+            # an argument that has a member that points to the thread.
+            del self._target, self._args, self._kwargs
+
+    def join(self, timeout=None) -> Any:
+        try:
+            super(PropagatingThread, self).join(timeout)
+            if self.exc:
+                raise RuntimeError(f"exception from {self.name}") from self.exc
+
+            return self.ret
+        finally:
+            # If join() raises, set `self = None` to avoid a reference cycle with the
+            # backtrace, because concurrent.futures.Future.result() does it.
+            self = None
+
+
 BeginFunc = Callable[[float, float], None]
 ProgressFunc = Callable[[int], None]
 IsAborted = Callable[[], bool]
@@ -177,11 +214,45 @@ IsAborted = Callable[[], bool]
 class Arguments:
     cfg_dir: str
     outputs: List[outputs_.IOutputConfig]
+    parallelism: Optional[Parallelism] = None
 
     on_begin: BeginFunc = lambda begin_time, end_time: None
     progress: ProgressFunc = lambda p: print(p, flush=True)
     is_aborted: IsAborted = lambda: False
     on_end: Callable[[], None] = lambda: None
+
+
+def worker_create_renderer(renderer_params: RendererParams, shmem_names: List[str]):
+    global WORKER_RENDERER
+    global SHMEMS
+
+    WORKER_RENDERER = Renderer(renderer_params)
+    SHMEMS = {
+        name: SharedMemory(name) for name in shmem_names
+    }  # type: Dict[str, SharedMemory]
+
+
+prev = 0.0
+
+
+def worker_render_frame(
+    render_inputs: List[RenderInput],
+    trigger_samples: List[int],
+    shmem_name: str,
+):
+    global WORKER_RENDERER, SHMEMS, prev
+    t = time.perf_counter() * 1000.0
+
+    renderer = WORKER_RENDERER
+    renderer.update_main_lines(render_inputs, trigger_samples)
+    frame_data = renderer.get_frame()
+    t1 = time.perf_counter() * 1000.0
+
+    shmem = SHMEMS[shmem_name]
+    shmem.buf[:] = frame_data
+    t2 = time.perf_counter() * 1000.0
+    # print(f"idle = {t - prev}, dt1 = {t1 - t}, dt2 = {t2 - t1}")
+    prev = t2
 
 
 class CorrScope:
@@ -243,25 +314,28 @@ class CorrScope:
             self.nchan = len(self.channels)
 
     @contextmanager
-    def _load_outputs(self) -> Iterator[None]:
+    def _load_outputs(self, frames_to_buffer: Optional[int] = None) -> Iterator[None]:
         with pushd(self.arg.cfg_dir):
             with ExitStack() as stack:
                 self.outputs = [
-                    stack.enter_context(output_cfg(self.cfg))
+                    stack.enter_context(output_cfg(self.cfg, frames_to_buffer))
                     for output_cfg in self.output_cfgs
                 ]
                 yield
 
-    def _load_renderer(self) -> RendererFrontend:
+    def _renderer_params(self) -> RendererParams:
         dummy_datas = [channel.get_render_around(0) for channel in self.channels]
-        renderer = Renderer(
+        return RendererParams.from_obj(
             self.cfg.render,
             self.cfg.layout,
             dummy_datas,
             self.cfg.channels,
             self.channels,
         )
-        return renderer
+
+    # def _load_renderer(self) -> Renderer:
+    #     # only kept for unit tests I'm too lazy to rewrite.
+    #     return Renderer(self._renderer_params())
 
     def play(self) -> None:
         if self.has_played:
@@ -280,12 +354,19 @@ class CorrScope:
         end_frame = fps * end_time
         end_frame = int(end_frame) + 1
 
+        @attr.dataclass
+        class ThreadShared:
+            # mutex? i hardly knew 'er!
+            end_frame: int
+
+        thread_shared = ThreadShared(end_frame)
+        del end_frame
+
         self.arg.on_begin(self.cfg.begin_time, end_time)
 
-        renderer = self._load_renderer()
+        renderer_params = self._renderer_params()
+        renderer = Renderer(renderer_params)
         self.renderer = renderer  # only used for unit tests
-
-        renderer.add_labels([channel.label for channel in self.channels])
 
         # For debugging only
         # for trigger in self.triggers:
@@ -297,20 +378,23 @@ class CorrScope:
         benchmark_mode = self.cfg.benchmark_mode
         not_benchmarking = not benchmark_mode
 
-        with self._load_outputs():
-            prev = -1
+        # When subsampling FPS, render frames from the future to alleviate lag.
+        # subfps=1, ahead=0.
+        # subfps=2, ahead=1.
+        render_subfps = self.cfg.render_subfps
+        ahead = render_subfps // 2
 
-            # When subsampling FPS, render frames from the future to alleviate lag.
-            # subfps=1, ahead=0.
-            # subfps=2, ahead=1.
-            render_subfps = self.cfg.render_subfps
-            ahead = render_subfps // 2
+        # Single-process
+        def play_impl():
+            end_frame = thread_shared.end_frame
+            prev = -1
+            pt = 0.0
 
             # For each frame, render each wave
             for frame in range(begin_frame, end_frame):
                 if self.arg.is_aborted():
                     # Used for FPS calculation
-                    end_frame = frame
+                    thread_shared.end_frame = frame
 
                     for output in self.outputs:
                         output.terminate()
@@ -353,8 +437,13 @@ class CorrScope:
 
                 if not_benchmarking or benchmark_mode >= BenchmarkMode.RENDER:
                     # Render frame
+
+                    t = time.perf_counter() * 1000.0
                     renderer.update_main_lines(render_inputs, trigger_samples)
                     frame_data = renderer.get_frame()
+                    t1 = time.perf_counter() * 1000.0
+                    # print(f"idle = {t - pt}, dt1 = {t1 - t}")
+                    pt = t1
 
                     if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
                         # Output frame
@@ -365,13 +454,277 @@ class CorrScope:
                                 break
                         if aborted:
                             # Outputting frame happens after most computation finished.
-                            end_frame = frame + 1
+                            thread_shared.end_frame = frame + 1
                             break
+
+        # Multiprocess
+        def play_parallel(nthread: int):
+            framebuffer_nbyte = len(renderer.get_frame())
+            print(f"framebuffer_nbyte = {framebuffer_nbyte}")
+
+            # setup threading
+            abort_from_thread = threading.Event()
+            # self.arg.is_aborted() from GUI, abort_from_thread.is_set() from thread
+            is_aborted = lambda: self.arg.is_aborted() or abort_from_thread.is_set()
+
+            @attr.dataclass
+            class RenderToOutput:
+                frame_idx: int
+                shmem: SharedMemory
+                completion: "Future[None]"
+
+            # Rely on avail_shmems for backpressure.
+            render_to_output: "Queue[RenderToOutput | None]" = Queue()
+
+            # Release all shmems after finishing rendering.
+            all_shmems: List[SharedMemory] = [
+                SharedMemory(create=True, size=framebuffer_nbyte)
+                for _ in range(2 * nthread)
+            ]
+
+            is_submitting = [False, 0]
+
+            # Only send unused shmems to a worker process, and wait for it to be
+            # returned before reusing.
+            avail_shmems: "Queue[SharedMemory]" = Queue()
+            for shmem in all_shmems:
+                avail_shmems.put(shmem)
+
+            # TODO https://stackoverflow.com/questions/2829329/catch-a-threads-exception-in-the-caller-thread
+            def _render_thread():
+                end_frame = thread_shared.end_frame
+                prev = -1
+
+                # TODO gather trigger points from triggering threads
+                # For each frame, render each wave
+                for frame in range(begin_frame, end_frame):
+                    if is_aborted():
+                        break
+
+                    time_seconds = frame / fps
+                    should_render = (frame - begin_frame) % render_subfps == ahead
+
+                    rounded = int(time_seconds)
+                    if PRINT_TIMESTAMP and rounded != prev:
+                        self.arg.progress(rounded)
+                        prev = rounded
+
+                    render_inputs = []
+                    trigger_samples = []
+                    # Get render-data from each wave.
+                    for render_wave, channel in zip(self.render_waves, self.channels):
+                        sample = round(render_wave.smp_s * time_seconds)
+
+                        # Get trigger.
+                        if not_benchmarking or benchmark_mode == BenchmarkMode.TRIGGER:
+                            cache = PerFrameCache()
+
+                            result = channel.trigger.get_trigger(sample, cache)
+                            trigger_sample = result.result
+                            freq_estimate = result.freq_estimate
+
+                        else:
+                            trigger_sample = sample
+                            freq_estimate = 0
+
+                        # Get render data.
+                        if should_render:
+                            trigger_samples.append(trigger_sample)
+                            data = channel.get_render_around(trigger_sample)
+                            render_inputs.append(RenderInput(data, freq_estimate))
+
+                    if not should_render:
+                        continue
+
+                    # blocks until frames get rendered and shmem is returned by
+                    # output_thread().
+                    t = time.perf_counter()
+                    shmem = avail_shmems.get()
+                    t = time.perf_counter() - t
+                    # if t >= 0.001:
+                    #     print("get shmem", t)
+                    if is_aborted():
+                        break
+
+                    # blocking
+                    t = time.perf_counter()
+                    render_to_output.put(
+                        RenderToOutput(
+                            frame,
+                            shmem,
+                            pool.submit(
+                                worker_render_frame,
+                                render_inputs,
+                                trigger_samples,
+                                shmem.name,
+                            ),
+                        )
+                    )
+                    t = time.perf_counter() - t
+                    # if t >= 0.001:
+                    #     print("send to render", t)
+
+                # TODO if is_aborted(), should we insert class CancellationToken,
+                #  rather than having output_thread() poll it too?
+                render_to_output.put(None)
+                print("exit render")
+
+            def render_thread():
+                """
+                How do we know that if render_thread() crashes, output_thread() will
+                not block?
+
+                - `_render_thread()` does not return early, and will always
+                  `render_to_output.put(None)` before returning.
+
+                - If `_render_thread()` crashes, `render_thread()` will call
+                  `abort_from_thread.set()` before writing `render_to_output.put(
+                  None)`. When the output thread reads None, it will see that it is
+                  aborted.
+                """
+                try:
+                    _render_thread()
+                except BaseException as e:
+                    abort_from_thread.set()
+                    render_to_output.put(None)
+                    raise e
+
+            def _output_thread():
+                thread_shared.end_frame = begin_frame
+
+                while True:
+                    if is_aborted():
+                        for output in self.outputs:
+                            output.terminate()
+                        break
+
+                    # blocking
+                    render_msg: Union[RenderToOutput, None] = render_to_output.get()
+
+                    if render_msg is None:
+                        if is_aborted():
+                            for output in self.outputs:
+                                output.terminate()
+                        break
+
+                    # Wait for shmem to be filled with data.
+                    render_msg.completion.result()
+                    frame_data = render_msg.shmem.buf
+
+                    if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
+                        # Output frame
+                        for output in self.outputs:
+                            if output.write_frame(frame_data) is outputs_.Stop:
+                                abort_from_thread.set()
+                                break
+                    thread_shared.end_frame = render_msg.frame_idx + 1
+
+                    avail_shmems.put(render_msg.shmem)
+
+                if is_aborted():
+                    output_on_error()
+
+                print("exit output")
+
+            def output_on_error():
+                """If is_aborted() is True but render_thread() is blocked on
+                render_to_output.put(), then we need to clear the queue so
+                render_thread() can return from put(), then check is_aborted() = True
+                and terminate."""
+
+                # It is an error to call output_on_error() when not aborted. If so,
+                # force an abort so we can print the error without deadlock.
+                was_aborted = is_aborted()
+                if not was_aborted:
+                    abort_from_thread.set()
+
+                while True:
+                    try:
+                        render_msg = render_to_output.get(block=False)
+                        if render_msg is None:
+                            continue  # probably empty?
+
+                        # To avoid deadlock, we must return the shmem to
+                        # _render_thread() in case it's blocked waiting for it. We do
+                        # not need to wait for the shmem to be no longer written to (
+                        # `render_msg.completion.result()`), since if we set
+                        # is_aborted() to true before returning a shmem,
+                        # `_render_thread()` will ignore the acquired shmem without
+                        # writing to it.
+
+                        avail_shmems.put(render_msg.shmem)
+                    except Empty:
+                        break
+
+                assert was_aborted
+
+            def output_thread():
+                """
+                How do we know that if output_thread() crashes, render_thread() will
+                not block?
+
+                - `_output_thread()` does not return early. If it is aborted, it will
+                  call `output_on_error()` to unblock `_render_thread()`.
+
+                - If `_output_thread()` crashes, `output_thread()` will call
+                  `abort_from_thread.set()` before calling `output_on_error()` to
+                  unblock `_render_thread()`.
+
+                I miss being able to poll()/WaitForMultipleObjects().
+                """
+                try:
+                    _output_thread()
+                except BaseException as e:
+                    abort_from_thread.set()
+                    output_on_error()
+                    raise e
+
+            shmem_names: List[str] = [shmem.name for shmem in all_shmems]
+
+            with ProcessPoolExecutor(
+                nthread,
+                initializer=worker_create_renderer,
+                initargs=(renderer_params, shmem_names),
+            ) as pool:
+                render_handle = PropagatingThread(
+                    target=render_thread, name="render_thread"
+                )
+                output_handle = PropagatingThread(
+                    target=output_thread, name="output_thread"
+                )
+
+                render_handle.start()
+                output_handle.start()
+
+                # throws
+                render_handle.join()
+                output_handle.join()
+
+                # TODO is it a problem that ProcessPoolExecutor's
+                #  worker_create_renderer() creates SharedMemory handles, which are
+                #  never closed when the process terminates?
+                #
+                # Constructing a new SharedMemory on every worker_render_frame() call
+                # is more "correct", but increases CPU usage by around 20% or more (
+                # see "shmem question"), likely due to page table thrashing.
+
+            for shmem in all_shmems:
+                shmem.unlink()
+
+        parallelism = self.arg.parallelism
+        if parallelism and parallelism.parallel:
+            nthread = parallelism.max_render_cores
+
+            with self._load_outputs(nthread):
+                play_parallel(nthread)
+        else:
+            with self._load_outputs():
+                play_impl()
 
         if PRINT_TIMESTAMP:
             # noinspection PyUnboundLocalVariable
             dtime_sec = time.perf_counter() - begin
-            dframe = end_frame - begin_frame
+            dframe = thread_shared.end_frame - begin_frame
 
             frame_per_sec = dframe / dtime_sec
             try:
