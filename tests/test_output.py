@@ -66,7 +66,7 @@ def test_render_output():
     """Ensure rendering to output does not raise exceptions."""
     datas = [RENDER_Y_ZEROS]
 
-    renderer = Renderer(CFG.render, CFG.layout, datas, None, None)
+    renderer = Renderer.from_obj(CFG.render, CFG.layout, datas, None, None)
     out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG)
 
     renderer.update_main_lines(RenderInput.wrap_datas(datas), [0])
