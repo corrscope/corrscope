@@ -1,3 +1,13 @@
+## 0.9.0 (unreleased)
+
+### Features
+
+### Major Changes
+
+### Changelog
+
+- Improve error messages for 24-bit WAV files (#443)
+
 ## 0.8.1
 
 ### Changelog
