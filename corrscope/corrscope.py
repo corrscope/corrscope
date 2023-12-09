@@ -314,11 +314,11 @@ class CorrScope:
             self.nchan = len(self.channels)
 
     @contextmanager
-    def _load_outputs(self, frames_to_buffer: Optional[int] = None) -> Iterator[None]:
+    def _load_outputs(self) -> Iterator[None]:
         with pushd(self.arg.cfg_dir):
             with ExitStack() as stack:
                 self.outputs = [
-                    stack.enter_context(output_cfg(self.cfg, frames_to_buffer))
+                    stack.enter_context(output_cfg(self.cfg))
                     for output_cfg in self.output_cfgs
                 ]
                 yield
@@ -712,13 +712,10 @@ class CorrScope:
                 shmem.unlink()
 
         parallelism = self.arg.parallelism
-        if parallelism and parallelism.parallel:
-            nthread = parallelism.max_render_cores
-
-            with self._load_outputs(nthread):
-                play_parallel(nthread)
-        else:
-            with self._load_outputs():
+        with self._load_outputs():
+            if parallelism and parallelism.parallel:
+                play_parallel(parallelism.max_render_cores)
+            else:
                 play_impl()
 
         if PRINT_TIMESTAMP:
