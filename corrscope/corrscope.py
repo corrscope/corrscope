@@ -194,6 +194,11 @@ class Arguments:
 
 
 def worker_create_renderer(renderer_params: RendererParams, shmem_names: List[str]):
+    import appnope
+
+    # Disable power saving for renderer processes.
+    appnope.nope()
+
     global WORKER_RENDERER
     global SHMEMS
 
