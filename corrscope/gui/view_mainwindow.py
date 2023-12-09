@@ -148,6 +148,7 @@ class MainWindow(QWidget):
                 ) as self.render__res_divisor:
                     self.render__res_divisor.setMinimum(1.0)
                     self.render__res_divisor.setSingleStep(0.5)
+                    self.render__res_divisor.setDecimals(4)
 
         return tab
 
