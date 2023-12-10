@@ -307,7 +307,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             # But since the dialog is modal,
             # self.corr_thread cannot have been replaced by a different thread.
             if self.corr_thread is not None:
-                self.corr_thread.abort_terminate()
+                self.corr_thread.job.abort_terminate()
             return True
 
         return False
