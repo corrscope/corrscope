@@ -33,9 +33,10 @@ On Windows, download Windows binary releases (.7z files) from the [Releases page
 pipx creates an isolated environment for each program, and adds their binaries into PATH. I find this most reliable in practice, though it runs into issues after upgrading system Python in-place.
 
 - Install Python 3.8 or above.
-- Install pipx using either your Linux package manager, `pip3 install --user pipx`, or `pip install --user pipx`.
+- Install pipx using either your preferred package manager, `pip3 install --user pipx`, or `pip install --user pipx`.
 - Run `pipx install 'corrscope[qt5]'`
     - On Linux, to add support for native Qt themes, instead run `pipx install --system-site-packages 'corrscope[qt5]'`
+    - On FreeBSD, install `py-qt5` and `py39-ruamel.yaml` via `pkg` or ports tree, and install `ffmpeg` via ports tree with `SDL` option enabled. After everything's installed, run `pipx install --system-site-packages 'corrscope[qt5]'`
     - On M1 Mac, instead run `pipx install 'corrscope[qt6]'`
 - Open a terminal and run `corr (args)`.
 
@@ -44,7 +45,7 @@ pipx creates an isolated environment for each program, and adds their binaries i
 pip installs packages into a per-user Python environment. This has the disadvantage that each program you install influences the packages seen by other programs. It might run into issues when upgrading system Python in-place; I haven't tested.
 
 - Install Python 3.8 or above.
-- If necessary, install pip using your Linux package manager.
+- If necessary, install pip using your preferred package manager.
 - Run `pip3 install --user 'corrscope[qt5]'`
     - On M1 Mac, instead run `pip3 install --user 'corrscope[qt6]'`
 - Open a terminal and run `corr (args)`.
