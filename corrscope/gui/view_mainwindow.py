@@ -117,8 +117,18 @@ class MainWindow(QWidget):
                 with add_row(s, "", BoundDoubleSpinBox) as self.amplification:
                     self.amplification.setSingleStep(0.1)
 
-                with add_row(s, "", BoundDoubleSpinBox) as self.begin_time:
-                    self.begin_time.setMaximum(9999.0)
+                with add_row(s, tr("Time"), QHBoxLayout) as self.layout_time:
+                    with append_widget(s, BoundDoubleSpinBox) as self.begin_time:
+                        self.begin_time.setMaximum(9999.0)
+                        self.begin_time.setDecimals(1)
+
+                    with append_widget(s, QLabel) as dash:
+                        dash.setText(tr("–"))
+
+                    with append_widget(s, BoundDoubleOrNone) as self.end_time:
+                        self.end_time.setMaximum(9999.0)
+                        self.end_time.setDecimals(1)
+                        self.end_time.setSpecialValueText(NBSP)
 
             with append_widget(
                 s, QGroupBox, title=tr("Performance (Preview Only)"), layout=QFormLayout
@@ -138,6 +148,7 @@ class MainWindow(QWidget):
                 ) as self.render__res_divisor:
                     self.render__res_divisor.setMinimum(1.0)
                     self.render__res_divisor.setSingleStep(0.5)
+                    self.render__res_divisor.setDecimals(4)
 
         return tab
 
@@ -535,7 +546,6 @@ class MainWindow(QWidget):
         self.trigger_msL.setText(tr("Trigger Width"))
         self.render_msL.setText(tr("Render Width"))
         self.amplificationL.setText(tr("Amplification"))
-        self.begin_timeL.setText(tr("Begin Time"))
         self.render_resolutionL.setText(tr("Resolution"))
         self.render__bg_colorL.setText(tr("Background"))
         self.render__init_line_colorL.setText(tr("Line Color"))
@@ -582,6 +592,7 @@ from corrscope.gui.model_bind import (
     BoundColorWidget,
     OptionalColorWidget,
     BoundFontButton,
+    BoundDoubleOrNone,
 )
 
 # Delete unbound widgets, so they cannot accidentally be used.
