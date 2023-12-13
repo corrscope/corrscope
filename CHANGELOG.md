@@ -9,7 +9,8 @@
 - Improve error messages for 24-bit WAV files (#443)
 - Add end time field to GUI (#451)
 - Change GUI render divisor to 4 decimal places (#451)
--  Fix crash with pitch tracking on low-sample-rate channels (#453)
+- Fix crash with pitch tracking on low-sample-rate channels (#453)
+- Fix crash on macOS when closing window with preview active (#454) 
 
 ## 0.8.1
 
