@@ -156,9 +156,10 @@ def split(data: np.ndarray, fenceposts: Sequence[FFTIndex]) -> List[np.ndarray]:
     for i in range(len(fenceposts) - 1):
         st = fenceposts[i]
         end = fenceposts[i + 1]
-        if not st < ndata:
-            break
-        region = data[st:end]
+        if st < ndata:
+            region = data[st:end]
+        else:
+            region = np.zeros([1], data.dtype)
         sub_arys.append(region)
 
     return sub_arys
