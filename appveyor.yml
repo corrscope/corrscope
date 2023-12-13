@@ -33,7 +33,7 @@ install:
   - 'set PATH=C:\Program Files\AppVeyor\BuildAgent\;%PATH%'
 
   - 'curl -sSL https://install.python-poetry.org | %py% -'
-  - 'set PATH=%USERPROFILE%\.poetry\bin;%PATH%'
+  - 'set PATH=%APPDATA%\Python\Scripts;%PATH%'
 
   # Prevents: "The current Python version (2.7.15) is not supported by the project (^3.6)"
   - 'set PATH=%pydir%;%pydir%\bin;%pydir%\Scripts;%PATH%'
