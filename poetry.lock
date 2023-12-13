@@ -933,6 +933,18 @@ files = [
 ]
 
 [[package]]
+name = "pyqt5-qt5"
+version = "5.15.11"
+description = "The subset of a Qt installation needed by PyQt5."
+optional = true
+python-versions = "*"
+files = [
+    {file = "PyQt5_Qt5-5.15.11-1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:9bb0d816de8c003ce41881e39fe5d64c2cdf5e8ca96b6c016c34f8e0bdc30768"},
+    {file = "PyQt5_Qt5-5.15.11-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:109c418d221538751e4d7755a81c978ee31abbd65facb3f1f361dca74a1b758a"},
+    {file = "PyQt5_Qt5-5.15.11-py3-none-macosx_11_0_arm64.whl", hash = "sha256:3cccb21942eb49d21fb0193f28e3e8ae3d35395f158e8a9d4d58e23efa3a2ea7"},
+]
+
+[[package]]
 name = "pyqt5-sip"
 version = "12.13.0"
 description = "The sip module support for PyQt5"
@@ -1272,10 +1284,10 @@ docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.link
 testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy (>=0.9.1)", "pytest-ruff"]
 
 [extras]
-qt5 = ["PyQt5", "PyQt5-Qt5"]
+qt5 = ["PyQt5", "PyQt5-Qt5", "PyQt5-Qt5"]
 qt6 = ["PyQt6"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "870845fa4637eb613ffa6fca873002e6e68dec542d24e0ec370f086b3580cae6"
+content-hash = "52115b304592d64e1fd1316af650e94b1a9986093bf2af90292f9e757f8ddba1"
