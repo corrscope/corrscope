@@ -199,13 +199,13 @@ def test_default_colors(appear: Appearance, data):
     lcfg = LayoutConfig(orientation=ORIENTATION)
     datas = [data] * NPLOTS
 
-    r = Renderer(cfg, lcfg, datas, None, None)
+    r = Renderer.from_obj(cfg, lcfg, datas, None, None)
     verify(r, appear, datas)
 
     # Ensure default ChannelConfig(line_color=None) does not override line color
     chan = ChannelConfig(wav_path="")
     channels = [chan] * NPLOTS
-    r = Renderer(cfg, lcfg, datas, channels, None)
+    r = Renderer.from_obj(cfg, lcfg, datas, channels, None)
     verify(r, appear, datas)
 
 
@@ -222,7 +222,7 @@ def test_line_colors(appear: Appearance, data):
     cfg.init_line_color = "#888888"
     chan.line_color = appear.fg.color
 
-    r = Renderer(cfg, lcfg, datas, channels, None)
+    r = Renderer.from_obj(cfg, lcfg, datas, channels, None)
     verify(r, appear, datas)
 
 
@@ -343,7 +343,7 @@ def test_label_render(label_position: LabelPosition, data, hide_lines):
     labels = ["#"] * nplots
     datas = [data] * nplots
 
-    r = Renderer(cfg, lcfg, datas, None, None)
+    r = Renderer.from_obj(cfg, lcfg, datas, None, None)
     r.add_labels(labels)
     if not hide_lines:
         r.update_main_lines(RenderInput.wrap_datas(datas), [0] * nplots)
@@ -426,7 +426,7 @@ def verify_res_divisor_rounding(
             datas = [RENDER_Y_ZEROS]
 
         try:
-            renderer = Renderer(cfg, LayoutConfig(), datas, None, None)
+            renderer = Renderer.from_obj(cfg, LayoutConfig(), datas, None, None)
             if not speed_hack:
                 renderer.update_main_lines(
                     RenderInput.wrap_datas(datas), [0] * len(datas)
@@ -484,7 +484,7 @@ def test_renderer_knows_stride(mocker: "pytest_mock.MockFixture", integration: b
     else:
         channel = Channel(chan_cfg, corr_cfg, channel_idx=0)
         data = channel.get_render_around(0)
-        renderer = Renderer(
+        renderer = Renderer.from_obj(
             corr_cfg.render, corr_cfg.layout, [data], [chan_cfg], [channel]
         )
         assert renderer.render_strides == [subsampling * width_mul]
@@ -510,7 +510,9 @@ def test_frontend_overrides_backend(mocker: "pytest_mock.MockFixture"):
     channel = Channel(chan_cfg, corr_cfg, channel_idx=0)
     data = channel.get_render_around(0)
 
-    renderer = Renderer(corr_cfg.render, corr_cfg.layout, [data], [chan_cfg], [channel])
+    renderer = Renderer.from_obj(
+        corr_cfg.render, corr_cfg.layout, [data], [chan_cfg], [channel]
+    )
     renderer.update_main_lines([RenderInput.stub_new(data)], [0])
     renderer.get_frame()
 

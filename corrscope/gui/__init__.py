@@ -185,8 +185,6 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         prefs_error = None
         try:
             self.pref = gp.load_prefs()
-            if not isinstance(self.pref, gp.GlobalPrefs):
-                raise TypeError(f"prefs.yaml contains wrong type {type(self.pref)}")
         except Exception as e:
             prefs_error = e
             self.pref = gp.GlobalPrefs()
@@ -211,6 +209,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self.action_separate_render_dir.toggled.connect(
             self.on_separate_render_dir_toggled
         )
+
+        self.action_parallel.setChecked(self.pref.parallel)
+        self.action_parallel.toggled.connect(self.on_parallel_toggled)
 
         self.action_open_config_dir.triggered.connect(self.on_open_config_dir)
 
@@ -467,6 +468,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         else:
             self.pref.render_dir = ""
 
+    def on_parallel_toggled(self, checked: bool):
+        self.pref.parallel = checked
+
     def on_open_config_dir(self):
         appdata_uri = qc.QUrl.fromLocalFile(str(paths.appdata_dir))
         QDesktopServices.openUrl(appdata_uri)
@@ -608,7 +612,10 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             )
 
         arg = Arguments(
-            cfg_dir=self.cfg_dir, outputs=outputs, is_aborted=raise_exception
+            cfg_dir=self.cfg_dir,
+            outputs=outputs,
+            parallelism=self.pref.parallelism(),
+            is_aborted=raise_exception,
         )
         return arg
 
@@ -766,7 +773,7 @@ class CorrThread(Thread):
     job: CorrJob
 
     def __init__(self, cfg: Config, arg: Arguments, mode: PreviewOrRender):
-        Thread.__init__(self)
+        Thread.__init__(self, name="CorrThread")
         self.job = CorrJob(cfg, arg, mode)
 
     def run(self):
