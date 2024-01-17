@@ -136,7 +136,7 @@ def template_config(**kwargs) -> Config:
             # post_trigger=ZeroCrossingTriggerConfig(),
         ),
         channels=[],
-        layout=LayoutConfig(orientation="v", ncols=1),
+        layout=LayoutConfig(orientation="v", stereo_orientation="v", ncols=1),
         render=RendererConfig(
             1280,
             720,

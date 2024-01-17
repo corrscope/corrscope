@@ -6,6 +6,9 @@
 
 ### Major Changes
 
+- Update defaults (#458)
+    - Switch default stereo orientation to vertical (to match user expectations)
+
 ### Changelog
 
 - Improve error messages for 24-bit WAV files (#443)
