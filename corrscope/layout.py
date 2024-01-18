@@ -137,9 +137,9 @@ class RendererLayout:
         cfg = self.cfg
 
         if cfg.nrows:
-            nrows = cfg.nrows
-            if nrows is None:
+            if cfg.nrows is None:
                 raise ValueError("impossible cfg: nrows is None and true")
+            nrows = min(cfg.nrows, self.nwaves)
             ncols = ceildiv(self.nwaves, nrows)
         else:
             if cfg.ncols is None:
@@ -147,7 +147,7 @@ class RendererLayout:
                     "invalid LayoutConfig: nrows,ncols is None "
                     "(__attrs_post_init__ not called?)"
                 )
-            ncols = cfg.ncols
+            ncols = min(cfg.ncols, self.nwaves)
             nrows = ceildiv(self.nwaves, ncols)
 
         self.wave_nrow = nrows
