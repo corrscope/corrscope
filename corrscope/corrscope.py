@@ -138,9 +138,9 @@ def template_config(**kwargs) -> Config:
         channels=[],
         layout=LayoutConfig(orientation="v", stereo_orientation="v", ncols=1),
         render=RendererConfig(
-            1280,
-            720,
-            res_divisor=4 / 3,
+            1920,
+            1080,
+            res_divisor=3 / 2,
             grid_color="#55aaff",
             v_midline=True,
             h_midline=True,
