@@ -136,6 +136,7 @@ def template_config(**kwargs) -> Config:
             # post_trigger=ZeroCrossingTriggerConfig(),
         ),
         channels=[],
+        default_label=DefaultLabel.FileName,
         layout=LayoutConfig(orientation="v", stereo_orientation="v", ncols=1),
         render=RendererConfig(
             1920,

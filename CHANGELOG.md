@@ -9,6 +9,7 @@
 - Update defaults (#458)
     - Switch default stereo orientation to vertical (to match user expectations)
     - Switch to 1080p output resolution by default, increase label font size
+    - Enable track labels by default (from filename)
 
 ### Changelog
 
