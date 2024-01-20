@@ -109,9 +109,9 @@ Increasing "Edge Strength" and decreasing "Buffer Strength" tracks new notes bet
 
 Corrscope saves a history buffer of size `Trigger Width` between frames. On each frame, we fetch input data of size `1.5 * Trigger Width`, then sweep the history buffer (size `Trigger Width`) within the input data, picking the optimal alignment (resulting in a triggering range of `0.5 * Trigger Width`). As a result, to properly trigger a wave of frequency <50 Hz (period >20 ms), you need a `Trigger Width` of >40 ms (not 20 ms)!
 
-On each frame, corrscope's trigger scans across input data near the currently playing point in the audio. For each point, corrscope computes `Edge Strength` * "total waveform to the right" (maximized at each rising edge) + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we keep points lying at a local maximum. If `Buffer Strength` is set to 0, this locate all rising edges.
+On each frame, corrscope's trigger locates candidate trigger points, by scanning across input data near the currently playing point in the audio, and looking for points near rising edges with good alignment. For each incoming sample, corrscope computes `Edge Strength` * "total waveform to the right" (maximized at each rising zero-crossing) + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we keep points lying at a local maximum. If `Buffer Strength` is set to 0, this locate all rising edges (zero-crossings).
 
-For each local maximum of the buffer/edge locator, we score the correlation by summing  `Edge Strength` * "slope around the point" + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we use the edge/correlation peak with the highest slope/correlation score.
+For each candidate trigger point (a local maximum of the zero-crossing/buffer score), we compute the quality by summing  `Edge Strength` * "slope around the point" + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we use the candidate trigger point with the highest slope/buffer score.
 
 ### Options
 
