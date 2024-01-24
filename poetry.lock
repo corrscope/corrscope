@@ -954,13 +954,15 @@ PyQt5-sip = ">=12.13,<13"
 
 [[package]]
 name = "pyqt5-qt5"
-version = "5.15.12"
+version = "5.15.2"
 description = "The subset of a Qt installation needed by PyQt5."
 optional = true
 python-versions = "*"
 files = [
-    {file = "PyQt5_Qt5-5.15.12-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:7adff02a33f2f82b409ca115d57fc7e39b22e673d29e35c9d2594164039f0f71"},
-    {file = "PyQt5_Qt5-5.15.12-py3-none-macosx_11_0_arm64.whl", hash = "sha256:b4c56566683ae905d5f04dd6ab925f02a384d6ce5ff4986eea0720d453666c22"},
+    {file = "PyQt5_Qt5-5.15.2-py3-none-macosx_10_13_intel.whl", hash = "sha256:76980cd3d7ae87e3c7a33bfebfaee84448fd650bad6840471d6cae199b56e154"},
+    {file = "PyQt5_Qt5-5.15.2-py3-none-manylinux2014_x86_64.whl", hash = "sha256:1988f364ec8caf87a6ee5d5a3a5210d57539988bf8e84714c7d60972692e2f4a"},
+    {file = "PyQt5_Qt5-5.15.2-py3-none-win32.whl", hash = "sha256:9cc7a768b1921f4b982ebc00a318ccb38578e44e45316c7a4a850e953e1dd327"},
+    {file = "PyQt5_Qt5-5.15.2-py3-none-win_amd64.whl", hash = "sha256:750b78e4dba6bdf1607febedc08738e318ea09e9b10aea9ff0d73073f11f6962"},
 ]
 
 [[package]]
@@ -1309,4 +1311,4 @@ qt6 = ["PyQt6"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "b0998608208968907aa8d69b554fc245120787aaa1fac9dbfffe30c27a6415db"
+content-hash = "b5adece2ad1161acc71ae3612c339131e9c5c5b545e48ba6c6724ac8bad6446c"

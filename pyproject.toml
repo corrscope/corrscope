@@ -30,7 +30,7 @@ atomicwrites = "^1.4.0"
 colorspacious = "^1.1.2"
 QtPy = "^2.0.1"
 PyQt5 = {version = "^5.15", optional = true}
-PyQt5-Qt5 = {version = "^5.15,!=5.15.11", optional = true}
+PyQt5-Qt5 = {version = "^5.15,<5.15.11", optional = true}
 PyQt6 = {version = "^6.2", optional = true}
 appnope = "^0.1.3"
 
