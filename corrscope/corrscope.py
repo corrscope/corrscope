@@ -436,7 +436,6 @@ class CorrScope:
         # Multiprocess
         def play_parallel(nthread: int):
             framebuffer_nbyte = len(renderer.get_frame())
-            print(f"framebuffer_nbyte = {framebuffer_nbyte}")
 
             # setup threading
             abort_from_thread = threading.Event()
