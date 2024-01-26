@@ -122,13 +122,15 @@ def test_stereo_layout(
     - This is a regression test...
     - And an obstacle to refactoring or feature development.
     """
+    nwaves = len(wave_nchans)
+
     # region Setup
     if is_nrows:
-        nrows = nrow_ncol
+        nrows = min(nrow_ncol, nwaves)
         ncols = None
     else:
         nrows = None
-        ncols = nrow_ncol
+        ncols = min(nrow_ncol, nwaves)
 
     lcfg = LayoutConfig(
         orientation=orientation,
@@ -136,7 +138,6 @@ def test_stereo_layout(
         ncols=ncols,
         stereo_orientation=stereo_orientation,
     )
-    nwaves = len(wave_nchans)
     layout = RendererLayout(lcfg, wave_nchans)
     # endregion
 

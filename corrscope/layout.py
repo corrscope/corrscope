@@ -139,7 +139,10 @@ class RendererLayout:
         if cfg.nrows:
             if cfg.nrows is None:
                 raise ValueError("impossible cfg: nrows is None and true")
-            nrows = min(cfg.nrows, self.nwaves)
+            # nrows=0 will never occur naturally, except for a broken config with
+            # nrows=0, or in unit tests which set nwaves=0 (speed_hack). To prevent
+            # tests from crashing, force nrows to 1 anyway.
+            nrows = min(cfg.nrows, self.nwaves) or 1
             ncols = ceildiv(self.nwaves, nrows)
         else:
             if cfg.ncols is None:
@@ -147,7 +150,8 @@ class RendererLayout:
                     "invalid LayoutConfig: nrows,ncols is None "
                     "(__attrs_post_init__ not called?)"
                 )
-            ncols = min(cfg.ncols, self.nwaves)
+            # See nrows=0 comment above.
+            ncols = min(cfg.ncols, self.nwaves) or 1
             nrows = ceildiv(self.nwaves, ncols)
 
         self.wave_nrow = nrows
