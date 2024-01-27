@@ -142,7 +142,7 @@ class Font(DumpableAttrs, always_dump="*"):
     bold: bool = False
     italic: bool = False
     # Font size
-    size: float = with_units("pt", default=20)
+    size: float = with_units("pt", default=28)
     # QFont implementation details
     toString: str = None
 
