@@ -30,7 +30,8 @@ def test_layout_config():
     assert one_row
 
     default = LayoutConfig()
-    assert default.ncols == 1  # Should default to single-column layout
+    # In a default LayoutConfig, default.ncols doesn't matter. See test_auto_layout()
+    # to verify we have the right behavior.
     assert default.nrows is None
     assert default.orientation == "h"
 
@@ -115,6 +116,19 @@ def test_less_tracks_than_nrows_ncols(key, nplots):
     assert len(region2d) == nplots
     for i, regions in enumerate(region2d):
         assert len(regions) == 1, (i, len(regions))
+
+
+@pytest.mark.parametrize("nplots", [1, 6])
+def test_auto_layout(nplots):
+    lcfg = LayoutConfig()
+    layout = RendererLayout(lcfg, [1] * nplots)
+
+    if nplots >= 6:
+        assert layout.wave_ncol == 2
+        assert layout.wave_nrow == ceildiv(nplots, 2)
+    else:
+        assert layout.wave_ncol == 1
+        assert layout.wave_nrow == nplots
 
 
 @given(

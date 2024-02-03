@@ -27,7 +27,9 @@ V = Orientation.v
 OVERLAY = StereoOrientation.overlay
 
 
-class LayoutConfig(DumpableAttrs, always_dump="orientation stereo_orientation"):
+class LayoutConfig(
+    DumpableAttrs, always_dump="orientation stereo_orientation nrows ncols"
+):
     orientation: Orientation = attr.ib(default="h", converter=Orientation)
     nrows: Optional[int] = None
     ncols: Optional[int] = None
@@ -44,9 +46,6 @@ class LayoutConfig(DumpableAttrs, always_dump="orientation stereo_orientation"):
 
         if self.nrows and self.ncols:
             raise CorrError("cannot manually assign both nrows and ncols")
-
-        if not self.nrows and not self.ncols:
-            self.ncols = 1
 
 
 class Edges(enum.Flag):
@@ -137,21 +136,20 @@ class RendererLayout:
         cfg = self.cfg
 
         if cfg.nrows:
-            if cfg.nrows is None:
-                raise ValueError("impossible cfg: nrows is None and true")
             # nrows=0 will never occur naturally, except for a broken config with
             # nrows=0, or in unit tests which set nwaves=0 (speed_hack). To prevent
             # tests from crashing, force nrows to 1 anyway.
             nrows = min(cfg.nrows, self.nwaves) or 1
             ncols = ceildiv(self.nwaves, nrows)
         else:
-            if cfg.ncols is None:
-                raise ValueError(
-                    "invalid LayoutConfig: nrows,ncols is None "
-                    "(__attrs_post_init__ not called?)"
-                )
+            # If both cfg.nrows and cfg.ncols are 0, default to auto layout.
+            # Set column count to 2 if we have 5 or more waves.
+            ncols = cfg.ncols
+            if not ncols:
+                ncols = 2 if self.nwaves >= 5 else 1
+
             # See nrows=0 comment above.
-            ncols = min(cfg.ncols, self.nwaves) or 1
+            ncols = min(ncols, self.nwaves) or 1
             nrows = ceildiv(self.nwaves, ncols)
 
         self.wave_nrow = nrows
