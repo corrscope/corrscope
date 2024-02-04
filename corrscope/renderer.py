@@ -626,12 +626,15 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
     def _axes_factory(self, r: RegionSpec, label: str = "") -> "Axes":
         cfg = self.cfg
 
+        # Calculate plot positions (relative to bottom-left) as fractions of the screen.
         width = 1 / r.ncol
         left = r.col / r.ncol
         assert 0 <= left < 1
 
         height = 1 / r.nrow
-        bottom = (r.nrow - r.row - 1) / r.nrow
+        # We index rows from top down, but matplotlib positions plots from bottom up.
+        # The final row (row = nrow-1) is located at the bottom of the graph, at y=0.
+        bottom = (r.nrow - (r.row + 1)) / r.nrow
         assert 0 <= bottom < 1
 
         # Disabling xticks/yticks is unnecessary, since we hide Axises.
