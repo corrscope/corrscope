@@ -560,6 +560,9 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
             img = mpl.image.imread(cfg.bg_image)
 
             ax = self._fig.add_axes([0, 0, 1, 1])
+
+            # Hide black borders around screen edge.
+            ax.set_axis_off()
             ax.imshow(img)
 
         # Create Axes (using self.lcfg, wave_nchans)
