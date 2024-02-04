@@ -563,7 +563,30 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
 
             # Hide black borders around screen edge.
             ax.set_axis_off()
-            ax.imshow(img)
+
+            # Size image to fill screen pixel-perfectly. Somehow, matplotlib requires
+            # showing the image 1 screen-pixel smaller than the full area.
+
+            # Get image dimensions (in ipx).
+            w = img.shape[1]
+            h = img.shape[0]
+
+            # Setup axes to fit image to screen (while maintaining square pixels).
+            # Axes automatically expand their limits to maintain square coordinates,
+            # while imshow() stretches images to the full area supplied.
+            ax.set_xlim(0, w)
+            ax.set_ylim(0, h)
+
+            # Calculate (image pixels per screen pixel). Since we fit the image
+            # on-screen, pick the minimum of the horizontal/vertical zoom factors.
+            zoom = min(self.w / w, self.h / h)
+            ipx_per_spx = 1 / zoom
+
+            # imshow() takes coordinates in axes units (here, ipx) and renders to
+            # screen pixels. To workaround matplotlib stretching images off-screen,
+            # we need an extent 1 spx smaller than full scale. So subtract 1 spx
+            # (converted to ipx) from dimensions.
+            ax.imshow(img, extent=(0, w - ipx_per_spx, 0, h - ipx_per_spx))
 
         # Create Axes (using self.lcfg, wave_nchans)
         # _axes2d[wave][chan] = Axes
