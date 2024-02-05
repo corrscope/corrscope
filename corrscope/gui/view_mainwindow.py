@@ -257,13 +257,13 @@ class MainWindow(QWidget):
 
                 with add_row(s, tr("Columns"), QHBoxLayout) as self.layoutDims:
                     with append_widget(s, BoundSpinBox) as self.layout__ncols:
-                        self.layout__ncols.setSpecialValueText(NBSP)
+                        self.layout__ncols.setSpecialValueText(tr("Auto"))
 
                     with append_widget(s, QLabel) as self.layout__nrowsL:
                         pass
 
                     with append_widget(s, BoundSpinBox) as self.layout__nrows:
-                        self.layout__nrows.setSpecialValueText(NBSP)
+                        self.layout__nrows.setSpecialValueText(tr("Auto"))
 
             with append_widget(s, QGroupBox, title=tr("Stereo"), layout=QFormLayout):
                 with add_row(
