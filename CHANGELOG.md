@@ -10,6 +10,9 @@
     - Switch default stereo orientation to vertical (to match user expectations)
     - Switch to 1080p output resolution by default, increase label font size
     - Enable track labels by default (from filename)
+- Use automatic column count by default, remove empty rows/columns (#461)
+    - If both row and column count are set to 0 (Auto), corrscope picks 2 columns when rendering 5 or more tracks. If you set the row or column count to a specific number, it will be used as before.
+    - Change default UI text for row/column count from blank to Auto, to improve usability.
 
 ### Changelog
 

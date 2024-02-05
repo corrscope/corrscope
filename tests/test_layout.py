@@ -30,7 +30,8 @@ def test_layout_config():
     assert one_row
 
     default = LayoutConfig()
-    assert default.ncols == 1  # Should default to single-column layout
+    # In a default LayoutConfig, default.ncols doesn't matter. See test_auto_layout()
+    # to verify we have the right behavior.
     assert default.nrows is None
     assert default.orientation == "h"
 
@@ -98,6 +99,38 @@ def test_vlayout(lcfg):
     np.testing.assert_equal(region2d[6][0].pos, (0, 2))
 
 
+@pytest.mark.parametrize("key", ["nrows", "ncols"])
+@pytest.mark.parametrize("nplots", [1, 2, 3])
+def test_less_tracks_than_nrows_ncols(key, nplots):
+    lcfg = LayoutConfig(**{key: 3})
+    layout = RendererLayout(lcfg, [1] * nplots)
+
+    if key == "nrows":
+        assert layout.wave_ncol == 1
+        assert layout.wave_nrow == nplots
+    else:
+        assert layout.wave_ncol == nplots
+        assert layout.wave_nrow == 1
+
+    region2d: List[List[RegionSpec]] = layout.arrange(lambda arg: arg)
+    assert len(region2d) == nplots
+    for i, regions in enumerate(region2d):
+        assert len(regions) == 1, (i, len(regions))
+
+
+@pytest.mark.parametrize("nplots", [1, 6])
+def test_auto_layout(nplots):
+    lcfg = LayoutConfig()
+    layout = RendererLayout(lcfg, [1] * nplots)
+
+    if nplots >= 6:
+        assert layout.wave_ncol == 2
+        assert layout.wave_nrow == ceildiv(nplots, 2)
+    else:
+        assert layout.wave_ncol == 1
+        assert layout.wave_nrow == nplots
+
+
 @given(
     wave_nchans=hs.lists(hs.integers(1, 10), min_size=1, max_size=100),
     orientation=hs.sampled_from(Orientation),
@@ -122,13 +155,15 @@ def test_stereo_layout(
     - This is a regression test...
     - And an obstacle to refactoring or feature development.
     """
+    nwaves = len(wave_nchans)
+
     # region Setup
     if is_nrows:
-        nrows = nrow_ncol
+        nrows = min(nrow_ncol, nwaves)
         ncols = None
     else:
         nrows = None
-        ncols = nrow_ncol
+        ncols = min(nrow_ncol, nwaves)
 
     lcfg = LayoutConfig(
         orientation=orientation,
@@ -136,7 +171,6 @@ def test_stereo_layout(
         ncols=ncols,
         stereo_orientation=stereo_orientation,
     )
-    nwaves = len(wave_nchans)
     layout = RendererLayout(lcfg, wave_nchans)
     # endregion
 
