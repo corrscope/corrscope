@@ -9,7 +9,7 @@ Backend implementation does not know about RendererFrontend.
 
 import enum
 import math
-import os
+import os.path
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import (
@@ -322,6 +322,7 @@ class RendererParams:
         dummy_datas: List[np.ndarray],
         channel_cfgs: Optional[List["ChannelConfig"]],
         channels: List["Channel"],
+        cfg_dir: Optional[str] = None,
     ):
         if channels is not None:
             render_strides = [channel.render_stride for channel in channels]
@@ -329,6 +330,10 @@ class RendererParams:
         else:
             render_strides = None
             labels = None
+
+        # Resolve background image path relative to .yaml directory.
+        if cfg_dir and cfg.bg_image:
+            cfg = attr.evolve(cfg, bg_image=os.path.join(cfg_dir, cfg.bg_image))
 
         return RendererParams(
             cfg,

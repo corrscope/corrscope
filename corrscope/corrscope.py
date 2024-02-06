@@ -308,6 +308,7 @@ class CorrScope:
             dummy_datas,
             self.cfg.channels,
             self.channels,
+            self.arg.cfg_dir,
         )
 
     # def _load_renderer(self) -> Renderer:
