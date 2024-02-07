@@ -1311,4 +1311,4 @@ qt6 = ["PyQt6"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "b5adece2ad1161acc71ae3612c339131e9c5c5b545e48ba6c6724ac8bad6446c"
+content-hash = "cb73596aed629b4f95d99c079bc01bfe75f161973659e13cfcde8486baef5774"

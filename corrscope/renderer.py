@@ -580,7 +580,7 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
             # List of colors at
             # https://matplotlib.org/gallery/color/colormap_reference.html
             # Discussion at https://github.com/matplotlib/matplotlib/issues/10840
-            cmap: ListedColormap = matplotlib.cm.get_cmap("Accent")
+            cmap: ListedColormap = matplotlib.colormaps["Accent"]
             colors = cmap.colors
             axes.set_prop_cycle(color=colors)
 
