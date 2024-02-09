@@ -20,7 +20,8 @@
 - Add end time field to GUI (#451)
 - Change GUI render divisor to 4 decimal places (#451)
 - Fix crash with pitch tracking on low-sample-rate channels (#453)
-- Fix crash on macOS when closing window with preview active (#454) 
+- Fix crash on macOS when closing window with preview active (#454)
+- Fix bug where background images had 1px black borders on top/left and were shown 1px too big (#464)
 
 ## 0.8.1
 

@@ -560,7 +560,33 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
             img = mpl.image.imread(cfg.bg_image)
 
             ax = self._fig.add_axes([0, 0, 1, 1])
-            ax.imshow(img)
+
+            # Hide black borders around screen edge.
+            ax.set_axis_off()
+
+            # Size image to fill screen pixel-perfectly. Somehow, matplotlib requires
+            # showing the image 1 screen-pixel smaller than the full area.
+
+            # Get image dimensions (in ipx).
+            w = img.shape[1]
+            h = img.shape[0]
+
+            # Setup axes to fit image to screen (while maintaining square pixels).
+            # Axes automatically expand their limits to maintain square coordinates,
+            # while imshow() stretches images to the full area supplied.
+            ax.set_xlim(0, w)
+            ax.set_ylim(0, h)
+
+            # Calculate (image pixels per screen pixel). Since we fit the image
+            # on-screen, pick the minimum of the horizontal/vertical zoom factors.
+            zoom = min(self.w / w, self.h / h)
+            ipx_per_spx = 1 / zoom
+
+            # imshow() takes coordinates in axes units (here, ipx) and renders to
+            # screen pixels. To workaround matplotlib stretching images off-screen,
+            # we need an extent 1 spx smaller than full scale. So subtract 1 spx
+            # (converted to ipx) from dimensions.
+            ax.imshow(img, extent=(0, w - ipx_per_spx, 0, h - ipx_per_spx))
 
         # Create Axes (using self.lcfg, wave_nchans)
         # _axes2d[wave][chan] = Axes
@@ -626,12 +652,15 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
     def _axes_factory(self, r: RegionSpec, label: str = "") -> "Axes":
         cfg = self.cfg
 
+        # Calculate plot positions (relative to bottom-left) as fractions of the screen.
         width = 1 / r.ncol
         left = r.col / r.ncol
         assert 0 <= left < 1
 
         height = 1 / r.nrow
-        bottom = (r.nrow - r.row - 1) / r.nrow
+        # We index rows from top down, but matplotlib positions plots from bottom up.
+        # The final row (row = nrow-1) is located at the bottom of the graph, at y=0.
+        bottom = (r.nrow - (r.row + 1)) / r.nrow
         assert 0 <= bottom < 1
 
         # Disabling xticks/yticks is unnecessary, since we hide Axises.
