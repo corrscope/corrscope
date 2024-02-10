@@ -109,6 +109,7 @@ class _Trigger(ABC, Generic[result]):
         fps: float,
         renderer: Optional["RendererFrontend"] = None,
         wave_idx: int = 0,
+        period_finder_ms: Optional[int] = None,
     ):
         self.cfg = cfg
         self._wave = wave
@@ -128,6 +129,13 @@ class _Trigger(ABC, Generic[result]):
         seconds_per_frame = 1 / fps
         # Full samples per frame
         self._smp_per_frame = self.seconds_to_samp(seconds_per_frame)
+
+        if period_finder_ms:
+            self._period_finder_subsmp = round(
+                period_finder_ms / 1000 * self.subsmp_per_s
+            )
+        else:
+            self._period_finder_subsmp = None
 
     def seconds_to_samp(self, time: float) -> int:
         return round(time * self._wave.smp_s)
@@ -483,14 +491,18 @@ class CorrelationTrigger(MainTrigger):
 
         # Remove mean from data, if enabled.
         mean = np.add.reduce(data) / data.size
-        period_data = data - mean
+
+        # print("self._period_finder_subsmp", self._period_finder_subsmp)
+        if self._period_finder_subsmp:
+            period_data = self._wave.get_around(pos, self._period_finder_subsmp, stride)
+        elif cfg.mean_responsiveness == 1:
+            period_data = data  # mutated below!!!!!!
+        else:
+            period_data = data - mean
 
         if cfg.mean_responsiveness:
             self._prev_mean += cfg.mean_responsiveness * (mean - self._prev_mean)
-            if cfg.mean_responsiveness != 1:
-                data -= self._prev_mean
-            else:
-                data = period_data
+            data -= self._prev_mean
         cache.smoothed_mean = self._prev_mean
 
         # Use period to recompute slope finder (if enabled) and restrict trigger

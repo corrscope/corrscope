@@ -43,6 +43,8 @@ class ChannelConfig(DumpableAttrs):
     line_color: Optional[str] = None
     color_by_pitch: Optional[bool] = None
 
+    period_finder_ms: Optional[int] = None
+
     # region Legacy Fields
     trigger_width_ratio = Alias("trigger_width")
     render_width_ratio = Alias("render_width")
@@ -132,6 +134,7 @@ class Channel:
             stride=self._trigger_stride,
             fps=corr_cfg.fps,
             wave_idx=channel_idx,
+            period_finder_ms=cfg.period_finder_ms,
         )
 
     def get_render_around(self, trigger_sample: int):
