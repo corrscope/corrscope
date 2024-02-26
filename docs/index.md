@@ -14,6 +14,8 @@ Homepage at <https://github.com/corrscope/corrscope>. Report bugs at https://git
 
 Start by adding channels to be visualized. Look above the bottom-right table, click the "Add..." button, then select some .wav files.
 
+- 24-bit WAV files are not supported, and must be converted to 16-bit integer or 32-bit integer/float WAV files before playing.
+
 To add audio to play in the background, look at the top-right "FFmpeg Options", click the Master Audio "Browse..." button, and pick a .wav file.
 
 To make the waves taller, go to the left panel's General tab and edit Amplification. Afterwards, click the Appearance tab and customize the appearance of the oscilloscope. (Note that colored lines will be discolored and blurred by Youtube's chroma subsampling.)
@@ -23,6 +25,8 @@ Click Preview to launch a live preview of the oscilloscope with audio.
 Click Render to render the oscilloscope to video.
 
 Click Save to save the current project configuration to a file. These project files can loaded in corrscope, previewed or rendered from the command line, or shared with corrscope's author when reporting issues.
+
+- If recently installed fonts are not showing up, you can try clearing the Matplotlib font cache. On Windows, you can view the font cache by opening Explorer and typing `%USERPROFILE%\.matplotlib` into the address bar.
 
 ## Configuring the Trigger
 
