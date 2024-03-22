@@ -111,7 +111,7 @@ Corrscope saves a history buffer of size `Trigger Width` between frames. On each
 
 On each frame, corrscope's trigger locates candidate trigger points, by scanning across input data near the currently playing point in the audio, and looking for points near rising edges with good alignment. For each incoming sample, corrscope computes `Edge Strength` * "total waveform to the right" (maximized at each rising zero-crossing) + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we keep points lying at a local maximum. If `Buffer Strength` is set to 0, this locate all rising edges (zero-crossings).
 
-For each candidate trigger point (a local maximum of the edge/buffer locator), we compute the quality by summing  `Edge Strength` * "slope around the point" + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we use the candidate trigger point with the highest slope/correlation score.
+For each candidate trigger point (a local maximum of the zero-crossing/buffer score), we compute the quality by summing  `Edge Strength` * "slope around the point" + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we use the candidate trigger point with the highest slope/buffer score.
 
 ### Options
 
