@@ -437,7 +437,12 @@ class _RendererBackend(ABC):
     # Primarily used by RendererFrontend, not outside world.
     @abstractmethod
     def _add_xy_line_mono(
-        self, wave_idx: int, xs: Sequence[float], ys: Sequence[float], stride: int
+        self,
+        name: str,
+        wave_idx: int,
+        xs: Sequence[float],
+        ys: Sequence[float],
+        stride: int,
     ) -> CustomLine:
         ...
 
@@ -810,7 +815,12 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
                     chan_line.set_color(color)
 
     def _add_xy_line_mono(
-        self, wave_idx: int, xs: Sequence[float], ys: Sequence[float], stride: int
+        self,
+        name: str,
+        wave_idx: int,
+        xs: Sequence[float],
+        ys: Sequence[float],
+        stride: int,
     ) -> CustomLine:
         cfg = self.cfg
 
@@ -819,6 +829,7 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
 
         ax = self._axes_mono[wave_idx]
         mono_line: Line2D = ax.plot(xs, ys, linewidth=line_width)[0]
+        print(f"{name} {wave_idx} has color {mono_line.get_color()}")
 
         self._artists.append(mono_line)
 
@@ -1016,7 +1027,7 @@ class RendererFrontend(_RendererBackend, ABC):
         key = (name, wave_idx)
 
         if key not in self._custom_lines:
-            line = self._add_line_mono(wave_idx, stride, data)
+            line = self._add_line_mono(name, wave_idx, stride, data)
             self._custom_lines[key] = line
             if absolute:
                 self._absolute[wave_idx].append(line)
@@ -1032,7 +1043,7 @@ class RendererFrontend(_RendererBackend, ABC):
     ):
         key = (name, wave_idx)
         if key not in self._vlines:
-            line = self._add_vline_mono(wave_idx, stride)
+            line = self._add_vline_mono(name, wave_idx, stride)
             self._vlines[key] = line
             if absolute:
                 self._absolute[wave_idx].append(line)
@@ -1049,16 +1060,17 @@ class RendererFrontend(_RendererBackend, ABC):
 
     def _add_line_mono(
         self,
+        name: str,
         wave_idx: int,
         stride: int,
         dummy_data: np.ndarray,
     ) -> CustomLine:
         xs = np.zeros_like(dummy_data)
         ys = np.zeros_like(dummy_data)
-        return self._add_xy_line_mono(wave_idx, xs, ys, stride)
+        return self._add_xy_line_mono(name, wave_idx, xs, ys, stride)
 
-    def _add_vline_mono(self, wave_idx: int, stride: int) -> CustomLine:
-        return self._add_xy_line_mono(wave_idx, [0, 0], [-1, 1], stride)
+    def _add_vline_mono(self, name: str, wave_idx: int, stride: int) -> CustomLine:
+        return self._add_xy_line_mono(name, wave_idx, [0, 0], [-1, 1], stride)
 
 
 class Renderer(RendererFrontend, MatplotlibAggRenderer):
