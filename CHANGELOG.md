@@ -1,5 +1,10 @@
 ## 0.9.1 (unreleased)
 
+### Major Changes
+
+- Fix bug which would add correlation buffers to slope finder (#471, found by Tachometer)
+    - NOTE: This affects triggering behavior compared to older program versions.
+
 ## 0.9.0
 
 ### Features

@@ -548,11 +548,12 @@ class CorrelationTrigger(MainTrigger):
         else:
             corr_quality = np.zeros(corr_nsamp, f32)
 
-        # array[A+B] Amplitude
-        corr_kernel = slope_finder
-        del slope_finder
         if corr_enabled:
-            corr_kernel += self._corr_buffer * cfg.buffer_strength
+            # array[A+B] Amplitude
+            # Don't mutate (self._prev_slope_finder = slope_finder).
+            corr_kernel = slope_finder + self._corr_buffer * cfg.buffer_strength
+        else:
+            corr_kernel = slope_finder
 
         # `corr[x]` = correlation of kernel placed at position `x` in data.
         # `corr_kernel` is not allowed to move past the boundaries of `data`.
