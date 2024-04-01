@@ -28,6 +28,8 @@ Corrscope is currently in semi-active development. The program basically works a
 
 On Windows, download Windows binary releases (.7z files) from the [Releases page](https://github.com/corrscope/corrscope/releases), then double-click `corrscope.exe` or run `corrscope (args)` via CLI.
 
+- If the program doesn't start, you may need to install the latest [Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170) for it to work.
+
 ### Installing from PyPI via pipx (cross-platform, releases)
 
 pipx creates an isolated environment for each program, and adds their binaries into PATH. I find this most reliable in practice, though it runs into issues after upgrading system Python in-place.
@@ -81,6 +83,8 @@ poetry run corr (args)
     - Per-channel on the right side
 1. Play or render to MP4/etc. video (requires ffmpeg)
     - Via toolbar or menu
+
+More help is available at the [help site](https://corrscope.github.io/corrscope/).
 
 ## Command-line Tutorial
 
