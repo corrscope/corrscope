@@ -14,6 +14,8 @@ Homepage at <https://github.com/corrscope/corrscope>. Report bugs at https://git
 
 Start by adding channels to be visualized. Look above the bottom-right table, click the "Add..." button, then select some .wav files.
 
+- 24-bit WAV files are not supported, and must be converted to 16-bit integer or 32-bit integer/float WAV files before playing.
+
 To add audio to play in the background, look at the top-right "FFmpeg Options", click the Master Audio "Browse..." button, and pick a .wav file.
 
 To make the waves taller, go to the left panel's General tab and edit Amplification. Afterwards, click the Appearance tab and customize the appearance of the oscilloscope. (Note that colored lines will be discolored and blurred by Youtube's chroma subsampling.)
@@ -23,6 +25,8 @@ Click Preview to launch a live preview of the oscilloscope with audio.
 Click Render to render the oscilloscope to video.
 
 Click Save to save the current project configuration to a file. These project files can loaded in corrscope, previewed or rendered from the command line, or shared with corrscope's author when reporting issues.
+
+- If recently installed fonts are not showing up, you can try clearing the Matplotlib font cache. On Windows, you can view the font cache by opening Explorer and typing `%USERPROFILE%\.matplotlib` into the address bar.
 
 ## Configuring the Trigger
 
@@ -105,9 +109,9 @@ Increasing "Edge Strength" and decreasing "Buffer Strength" tracks new notes bet
 
 Corrscope saves a history buffer of size `Trigger Width` between frames. On each frame, we fetch input data of size `1.5 * Trigger Width`, then sweep the history buffer (size `Trigger Width`) within the input data, picking the optimal alignment (resulting in a triggering range of `0.5 * Trigger Width`). As a result, to properly trigger a wave of frequency <50 Hz (period >20 ms), you need a `Trigger Width` of >40 ms (not 20 ms)!
 
-On each frame, corrscope's trigger scans across input data near the currently playing point in the audio. For each point, corrscope computes `Edge Strength` * "total waveform to the right" (maximized at each rising edge) + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we keep points lying at a local maximum. If `Buffer Strength` is set to 0, this locate all rising edges.
+On each frame, corrscope's trigger locates candidate trigger points, by scanning across input data near the currently playing point in the audio, and looking for points near rising edges with good alignment. For each incoming sample, corrscope computes `Edge Strength` * "total waveform to the right" (maximized at each rising zero-crossing) + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we keep points lying at a local maximum. If `Buffer Strength` is set to 0, this locate all rising edges (zero-crossings).
 
-For each local maximum of the buffer/edge locator, we score the correlation by summing  `Edge Strength` * "slope around the point" + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we use the edge/correlation peak with the highest slope/correlation score.
+For each candidate trigger point (a local maximum of the zero-crossing/buffer score), we compute the quality by summing  `Edge Strength` * "slope around the point" + `Buffer Strength` * "similarity with buffer" (measuring alignment with previous frame). Then we use the candidate trigger point with the highest slope/buffer score.
 
 ### Options
 
