@@ -495,6 +495,7 @@ class MainWindow(QWidget):
         self.action_parallel = create_element(
             QAction, MainWindow, text=tr("&Multi-Core Rendering"), checkable=True
         )
+        self.action_parallel.setDisabled(True)
         self.action_open_config_dir = create_element(
             QAction, MainWindow, text=tr("Open &Config Folder")
         )

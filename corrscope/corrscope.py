@@ -688,7 +688,7 @@ class CorrScope:
             for shmem in all_shmems:
                 shmem.unlink()
 
-        parallelism = self.arg.parallelism
+        parallelism = False  # incompatible with debug plots
         with self._load_outputs():
             if parallelism and parallelism.parallel:
                 play_parallel(parallelism.max_render_cores)
