@@ -438,7 +438,7 @@ class CorrelationTrigger(MainTrigger):
         slope_width: float = np.clip(cfg.slope_width * period, 1.0, self.A / 3)
 
         # This is a fudge factor. Adjust it until it feels right.
-        slope_strength = cfg.edge_strength * 5
+        slope_strength = cfg.edge_strength * 2
         # slope_width is 1.0 or greater, so this doesn't divide by 0.
 
         slope_finder = np.empty(kernel_size, dtype=f32)  # type: np.ndarray[f32]
