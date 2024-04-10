@@ -36,7 +36,7 @@ pipx creates an isolated environment for each program, and adds their binaries i
 - Install pipx using either your package manager, `pip3 install --user pipx`, or `pip install --user pipx`.
 - Run `pipx install "corrscope[qt5]"`
     - On Linux, to add support for native Qt themes, instead run `pipx install --system-site-packages "corrscope[qt5]"`
-    - On FreeBSD, install `py39-qt5`, `py39-atomicwrites`, and `py39-ruamel.yaml` via `pkg` or ports tree, then run `pipx install --system-site-packages "corrscope[qt5]"`. To get previews working, install `ffmpeg` via ports tree with `SDL` option enabled.
+    - On FreeBSD, install `py39-qt5` and `py39-ruamel.yaml` via `pkg` or ports tree, then run `pipx install --system-site-packages "corrscope[qt5]"`. To get previews working, install `ffmpeg` via ports tree with `SDL` option enabled.
     - On M1 Mac, instead run `pipx install "corrscope[qt6]"`
 - Open a terminal and run `corr (args)`.
 
@@ -47,7 +47,7 @@ pip installs packages into a per-user Python environment. This has the disadvant
 - Install Python 3.8 or above.
 - If necessary, install pip using your package manager.
 - Run `pip3 install --user "corrscope[qt5]"`
-    - On FreeBSD, install `py39-qt5`, `py39-atomicwrites`, and `py39-ruamel.yaml` via `pkg` or ports tree, then run `pip install --user "corrscope[qt5]"`. To get previews working, install `ffmpeg` via ports tree with `SDL` option enabled.
+    - On FreeBSD, install `py39-qt5` and `py39-ruamel.yaml` via `pkg` or ports tree, then run `pip install --user "corrscope[qt5]"`. To get previews working, install `ffmpeg` via ports tree with `SDL` option enabled.
     - On M1 Mac, instead run `pip3 install --user "corrscope[qt6]"`
 - Open a terminal and run `corr (args)`.
 
