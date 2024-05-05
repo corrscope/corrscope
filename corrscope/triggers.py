@@ -590,12 +590,12 @@ class CorrelationTrigger(MainTrigger):
             """
             assert len(corr) == len(peaks) == corr_nsamp
             # returns double, not single/f32
-            begin_offset = 0
+            begin_offset = 0  # Start of corr relative to start of orig corr.
+
+            Ncorr = len(corr)
+            mid = Ncorr // 2  # Midpoint of orig corr.
 
             if radius is not None:
-                Ncorr = len(corr)
-                mid = Ncorr // 2
-
                 left = max(mid - radius, 0)
                 right = min(mid + radius + 1, Ncorr)
 
@@ -612,9 +612,18 @@ class CorrelationTrigger(MainTrigger):
             corr[1:][peaks[1:] < peaks[:-1]] = min_corr
             corr[0] = corr[-1] = min_corr
 
-            # Find optimal offset
-            peak_offset = np.argmax(corr) + begin_offset  # type: int
-            return peak_offset
+            # Find optimal offset into truncated corr.
+            peak_corr_idx = np.argmax(corr)  # type: int
+
+            # Return an index into orig corr. If there are no local maxima outside of
+            # buffer endpoints (eg. buffer_strength = 0 and no rising edges visible),
+            # return the center point.
+            if corr[peak_corr_idx] == min_corr:
+                # It may be better to find a peak of orig corr (if it exists),
+                # but returning the midpoint of the window is "good enough".
+                return mid
+            else:
+                return peak_corr_idx + begin_offset
 
         # Find correlation peak.
         peak_offset = find_peak(corr, peaks, trigger_radius)

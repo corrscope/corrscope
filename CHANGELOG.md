@@ -4,6 +4,7 @@
 
 - Fix bug which would add correlation buffers to slope finder (#471, found by Tachometer)
     - NOTE: This affects triggering behavior compared to older program versions.
+- Fix stray triggering results in long areas of audio with no rising edges (#474)
 
 ## 0.9.0
 
