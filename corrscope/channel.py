@@ -15,7 +15,7 @@ from corrscope.config import (
 )
 from corrscope.triggers import MainTriggerConfig
 from corrscope.util import coalesce
-from corrscope.wave import Wave, FlattenOrStr
+from corrscope.wave import Wave, Flatten, FlattenOrStr
 
 if TYPE_CHECKING:
     from corrscope.corrscope import Config
@@ -42,6 +42,7 @@ class ChannelConfig(DumpableAttrs):
 
     line_color: Optional[str] = None
     color_by_pitch: Optional[bool] = None
+    stereo_bars: Optional[bool] = None
 
     # region Legacy Fields
     trigger_width_ratio = Alias("trigger_width")
@@ -87,6 +88,7 @@ class Channel:
 
         self.trigger_wave = wave.with_flatten(tflat, return_channels=False)
         self.render_wave = wave.with_flatten(rflat, return_channels=True)
+        self.stereo_wave = wave.with_flatten(Flatten.Stereo, return_channels=True)
 
         # `subsampling` increases `stride` and decreases `nsamp`.
         # `width` increases `stride` without changing `nsamp`.
@@ -136,5 +138,10 @@ class Channel:
 
     def get_render_around(self, trigger_sample: int):
         return self.render_wave.get_around(
+            trigger_sample, self._render_samp, self.render_stride
+        )
+
+    def get_render_stereo(self, trigger_sample: int):
+        return self.stereo_wave.get_around(
             trigger_sample, self._render_samp, self.render_stride
         )

@@ -73,6 +73,7 @@ import matplotlib.image
 import matplotlib.patheffects
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
 
 if TYPE_CHECKING:
     from matplotlib.artist import Artist
@@ -185,6 +186,9 @@ class RendererConfig(
     v_midline: bool = False
     h_midline: bool = False
 
+    global_stereo_bars: bool = False
+    stereo_bar_color: str = "#88ffff"
+
     # Label settings
     label_font: Font = attr.ib(factory=Font)
 
@@ -251,6 +255,10 @@ def freq_to_color(cmap, freq: Optional[float], fallback_color: str) -> str:
 class LineParam:
     color: str
     color_by_pitch: bool
+    stereo_bars: bool
+
+
+StereoLevels = Tuple[float, float]
 
 
 @attr.dataclass
@@ -258,6 +266,7 @@ class RenderInput:
     # Should Renderer store a Wave and take an int?
     # Or take an array on each frame?
     data: np.ndarray
+    stereo_levels: Optional[StereoLevels]
     freq_estimate: Optional[float]
 
     @staticmethod
@@ -266,7 +275,7 @@ class RenderInput:
         Stable function to construct a RenderInput given only a data array.
         Used mainly for tests.
         """
-        return RenderInput(data, None)
+        return RenderInput(data, None, None)
 
     @staticmethod
     def wrap_datas(datas: List[np.ndarray]) -> List["RenderInput"]:
@@ -419,6 +428,7 @@ class _RendererBase(ABC):
             LineParam(
                 color=coalesce(ccfg.line_color, cfg.global_line_color),
                 color_by_pitch=coalesce(ccfg.color_by_pitch, cfg.global_color_by_pitch),
+                stereo_bars=coalesce(ccfg.stereo_bars, cfg.global_stereo_bars),
             )
             for ccfg in channel_cfgs
         ]
@@ -433,6 +443,9 @@ class _RendererBase(ABC):
             self.render_strides = render_strides
         else:
             self.render_strides = [1] * self.nplots
+
+    def is_stereo_bars(self, wave_idx: int):
+        return self._line_params[wave_idx].stereo_bars
 
     # Instance functionality
 
@@ -501,6 +514,22 @@ def px_from_points(pt: Point) -> Pixel:
     return pt * PIXELS_PER_PT
 
 
+@attr.dataclass(cmp=False)
+class StereoBar:
+    rect: Rectangle
+    x_center: float
+    x_range: float
+
+    def set_range(self, left: float, right: float):
+        left = -left
+
+        x = self.x_center + left * self.x_range
+        width = (right - left) * self.x_range
+
+        self.rect.set_x(x)
+        self.rect.set_width(width)
+
+
 class AbstractMatplotlibRenderer(_RendererBase, ABC):
     """Matplotlib renderer which can use any backend (agg, mplcairo).
     To pick a backend, subclass and set _canvas_type at the class level.
@@ -542,6 +571,9 @@ class AbstractMatplotlibRenderer(_RendererBase, ABC):
     # Fields updated by _update_lines_stereo():
     # [wave][chan] Line2D
     _wave_chan_to_line: "Optional[List[List[Line2D]]]" = None
+
+    # Only for stereo channels, if stereo bars are enabled.
+    _wave_to_stereo_bar: "List[Optional[StereoBar]]"
 
     def _setup_axes(self, wave_nchans: List[int]) -> None:
         """
@@ -766,7 +798,7 @@ class AbstractMatplotlibRenderer(_RendererBase, ABC):
         return ax
 
     # Protected API
-    def __add_lines_stereo(self, dummy_datas: List[np.ndarray]):
+    def __add_lines_stereo(self, inputs: List[RenderInput]):
         cfg = self.cfg
         strides = self.render_strides
 
@@ -775,7 +807,11 @@ class AbstractMatplotlibRenderer(_RendererBase, ABC):
 
         # Foreach wave, plot dummy data.
         lines2d = []
-        for wave_idx, wave_data in enumerate(dummy_datas):
+        wave_to_stereo_bar = []
+        for wave_idx, input in enumerate(inputs):
+            wave_data = input.data
+            line_params = self._line_params[wave_idx]
+
             # [nsamp][nchan] Amplitude
             wave_zeros = np.zeros_like(wave_data)
 
@@ -783,11 +819,11 @@ class AbstractMatplotlibRenderer(_RendererBase, ABC):
             wave_lines = []
 
             xs = calc_xs(len(wave_zeros), strides[wave_idx])
+            line_color = line_params.color
 
             # Foreach chan
             for chan_idx, chan_zeros in enumerate(wave_zeros.T):
                 ax = chan_to_axes[chan_idx]
-                line_color = self._line_params[wave_idx].color
 
                 chan_line: Line2D = ax.plot(
                     xs, chan_zeros, color=line_color, linewidth=line_width
@@ -809,7 +845,34 @@ class AbstractMatplotlibRenderer(_RendererBase, ABC):
             lines2d.append(wave_lines)
             self._artists.extend(wave_lines)
 
+            # Add stereo bars if enabled and track is stereo.
+            if input.stereo_levels:
+                assert self._line_params[wave_idx].stereo_bars
+                ax = self._wave_to_mono_axes[wave_idx]
+
+                viewport_stride = self.render_strides[wave_idx] * cfg.viewport_width
+                x_center = calc_center(viewport_stride)
+
+                xlim = ax.get_xlim()
+                x_range = (xlim[1] - xlim[0]) / 2
+
+                y_bottom = ax.get_ylim()[0]
+
+                h = abs(y_bottom) / 16
+                stereo_rect = Rectangle((x_center, y_bottom - h), 0, 2 * h)
+                stereo_rect.set_color(cfg.stereo_bar_color)
+                stereo_rect.set_linewidth(0)
+                ax.add_patch(stereo_rect)
+
+                stereo_bar = StereoBar(stereo_rect, x_center, x_range)
+
+                wave_to_stereo_bar.append(stereo_bar)
+                self._artists.append(stereo_rect)
+            else:
+                wave_to_stereo_bar.append(None)
+
         self._wave_chan_to_line = lines2d
+        self._wave_to_stereo_bar = wave_to_stereo_bar
 
     def _update_lines_stereo(self, inputs: List[RenderInput]) -> None:
         """
@@ -817,8 +880,7 @@ class AbstractMatplotlibRenderer(_RendererBase, ABC):
         - inputs[wave] = ndarray, [samp][chan] = f32
         """
         if self._wave_chan_to_line is None:
-            datas = [input.data for input in inputs]
-            self.__add_lines_stereo(datas)
+            self.__add_lines_stereo(inputs)
 
         lines2d = self._wave_chan_to_line
         nplots = len(lines2d)
@@ -853,6 +915,14 @@ class AbstractMatplotlibRenderer(_RendererBase, ABC):
                 chan_line.set_ydata(chan_data)
                 if color_by_pitch:
                     chan_line.set_color(color)
+
+            stereo_bar = self._wave_to_stereo_bar[wave_idx]
+            stereo_levels = inputs[wave_idx].stereo_levels
+            assert bool(stereo_bar) == bool(
+                stereo_levels
+            ), f"wave {wave_idx}: plot={stereo_bar} != values={stereo_levels}"
+            if stereo_bar:
+                stereo_bar.set_range(*stereo_levels)
 
     def _add_xy_line_mono(
         self,

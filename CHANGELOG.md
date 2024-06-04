@@ -1,5 +1,9 @@
 ## 0.10.0 (unreleased)
 
+### Features
+
+- Add support for showing stereo balance as bars (#475)
+
 ## 0.9.1
 
 ### Major Changes
