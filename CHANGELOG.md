@@ -1,4 +1,4 @@
-## 0.9.1 (unreleased)
+## 0.9.1
 
 ### Major Changes
 
