@@ -284,6 +284,12 @@ class MainWindow(QWidget):
                 ) as self.layout__stereo_orientation:
                     pass
 
+                with add_row(s, BoundCheckBox, BoundColorWidget) as (
+                    self.render__global_stereo_bars,
+                    self.render__stereo_bar_color,
+                ):
+                    self.render__global_stereo_bars.setText(tr("Stereo Bars"))
+
                 with add_row(
                     s,
                     tr("Grid Opacity"),
