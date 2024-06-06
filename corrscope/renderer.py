@@ -332,7 +332,7 @@ class RendererParams:
         lcfg: "LayoutConfig",
         dummy_datas: List[np.ndarray],
         channel_cfgs: Optional[List["ChannelConfig"]],
-        channels: List["Channel"],
+        channels: Optional[List["Channel"]],
         cfg_dir: Optional[str] = None,
     ):
         if channels is not None:
