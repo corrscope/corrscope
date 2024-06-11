@@ -73,6 +73,7 @@ import matplotlib.image
 import matplotlib.patheffects
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
 
 if TYPE_CHECKING:
     from matplotlib.artist import Artist
@@ -185,6 +186,9 @@ class RendererConfig(
     v_midline: bool = False
     h_midline: bool = False
 
+    global_stereo_bars: bool = False
+    stereo_bar_color: str = "#88ffff"
+
     # Label settings
     label_font: Font = attr.ib(factory=Font)
 
@@ -251,6 +255,10 @@ def freq_to_color(cmap, freq: Optional[float], fallback_color: str) -> str:
 class LineParam:
     color: str
     color_by_pitch: bool
+    stereo_bars: bool
+
+
+StereoLevels = Tuple[float, float]
 
 
 @attr.dataclass
@@ -258,6 +266,7 @@ class RenderInput:
     # Should Renderer store a Wave and take an int?
     # Or take an array on each frame?
     data: np.ndarray
+    stereo_levels: Optional[StereoLevels]
     freq_estimate: Optional[float]
 
     @staticmethod
@@ -266,7 +275,7 @@ class RenderInput:
         Stable function to construct a RenderInput given only a data array.
         Used mainly for tests.
         """
-        return RenderInput(data, None)
+        return RenderInput(data, None, None)
 
     @staticmethod
     def wrap_datas(datas: List[np.ndarray]) -> List["RenderInput"]:
@@ -277,7 +286,6 @@ class RenderInput:
         return [RenderInput.stub_new(data) for data in datas]
 
 
-UpdateLines = Callable[[List[RenderInput]], Any]
 UpdateOneLine = Callable[[np.ndarray], Any]
 
 
@@ -310,7 +318,10 @@ class RendererParams:
 
     cfg: RendererConfig
     lcfg: LayoutConfig
-    data_shapes: List[tuple]
+
+    data_shapes: List[Tuple[int, ...]]
+    """[nwave] (nsamp, nchan), but tuple length is unchecked"""
+
     channel_cfgs: Optional[List[ChannelConfig]]
     render_strides: Optional[List[int]]
     labels: Optional[List[str]]
@@ -321,7 +332,7 @@ class RendererParams:
         lcfg: "LayoutConfig",
         dummy_datas: List[np.ndarray],
         channel_cfgs: Optional[List["ChannelConfig"]],
-        channels: List["Channel"],
+        channels: Optional[List["Channel"]],
         cfg_dir: Optional[str] = None,
     ):
         if channels is not None:
@@ -345,11 +356,25 @@ class RendererParams:
         )
 
 
-class _RendererBackend(ABC):
+class _RendererBase(ABC):
     """
     Renderer backend which takes data and produces images.
     Does not touch Wave or Channel.
     """
+
+    cfg: RendererConfig
+    lcfg: LayoutConfig
+    w: int
+    h: int
+
+    pitch_cmap: Any
+    nplots: int
+
+    # [nplots] ...
+    wave_nsamps: List[int]
+    wave_nchans: List[int]
+    _line_params: List[LineParam]
+    render_strides: List[int]
 
     # Class attributes and methods
     bytes_per_pixel: int = abstract_classvar
@@ -372,7 +397,7 @@ class _RendererBackend(ABC):
 
     # Instance initializer
     def __init__(self, params: RendererParams):
-        cfg = params.cfg
+        cfg: RendererConfig = params.cfg
         self.cfg = cfg
         self.lcfg = params.lcfg
 
@@ -403,6 +428,7 @@ class _RendererBackend(ABC):
             LineParam(
                 color=coalesce(ccfg.line_color, cfg.global_line_color),
                 color_by_pitch=coalesce(ccfg.color_by_pitch, cfg.global_color_by_pitch),
+                stereo_bars=coalesce(ccfg.stereo_bars, cfg.global_stereo_bars),
             )
             for ccfg in channel_cfgs
         ]
@@ -418,12 +444,15 @@ class _RendererBackend(ABC):
         else:
             self.render_strides = [1] * self.nplots
 
+    def is_stereo_bars(self, wave_idx: int):
+        return self._line_params[wave_idx].stereo_bars
+
     # Instance functionality
 
     @abstractmethod
-    def add_lines_stereo(
-        self, dummy_datas: List[np.ndarray], strides: List[int]
-    ) -> UpdateLines:
+    def update_main_lines(
+        self, inputs: List[RenderInput], trigger_samples: List[int]
+    ) -> None:
         ...
 
     @abstractmethod
@@ -435,6 +464,10 @@ class _RendererBackend(ABC):
         ...
 
     # Primarily used by RendererFrontend, not outside world.
+    @abstractmethod
+    def _update_lines_stereo(self, inputs: List[RenderInput]) -> None:
+        ...
+
     @abstractmethod
     def _add_xy_line_mono(
         self,
@@ -481,7 +514,23 @@ def px_from_points(pt: Point) -> Pixel:
     return pt * PIXELS_PER_PT
 
 
-class AbstractMatplotlibRenderer(_RendererBackend, ABC):
+@attr.dataclass(cmp=False)
+class StereoBar:
+    rect: Rectangle
+    x_center: float
+    x_range: float
+
+    def set_range(self, left: float, right: float):
+        left = -left
+
+        x = self.x_center + left * self.x_range
+        width = (right - left) * self.x_range
+
+        self.rect.set_x(x)
+        self.rect.set_width(width)
+
+
+class AbstractMatplotlibRenderer(_RendererBase, ABC):
     """Matplotlib renderer which can use any backend (agg, mplcairo).
     To pick a backend, subclass and set _canvas_type at the class level.
     """
@@ -505,17 +554,26 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
         if params.labels is not None:
             self.add_labels(params.labels)
 
-        self._artists: List["Artist"] = []
+        self._artists = []
 
     _fig: "Figure"
 
-    # _axes2d[wave][chan] = Axes
+    _artists: List["Artist"]
+
+    # [wave][chan] Axes
     # Primary, used to draw oscilloscope lines and gridlines.
-    _axes2d: List[List["Axes"]]  # set by set_layout()
+    _wave_chan_to_axes: List[List["Axes"]]  # set by set_layout()
 
     # _axes_mono[wave] = Axes
     # Secondary, used for titles and debug plots.
-    _axes_mono: List["Axes"]
+    _wave_to_mono_axes: List["Axes"]
+
+    # Fields updated by _update_lines_stereo():
+    # [wave][chan] Line2D
+    _wave_chan_to_line: "Optional[List[List[Line2D]]]" = None
+
+    # Only for stereo channels, if stereo bars are enabled.
+    _wave_to_stereo_bar: "List[Optional[StereoBar]]"
 
     def _setup_axes(self, wave_nchans: List[int]) -> None:
         """
@@ -523,8 +581,9 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
         Sets up each Axes with correct region limits.
         """
 
+        # Only read by unit tests.
         self.layout = RendererLayout(self.lcfg, wave_nchans)
-        self.layout_mono = RendererLayout(self.lcfg, [1] * self.nplots)
+        layout_mono = RendererLayout(self.lcfg, [1] * self.nplots)
 
         if hasattr(self, "_fig"):
             raise Exception("I don't currently expect to call _setup_axes() twice")
@@ -557,6 +616,7 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
 
         real_dims = self._fig.canvas.get_width_height()
         assert (self.w, self.h) == real_dims, [(self.w, self.h), real_dims]
+        del real_dims
 
         # Setup background
         self._fig.set_facecolor(cfg.bg_color)
@@ -594,25 +654,30 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
             ax.imshow(img, extent=(0, w - ipx_per_spx, 0, h - ipx_per_spx))
 
         # Create Axes (using self.lcfg, wave_nchans)
-        # _axes2d[wave][chan] = Axes
-        self._axes2d = self.layout.arrange(self._axes_factory)
+        # [wave][chan] Axes
+        self._wave_chan_to_axes = self.layout.arrange(self._axes_factory)
+
+        # _axes_mono[wave] = Axes
+        self._wave_to_mono_axes = []
 
         """
-        Adding an axes using the same arguments as a previous axes
+        When calling _axes_factory() with the same position twice, we should pass a
+        different label to get a different Axes, to avoid warning:
+        
+        >>> Adding an axes using the same arguments as a previous axes
         currently reuses the earlier instance.
         In a future version, a new instance will always be created and returned.
         Meanwhile, this warning can be suppressed, and the future behavior ensured,
         by passing a unique label to each axes instance.
 
-        ax=fig.add_axes(label=) is unused, even if you call ax.legend().
+        <<< ax=fig.add_axes(label=) is unused, even if you call ax.legend().
         """
-        # _axes_mono[wave] = Axes
-        self._axes_mono = []
         # Returns 2D list of [self.nplots][1]Axes.
-        axes_mono_2d = self.layout_mono.arrange(self._axes_factory, label="mono")
+        axes_mono_2d = layout_mono.arrange(self._axes_factory, label="mono")
         for axes_list in axes_mono_2d:
             (axes,) = axes_list  # type: Axes
 
+            # Pick colormap used for debug lines (_add_xy_line_mono()).
             # List of colors at
             # https://matplotlib.org/gallery/color/colormap_reference.html
             # Discussion at https://github.com/matplotlib/matplotlib/issues/10840
@@ -620,22 +685,26 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
             colors = cmap.colors
             axes.set_prop_cycle(color=colors)
 
-            self._axes_mono.append(axes)
+            self._wave_to_mono_axes.append(axes)
 
         # Setup axes
-        for idx, N in enumerate(self.wave_nsamps):
-            wave_axes = self._axes2d[idx]
+        for wave_idx, N in enumerate(self.wave_nsamps):
+            chan_to_axes = self._wave_chan_to_axes[wave_idx]
 
-            viewport_stride = self.render_strides[idx] * cfg.viewport_width
+            # Calculate the bounds of an Axes object to match the scale of calc_xs()
+            # (unless cfg.viewport_width != 1).
+            viewport_stride = self.render_strides[wave_idx] * cfg.viewport_width
+            xlims = calc_limits(N, viewport_stride)
             ylim = cfg.viewport_height
 
             def scale_axes(ax: "Axes"):
-                xlim = calc_limits(N, viewport_stride)
-                ax.set_xlim(*xlim)
+                ax.set_xlim(*xlims)
                 ax.set_ylim(-ylim, ylim)
 
-            scale_axes(self._axes_mono[idx])
-            for ax in unique_by_id(wave_axes):
+            scale_axes(self._wave_to_mono_axes[wave_idx])
+
+            # When using overlay stereo, all channels map to the same Axes object.
+            for ax in unique_by_id(chan_to_axes):
                 scale_axes(ax)
 
                 # Setup midlines (depends on max_x and wave_data)
@@ -695,7 +764,7 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
             def hide(key: str):
                 ax.spines[key].set_visible(False)
 
-            # Hide all axes except bottom-right.
+            # Hide all borders except bottom-right.
             hide("top")
             hide("left")
 
@@ -705,7 +774,8 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
             if r.screen_edges & Edges.Right:
                 hide("right")
 
-            # Dim stereo gridlines
+            # If our Axes is a stereo track, dim borders between channels. (Show
+            # borders between waves at full opacity.)
             if cfg.stereo_grid_opacity > 0:
                 dim_color = matplotlib.colors.to_rgba_array(grid_color)[0]
                 dim_color[-1] = cfg.stereo_grid_opacity
@@ -727,29 +797,33 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
 
         return ax
 
-    # Public API
-    def add_lines_stereo(
-        self, dummy_datas: List[np.ndarray], strides: List[int]
-    ) -> UpdateLines:
+    # Protected API
+    def __add_lines_stereo(self, inputs: List[RenderInput]):
         cfg = self.cfg
+        strides = self.render_strides
 
         # Plot lines over background
         line_width = cfg.line_width
 
         # Foreach wave, plot dummy data.
         lines2d = []
-        for wave_idx, wave_data in enumerate(dummy_datas):
+        wave_to_stereo_bar = []
+        for wave_idx, input in enumerate(inputs):
+            wave_data = input.data
+            line_params = self._line_params[wave_idx]
+
+            # [nsamp][nchan] Amplitude
             wave_zeros = np.zeros_like(wave_data)
 
-            wave_axes = self._axes2d[wave_idx]
+            chan_to_axes = self._wave_chan_to_axes[wave_idx]
             wave_lines = []
 
             xs = calc_xs(len(wave_zeros), strides[wave_idx])
+            line_color = line_params.color
 
             # Foreach chan
             for chan_idx, chan_zeros in enumerate(wave_zeros.T):
-                ax = wave_axes[chan_idx]
-                line_color = self._line_params[wave_idx].color
+                ax = chan_to_axes[chan_idx]
 
                 chan_line: Line2D = ax.plot(
                     xs, chan_zeros, color=line_color, linewidth=line_width
@@ -771,16 +845,44 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
             lines2d.append(wave_lines)
             self._artists.extend(wave_lines)
 
-        return lambda datas: self._update_lines_stereo(lines2d, datas)
+            # Add stereo bars if enabled and track is stereo.
+            if input.stereo_levels:
+                assert self._line_params[wave_idx].stereo_bars
+                ax = self._wave_to_mono_axes[wave_idx]
 
-    def _update_lines_stereo(
-        self, lines2d: "List[List[Line2D]]", inputs: List[RenderInput]
-    ) -> None:
+                viewport_stride = self.render_strides[wave_idx] * cfg.viewport_width
+                x_center = calc_center(viewport_stride)
+
+                xlim = ax.get_xlim()
+                x_range = (xlim[1] - xlim[0]) / 2
+
+                y_bottom = ax.get_ylim()[0]
+
+                h = abs(y_bottom) / 16
+                stereo_rect = Rectangle((x_center, y_bottom - h), 0, 2 * h)
+                stereo_rect.set_color(cfg.stereo_bar_color)
+                stereo_rect.set_linewidth(0)
+                ax.add_patch(stereo_rect)
+
+                stereo_bar = StereoBar(stereo_rect, x_center, x_range)
+
+                wave_to_stereo_bar.append(stereo_bar)
+                self._artists.append(stereo_rect)
+            else:
+                wave_to_stereo_bar.append(None)
+
+        self._wave_chan_to_line = lines2d
+        self._wave_to_stereo_bar = wave_to_stereo_bar
+
+    def _update_lines_stereo(self, inputs: List[RenderInput]) -> None:
         """
         Preconditions:
-        - lines2d[wave][chan] = Line2D
         - inputs[wave] = ndarray, [samp][chan] = f32
         """
+        if self._wave_chan_to_line is None:
+            self.__add_lines_stereo(inputs)
+
+        lines2d = self._wave_chan_to_line
         nplots = len(lines2d)
         ndata = len(inputs)
         if nplots != ndata:
@@ -814,6 +916,14 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
                 if color_by_pitch:
                     chan_line.set_color(color)
 
+            stereo_bar = self._wave_to_stereo_bar[wave_idx]
+            stereo_levels = inputs[wave_idx].stereo_levels
+            assert bool(stereo_bar) == bool(
+                stereo_levels
+            ), f"wave {wave_idx}: plot={stereo_bar} != values={stereo_levels}"
+            if stereo_bar:
+                stereo_bar.set_range(*stereo_levels)
+
     def _add_xy_line_mono(
         self,
         name: str,
@@ -822,12 +932,13 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
         ys: Sequence[float],
         stride: int,
     ) -> CustomLine:
+        """Add a debug line, which can be repositioned every frame."""
         cfg = self.cfg
 
         # Plot lines over background
         line_width = cfg.line_width
 
-        ax = self._axes_mono[wave_idx]
+        ax = self._wave_to_mono_axes[wave_idx]
         mono_line: Line2D = ax.plot(xs, ys, linewidth=line_width)[0]
         print(f"{name} {wave_idx} has color {mono_line.get_color()}")
 
@@ -873,7 +984,7 @@ class AbstractMatplotlibRenderer(_RendererBackend, ABC):
         offset_pt = (xpos.offset_px, ypos.offset_px)
 
         out: List["Text"] = []
-        for label_text, ax in zip(labels, self._axes_mono):
+        for label_text, ax in zip(labels, self._wave_to_mono_axes):
             # https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.annotate.html
             # Annotation subclasses Text.
             text: "Annotation" = ax.annotate(
@@ -957,7 +1068,7 @@ class MatplotlibAggRenderer(AbstractMatplotlibRenderer):
         # Flatten all dimensions of the memoryview.
         return canvas.buffer_rgba().cast("B")
 
-    # Implements _RendererBackend.
+    # Implements _RendererBase.
     bytes_per_pixel = 4
     ffmpeg_pixel_format = "rgb0"
 
@@ -971,21 +1082,19 @@ class MatplotlibAggRenderer(AbstractMatplotlibRenderer):
 # TODO: PlotConfig
 # - align: left vs mid
 # - shift/offset: bool
-# - invert if trigger is negative: bool
 
 
-class RendererFrontend(_RendererBackend, ABC):
-    """Wrapper around _RendererBackend implementations, providing a better interface."""
+class RendererFrontend(_RendererBase, ABC):
+    """Wrapper around _RendererBase implementations, providing a better interface."""
 
     def __init__(self, params: RendererParams):
         super().__init__(params)
 
-        self._update_main_lines = None
         self._custom_lines = {}  # type: Dict[Any, CustomLine]
         self._vlines = {}  # type: Dict[Any, CustomLine]
         self._absolute = defaultdict(list)
 
-    # Overrides implementations of _RendererBackend.
+    # Overrides implementations of _RendererBase.
     def get_frame(self) -> ByteBuffer:
         out = super().get_frame()
 
@@ -997,17 +1106,12 @@ class RendererFrontend(_RendererBackend, ABC):
         return out
 
     # New methods.
-    _update_main_lines: Optional[UpdateLines]
-
     def update_main_lines(
         self, inputs: List[RenderInput], trigger_samples: List[int]
     ) -> None:
         datas = [input.data for input in inputs]
 
-        if self._update_main_lines is None:
-            self._update_main_lines = self.add_lines_stereo(datas, self.render_strides)
-
-        self._update_main_lines(inputs)
+        self._update_lines_stereo(inputs)
         assert len(datas) == len(trigger_samples)
         for i, (data, trigger) in enumerate(zip(datas, trigger_samples)):
             self.move_viewport(i, trigger)  # - len(data) / 2

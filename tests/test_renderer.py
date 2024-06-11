@@ -390,6 +390,74 @@ def test_stereo_render_integration(mocker: "pytest_mock.MockFixture"):
     corr.play()
 
 
+def test_stereo_bars_doesnt_crash(mocker: "pytest_mock.MockFixture"):
+    """Currently Renderer gets its stereo volume data from CorrScope.
+
+    TODO ideally we'd build a custom output object which captures frames, so we can
+    check for the presence of pixel values."""
+
+    # Stub out FFplay output.
+    mocker.patch.object(FFplayOutputConfig, "cls")
+
+    # Render in stereo.
+    cfg = template_config(
+        channels=[ChannelConfig("tests/stereo in-phase.wav")],
+        render_stereo=Flatten.Stereo,
+        end_time=0.5,  # Reduce test duration
+        render=RendererConfig(WIDTH, HEIGHT, global_stereo_bars=True),
+    )
+
+    # Make sure it doesn't crash.
+    corr = CorrScope(cfg, Arguments(".", [FFplayOutputConfig()]))
+    corr.play()
+
+
+def test_stereo_bars_color():
+    """Check that the correct stereo bar values produce the right color in render
+    output. Does not check that CorrScope passes the right input to Renderer for
+    stereo bars."""
+
+    corr_cfg = template_config()
+
+    cfg = corr_cfg.render
+    cfg.global_stereo_bars = True
+    cfg.stereo_bar_color = "#ff00ff"
+
+    stereo_bar_color = color_to_bytes(cfg.stereo_bar_color)
+
+    # Setup r = Renderer().
+    lcfg = LayoutConfig(orientation=ORIENTATION)
+    datas = [RENDER_Y_STEREO]
+
+    r = Renderer.from_obj(cfg, lcfg, datas, channel_cfgs=None, channels=None)
+
+    # Check that stereo bars are visible.
+
+    render_inputs = [RenderInput(data, (0.5, 0.5), None) for data in datas]
+    r.update_main_lines(render_inputs, [0] * len(datas))
+
+    frame_colors: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
+        (-1, BYTES_PER_PIXEL)
+    )
+
+    does_bar_appear_here = np.prod(frame_colors == stereo_bar_color, axis=-1)
+    does_bar_appear = does_bar_appear_here.any()
+    assert does_bar_appear, "color bar missing"
+
+    # Check that stereo bars are invisible when passed zero levels.
+
+    render_inputs = [RenderInput(data, (0.0, 0.0), None) for data in datas]
+    r.update_main_lines(render_inputs, [0] * len(datas))
+
+    frame_colors: np.ndarray = np.frombuffer(r.get_frame(), dtype=np.uint8).reshape(
+        (-1, BYTES_PER_PIXEL)
+    )
+
+    does_bar_appear_here = np.prod(frame_colors == stereo_bar_color, axis=-1)
+    does_bar_appear = does_bar_appear_here.any()
+    assert not does_bar_appear, "unexpected color bar"
+
+
 # Image dimension tests
 @pytest.mark.parametrize(
     "target_int, res_divisor", [(50, 2.0), (51, 2.0), (100, 1.001)]

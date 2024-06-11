@@ -13,6 +13,7 @@ from threading import Thread
 from typing import Iterator, Optional, List, Callable, Dict, Union, Any
 
 import attr
+import numpy as np
 
 from corrscope import outputs as outputs_
 from corrscope.channel import Channel, ChannelConfig, DefaultLabel
@@ -24,6 +25,7 @@ from corrscope.renderer import (
     RendererConfig,
     RendererParams,
     RenderInput,
+    StereoLevels,
 )
 from corrscope.settings.global_prefs import Parallelism
 from corrscope.triggers import (
@@ -232,6 +234,16 @@ def worker_render_frame(
     prev = t2
 
 
+def calc_stereo_levels(data: np.ndarray) -> StereoLevels:
+    def amplitude(chan_data: np.ndarray) -> float:
+        sq = chan_data * chan_data
+        mean = np.add.reduce(sq) / len(sq)
+        root = np.sqrt(mean)
+        return root
+
+    return (amplitude(data.T[0]), amplitude(data.T[1]))
+
+
 class CorrScope:
     def __init__(self, cfg: Config, arg: Arguments):
         """cfg is mutated!
@@ -389,7 +401,9 @@ class CorrScope:
                 render_inputs = []
                 trigger_samples = []
                 # Get render-data from each wave.
-                for render_wave, channel in zip(self.render_waves, self.channels):
+                for wave_idx, (render_wave, channel) in enumerate(
+                    zip(self.render_waves, self.channels)
+                ):
                     sample = round(render_wave.smp_s * time_seconds)
 
                     # Get trigger.
@@ -408,7 +422,25 @@ class CorrScope:
                     if should_render:
                         trigger_samples.append(trigger_sample)
                         data = channel.get_render_around(trigger_sample)
-                        render_inputs.append(RenderInput(data, freq_estimate))
+
+                        stereo_data = None
+                        if (
+                            renderer.is_stereo_bars(wave_idx)
+                            and not channel.stereo_wave.is_mono
+                        ):
+                            stereo_data = data
+                            # If stereo track is flattened to mono for rendering,
+                            # get raw stereo data.
+                            if stereo_data.shape[1] == 1:
+                                stereo_data = channel.get_render_stereo(trigger_sample)
+
+                        stereo_levels = None
+                        if stereo_data is not None:
+                            stereo_levels = calc_stereo_levels(stereo_data)
+
+                        render_inputs.append(
+                            RenderInput(data, stereo_levels, freq_estimate)
+                        )
 
                 if not should_render:
                     continue
@@ -489,7 +521,9 @@ class CorrScope:
                     render_inputs = []
                     trigger_samples = []
                     # Get render-data from each wave.
-                    for render_wave, channel in zip(self.render_waves, self.channels):
+                    for wave_idx, (render_wave, channel) in enumerate(
+                        zip(self.render_waves, self.channels)
+                    ):
                         sample = round(render_wave.smp_s * time_seconds)
 
                         # Get trigger.
@@ -508,7 +542,27 @@ class CorrScope:
                         if should_render:
                             trigger_samples.append(trigger_sample)
                             data = channel.get_render_around(trigger_sample)
-                            render_inputs.append(RenderInput(data, freq_estimate))
+
+                            stereo_data = None
+                            if (
+                                renderer.is_stereo_bars(wave_idx)
+                                and not channel.stereo_wave.is_mono
+                            ):
+                                stereo_data = data
+                                # If stereo track is flattened to mono for rendering,
+                                # get raw stereo data.
+                                if stereo_data.shape[1] == 1:
+                                    stereo_data = channel.get_render_stereo(
+                                        trigger_sample
+                                    )
+
+                            stereo_levels = None
+                            if stereo_data is not None:
+                                stereo_levels = calc_stereo_levels(stereo_data)
+
+                            render_inputs.append(
+                                RenderInput(data, stereo_levels, freq_estimate)
+                            )
 
                     if not should_render:
                         continue
