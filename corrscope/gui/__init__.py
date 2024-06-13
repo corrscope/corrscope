@@ -1,4 +1,5 @@
 import functools
+import os.path
 import signal
 import sys
 import traceback
@@ -199,10 +200,11 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self.channelUp.add_shortcut(self.channelsGroup, "ctrl+shift+up")
         self.channelDown.add_shortcut(self.channelsGroup, "ctrl+shift+down")
 
-        self.channelUp.clicked.connect(self.channel_view.on_channel_up)
-        self.channelDown.clicked.connect(self.channel_view.on_channel_down)
         self.channelAdd.clicked.connect(self.on_channel_add)
         self.channelDelete.clicked.connect(self.on_channel_delete)
+        self.channelExtTrigger.clicked.connect(self.on_channel_ext_trigger)
+        self.channelUp.clicked.connect(self.channel_view.on_channel_up)
+        self.channelDown.clicked.connect(self.channel_view.on_channel_down)
 
         # Bind actions.
         self.action_separate_render_dir.setChecked(self.pref.separate_render_dir)
@@ -402,6 +404,12 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self.channel_model = ChannelModel(cfg.channels)
         # Calling setModel again disconnects previous model.
         self.channel_view.setModel(self.channel_model)
+
+        self.channel_view.selectionModel().currentChanged.connect(
+            self.on_channel_view_changed
+        )
+        self.on_channel_view_changed()
+
         self.channel_model.dataChanged.connect(self.on_model_edited)
         self.channel_model.rowsInserted.connect(self.on_model_edited)
         self.channel_model.rowsMoved.connect(self.on_model_edited)
@@ -475,12 +483,43 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         appdata_uri = qc.QUrl.fromLocalFile(str(paths.appdata_dir))
         QDesktopServices.openUrl(appdata_uri)
 
+    def maybe_current_row(self) -> Optional[int]:
+        idx = self.channel_view.currentIndex()
+        nrows = self.channel_model.rowCount()
+        row = idx.row()
+
+        if idx.isValid() and 0 <= row < nrows:
+            return row
+        else:
+            return None
+
+    def on_channel_view_changed(self):
+        self.channelExtTrigger.setEnabled(self.maybe_current_row() is not None)
+
     def on_channel_add(self):
         wavs = get_open_file_list(
             self, "Add audio channels", self.pref.file_dir_ref, FILTER_WAV_FILES
         )
         if wavs:
             self.channel_view.append_channels(wavs)
+
+    def on_channel_ext_trigger(self):
+        maybe_row = self.maybe_current_row()
+        if maybe_row is None:
+            return
+        row = maybe_row
+
+        wav_name = get_open_file_name(
+            self,
+            self.tr("Pick external trigger WAV"),
+            self.pref.file_dir_ref,
+            FILTER_WAV_FILES,
+        )
+        if wav_name:
+            model = self.channel_model
+            col = model.idx_of_key["trigger_wav_path"]
+            index = model.index(row, col)
+            model.setData(index, wav_name)
 
     def on_channel_delete(self):
         self.channel_view.delete_selected()
@@ -1123,6 +1162,7 @@ class ChannelModel(qc.QAbstractTableModel):
         Column("render_stereo", str, None, "Render Stereo\nDownmix"),
         Column("trigger_width", int, 1, "Trigger Width ×", always_show=True),
         Column("render_width", int, 1, "Render Width ×", always_show=True),
+        Column("trigger_wav_path", path_strip_quotes, None, "Ext. Trigger\nWAV Path"),
         Column("trigger__mean_responsiveness", float, None, "DC Removal\nRate"),
         Column("trigger__sign_strength", float, None, "Sign\nAmplification"),
         Column("trigger__edge_direction", plus_minus_one, None),
@@ -1185,6 +1225,27 @@ class ChannelModel(qc.QAbstractTableModel):
             if key == "wav_path" and role == Qt.DisplayRole:
                 if Path(value).parent != Path():
                     return "..." + Path(value).name
+
+            if key == "trigger_wav_path" and role == Qt.DisplayRole:
+                path = Path(value)
+                render_path = Path(self.channels[row].wav_path)
+
+                if path.name == render_path.name:
+                    # If name clashes with render_path, abbreviate past 2 components.
+                    if path.parent.parent != Path():
+                        relative = os.path.relpath(value, path.parent.parent)
+
+                        # Replace backslashes with slashes for visual consistency.
+                        if os.path.sep == "\\":
+                            relative = relative.replace(os.path.sep, "/")
+
+                        return "..." + relative
+
+                else:
+                    # Otherwise abbreviate past 1 component.
+                    if path.parent != Path():
+                        return "..." + path.name
+
             return str(value)
 
         return nope

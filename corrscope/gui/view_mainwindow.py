@@ -468,6 +468,8 @@ class MainWindow(QWidget):
                     pass
                 with append_widget(s, ShortcutButton) as self.channelDelete:
                     pass
+                with append_widget(s, ShortcutButton) as self.channelExtTrigger:
+                    self.channelExtTrigger.setText(tr("&Ext. Trigger"))
                 with append_widget(s, ShortcutButton) as self.channelUp:
                     pass
                 with append_widget(s, ShortcutButton) as self.channelDown:
