@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 class ChannelConfig(DumpableAttrs):
     wav_path: str
+    trigger_wav_path: Optional[str] = None  # For external triggering
     label: str = ""
 
     # Supplying a dict inherits attributes from global trigger.
@@ -81,12 +82,19 @@ class Channel:
             abspath(cfg.wav_path),
             amplification=coalesce(cfg.amplification, corr_cfg.amplification),
         )
+        if cfg.trigger_wav_path:
+            trigger_wave = Wave(
+                abspath(cfg.trigger_wav_path),
+                amplification=coalesce(cfg.amplification, corr_cfg.amplification),
+            )
+        else:
+            trigger_wave = wave
 
         # Flatten wave stereo for trigger and render.
         tflat = coalesce(cfg.trigger_stereo, corr_cfg.trigger_stereo)
         rflat = coalesce(cfg.render_stereo, corr_cfg.render_stereo)
 
-        self.trigger_wave = wave.with_flatten(tflat, return_channels=False)
+        self.trigger_wave = trigger_wave.with_flatten(tflat, return_channels=False)
         self.render_wave = wave.with_flatten(rflat, return_channels=True)
         self.stereo_wave = wave.with_flatten(Flatten.Stereo, return_channels=True)
 

@@ -3,6 +3,7 @@
 ### Features
 
 - Add support for showing stereo balance as bars (#475)
+- Add external triggering (#476)
 
 ## 0.9.1
 
