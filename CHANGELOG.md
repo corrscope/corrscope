@@ -9,6 +9,10 @@
 
 - Switch default track orientation to horizontal (#477)
 
+### Changelog
+
+- Add warning when rendering partial video (#478)
+
 ## 0.9.1
 
 ### Major Changes
