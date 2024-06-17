@@ -139,7 +139,7 @@ def template_config(**kwargs) -> Config:
         ),
         channels=[],
         default_label=DefaultLabel.FileName,
-        layout=LayoutConfig(orientation="v", stereo_orientation="v", ncols=0),
+        layout=LayoutConfig(orientation="h", stereo_orientation="v", ncols=0),
         render=RendererConfig(
             1920,
             1080,
