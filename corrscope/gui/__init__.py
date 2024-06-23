@@ -583,6 +583,19 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             qw.QMessageBox.critical(self, "Error", error_msg)
             return
 
+        if self.cfg.begin_time or self.cfg.end_time:
+            Msg = qw.QMessageBox
+
+            title = self.tr("Render partial video")
+            message = self.tr(
+                "Are you sure you want to render a partial video?\n"
+                "(Begin/End Time is set.)"
+            )
+            response = Msg.question(self, title, message, Msg.Yes | Msg.No, Msg.Yes)
+
+            if response != Msg.Yes:
+                return
+
         # Name and extension (no folder).
         video_filename = self.get_save_filename(cli.VIDEO_NAME)
         filters = [
