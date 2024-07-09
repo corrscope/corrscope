@@ -1,5 +1,9 @@
 ## 0.10.1 (unreleased)
 
+### Changelog
+
+- Raise minimum Python version to 3.10, fix NumPy 2.0 support (#480)
+
 ## 0.10.0
 
 ### Features
