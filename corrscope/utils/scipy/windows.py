@@ -816,11 +816,6 @@ def hann(M: int, sym: bool = True) -> np.ndarray:
     return general_hamming(M, 0.5, sym)
 
 
-@np.deprecate(new_name='scipy.signal.windows.hann')
-def hanning(*args, **kwargs):
-    return hann(*args, **kwargs)
-
-
 def tukey(M, alpha=0.5, sym=True):
     r"""Return a Tukey window, also known as a tapered cosine window.
 
