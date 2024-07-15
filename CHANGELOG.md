@@ -1,4 +1,4 @@
-## 0.10.1 (unreleased)
+## 0.10.1
 
 ### Changelog
 
