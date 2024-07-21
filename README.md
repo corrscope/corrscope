@@ -8,7 +8,7 @@ Corrscope renders oscilloscope views of WAV files recorded from chiptune (game m
 
 Corrscope uses "waveform correlation" to track complex waves (including SNES and Sega Genesis/FM synthesis) which jump around on other oscilloscope programs.
 
-Sample results can be found on my Youtube channel at https://www.youtube.com/nyanpasu64/videos.
+Sample results can be found on my Youtube channel at https://www.youtube.com/@nyanpasu64/videos.
 
 Documentation is available at https://corrscope.github.io/corrscope/.
 
