@@ -149,7 +149,9 @@ class Font(DumpableAttrs, always_dump="*"):
 
 
 class RendererConfig(
-    DumpableAttrs, always_dump="*", exclude="viewport_width viewport_height"
+    DumpableAttrs,
+    always_dump="*",
+    exclude="stereo_bar_right_color viewport_width viewport_height",
 ):
     width: int
     height: int
@@ -188,7 +190,7 @@ class RendererConfig(
 
     global_stereo_bars: bool = False
     stereo_bar_color: str = "#88ffff"
-    stereo_bar_right_color: Optional[str] = "#ff9999"
+    stereo_bar_right_color: Optional[str] = None
 
     # Label settings
     label_font: Font = attr.ib(factory=Font)
