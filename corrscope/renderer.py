@@ -187,8 +187,8 @@ class RendererConfig(
     h_midline: bool = False
 
     global_stereo_bars: bool = False
-    stereo_bar_color: str = "#5bcffa"
-    stereo_bar_right_color: Optional[str] = "#f5abb9"
+    stereo_bar_color: str = "#88ffff"
+    stereo_bar_right_color: Optional[str] = "#ff9088"
 
     # Label settings
     label_font: Font = attr.ib(factory=Font)
