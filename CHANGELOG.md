@@ -1,5 +1,9 @@
 ## 0.11.0 (unreleased)
 
+### Features
+
+- Implement split stereo bar colors (#491)
+
 ### Major Changes
 
 - Encode audio using libopus instead of aac (#487)
