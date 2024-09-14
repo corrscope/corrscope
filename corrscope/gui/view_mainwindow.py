@@ -291,6 +291,11 @@ class MainWindow(QWidget):
                     self.render__global_stereo_bars.setText(tr("Stereo Bars"))
 
                 with add_row(
+                    s, tr("Right Color"), OptionalColorWidget
+                ) as self.render__stereo_bar_right_color:
+                    pass
+
+                with add_row(
                     s,
                     tr("Grid Opacity"),
                     BoundDoubleSpinBox,
