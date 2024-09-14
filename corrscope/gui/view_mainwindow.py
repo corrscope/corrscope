@@ -177,9 +177,10 @@ class MainWindow(QWidget):
                 with add_row(s, "", BoundColorWidget) as self.render__init_line_color:
                     pass
 
-                with add_row(
-                    s, BoundCheckBox, Both
-                ) as self.render__global_color_by_pitch:
+                with add_row(s, QWidget, BoundCheckBox) as (
+                    _,
+                    self.render__global_color_by_pitch,
+                ):
                     self.render__global_color_by_pitch.setText(
                         tr("Color Lines By Pitch")
                     )
