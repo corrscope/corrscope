@@ -188,7 +188,7 @@ class RendererConfig(
 
     global_stereo_bars: bool = False
     stereo_bar_color: str = "#88ffff"
-    stereo_bar_right_color: Optional[str] = "#ff9088"
+    stereo_bar_right_color: Optional[str] = "#ff9999"
 
     # Label settings
     label_font: Font = attr.ib(factory=Font)
