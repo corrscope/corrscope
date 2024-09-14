@@ -239,6 +239,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         map_gui(self, self.model)
 
         self.model.update_widget["render_stereo"].append(self.on_render_stereo_changed)
+        self.model.update_widget["render__global_stereo_bars"].append(
+            self.on_stereo_bars_changed
+        )
 
         # Bind config to UI.
         if isinstance(cfg_or_path, Config):
@@ -286,6 +289,11 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self.layout__stereo_orientation.setEnabled(
             self.model.cfg.render_stereo is Flatten.Stereo
         )
+
+    def on_stereo_bars_changed(self):
+        bars = self.model.cfg.render.global_stereo_bars
+        self.render__stereo_bar_right_color.setVisible(bars)
+        self.render__stereo_bar_right_colorL.setVisible(bars)
 
     # Closing active document
 
