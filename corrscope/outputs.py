@@ -1,6 +1,7 @@
 import errno
 import shlex
 import subprocess
+import wave
 from abc import ABC, abstractmethod
 from os.path import abspath
 from typing import TYPE_CHECKING, Type, List, Union, Optional, ClassVar, Callable
@@ -87,8 +88,11 @@ class _FFmpegProcess:
 
             self.templates.append(f"-ss {corr_cfg.begin_time}")
 
+            master_wav = wave.open(corr_cfg.master_audio, "rb")
+            mono = master_wav.getnchannels() <= 1
+
             audio_path = shlex.quote(abspath(corr_cfg.master_audio))
-            self.templates += ffmpeg_input_audio(audio_path)  # audio
+            self.templates += ffmpeg_input_audio(audio_path, mono)  # audio
 
             if corr_cfg.end_time is not None:
                 dur = corr_cfg.end_time - corr_cfg.begin_time
@@ -126,8 +130,11 @@ def ffmpeg_input_video(cfg: "Config") -> List[str]:
     ]
 
 
-def ffmpeg_input_audio(audio_path: str) -> List[str]:
-    return ["-i", audio_path]
+def ffmpeg_input_audio(audio_path: str, mono: bool) -> List[str]:
+    out = ["-i", audio_path]
+    if mono:
+        out += ["-af", "pan=stereo|c0=c0|c1=c0"]
+    return out
 
 
 class PipeOutput(Output):
@@ -275,7 +282,7 @@ class FFmpegOutput(PipeOutput):
 
 class FFplayOutputConfig(IOutputConfig):
     video_template: str = "-c:v copy"
-    audio_template: str = "-c:a copy"
+    audio_template: str = "-c:a pcm_s16le"
 
 
 FFPLAY = "ffplay"
