@@ -1,5 +1,9 @@
 ## 0.11.0 (unreleased)
 
+### Major Changes
+
+- Encode audio using libopus instead of aac (#487)
+
 ## 0.10.1
 
 ### Changelog

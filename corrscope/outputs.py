@@ -247,7 +247,7 @@ class FFmpegOutputConfig(IOutputConfig):
         "-color_range 1 -colorspace bt709 -color_trc bt709 -color_primaries bt709 "
         "-movflags faststart"
     )
-    audio_template: str = "-c:a aac -b:a 384k"
+    audio_template: str = "-c:a libopus -b:a 256k"
 
 
 FFMPEG = "ffmpeg"
