@@ -111,7 +111,7 @@ def main(
     render: Optional[str],
     profile: bool,
 ):
-    """Intelligent oscilloscope visualizer for .wav files.
+    """Advanced oscilloscope visualizer for .wav files.
 
     FILES can be one or more .wav files (or wildcards), one folder, or one
     .yaml config.
