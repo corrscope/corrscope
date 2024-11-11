@@ -294,7 +294,7 @@ class MainWindow(QWidget):
                 with add_row(
                     s, tr("Right Color"), OptionalColorWidget
                 ) as self.render__stereo_bar_right_color:
-                    pass
+                    self.render__stereo_bar_right_color.set_default_color("#ff9999")
 
                 with add_row(
                     s,

@@ -463,7 +463,7 @@ class BoundColorWidget(BoundWidget, qw.QWidget):
 
         # Setup checkbox
         if self.optional:
-            self.check = _ColorCheckBox(self, self.text)
+            self.check = _ColorCheckBox(self, self.text, "#ffffff")
             self.check.setToolTip("Enable/Disable Color")
             layout.addWidget(self.check)
 
@@ -491,6 +491,12 @@ class BoundColorWidget(BoundWidget, qw.QWidget):
         raise RuntimeError(
             "BoundColorWidget.gui_changed -> set_model should not be called"
         )
+
+    def set_default_color(self, color: str):
+        assert hasattr(
+            self, "check"
+        ), "cannot set default color of non-optional color widget"
+        self.check.default_color = color
 
 
 class OptionalColorWidget(BoundColorWidget):
@@ -590,11 +596,12 @@ class _ColorButton(qw.QPushButton):
 
 
 class _ColorCheckBox(qw.QCheckBox):
-    def __init__(self, parent: QWidget, text: "_ColorText"):
+    def __init__(self, parent: QWidget, text: "_ColorText", default_color: str):
         qw.QCheckBox.__init__(self, parent)
         self.stateChanged.connect(self.on_check)
 
         self.color_text = text
+        self.default_color = default_color
         text.hex_color.connect(self.set_color)
 
     @Slot(str)
@@ -612,7 +619,7 @@ class _ColorCheckBox(qw.QCheckBox):
             CheckState.Checked,
         ]
         if value != CheckState.Unchecked:
-            self.color_text.setText("#ffffff")
+            self.color_text.setText(self.default_color)
         else:
             self.color_text.setText("")
 
