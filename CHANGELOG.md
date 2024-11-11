@@ -3,6 +3,7 @@
 ### Major Changes
 
 - Encode audio using libopus instead of aac (#487)
+- Fix loss of volume when using a mono track as master audio (#488)
 
 ## 0.10.1
 
