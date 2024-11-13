@@ -1,6 +1,7 @@
 import errno
 import shlex
 import subprocess
+import wave
 from abc import ABC, abstractmethod
 from os.path import abspath
 from typing import TYPE_CHECKING, Type, List, Union, Optional, ClassVar, Callable
@@ -87,8 +88,11 @@ class _FFmpegProcess:
 
             self.templates.append(f"-ss {corr_cfg.begin_time}")
 
+            with wave.open(corr_cfg.master_audio, "rb") as master_wav:
+                self.mono = master_wav.getnchannels() <= 1
+
             audio_path = shlex.quote(abspath(corr_cfg.master_audio))
-            self.templates += ffmpeg_input_audio(audio_path)  # audio
+            self.templates += ffmpeg_input_audio(audio_path, self.mono)  # audio
 
             if corr_cfg.end_time is not None:
                 dur = corr_cfg.end_time - corr_cfg.begin_time
@@ -97,7 +101,13 @@ class _FFmpegProcess:
     def add_output(self, cfg: "Union[FFmpegOutputConfig, FFplayOutputConfig]") -> None:
         self.templates.append(cfg.video_template)  # video
         if self.corr_cfg.master_audio:
-            self.templates.append(cfg.audio_template)  # audio
+            audio_template = cfg.audio_template
+
+            # When upmixing mono to stereo (in ffmpeg_input_audio()), we need to
+            # reencode audio.
+            if self.mono and audio_template.endswith(" copy"):
+                audio_template = "-c:a pcm_s16le"
+            self.templates.append(audio_template)  # audio
 
     def popen(self, extra_args: List[str], bufsize: int, **kwargs) -> subprocess.Popen:
         """Raises FileNotFoundError if FFmpeg missing"""
@@ -126,8 +136,14 @@ def ffmpeg_input_video(cfg: "Config") -> List[str]:
     ]
 
 
-def ffmpeg_input_audio(audio_path: str) -> List[str]:
-    return ["-i", audio_path]
+def ffmpeg_input_audio(audio_path: str, mono: bool) -> List[str]:
+    out = ["-i", audio_path]
+
+    # Preserve mono volume and upmix to stereo. If we don't do this explicitly, most
+    # players will attenuate stereo playback by 3 dB during encoding/playback.
+    if mono:
+        out += ["-af", "pan=stereo|c0=c0|c1=c0"]
+    return out
 
 
 class PipeOutput(Output):
