@@ -24,7 +24,7 @@ python = "^3.10"
 numpy = ">=1.21,<3.0"
 click = "^8.0.1"
 matplotlib = "^3.5"
-attrs = "^21.2.0"
+attrs = ">=21.2.0"
 appdirs = "^1.4.4"
 atomicwrites = "^1.4.0"
 colorspacious = "^1.1.2"
@@ -39,7 +39,7 @@ qt5 = ["PyQt5", "PyQt5-Qt5"]
 qt6 = ["PyQt6"]
 
 [tool.poetry.dev-dependencies]
-pytest = "^7"
+pytest = "^8"
 pytest-mock = "^3.6.1"
 hypothesis = "^6.14.0"
 delayed-assert = "^0.3.5"
