@@ -311,7 +311,7 @@ class MainWindow(QWidget):
     def add_trigger_tab(self, s: LayoutStack) -> QWidget:
         tr = self.tr
 
-        with self.add_tab_stretch(s, tr("&Trigger"), layout=QVBoxLayout) as tab:
+        with self.add_tab_stretch(s, tr("T&rigger"), layout=QVBoxLayout) as tab:
             with append_widget(
                 s, QGroupBox, title=tr("Input Data Preprocessing"), layout=QFormLayout
             ):
@@ -509,6 +509,11 @@ class MainWindow(QWidget):
         self.action_parallel = create_element(
             QAction, MainWindow, text=tr("&Multi-Core Rendering"), checkable=True
         )
+        self.action_clear_font_cache = create_element(
+            QAction,
+            MainWindow,
+            text=tr("&Reload Font List"),
+        )
         self.action_open_config_dir = create_element(
             QAction, MainWindow, text=tr("Open &Config Folder")
         )
@@ -533,6 +538,7 @@ class MainWindow(QWidget):
                 w.addAction(self.action_separate_render_dir)
                 w.addAction(self.action_parallel)
                 w.addSeparator()
+                w.addAction(self.action_clear_font_cache)
                 w.addAction(self.action_open_config_dir)
 
             with append_menu(s, title=tr("&Help")) as self.menuHelp:

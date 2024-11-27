@@ -3,6 +3,7 @@
 ### Features
 
 - Implement split stereo bar colors (#491)
+- Add "Reload Font List" menu item to fix missing fonts (#492)
 
 ### Major Changes
 
