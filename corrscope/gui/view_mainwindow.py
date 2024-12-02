@@ -177,9 +177,10 @@ class MainWindow(QWidget):
                 with add_row(s, "", BoundColorWidget) as self.render__init_line_color:
                     pass
 
-                with add_row(
-                    s, BoundCheckBox, Both
-                ) as self.render__global_color_by_pitch:
+                with add_row(s, QWidget, BoundCheckBox) as (
+                    _,
+                    self.render__global_color_by_pitch,
+                ):
                     self.render__global_color_by_pitch.setText(
                         tr("Color Lines By Pitch")
                     )
@@ -289,6 +290,11 @@ class MainWindow(QWidget):
                     self.render__stereo_bar_color,
                 ):
                     self.render__global_stereo_bars.setText(tr("Stereo Bars"))
+
+                with add_row(
+                    s, tr("Right Color"), OptionalColorWidget
+                ) as self.render__stereo_bar_right_color:
+                    self.render__stereo_bar_right_color.set_default_color("#ff9999")
 
                 with add_row(
                     s,

@@ -149,7 +149,9 @@ class Font(DumpableAttrs, always_dump="*"):
 
 
 class RendererConfig(
-    DumpableAttrs, always_dump="*", exclude="viewport_width viewport_height"
+    DumpableAttrs,
+    always_dump="*",
+    exclude="stereo_bar_right_color viewport_width viewport_height",
 ):
     width: int
     height: int
@@ -188,6 +190,7 @@ class RendererConfig(
 
     global_stereo_bars: bool = False
     stereo_bar_color: str = "#88ffff"
+    stereo_bar_right_color: Optional[str] = None
 
     # Label settings
     label_font: Font = attr.ib(factory=Font)
@@ -516,18 +519,19 @@ def px_from_points(pt: Point) -> Pixel:
 
 @attr.dataclass(cmp=False)
 class StereoBar:
-    rect: Rectangle
+    left: Rectangle
+    right: Rectangle
     x_center: float
     x_range: float
 
     def set_range(self, left: float, right: float):
-        left = -left
+        """{left, right} are ≥ 0."""
 
-        x = self.x_center + left * self.x_range
-        width = (right - left) * self.x_range
+        self.left.set_x(self.x_center - left * self.x_range)
+        self.left.set_width(left * self.x_range)
 
-        self.rect.set_x(x)
-        self.rect.set_width(width)
+        # self.right.x should always be self.x_center.
+        self.right.set_width(right * self.x_range)
 
 
 class AbstractMatplotlibRenderer(_RendererBase, ABC):
@@ -859,15 +863,22 @@ class AbstractMatplotlibRenderer(_RendererBase, ABC):
                 y_bottom = ax.get_ylim()[0]
 
                 h = abs(y_bottom) / 16
-                stereo_rect = Rectangle((x_center, y_bottom - h), 0, 2 * h)
-                stereo_rect.set_color(cfg.stereo_bar_color)
-                stereo_rect.set_linewidth(0)
-                ax.add_patch(stereo_rect)
 
-                stereo_bar = StereoBar(stereo_rect, x_center, x_range)
+                def create_rect(color):
+                    rect = Rectangle((x_center, y_bottom - h), 0, 2 * h)
+                    rect.set_color(color)
+                    rect.set_linewidth(0)
 
+                    ax.add_patch(rect)
+                    self._artists.append(rect)
+                    return rect
+
+                left = create_rect(cfg.stereo_bar_color)
+                right = create_rect(cfg.stereo_bar_right_color or cfg.stereo_bar_color)
+
+                stereo_bar = StereoBar(left, right, x_center, x_range)
                 wave_to_stereo_bar.append(stereo_bar)
-                self._artists.append(stereo_rect)
+
             else:
                 wave_to_stereo_bar.append(None)
 
