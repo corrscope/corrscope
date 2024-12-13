@@ -11,6 +11,7 @@ from types import MethodType
 from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence, NewType
 
 import appnope
+import matplotlib as mpl
 import qtpy.QtCore as qc
 import qtpy.QtWidgets as qw
 import attr
@@ -215,6 +216,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         self.action_parallel.setChecked(self.pref.parallel)
         self.action_parallel.toggled.connect(self.on_parallel_toggled)
 
+        self.action_clear_font_cache.triggered.connect(self.on_clear_font_cache)
         self.action_open_config_dir.triggered.connect(self.on_open_config_dir)
 
         self.actionNew.triggered.connect(self.on_action_new)
@@ -448,6 +450,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     action_separate_render_dir: qw.QAction
     action_open_config_dir: qw.QAction
+    action_clear_font_cache: qw.QAction
 
     # Loading mainwindow.ui changes menuBar from a getter to an attribute.
     menuBar: qw.QMenuBar
@@ -486,6 +489,16 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
     def on_parallel_toggled(self, checked: bool):
         self.pref.parallel = checked
+
+    def on_clear_font_cache(self):
+        # On Windows, matplotlibrc (if present) and font cache share a folder:
+        # https://matplotlib.org/stable/install/index.html#matplotlib-configuration-and-cache-directory-locations
+        # Only delete font cache files, in case user has a custom RC.
+        # TODO test matplotlib with custom RC?
+
+        mpl_cache = mpl.get_cachedir()
+        for file in Path(mpl_cache).glob("fontlist-*.json"):
+            file.unlink()
 
     def on_open_config_dir(self):
         appdata_uri = qc.QUrl.fromLocalFile(str(paths.appdata_dir))
