@@ -36,9 +36,6 @@ YAML_EXTS = [".yaml"]
 # Default extension when writing Config.
 YAML_NAME = YAML_EXTS[0]
 
-# Default output extension, only used in GUI and unit tests
-VIDEO_NAME = ".mp4"
-
 
 DEFAULT_NAME = corrscope.app_name
 

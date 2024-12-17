@@ -6,6 +6,9 @@ from atomicwrites import atomic_write
 from corrscope.config import DumpableAttrs, yaml
 from corrscope.settings import paths
 
+# Default output extension.
+VIDEO_NAME = ".mp4"
+
 
 Attrs = TypeVar("Attrs", bound=DumpableAttrs)
 
@@ -39,6 +42,9 @@ class GlobalPrefs(DumpableAttrs, always_dump="*"):
     # Most recent video rendered
     separate_render_dir: bool = False
     render_dir: str = ""  # Set to "" whenever separate_render_dir=False.
+
+    # Most recent video filetype, including period.
+    render_ext: Optional[str] = VIDEO_NAME
 
     @property
     def render_dir_ref(self) -> "Ref[GlobalPrefs]":
