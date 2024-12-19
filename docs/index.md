@@ -237,6 +237,11 @@ I do not have experience with other encoders (like x265, VP8, VP9, or AV1), but 
 
 ## Audio Encoding
 
-corrscope defaults to rendering to .mp4 files, which support a limited set of audio codecs. MP3 is a "good enough" audio codec. AAC is better in theory, but ffmpeg's AAC encoder (which corrscope uses by default, `-c:a aac`) is *bad*. However, corrscope defaults to 384 kilobits/sec (`-b:a 384k`), which should be sufficient to produce audio without obvious artifacts.
+corrscope defaults to rendering to .mp4 files, which support a limited set of audio codecs. MP3 is a "good enough" audio codec. AAC is better in theory, but ffmpeg's AAC encoder (which corrscope uses by default, `-c:a aac`) is *bad*. Opus is currently the best audio codec available, and FFmpeg has added support for Opus in MP4 files, so we use `libopus` by default. The default `-b:a 256k` [VBR](https://ffmpeg.org//ffmpeg-codecs.html#libopus-1) should be overkill for audio quality.
 
-In the future, I may enable VBR encoding, or switch to an audio codec not supported in .mp4 files, like Vorbis or Opus (which has better quality at any bitrate than even good AAC encoders). This would requires switching to a different file format like .mkv.
+
+## Missing Fonts
+
+If you install a new font and it does not work in corrscope, you may need to clear the Matplotlib font cache. In Corrscope, click on menu Tools → Reload Font List, and check if the font works now. If not, your font may be an unsupported (eg. bitmap) font.
+
+To manually reload the font list, on Windows you can delete `C:\Users\(whatever_your_username_is)\.matplotlib`.

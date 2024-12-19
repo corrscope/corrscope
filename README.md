@@ -37,7 +37,7 @@ pipx creates an isolated environment for each program, and adds their binaries i
 - Install Python 3.8 or above.
 - Install pipx using either your package manager, `pip3 install --user pipx`, or `pip install --user pipx`.
 - Run `pipx install "corrscope[qt5]"`
-    - On Linux, to add support for native Qt themes, instead run `pipx install --system-site-packages "corrscope[qt5]"`
+    - On Linux, to add support for native Qt 6 themes, instead run `pipx install --system-site-packages "corrscope[qt6]"`
     - On FreeBSD, install `py39-qt5` and `py39-ruamel.yaml` via `pkg` or ports tree, then run `pipx install --system-site-packages "corrscope[qt5]"`. To get previews working, install `ffmpeg` via ports tree with `SDL` option enabled.
     - On M1 Mac, instead run `pipx install "corrscope[qt6]"`
 - Open a terminal and run `corr (args)`.
@@ -49,15 +49,16 @@ pip installs packages into a per-user Python environment. This has the disadvant
 - Install Python 3.8 or above.
 - If necessary, install pip using your package manager.
 - Run `pip3 install --user "corrscope[qt5]"`
+    - On Linux, to add support for native Qt 6 themes, instead run `pip3 install --user "corrscope[qt6]"`
     - On FreeBSD, install `py39-qt5` and `py39-ruamel.yaml` via `pkg` or ports tree, then run `pip install --user "corrscope[qt5]"`. To get previews working, install `ffmpeg` via ports tree with `SDL` option enabled.
     - On M1 Mac, instead run `pip3 install --user "corrscope[qt6]"`
 - Open a terminal and run `corr (args)`.
 
-### Dev builds (Windows)
+### Installing dev builds from Git (cross-platform, dev master)
 
 Windows dev builds are compiled automatically, and available at https://ci.appveyor.com/project/nyanpasu64/corrscope/history.
 
-Installing dev builds on non-Windows platforms without cloning the repo (eg. Git URLs or .whl files) is not supported yet. Fixes are welcome.
+On other platforms, follow the regular pip or pipx installation instructions, but replace `"corrscope[qt5]"` with `"corrscope[qt5] @ git+https://github.com/corrscope/corrscope.git"`. On Linux/Mac, replace `qt5` with `qt6`.
 
 ### Running from Source Code (cross-platform, dev master)
 
@@ -69,6 +70,10 @@ poetry install -E qt5  # --develop is implied
 # On M1 Mac, instead run `poetry install -E qt6`.
 poetry run corr (args)
 ```
+
+### Installing on Android (experimental)
+
+I've written [experimental instructions](install-android.md) to install corrscope on Android. I have not tested on a blank slate installation yet.
 
 ## GUI Tutorial
 
