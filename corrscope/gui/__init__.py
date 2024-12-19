@@ -566,17 +566,20 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         cfg_filename = self.get_save_filename(cli.YAML_NAME)
 
         # Folder is obtained from self.pref.file_dir_ref.
-        filters = ["YAML files (*.yaml)", "All files (*)"]
-        path = get_save_file_path(
+        extensions = {
+            ".yaml": "YAML files (*.yaml)",
+            None: "All files (*)",
+        }
+        save_name = get_save_file_path(
             self,
             "Save As",
             self.pref.file_dir_ref,
             cfg_filename,
-            filters,
+            extensions,
             cli.YAML_NAME,
         )
-        if path:
-            self._cfg_path = path
+        if save_name:
+            self._cfg_path = Path(save_name.name)
             self.load_title()
             self.on_action_save()
             return True
@@ -618,30 +621,34 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
                 return
 
         # Name and extension (no folder).
-        video_filename = self.get_save_filename(cli.VIDEO_NAME)
-        filters = [
-            "MP4 files (*.mp4)",
-            "Matroska files (*.mkv)",
-            "WebM files (*.webm)",
-            "All files (*)",
-        ]
+
+        video_stem = cli.get_file_stem(self._cfg_path, self.cfg, default="")
 
         # Points to either `file_dir` or `render_dir`.
         # Folder is obtained from `dir_ref`.
         dir_ref = self.pref.render_dir_ref
 
-        path = get_save_file_path(
-            self, "Render to Video", dir_ref, video_filename, filters, cli.VIDEO_NAME
+        suffix = self.pref.render_ext
+        extensions = {
+            ".mp4": "MP4 files (*.mp4)",
+            ".mkv": "Matroska files (*.mkv)",
+            ".webm": "WebM files (*.webm)",
+            None: "All files (*)",
+        }
+        assert gp.VIDEO_NAME in extensions
+        save_name = get_save_file_path(
+            self, "Render to Video", dir_ref, video_stem, extensions, suffix
         )
-        if path:
-            name = str(path)
+        if save_name:
+            self.pref.render_ext = save_name.suffix
+
             dlg = CorrProgressDialog(self, "Rendering video")
 
             # FFmpegOutputConfig contains only hashable/immutable strs,
             # so get_ffmpeg_cfg() can be shared across threads without copying.
             # Optionally copy_config() first.
 
-            outputs = [self.cfg.get_ffmpeg_cfg(name)]
+            outputs = [self.cfg.get_ffmpeg_cfg(save_name.name)]
             self.play_thread(outputs, PreviewOrRender.render, dlg)
 
     def play_thread(
