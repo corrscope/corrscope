@@ -150,12 +150,6 @@ def get_save_file_path(
 
     user_suffix = Path(out_name).suffix
 
-    # If user explicitly types a different extension, use it next time (even if they
-    # don't change the dropdown). This works on Windows and FIXME Linux? Mac?
-    # FIXME it seems confusing to pick a different default extension if you type but don't dropdown? IDK.
-    if user_suffix and user_suffix in filters:
-        out_suffix = user_suffix
-
     # Append suffix if missing in user-specified name but present in dialog.
     # getSaveFileName() does not automatically append a suffix on Linux KDE.
     if user_suffix == "" and out_suffix:
