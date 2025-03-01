@@ -10,7 +10,8 @@ from pathlib import Path
 from types import MethodType
 from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence, NewType
 
-import appnope
+if sys.platform == "darwin":
+    import appnope
 import matplotlib as mpl
 import qtpy.QtCore as qc
 import qtpy.QtWidgets as qw
@@ -831,7 +832,13 @@ class CorrJob(qc.QObject):
         """Called in separate thread."""
         cfg = self.cfg
         arg = self.arg
-        with appnope.nope_scope(reason="corrscope preview/render active"):
+        if sys.platform == "darwin":
+            ctx = appnope.nope_scope(reason="corrscope preview/render active")
+        else:
+            import contextlib
+
+            ctx = contextlib.nullcontext()
+        with ctx:
             try:
                 self.corr = CorrScope(cfg, arg)
                 self.corr.play()
