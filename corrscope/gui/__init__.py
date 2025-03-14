@@ -563,7 +563,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         """
 
         # Name and extension (no folder).
-        cfg_filename = self.get_save_filename(cli.YAML_NAME)
+        cfg_filename = self.get_save_file_stem(cli.YAML_NAME)
 
         # Folder is obtained from self.pref.file_dir_ref.
         extensions = {
@@ -731,18 +731,14 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             return self._cfg_path.name
         return self.UNTITLED
 
-    def get_save_filename(self, suffix: str) -> str:
+    def get_save_file_stem(self, suffix: str) -> str:
         """
         If file name can be guessed, return "filename.suffix" (no dir).
         Otherwise return "".
 
         Used for saving file or video.
         """
-        stem = cli.get_file_stem(self._cfg_path, self.cfg, default="")
-        if stem:
-            return stem + suffix
-        else:
-            return ""
+        return cli.get_file_stem(self._cfg_path, self.cfg, default="")
 
     @staticmethod
     def compute_save_dir(cfg: Config) -> Optional[str]:
