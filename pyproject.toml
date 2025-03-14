@@ -10,8 +10,10 @@ authors = [{ name = "nyanpasu64", email = "nyanpasu64@tuta.io" }]
 requires-python = "~=3.10"
 readme = "README.md"
 license = "BSD-2-Clause"
+
+# https://packaging.python.org/en/latest/specifications/version-specifiers/#version-specifiers
 dependencies = [
-    "ruamel.yaml>=0.17,<0.18",
+    "ruamel.yaml>=0.17,<0.19",
     "numpy>=1.21,<3.0",
     "click>=8.0.1,<9",
     "matplotlib~=3.5",
