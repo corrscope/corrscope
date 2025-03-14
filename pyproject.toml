@@ -28,7 +28,7 @@ dependencies = [
 [project.optional-dependencies]
 qt5 = [
     "PyQt5~=5.15",
-    "PyQt5-Qt5~=5.15",
+    "PyQt5-Qt5~=5.15,<5.15.11",
 ]
 qt6 = ["PyQt6~=6.2"]
 

@@ -209,7 +209,7 @@ requires-dist = [
     { name = "matplotlib", specifier = "~=3.5" },
     { name = "numpy", specifier = ">=1.21,<3.0" },
     { name = "pyqt5", marker = "extra == 'qt5'", specifier = "~=5.15" },
-    { name = "pyqt5-qt5", marker = "extra == 'qt5'", specifier = "~=5.15" },
+    { name = "pyqt5-qt5", marker = "extra == 'qt5'", specifier = "~=5.15,<5.15.11" },
     { name = "pyqt6", marker = "extra == 'qt6'", specifier = "~=6.2" },
     { name = "qtpy", specifier = ">=2.0.1,<3" },
     { name = "ruamel-yaml", specifier = ">=0.17,<0.19" },
@@ -742,13 +742,13 @@ wheels = [
 
 [[package]]
 name = "pyqt5-qt5"
-version = "5.15.16"
+version = "5.15.2"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2f/97/ef77663fb5d61b65f2e93edc135cc0b86724c1fc610c10a6867ae0c0baff/PyQt5_Qt5-5.15.16-1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:2cfa8f50dd29618ef98f29355f83d8a5f3e41003be22128e9b5d94d214b6b468", size = 61080044 },
-    { url = "https://files.pythonhosted.org/packages/ff/89/65a4b9c6bc89012182ff46bf8e503a8aa5e5570df7cb628211c93012beca/PyQt5_Qt5-5.15.16-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:18b6fec012de60921fcb131cf2a21368171dc29050d43e4b81a64be407a36105", size = 39957063 },
-    { url = "https://files.pythonhosted.org/packages/0a/60/b6db285c87666b02aa11d0946d7bb381d8bdcc815cc5aa61fa91272b321b/PyQt5_Qt5-5.15.16-py3-none-macosx_11_0_arm64.whl", hash = "sha256:e1a0e7ae35a7615c74a293705204579650930486a89af23082462f429dae504a", size = 37122434 },
-    { url = "https://files.pythonhosted.org/packages/dc/1a/c4f861c4d7a9844a207b8bc3aa9dd84c51f823784d405469cde83d736cf1/PyQt5_Qt5-5.15.16-py3-none-manylinux2014_x86_64.whl", hash = "sha256:5ee1754a6460849cba76c0f0c490c0ccc3b514abc780b141cf772db22b76b54b", size = 59854452 },
+    { url = "https://files.pythonhosted.org/packages/62/09/99a222b0360616250fb2e6003a54e43a2a06b0774f0f8d5daafb86a2c375/PyQt5_Qt5-5.15.2-py3-none-macosx_10_13_intel.whl", hash = "sha256:76980cd3d7ae87e3c7a33bfebfaee84448fd650bad6840471d6cae199b56e154", size = 40546019 },
+    { url = "https://files.pythonhosted.org/packages/83/d4/241a6a518d0bcf0a9fcdcbad5edfed18d43e884317eab8d5230a2b27e206/PyQt5_Qt5-5.15.2-py3-none-manylinux2014_x86_64.whl", hash = "sha256:1988f364ec8caf87a6ee5d5a3a5210d57539988bf8e84714c7d60972692e2f4a", size = 59921716 },
+    { url = "https://files.pythonhosted.org/packages/1c/7e/ce7c66a541a105fa98b41d6405fe84940564695e29fc7dccf6d9e8c5f898/PyQt5_Qt5-5.15.2-py3-none-win32.whl", hash = "sha256:9cc7a768b1921f4b982ebc00a318ccb38578e44e45316c7a4a850e953e1dd327", size = 43447358 },
+    { url = "https://files.pythonhosted.org/packages/37/97/5d3b222b924fa2ed4c2488925155cd0b03fd5d09ee1cfcf7c553c11c9f66/PyQt5_Qt5-5.15.2-py3-none-win_amd64.whl", hash = "sha256:750b78e4dba6bdf1607febedc08738e318ea09e9b10aea9ff0d73073f11f6962", size = 50075158 },
 ]
 
 [[package]]
