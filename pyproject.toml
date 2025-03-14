@@ -1,62 +1,52 @@
-# Right now, `pip install [--editable] .` and `pipx install .` work,
-# but `pipx install --editable .` fails with message
-# "No apps associated with package UNKNOWN or its dependencies."
-
 [build-system]
-requires = ["poetry_core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry]
+[project]
 name = "corrscope"
 version = "0.11.0-pre"
 description = "Python program to render wave files into oscilloscope views, featuring advanced correlation-based triggering algorithm"
-license = "BSD-2-Clause"
-authors = ["nyanpasu64 <nyanpasu64@tuta.io>"]
-# maintainers =
+authors = [{ name = "nyanpasu64", email = "nyanpasu64@tuta.io" }]
+requires-python = "~=3.10"
 readme = "README.md"
-# homepage =
-repository = "https://github.com/corrscope/corrscope/"
-documentation = "https://corrscope.github.io/corrscope/"
+license = "BSD-2-Clause"
+dependencies = [
+    "ruamel.yaml>=0.17,<0.18",
+    "numpy>=1.21,<3.0",
+    "click>=8.0.1,<9",
+    "matplotlib~=3.5",
+    "attrs>=21.2.0",
+    "appdirs>=1.4.4,<2",
+    "atomicwrites>=1.4.0,<2",
+    "colorspacious>=1.1.2,<2",
+    "QtPy>=2.0.1,<3",
+    "appnope>=0.1.3,<0.2 ; sys_platform == 'darwin'",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-"ruamel.yaml" = "^0.17"
-numpy = ">=1.21,<3.0"
-click = "^8.0.1"
-matplotlib = "^3.5"
-attrs = ">=21.2.0"
-appdirs = "^1.4.4"
-atomicwrites = "^1.4.0"
-colorspacious = "^1.1.2"
-QtPy = "^2.0.1"
-PyQt5 = {version = "^5.15", optional = true}
-PyQt5-Qt5 = {version = "^5.15,<5.15.11", optional = true}
-PyQt6 = {version = "^6.2", optional = true}
-appnope = {platform = "darwin", version = "^0.1.3"}
+[project.optional-dependencies]
+qt5 = [
+    "PyQt5~=5.15",
+    "PyQt5-Qt5~=5.15",
+]
+qt6 = ["PyQt6~=6.2"]
 
-[tool.poetry.extras]
-qt5 = ["PyQt5", "PyQt5-Qt5"]
-qt6 = ["PyQt6"]
+[project.urls]
+Repository = "https://github.com/corrscope/corrscope/"
+Documentation = "https://corrscope.github.io/corrscope/"
 
-[tool.poetry.dev-dependencies]
-pytest = "^8"
-pytest-mock = "^3.6.1"
-hypothesis = "^6.14.0"
-delayed-assert = "^0.3.5"
+[project.scripts]
+corr = "corrscope.cli:main"
 
-# Note: PyInstaller 4.5 and below claim to support all Python versions,
-# and 4.6 and above have maximum Python versions.
-# When upgrading the version of Python (not PyInstaller) used to create binaries,
-# increase the `python = ""` bound.
-pyinstaller = {version = "^6.3", python = "<3.13"}
-
-#pefile = {version = "^2021.5.24", platform = "win32"}
-
-pytest-cases = "^3.6.1"
-black = "^22"
-
-[tool.poetry.scripts]
-corr = 'corrscope.cli:main'
+[dependency-groups]
+dev = [
+    "pytest>=8,<9",
+    "pytest-mock>=3.6.1,<4",
+    "hypothesis>=6.14.0,<7",
+    "delayed-assert>=0.3.5,<0.4",
+    "pyinstaller~=6.3 ; python_version < '3.13'",
+    "pytest-cases>=3.6.1,<4",
+    "black>=22,<23",
+]
 
 [tool.black]
 line-length = 88
