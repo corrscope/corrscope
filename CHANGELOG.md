@@ -11,6 +11,10 @@
 - Encode audio using libopus instead of aac (#487)
 - Fix loss of volume when using a mono track as master audio (#488)
 
+### Changelog
+
+- When opening missing file via CLI, show dialog rather than crashing (#499)
+
 ## 0.10.1
 
 ### Changelog

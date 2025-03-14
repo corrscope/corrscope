@@ -390,13 +390,12 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
         if self.model is None:
             self.load_cfg(template_config(), None)
 
-        assert cfg_path.is_file()
         self.pref.file_dir = str(cfg_path.parent.resolve())
 
-        # Raises YAML structural exceptions
-        cfg = yaml.load(cfg_path)
-
         try:
+            # Raises YAML structural exceptions
+            cfg = yaml.load(cfg_path)
+
             # Raises color getter exceptions
             self.load_cfg(cfg, cfg_path)
         except Exception as e:
