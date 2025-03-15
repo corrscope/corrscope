@@ -4,7 +4,7 @@
 
 - Implement split stereo bar colors (#491)
 - Add "Reload Font List" menu item to fix missing fonts (#492)
-- Remember most recently selected filetype in Render dialog (#493)
+- Remember most recently selected filetype in Render dialog (#493, #500)
 
 ### Major Changes
 
