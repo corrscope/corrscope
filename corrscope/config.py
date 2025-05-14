@@ -19,10 +19,10 @@ from typing import (
     Any,
     TextIO,
     Union,
-    IO,
 )
 
 import attr
+from atomicwrites import atomic_write
 from ruamel.yaml import (
     yaml_object,
     YAML,
@@ -61,8 +61,13 @@ class MyYAML(YAML):
         # https://bitbucket.org/ruamel/yaml/issues/316/unicode-encoding-decoding-errors-on
         # Both are bad, so use UTF-8.
         if isinstance(stream, Path):
-            with stream.open("w", encoding="utf-8") as f:
+            path = stream
+            with atomic_write(path, overwrite=True, encoding="utf-8") as f:
                 self.dump_without_corrupting(data, f, **kwargs)
+
+        elif isinstance(stream, TextIO):
+            # Nobody actually calls dump(..., open()). This branch is never taken.
+            self.dump_without_corrupting(data, stream, **kwargs)
 
         elif stream is None:
             # Possibly only called in unit tests, not in production.
@@ -71,8 +76,9 @@ class MyYAML(YAML):
             return stream.getvalue()
 
         else:
-            # with atomic_write(...) as f: dump(..., f)
-            self.dump_without_corrupting(data, stream, **kwargs)
+            raise TypeError(
+                f"stream must be {{Path, TextIO=open(), None}}, but is {type(stream)}"
+            )
 
     def dump_without_corrupting(self, *args, **kwargs):
         YAML.dump(self, *args, **kwargs)
