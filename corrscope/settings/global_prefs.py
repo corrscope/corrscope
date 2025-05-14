@@ -75,5 +75,5 @@ def load_prefs() -> GlobalPrefs:
 
 
 def dump_prefs(pref: GlobalPrefs) -> None:
-    with atomic_write(_PREF_PATH, overwrite=True) as f:
+    with atomic_write(_PREF_PATH, overwrite=True, encoding="utf-8") as f:
         yaml.dump(pref, f)
