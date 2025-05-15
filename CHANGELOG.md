@@ -16,6 +16,7 @@
 - When opening missing file via CLI, show dialog rather than crashing (#499)
 - Fix saving global settings after opening config in Unicode folder (#507)
 - Save config files atomically (#507)
+- Switch from Poetry to uv project manager (#508)
 
 ## 0.10.1
 
