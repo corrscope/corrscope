@@ -62,13 +62,13 @@ On other platforms, follow the regular pip or pipx installation instructions, bu
 
 ### Running from Source Code (cross-platform, dev master)
 
-Install Python 3.8 or above, and Poetry. My preference is to run `pipx install poetry`. You can alternatively use the Poetry installer via `curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python`, but in the past, updating via `poetry self update` has broken and left me with no Poetry at all, requiring reinstalling.
+Install Python 3.8 or above, and [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
 ```shell
 cd path/to/corrscope
-poetry install -E qt5  # --develop is implied
-# On M1 Mac, instead run `poetry install -E qt6`.
-poetry run corr (args)
+uv sync --extra qt5
+# On M1 Mac, instead run `uv sync --extra qt5`.
+uv run corr (args)
 ```
 
 ### Installing on Android (experimental)
@@ -95,18 +95,18 @@ More help is available at the [help site](https://corrscope.github.io/corrscope/
 ## Command-line Tutorial
 
 1. Create YAML:
-    - `corrscope split*.wav --audio master.wav -w`
+    - `corr split*.wav --audio master.wav -w`
     - Specify all channels on the command line.
     - `-a` or `--audio` specifies master audio track.
     - Creates file `master.yaml`.
 
-1. Edit `master.yaml` to change settings.
+2. Edit `master.yaml` to change settings.
 
-1. Play (requires ffmpeg):
-    - `corrscope master.yaml -p/--play`
+3. Play (requires ffmpeg):
+    - `corr master.yaml -p/--play`
 
-1. Render and encode video (requires ffmpeg)
-    - `corrscope master.yaml -r/--render file.mp4` (other file extensions supported)
+4. Render and encode video (requires ffmpeg)
+    - `corr master.yaml -r/--render file.mp4` (other file extensions supported)
 
 ## Mac-specific Issues
 
