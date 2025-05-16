@@ -353,7 +353,21 @@ class DumpableAttrs:
 
     # SafeConstructor.construct_yaml_object() uses __setstate__ to load objects.
     def __setstate__(self, state: Dict[str, Any]) -> None:
-        self.__dict__ = self.new_from_state(state).__dict__
+        """Apparently pickle.load() calls this method too?
+        I have not evaluated whether this causes problems."""
+
+        other = self.new_from_state(state)
+
+        # You're... not supposed to? create two objects sharing the same __dict__.
+        # self.__dict__ is empty (because __setstate__() is called instead of __init__()),
+        # which violates this object's contract. So steal __dict__ from the other object.
+        #
+        # If we leave it in `other` as well, we will find self.__dict__ blanked
+        # when other.__del__() is called at a random point in the future (#504).
+        # So replace `other.__dict__`. (We could swap with self.__dict__, but the syntax
+        # is jankier in Python than Rust since Python lacks &mut.)
+        self.__dict__ = other.__dict__
+        other.__dict__ = {}
 
     # If called via instance, cls == type(self).
     @classmethod
