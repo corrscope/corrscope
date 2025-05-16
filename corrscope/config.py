@@ -352,28 +352,17 @@ class DumpableAttrs:
         return state
 
     # SafeConstructor.construct_yaml_object() uses __setstate__ to load objects.
-    def __setstate__(self, state: Dict[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         """Apparently pickle.load() calls this method too?
         I have not evaluated whether this causes problems."""
 
-        other = self.new_from_state(state)
-
-        # You're... not supposed to? create two objects sharing the same __dict__.
-        # self.__dict__ is empty (because __setstate__() is called instead of __init__()),
-        # which violates this object's contract. So steal __dict__ from the other object.
-        #
-        # If we leave it in `other` as well, we will find self.__dict__ blanked
-        # when other.__del__() is called at a random point in the future (#504).
-        # So replace `other.__dict__`. (We could swap with self.__dict__, but the syntax
-        # is jankier in Python than Rust since Python lacks &mut.)
-        self.__dict__ = other.__dict__
-        other.__dict__ = {}
+        # https://stackoverflow.com/q/23461479 "Technically it is OK".
+        self.__init__(**self.prepare_state(state))
 
     # If called via instance, cls == type(self).
     @classmethod
-    def new_from_state(cls: Type[T], state: Dict[str, Any]) -> T:
-        """Redirect `Alias(key)=value` to `key=value`.
-        Then call the dataclass constructor (to validate parameters)."""
+    def prepare_state(cls: Type[T], state: dict[str, Any]) -> dict[str, Any]:
+        """Redirect `Alias(key)=value` to `key=value`."""
 
         cls_name = cls.__name__
         fields = attr.fields_dict(cls)
@@ -406,14 +395,15 @@ class DumpableAttrs:
                 new_state[key] = value
 
         del state
-        return cls(**new_state)
+        return new_state
 
 
 def evolve_compat(obj: DumpableAttrs, **changes):
     """Evolve an object, based on user-specified dict,
     while ignoring unrecognized keywords."""
     # In dictionaries, later values will always override earlier ones
-    return obj.new_from_state({**obj.__dict__, **changes})
+    new_state = obj.prepare_state({**obj.__dict__, **changes})
+    return type(obj)(**new_state)
 
 
 class KeywordAttrs(DumpableAttrs):
