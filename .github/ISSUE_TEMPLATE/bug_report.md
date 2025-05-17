@@ -35,7 +35,7 @@ assignees: ''
 
 - OS: <!-- e.g. Windows 10 x64 -->
 - Corrscope version:
-- How you installed corrscope: <!-- official Windows binaries, pip, poetry, etc. -->
+- How you installed corrscope: <!-- official Windows binaries, pip, uv, poetry, etc. -->
 - How you obtained FFmpeg: <!-- Linux package manager, in-app download, etc., unknown -->
 
 ## Additional context

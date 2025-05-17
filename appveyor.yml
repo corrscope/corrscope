@@ -8,7 +8,7 @@ branches:
   only:
     - master
 
-image: Visual Studio 2019
+image: Visual Studio 2022
 shallow_clone: true
 environment:
   matrix:
@@ -22,34 +22,35 @@ environment:
 
 
 cache:
-  - '%LOCALAPPDATA%\pypoetry\Cache -> .appveyor\clear-caches'
-  - '%USERPROFILE%\.poetry -> .appveyor\clear-caches'
-  # \cache\repositories\pypi\
-  # \virtualenvs\xyz-py3.x\
+  - '%LOCALAPPDATA%\uv\cache -> .appveyor\clear-caches'
+  # - '.venv -> .appveyor\clear-caches'
 
 install:
   # needed? to fix `appveyor` command
   - 'set PATH=C:\Program Files\AppVeyor\BuildAgent\;%PATH%'
 
-  - 'curl -sSL https://install.python-poetry.org | %py% -'
-  - 'set PATH=%APPDATA%\Python\Scripts;%PATH%'
+  - powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+  - 'set Path=%USERPROFILE%\.local\bin;%Path%'
 
   # Prevents: "The current Python version (2.7.15) is not supported by the project (^3.6)"
   - 'set PATH=%pydir%;%pydir%\bin;%pydir%\Scripts;%PATH%'
-  - 'poetry install -v -E qt5'  # don't pass --no-dev
+  - 'uv sync --extra qt5'  # don't pass --no-dev
 
 build_script:
   - exit
 
 test_script:
-  - 'poetry run black --check .'
-  - 'poetry run pytest --tb=short'
+  - 'uv run black --check .'
+  - 'uv run pytest --tb=short'
 
 after_test:
   # Run 32-bit PyInstaller to make CI complete faster.
   # pyinstaller used to get stuck for minutes on 32-bit builds, but it no longer happens.
-  - 'poetry build'
-  - 'poetry run pyinstaller corrscope.spec -y'
+  - 'uv build'
+  - 'uv run pyinstaller corrscope.spec -y'
 
 artifacts:
-  - path: 'dist\*'
+  - path: 'dist\corrscope-*'  # exclude dist\.gitignore
+
+on_finish:
+  - 'uv cache prune --ci'
