@@ -9,7 +9,7 @@
 ### Major Changes
 
 - Encode audio using libopus instead of aac (#487)
-- Fix loss of volume when using a mono track as master audio (#488)
+- Fix loss of volume when using a mono track as master audio (#488, #510)
 - Fix bug where previewing project files breaks them (#509)
 
 ### Changelog

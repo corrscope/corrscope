@@ -1,11 +1,11 @@
 import errno
 import shlex
 import subprocess
-import wave
 from abc import ABC, abstractmethod
 from os.path import abspath
 from typing import TYPE_CHECKING, Type, List, Union, Optional, ClassVar, Callable
 
+import corrscope.utils.scipy.wavfile as wavfile
 from corrscope.config import DumpableAttrs
 from corrscope.renderer import ByteBuffer, Renderer
 from corrscope.settings.paths import MissingFFmpegError
@@ -88,8 +88,12 @@ class _FFmpegProcess:
 
             self.templates.append(f"-ss {corr_cfg.begin_time}")
 
-            with wave.open(corr_cfg.master_audio, "rb") as master_wav:
-                self.mono = master_wav.getnchannels() <= 1
+            # wave does not support floating-point master audio. wavfile(mmap=true)
+            # does not support 24-bit integer, but this restriction is consistent
+            # with render channels.
+            smp_s, data = wavfile.read(corr_cfg.master_audio, mmap=True)
+            self.mono = data.ndim == 1
+            del data
 
             audio_path = shlex.quote(abspath(corr_cfg.master_audio))
             self.templates += ffmpeg_input_audio(audio_path, self.mono)  # audio
