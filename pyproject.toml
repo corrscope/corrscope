@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "corrscope"
-version = "0.11.0-pre"
+version = "0.11.0"
 description = "Python program to render wave files into oscilloscope views, featuring advanced correlation-based triggering algorithm"
 authors = [{ name = "nyanpasu64", email = "nyanpasu64@tuta.io" }]
 requires-python = "~=3.10"
