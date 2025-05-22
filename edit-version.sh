@@ -8,6 +8,8 @@ fi
 sed -i "s/^version = .*/version = \"$1\"/" pyproject.toml || exit $?
 sed -i "s/^base_version = .*/base_version = \"$1\"/" corrscope/version.py || exit $?
 
+uv lock || exit $?
+
 # https://blog.danslimmon.com/2019/07/15/do-nothing-scripting-the-key-to-gradual-automation/
 echo "Update CHANGELOG.md?"
 read -rp "- Press Enter to continue: "
