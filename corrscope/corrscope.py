@@ -248,6 +248,8 @@ def calc_stereo_levels(data: np.ndarray) -> StereoLevels:
 
 
 class CorrScope:
+    output_cfgs: list[IOutputConfig]
+
     def __init__(self, cfg: Config, arg: Arguments):
         """cfg is mutated!
         Recording config is triggered if any FFmpegOutputConfig is found.
@@ -265,7 +267,7 @@ class CorrScope:
         if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
             self.output_cfgs = arg.outputs
         else:
-            self.output_cfgs = []  # type: List[IOutputConfig]
+            self.output_cfgs = []
 
         if len(self.cfg.channels) == 0:
             raise CorrError("Config.channels is empty")
