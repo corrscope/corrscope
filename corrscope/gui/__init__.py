@@ -10,6 +10,8 @@ from pathlib import Path
 from types import MethodType
 from typing import Optional, List, Any, Tuple, Callable, Union, Dict, Sequence, NewType
 
+from corrscope.settings.paths import MissingFFmpegError
+
 if sys.platform == "darwin":
     import appnope
 import matplotlib as mpl
@@ -216,6 +218,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
 
         self.action_parallel.setChecked(self.pref.parallel)
         self.action_parallel.toggled.connect(self.on_parallel_toggled)
+
+        self.action_ffprobe_detect_mono.setChecked(self.pref.ffprobe_detect_mono)
+        self.action_ffprobe_detect_mono.toggled.connect(self.on_detect_mono_toggled)
 
         self.action_clear_font_cache.triggered.connect(self.on_clear_font_cache)
         self.action_open_config_dir.triggered.connect(self.on_open_config_dir)
@@ -490,6 +495,9 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     def on_parallel_toggled(self, checked: bool):
         self.pref.parallel = checked
 
+    def on_detect_mono_toggled(self, checked: bool):
+        self.pref.ffprobe_detect_mono = checked
+
     def on_clear_font_cache(self):
         # On Windows, matplotlibrc (if present) and font cache share a folder:
         # https://matplotlib.org/stable/install/index.html#matplotlib-configuration-and-cache-directory-locations
@@ -695,6 +703,7 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
             cfg_dir=self.cfg_dir,
             outputs=outputs,
             parallelism=self.pref.parallelism(),
+            ffprobe_detect_mono=self.pref.ffprobe_detect_mono,
             is_aborted=raise_exception,
         )
         return arg
@@ -705,8 +714,8 @@ class MainWindow(qw.QMainWindow, Ui_MainWindow):
     def on_play_thread_error(self, stack_trace: str):
         TracebackDialog(self).showMessage(stack_trace)
 
-    def on_play_thread_ffmpeg_missing(self):
-        DownloadFFmpegActivity(self)
+    def on_play_thread_ffmpeg_missing(self, e: MissingFFmpegError):
+        DownloadFFmpegActivity(self, e)
 
     # File paths
     @safe_property
@@ -811,7 +820,7 @@ class CorrJob(qc.QObject):
 
     finished = qc.Signal()
     error = qc.Signal(str)
-    ffmpeg_missing = qc.Signal()
+    ffmpeg_missing = qc.Signal(MissingFFmpegError)
 
     def __init__(self, cfg: Config, arg: Arguments, mode: PreviewOrRender):
         qc.QObject.__init__(self)
@@ -838,9 +847,9 @@ class CorrJob(qc.QObject):
                 self.corr = CorrScope(cfg, arg)
                 self.corr.play()
 
-            except paths.MissingFFmpegError:
+            except MissingFFmpegError as e:
                 arg.on_end()
-                self.ffmpeg_missing.emit()
+                self.ffmpeg_missing.emit(e)
 
             except Exception as e:
                 arg.on_end()
@@ -1408,24 +1417,33 @@ class DownloadFFmpegActivity:
     ffmpeg_url = paths.get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
-    required = (
-        f"FFmpeg+FFplay must be in PATH or "
-        f'<a href="{PATH_uri.toString()}">corrscope PATH</a> in order to use corrscope.<br>'
-    )
-
-    ffmpeg_template = required + (
-        f'Download ffmpeg from <a href="{ffmpeg_url}">this link</a>, '
-        f"open in 7-Zip and navigate to the ffmpeg-.../bin folder, "
-        f"and copy all .exe files to the folder above."
-    )
-    fail_template = required + "Cannot download FFmpeg for your platform."
-
-    def __init__(self, window: qw.QWidget):
+    def __init__(self, window: qw.QWidget, e: MissingFFmpegError):
         """Prompt the user to download and install ffmpeg."""
         Msg = qw.QMessageBox
 
-        if not self.can_download:
-            Msg.information(window, self.title, self.fail_template, Msg.Ok)
-            return
+        if e.ffprobe:
+            message = "ffprobe"
+        else:
+            message = "ffmpeg+ffplay"
 
-        Msg.information(window, self.title, self.ffmpeg_template, Msg.Ok)
+        message = (
+            f"{message} must be in PATH or "
+            f'<a href="{PATH_uri.toString()}">corrscope PATH</a> in order to use corrscope.<br>'
+        )
+
+        if self.can_download:
+            message += (
+                f'Download ffmpeg from <a href="{self.ffmpeg_url}">this link</a>, '
+                f"open in 7-Zip and navigate to the ffmpeg-.../bin folder, "
+                f"and copy all .exe files to the folder above."
+            )
+        else:
+            message += "Cannot download FFmpeg for your platform."
+
+        if e.ffprobe:
+            message += (
+                "<br><br>If you do not have ffprobe, you can uncheck the menu:<br>"
+                '"Tools > Preserve Mono Volume."'
+            )
+
+        Msg.information(window, self.title, message, Msg.Ok)

@@ -509,6 +509,9 @@ class MainWindow(QWidget):
         self.action_parallel = create_element(
             QAction, MainWindow, text=tr("&Multi-Core Rendering"), checkable=True
         )
+        self.action_ffprobe_detect_mono = create_element(
+            QAction, MainWindow, text=tr("Preserve Mono &Volume"), checkable=True
+        )
         self.action_clear_font_cache = create_element(
             QAction,
             MainWindow,
@@ -537,6 +540,7 @@ class MainWindow(QWidget):
                 w = self.menuTools
                 w.addAction(self.action_separate_render_dir)
                 w.addAction(self.action_parallel)
+                w.addAction(self.action_ffprobe_detect_mono)
                 w.addSeparator()
                 w.addAction(self.action_clear_font_cache)
                 w.addAction(self.action_open_config_dir)

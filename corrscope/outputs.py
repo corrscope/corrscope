@@ -1,12 +1,12 @@
 import errno
 import shlex
+import shutil
 import subprocess
-import wave
 from abc import ABC, abstractmethod
 from os.path import abspath
 from typing import TYPE_CHECKING, Type, List, Union, Optional, ClassVar, Callable
 
-from corrscope.config import DumpableAttrs
+from corrscope.config import DumpableAttrs, CorrError
 from corrscope.renderer import ByteBuffer, Renderer
 from corrscope.settings.paths import MissingFFmpegError
 
@@ -22,10 +22,10 @@ FFMPEG_QUIET = "-nostats -hide_banner -loglevel error".split()
 class IOutputConfig(DumpableAttrs):
     cls: "ClassVar[Type[Output]]"
 
-    def __call__(self, corr_cfg: "Config") -> "Output":
+    def __call__(self, corr_cfg: "Config", ffprobe_detect_mono: bool) -> "Output":
         """Must be called in the .yaml file's directory.
         This is used to properly resolve corr_cfg.master_audio."""
-        return self.cls(corr_cfg, cfg=self)
+        return self.cls(corr_cfg, cfg=self, ffprobe_detect_mono=ffprobe_detect_mono)
 
 
 class _Stop:
@@ -36,9 +36,12 @@ Stop = _Stop()
 
 
 class Output(ABC):
-    def __init__(self, corr_cfg: "Config", cfg: IOutputConfig):
+    def __init__(
+        self, corr_cfg: "Config", cfg: IOutputConfig, ffprobe_detect_mono: bool = True
+    ):
         self.corr_cfg = corr_cfg
         self.cfg = cfg
+        del ffprobe_detect_mono
 
         rcfg = corr_cfg.render
 
@@ -77,19 +80,80 @@ def register_output(
 # FFmpeg command line generation
 
 
+def ffprobe_is_mono(path: str) -> bool:
+    """Returns whether ffprobe thinks the input path is mono.
+    If ffprobe is missing, raises MissingFFmpegError(ffprobe=True). (We currently don't have a way to spawn a nonfatal warning.)
+    If ffprobe errors trying to read the file, raises CorrError."""
+
+    # How does ffprobe behave?
+    # - If passed an invalid file, it prints nothing and returns a nonzero error code.
+    # - On a valid file, it prints a number and returns error code 0.
+    #
+    # On some files (eg. produced by yt-dlp?), ffprobe may return blank lines of output for non-audio streams.
+    # - If you remove `-of compact=p=0:nk=1`, you will see multiple [STREAM]...[/STREAM] instead.
+    # So strip whitespace before parsing the integer.
+    r"""
+    C:\Users\user>ffprobe -show_entries stream=channels -of compact=p=0:nk=1 -v 0 asdf
+    C:\Users\user>echo %ERRORLEVEL%
+    1
+    C:\Users\user>ffprobe -show_entries stream=channels -of compact=p=0:nk=1 -v 0 D:\Music\eirinbae.opus
+    2
+    C:\Users\user>echo %ERRORLEVEL%
+    0
+    C:\Users\user>ffprobe -show_entries stream=channels -of compact=p=0:nk=1 -v 0 "C:\Users\user\Videos\[Vinesauce] Vinny - Kukkiizu Bassuru [o3-XlcMpxeU].webm"
+
+    2
+    """
+    try:
+        proc = subprocess.run(
+            [
+                *"ffprobe -show_entries stream=channels -of compact=p=0:nk=1 -v 0".split(),
+                path,
+            ],
+            capture_output=True,
+        )
+    except FileNotFoundError as e:
+        raise MissingFFmpegError(ffprobe=True) from e
+
+    def error():
+        return CorrError(f'Could not determine channel count for master audio "{path}"')
+
+    if proc.returncode != 0:
+        raise error()
+
+    try:
+        nchan = int(proc.stdout.strip())
+    except ValueError:
+        raise error()
+
+    is_mono = nchan == 1
+    return is_mono
+
+
 class _FFmpegProcess:
-    def __init__(self, templates: List[str], corr_cfg: "Config"):
+    def __init__(
+        self, templates: List[str], corr_cfg: "Config", ffprobe_detect_mono: bool
+    ):
         self.templates = templates
         self.corr_cfg = corr_cfg
 
+        # Test for ffmpeg's existence before calling ffprobe.
+        if ffprobe_detect_mono and shutil.which("ffmpeg") is None:
+            raise MissingFFmpegError
+
         self.templates += ffmpeg_input_video(corr_cfg)  # video
         if corr_cfg.master_audio:
+            # Raise FileNotFoundError if missing.
+            open(corr_cfg.master_audio, "rb").close()
+
             # Load master audio and trim to timestamps.
 
             self.templates.append(f"-ss {corr_cfg.begin_time}")
 
-            with wave.open(corr_cfg.master_audio, "rb") as master_wav:
-                self.mono = master_wav.getnchannels() <= 1
+            if ffprobe_detect_mono:
+                self.mono = ffprobe_is_mono(corr_cfg.master_audio)
+            else:
+                self.mono = False
 
             audio_path = shlex.quote(abspath(corr_cfg.master_audio))
             self.templates += ffmpeg_input_audio(audio_path, self.mono)  # audio
@@ -271,10 +335,15 @@ FFMPEG = "ffmpeg"
 
 @register_output(FFmpegOutputConfig)
 class FFmpegOutput(PipeOutput):
-    def __init__(self, corr_cfg: "Config", cfg: FFmpegOutputConfig):
+    def __init__(
+        self,
+        corr_cfg: "Config",
+        cfg: FFmpegOutputConfig,
+        ffprobe_detect_mono: bool = True,
+    ):
         super().__init__(corr_cfg, cfg)
 
-        ffmpeg = _FFmpegProcess([FFMPEG, "-y"], corr_cfg)
+        ffmpeg = _FFmpegProcess([FFMPEG, "-y"], corr_cfg, ffprobe_detect_mono)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append(cfg.args)
 
@@ -299,10 +368,19 @@ FFPLAY = "ffplay"
 
 @register_output(FFplayOutputConfig)
 class FFplayOutput(PipeOutput):
-    def __init__(self, corr_cfg: "Config", cfg: FFplayOutputConfig):
+    def __init__(
+        self,
+        corr_cfg: "Config",
+        cfg: FFplayOutputConfig,
+        ffprobe_detect_mono: bool = True,
+    ):
         super().__init__(corr_cfg, cfg)
 
-        ffmpeg = _FFmpegProcess([FFMPEG, *FFMPEG_QUIET], corr_cfg)
+        # Test for ffplay's existence before calling ffprobe.
+        if ffprobe_detect_mono and shutil.which("ffplay") is None:
+            raise MissingFFmpegError
+
+        ffmpeg = _FFmpegProcess([FFMPEG, *FFMPEG_QUIET], corr_cfg, ffprobe_detect_mono)
         ffmpeg.add_output(cfg)
         ffmpeg.templates.append("-f nut")
 

@@ -57,6 +57,8 @@ class GlobalPrefs(DumpableAttrs, always_dump="*"):
     def parallelism(self) -> Parallelism:
         return Parallelism(self.parallel, self.max_render_cores)
 
+    ffprobe_detect_mono: bool = True
+
 
 _PREF_PATH = paths.appdata_dir / "prefs.yaml"
 

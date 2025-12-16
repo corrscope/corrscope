@@ -1,5 +1,9 @@
 ## 0.11.1 (unreleased)
 
+### Changelog
+
+- Fix non-WAV master audio, allow disabling "Preserve Mono Volume" (#517)
+
 ## 0.11.0
 
 ### Features

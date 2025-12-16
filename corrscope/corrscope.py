@@ -189,6 +189,7 @@ class Arguments:
     cfg_dir: str
     outputs: List[outputs_.IOutputConfig]
     parallelism: Optional[Parallelism] = None
+    ffprobe_detect_mono: bool = True
 
     on_begin: BeginFunc = lambda begin_time, end_time: None
     progress: ProgressFunc = lambda p: print(p, flush=True)
@@ -312,7 +313,9 @@ class CorrScope:
         with pushd(self.arg.cfg_dir):
             with ExitStack() as stack:
                 self.outputs = [
-                    stack.enter_context(output_cfg(self.cfg))
+                    stack.enter_context(
+                        output_cfg(self.cfg, self.arg.ffprobe_detect_mono)
+                    )
                     for output_cfg in self.output_cfgs
                 ]
                 yield

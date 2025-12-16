@@ -187,7 +187,8 @@ def test_load_yaml_another_dir(mocker, Popen):
     # Same function as used in cli.py and gui/__init__.py.
     output = cfg.get_ffmpeg_cfg(mp4)
 
-    corr = CorrScope(cfg, Arguments(subdir, [output]))
+    # turn off ffprobe because not available in CI
+    corr = CorrScope(cfg, Arguments(subdir, [output], ffprobe_detect_mono=False))
     corr.play()
 
     # The .wav path (specified in Config) should be resolved relative to the config
