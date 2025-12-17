@@ -46,18 +46,27 @@ class MissingFFmpegError(CorrError, FileNotFoundError):
     ffmpeg_url = get_ffmpeg_url()
     can_download = bool(ffmpeg_url)
 
-    message = (
-        f'FFmpeg+FFplay must be in PATH or "{PATH_dir}" in order to use corrscope.\n'
-    )
-
-    if can_download:
-        message += (
-            f"Download ffmpeg from {ffmpeg_url}, "
-            f"open in 7-Zip and navigate to the ffmpeg-.../bin folder, "
-            f"and copy all .exe files to the folder above."
-        )
-    else:
-        message += "Cannot download FFmpeg for your platform."
+    def __init__(self, ffprobe: bool = False):
+        self.ffprobe = ffprobe
 
     def __str__(self) -> str:
-        return self.message
+        if self.ffprobe:
+            message = "ffprobe"
+        else:
+            message = "ffmpeg+ffplay"
+
+        message = (
+            f'{message} must be in PATH or "{PATH_dir}" in order to use corrscope.\n'
+        )
+
+        if self.can_download:
+            message += (
+                f"Download ffmpeg from {self.ffmpeg_url}, "
+                f"open in 7-Zip and navigate to the ffmpeg-.../bin folder, "
+                f"and copy all .exe files to the folder above."
+            )
+        else:
+            message += "Cannot download FFmpeg for your platform."
+
+        if self.ffprobe:
+            message += "\n\nIf you do not have ffprobe, you can edit prefs.yaml and set ffprobe_detect_mono to false."

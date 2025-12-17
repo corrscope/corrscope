@@ -67,7 +67,7 @@ def test_render_output():
     datas = [RENDER_Y_ZEROS]
 
     renderer = Renderer.from_obj(CFG.render, CFG.layout, datas, None, None)
-    out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG)
+    out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG, True)
 
     renderer.update_main_lines(RenderInput.wrap_datas(datas), [0])
     out.write_frame(renderer.get_frame())
@@ -77,7 +77,7 @@ def test_render_output():
 
 # Calls FFmpegOutput and FFmpeg.
 def test_output():
-    out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG)
+    out: FFmpegOutput = NULL_FFMPEG_OUTPUT(CFG, True)
 
     frame = bytes(WIDTH * HEIGHT * BYTES_PER_PIXEL)
     out.write_frame(frame)
@@ -97,7 +97,7 @@ def test_close_output(Popen):
 
     ffplay_cfg = FFplayOutputConfig()
     output: FFplayOutput
-    with ffplay_cfg(CFG) as output:
+    with ffplay_cfg(CFG, True) as output:
         pass
 
     output._pipeline[0].stdin.close.assert_called()
@@ -131,7 +131,7 @@ def test_terminate_ffplay(Popen):
     ffplay_cfg = FFplayOutputConfig()
     try:
         output: FFplayOutput
-        with ffplay_cfg(CFG) as output:
+        with ffplay_cfg(CFG, True) as output:
             raise DummyException
 
     except DummyException:
@@ -193,7 +193,12 @@ def test_corr_terminate_works(test):
 
     @register_output(StayOpenOutputConfig)
     class StayOpenOutput(PipeOutput):
-        def __init__(self, corr_cfg: "Config", cfg: StayOpenOutputConfig):
+        def __init__(
+            self,
+            corr_cfg: "Config",
+            cfg: StayOpenOutputConfig,
+            ffprobe_detect_mono: bool = True,
+        ):
             super().__init__(corr_cfg, cfg)
 
             sleep_process = subprocess.Popen(
@@ -239,7 +244,7 @@ def test_closing_ffplay_stops_main(Popen, errno_id):
     assert Popen.side_effect
 
     # Launch corrscope
-    with FFplayOutputConfig()(CFG) as output:
+    with FFplayOutputConfig()(CFG, True) as output:
         # Writing to Popen instance raises exc.
         ret = output.write_frame(b"")
 

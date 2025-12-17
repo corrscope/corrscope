@@ -189,6 +189,7 @@ class Arguments:
     cfg_dir: str
     outputs: List[outputs_.IOutputConfig]
     parallelism: Optional[Parallelism] = None
+    ffprobe_detect_mono: bool = True
 
     on_begin: BeginFunc = lambda begin_time, end_time: None
     progress: ProgressFunc = lambda p: print(p, flush=True)
@@ -248,6 +249,8 @@ def calc_stereo_levels(data: np.ndarray) -> StereoLevels:
 
 
 class CorrScope:
+    output_cfgs: list[IOutputConfig]
+
     def __init__(self, cfg: Config, arg: Arguments):
         """cfg is mutated!
         Recording config is triggered if any FFmpegOutputConfig is found.
@@ -265,7 +268,7 @@ class CorrScope:
         if not_benchmarking or benchmark_mode == BenchmarkMode.OUTPUT:
             self.output_cfgs = arg.outputs
         else:
-            self.output_cfgs = []  # type: List[IOutputConfig]
+            self.output_cfgs = []
 
         if len(self.cfg.channels) == 0:
             raise CorrError("Config.channels is empty")
@@ -310,7 +313,9 @@ class CorrScope:
         with pushd(self.arg.cfg_dir):
             with ExitStack() as stack:
                 self.outputs = [
-                    stack.enter_context(output_cfg(self.cfg))
+                    stack.enter_context(
+                        output_cfg(self.cfg, self.arg.ffprobe_detect_mono)
+                    )
                     for output_cfg in self.output_cfgs
                 ]
                 yield

@@ -238,7 +238,10 @@ def main(
                 pref = gp.GlobalPrefs()
 
             arg = Arguments(
-                cfg_dir=cfg_dir, outputs=outputs, parallelism=pref.parallelism()
+                cfg_dir=cfg_dir,
+                outputs=outputs,
+                parallelism=pref.parallelism(),
+                ffprobe_detect_mono=pref.ffprobe_detect_mono,
             )
             command = lambda: CorrScope(cfg, arg).play()
             if profile:
