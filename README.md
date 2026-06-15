@@ -21,6 +21,7 @@ Corrscope is currently in semi-active development. The program basically works a
 ## Dependencies
 
 - FFmpeg
+- PyQt5/PyQt6
 
 ## Installation
 
@@ -66,7 +67,7 @@ Install Python 3.8 or above, and [uv](https://docs.astral.sh/uv/getting-started/
 
 ```shell
 cd path/to/corrscope
-uv sync --extra qt5
+uv sync --extra qt6
 # On M1 Mac, instead run `uv sync --extra qt5`.
 uv run corr (args)
 ```
