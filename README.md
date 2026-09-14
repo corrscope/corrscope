@@ -39,7 +39,7 @@ pipx creates an isolated environment for each program, and adds their binaries i
 - Run `pipx install "corrscope[qt5]"`
     - On Linux, to add support for native Qt 6 themes, instead run `pipx install --system-site-packages "corrscope[qt6]"`
     - On FreeBSD, install `py39-qt5` and `py39-ruamel.yaml` via `pkg` or ports tree, then run `pipx install --system-site-packages "corrscope[qt5]"`. To get previews working, install `ffmpeg` via ports tree with `SDL` option enabled.
-    - On M1 Mac, instead run `pipx install "corrscope[qt6]"`
+    - On Apple Silicon, instead run `pipx install "corrscope[qt6]"`
 - Open a terminal and run `corr (args)`.
 
 ### Installing from PyPI via Pip (cross-platform, releases)
@@ -51,7 +51,7 @@ pip installs packages into a per-user Python environment. This has the disadvant
 - Run `pip3 install --user "corrscope[qt5]"`
     - On Linux, to add support for native Qt 6 themes, instead run `pip3 install --user "corrscope[qt6]"`
     - On FreeBSD, install `py39-qt5` and `py39-ruamel.yaml` via `pkg` or ports tree, then run `pip install --user "corrscope[qt5]"`. To get previews working, install `ffmpeg` via ports tree with `SDL` option enabled.
-    - On M1 Mac, instead run `pip3 install --user "corrscope[qt6]"`
+    - On Apple Silicon, instead run `pip3 install --user "corrscope[qt6]"`
 - Open a terminal and run `corr (args)`.
 
 ### Installing dev builds from Git (cross-platform, dev master)
@@ -67,7 +67,7 @@ Install Python 3.8 or above, and [uv](https://docs.astral.sh/uv/getting-started/
 ```shell
 cd path/to/corrscope
 uv sync --extra qt5
-# On M1 Mac, instead run `uv sync --extra qt5`.
+# On Apple Silicon, instead run `uv sync --extra qt6`.
 uv run corr (args)
 ```
 
