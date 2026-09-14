@@ -39,8 +39,9 @@ jobs:
         uv sync --extra qt5  # don't pass --no-dev
         uv run black --check .
         uv run pytest --tb=short
-    - name: Setup Debug Session
-      uses: csexton/debugger-action@master
+    # what's upterm?
+    - name: Setup upterm session
+      uses: owenthereal/action-upterm@v1
     - name: Build binaries
       run: |
         uv build
