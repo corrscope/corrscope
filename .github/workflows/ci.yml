@@ -38,19 +38,18 @@ jobs:
         uv build
         uv run pyinstaller corrscope.spec -y
     # https://github.com/actions/upload-artifact/issues/331
-    - # name: Upload package
+    - name: Upload package
       uses: actions/upload-artifact@v7
       with:
-        name: Package
         path: dist/*.tar.gz
         archive: false
-    - uses: actions/upload-artifact@v7
+    - name: Upload wheel
+      uses: actions/upload-artifact@v7
       with:
-        name: Wheel
         path: dist/*.whl
         archive: false
-    - uses: actions/upload-artifact@v7
+    - name: Upload Windows binary
+      uses: actions/upload-artifact@v7
       with:
-        name: Windows binary
         path: dist/*.7z
         archive: false
