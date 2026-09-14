@@ -29,7 +29,7 @@ jobs:
     - name: uv cache
       uses: actions/cache@v6  # upload on job end
       with:
-        path: $LOCALAPPDATA/uv/cache
+        path: ~/AppData/Local/uv/cache
         key: ${{ runner.os }}-uv-cache
         # clear via https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manage-caches#deleting-cache-entries
     - name: Install dependencies
@@ -39,9 +39,9 @@ jobs:
         uv sync --extra qt5  # don't pass --no-dev
         uv run black --check .
         uv run pytest --tb=short
-    # what's upterm?
-    - name: Setup upterm session
-      uses: owenthereal/action-upterm@v1
+    # # what's upterm?
+    # - name: Setup upterm session
+    #   uses: owenthereal/action-upterm@v1
     - name: Build binaries
       run: |
         uv build
