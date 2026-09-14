@@ -1,10 +1,11 @@
 import html
+from collections.abc import Iterable
 from itertools import groupby
 from operator import itemgetter
-from typing import TypeVar, Iterable, Generic, Tuple, Any, Optional
+from threading import Lock
+from typing import Any, Generic, TypeVar
 
 import matplotlib.colors
-from qtpy.QtCore import QMutex, QMutexLocker
 from qtpy.QtWidgets import QErrorMessage, QWidget
 
 from corrscope.config import CorrError
@@ -31,18 +32,23 @@ class Locked(Generic[T]):
     def __init__(self, obj: T):
         super().__init__()
         self.obj = obj
-        self.lock = QMutex()
+        self.lock = Lock()
 
     def set(self, value: T) -> T:
         # We don't actually need a mutex since Python holds the GIL during reads and
         # writes. But keep it anyway.
-        with QMutexLocker(self.lock):
+        with self.lock:
             self.obj = value
+            print(self.lock, "should be Lock")
+        print(self.lock, "should be Lock")
         return value
 
     def get(self) -> T:
-        with QMutexLocker(self.lock):
-            return self.obj
+        with self.lock:
+            print(self.lock, "should be Lock")
+            out = self.obj
+        print(self.lock, "should be Lock")
+        return out
 
 
 class TracebackDialog(QErrorMessage):
@@ -56,7 +62,7 @@ class TracebackDialog(QErrorMessage):
     </style>
     <body>%s</body>"""
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: QWidget | None = None):
         QErrorMessage.__init__(self, parent)
         self.resize(self.w, self.h)
 
@@ -65,7 +71,7 @@ class TracebackDialog(QErrorMessage):
         QErrorMessage.showMessage(self, message, type)
 
 
-def find_ranges(iterable: Iterable[T]) -> Iterable[Tuple[T, int]]:
+def find_ranges(iterable: Iterable[T]) -> Iterable[tuple[T, int]]:
     """Extracts consecutive runs from a list of items.
 
     :param iterable: List of items.
