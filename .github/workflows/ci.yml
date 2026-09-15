@@ -1,0 +1,64 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python application
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: windows-2025
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    - name: uv cache
+      uses: actions/cache@v6  # upload on job end
+      with:
+        path: ~/AppData/Local/uv/cache
+        key: ${{ runner.os }}-uv-cache
+        # clear via https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manage-caches#deleting-cache-entries
+    - name: Install dependencies
+      run: powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    - name: Run tests
+      run: |  # https://github.com/actions/runner-images/issues/6668
+        uv sync --extra qt5  # don't pass --no-dev
+        uv run black --check .
+        uv run pytest --tb=short
+    # # what's upterm?
+    # - name: Setup upterm session
+    #   uses: owenthereal/action-upterm@v1
+    - name: Build binaries
+      run: |
+        uv build
+        uv run pyinstaller corrscope.spec -y
+    # https://github.com/actions/upload-artifact/issues/331
+    - name: Upload package
+      uses: actions/upload-artifact@v7
+      with:
+        path: dist/*.tar.gz
+        archive: false
+    - name: Upload wheel
+      uses: actions/upload-artifact@v7
+      with:
+        path: dist/*.whl
+        archive: false
+    - name: Upload Windows binary
+      uses: actions/upload-artifact@v7
+      with:
+        path: dist/*.7z
+        archive: false

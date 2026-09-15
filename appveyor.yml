@@ -44,8 +44,6 @@ test_script:
   - 'uv run pytest --tb=short'
 
 after_test:
-  # Run 32-bit PyInstaller to make CI complete faster.
-  # pyinstaller used to get stuck for minutes on 32-bit builds, but it no longer happens.
   - 'uv build'
   - 'uv run pyinstaller corrscope.spec -y'
 
