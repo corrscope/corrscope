@@ -88,8 +88,8 @@ if is_ci:
     BRANCH = alias_env("BRANCH", "BRANCH_NAME")
     PR_NUM = alias_env("PR_NUM", "PR_NUMBER")
 
-    # "buildN" where N=APPVEYOR_BUILD_NUMBER
     VER = alias_env("VER", "GITHUB_RUN_NUMBER")
+    ATTEMPT = alias_env("ATTEMPT", "GITHUB_RUN_ATTEMPT")
 
 
 def _calc_metadata() -> str:
@@ -105,7 +105,11 @@ def _calc_metadata() -> str:
         return "local-build"
 
     is_pr = PR_NUM in env
-    assert VER in env
+
+    env[VER] = f"build{env[VER]}"
+    if int(env[ATTEMPT]) > 1:
+        env[VER] += f".{env[ATTEMPT]}"
+
     assert BRANCH in env
 
     if is_pr:
