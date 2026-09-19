@@ -3,9 +3,8 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import List, Tuple
 
-from PyInstaller.building.api import PYZ, EXE, COLLECT
+from PyInstaller.building.api import COLLECT, EXE, PYZ
 from PyInstaller.building.build_main import Analysis
 from PyInstaller.building.datastruct import TOC
 
@@ -22,7 +21,7 @@ def keep(dir, wildcard):
 
 InFile = str
 OutFolder = str
-datas: List[Tuple[InFile, OutFolder]] = []
+datas: list[tuple[InFile, OutFolder]] = []
 
 version = v.pyinstaller_write_version()
 datas += [(str(v.version_txt), ".")]
@@ -123,7 +122,7 @@ class ZipCollect(COLLECT):
             in_files = f"{self.name}/*"  # asterisk removes root directory from archive
 
             subprocess.run(cmd_7z + [out_name, in_files], check=True)
-            assert os.path.getsize(out_name) > 2 ** 20
+            assert os.path.getsize(out_name) > 2**20
 
         return ret
 
