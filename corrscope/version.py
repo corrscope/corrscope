@@ -4,7 +4,6 @@ import struct
 import sys
 from pathlib import Path
 
-
 _package = Path(__file__).parent
 
 
@@ -79,19 +78,18 @@ env = {}
 
 
 def alias_env(new: str, old: str) -> str:
-    if old in os.environ:
+    if old in os.environ and os.environ[old]:
         env[new] = os.environ[old]
     return new
 
 
-is_appveyor = "APPVEYOR" in os.environ
-if is_appveyor:
-    BRANCH = alias_env("BRANCH", "APPVEYOR_REPO_BRANCH")
-    PR_NUM = alias_env("PR_NUM", "APPVEYOR_PULL_REQUEST_NUMBER")
-    PR_BRANCH = alias_env("PR_BRANCH", "APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH")
+is_ci = "CI" in os.environ
+if is_ci:
+    BRANCH = alias_env("BRANCH", "BRANCH_NAME")
+    PR_NUM = alias_env("PR_NUM", "PR_NUMBER")
 
-    # "buildN" where N=APPVEYOR_BUILD_NUMBER
-    VER = alias_env("VER", "APPVEYOR_BUILD_VERSION")
+    VER = alias_env("VER", "GITHUB_RUN_NUMBER")
+    ATTEMPT = alias_env("ATTEMPT", "GITHUB_RUN_ATTEMPT")
 
 
 def _calc_metadata() -> str:
@@ -103,16 +101,19 @@ def _calc_metadata() -> str:
     Identifiers MUST comprise only ASCII alphanumerics and hyphen [0-9A-Za-z-].
     """
 
-    if not is_appveyor:
+    if not is_ci:
         return "local-build"
 
     is_pr = PR_NUM in env
-    assert (PR_NUM in env) == (PR_BRANCH in env)
 
-    assert VER in env
+    env[VER] = f"build{env[VER]}"
+    if int(env[ATTEMPT]) > 1:
+        env[VER] += f".{env[ATTEMPT]}"
+
+    assert BRANCH in env
 
     if is_pr:
-        return "{VER}.pr{PR_NUM}-{PR_BRANCH}".format(**env)
+        return "{VER}.pr{PR_NUM}-{BRANCH}".format(**env)
     else:
         if env[BRANCH] != "master":
             # Shouldn't happen, since side branches are not built.

@@ -4,6 +4,7 @@
 
 - Fix non-WAV master audio, allow disabling "Preserve Mono Volume" (#517)
 - Replace QMutex with threading.Lock to avoid memory corruption issues (#524)
+- Port CI to GitHub Actions (#525)
 
 ## 0.11.0
 
